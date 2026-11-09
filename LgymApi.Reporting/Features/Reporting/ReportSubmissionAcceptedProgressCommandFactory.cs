@@ -20,7 +20,8 @@ public interface IReportSubmissionAcceptedProgressCommandFactory
         Id<LgymApi.Domain.Entities.ReportSubmission> submissionId,
         Id<LgymApi.Domain.Entities.ReportRequest> requestId,
         Id<AccountReference> traineeId,
-        DateTimeOffset acceptedAtUtc);
+        DateTimeOffset acceptedAtUtc,
+        Id<LgymApi.Domain.Entities.CoachingEpisode>? sourceCoachingEpisodeId);
 }
 
 public sealed class ReportSubmissionAcceptedProgressCommandFactory : IReportSubmissionAcceptedProgressCommandFactory
@@ -74,7 +75,8 @@ public sealed class ReportSubmissionAcceptedProgressCommandFactory : IReportSubm
         Id<LgymApi.Domain.Entities.ReportSubmission> submissionId,
         Id<LgymApi.Domain.Entities.ReportRequest> requestId,
         Id<AccountReference> traineeId,
-        DateTimeOffset acceptedAtUtc)
+        DateTimeOffset acceptedAtUtc,
+        Id<LgymApi.Domain.Entities.CoachingEpisode>? sourceCoachingEpisodeId)
     {
         var measurements = CollectMeasurements(template, answers);
         if (measurements.Count == 0)
@@ -96,7 +98,9 @@ public sealed class ReportSubmissionAcceptedProgressCommandFactory : IReportSubm
                 traineeId,
                 acceptedAt,
                 acceptedAt,
-                measurements)
+                measurements,
+                requestId.ToString(),
+                sourceCoachingEpisodeId?.ToString())
         };
     }
 

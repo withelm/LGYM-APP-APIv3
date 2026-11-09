@@ -13,6 +13,7 @@ public sealed class ReportRequest : EntityBase<ReportRequest>
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
     public string? Note { get; set; }
+    public Id<CoachingEpisode>? SourceCoachingEpisodeId { get; set; }
 
     public User Trainer { get; set; } = null!;
     public User Trainee { get; set; } = null!;

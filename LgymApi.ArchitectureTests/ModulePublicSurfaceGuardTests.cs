@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 827;
+    private const int ManifestEntryCount = 832;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -39,7 +39,12 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.CoachingEpisodeAuthorizationGrant",
         "LgymApi.Application/Coaching/Contracts/Access/ICoachingEpisodeAuthorizationService.cs\tLgymApi.Application.Coaching.Contracts.Access.ICoachingEpisodeAuthorizationService",
         "LgymApi.Application/Coaching/Persistence/CoachingPersistenceModels.cs\tLgymApi.Application.Coaching.Persistence.CoachingEpisodeFact",
+        "LgymApi.Application/Coaching/Persistence/CoachingPersistenceModels.cs\tLgymApi.Application.Coaching.Persistence.CoachingMeasurementsRelationshipAccessFact",
+        "LgymApi.Application/WorkoutProgress/Contracts/Measurements/IMeasurementsRelationshipAccessPort.cs\tLgymApi.Application.WorkoutProgress.Contracts.Measurements.MeasurementsRelationshipAccessFact",
+        "LgymApi.Application/WorkoutProgress/Contracts/Measurements/IMeasurementsRelationshipAccessPort.cs\tLgymApi.Application.WorkoutProgress.Contracts.Measurements.MeasurementsRelationshipPeriod",
+        "LgymApi.Application/WorkoutProgress/Persistence/WorkoutProgressPersistenceModels.cs\tLgymApi.Application.WorkoutProgress.Persistence.MeasurementReadScope",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingRelationshipPeriodFact",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingActiveRelationshipFact",
         "LgymApi.Reporting/Options/PhotoStorageOptions.cs\tLgymApi.Application.Options.PhotoStorageOptions",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",

@@ -1,8 +1,12 @@
 using System.Runtime.ExceptionServices;
+using LgymApi.Application.BuildingBlocks.Errors;
+using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Features.Reporting;
@@ -88,7 +92,13 @@ public sealed partial class RecurringReportAssignmentService
                 }
                 else
                 {
-                    var stagedResult = await StageRequestCreationAsync(assignment, now, cancellationToken);
+                    var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+                        assignment.TrainerId,
+                        assignment.TraineeId,
+                        cancellationToken);
+                    var stagedResult = relationshipAccess.HasActiveRelationship
+                        ? await StageRequestCreationAsync(assignment, relationshipAccess, now, cancellationToken)
+                        : Result<StagedRequestCreation, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
                     if (stagedResult.IsFailure)
                     {
                         var rollback = await RollbackBusinessDecisionAsync(

@@ -13,6 +13,9 @@ internal sealed class ReportSubmissionEntityTypeConfiguration : IEntityTypeConfi
         builder.Property(e => e.PayloadJson).IsRequired();
         builder.Property(e => e.TrainerOverallComment).HasMaxLength(4000);
         builder.Property(e => e.TrainerFieldCommentsJson).HasColumnType("text");
+        builder.Property(e => e.SourceCoachingEpisodeId).HasColumnType("uuid");
+        builder.Property(e => e.AcceptedAt).HasColumnType("timestamp with time zone");
+        builder.HasIndex(e => e.SourceCoachingEpisodeId);
 
         builder.HasIndex(e => e.ReportRequestId)
             .IsUnique()

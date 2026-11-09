@@ -435,9 +435,13 @@ public sealed partial class RecurringReportAssignmentServiceTests
         bool isTrainer = true)
     {
         var relationshipAccess = Substitute.For<IReportingRelationshipAccessPersistence>();
+        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
         relationshipAccess
             .GetAccessAsync(ReportingTestData.AccountId(trainerId), ReportingTestData.AccountId(traineeId), Arg.Any<CancellationToken>())
-            .Returns(new ReportingRelationshipAccessFact(ownsTrainee));
+            .Returns(new ReportingRelationshipAccessFact(ownsTrainee, [], ownsTrainee ? activeEpisode : null));
+        relationshipAccess
+            .StageActiveEpisodeRevisionCheckAsync(activeEpisode, Arg.Any<CancellationToken>())
+            .Returns(true);
 
         return new RecurringReportAssignmentService(
             new ReportTemplatePersistenceRepository(db),

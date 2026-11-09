@@ -171,8 +171,7 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using (var writeContext = CreateDbContext(lease))
         {
             seed = await SeedFirstRecurringRequestAsync(writeContext);
-            writeContext.ReportRequests.Add(CreateRequest(seed, "second"));
-            await writeContext.SaveChangesAsync();
+            await PostgreSqlHistoricalReportingSeed.AddRequestAsync(writeContext, CreateRequest(seed, "second"));
         }
 
         await using (var downgradeContext = CreateDbContext(lease))
@@ -216,30 +215,28 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         }
 
         await using var verificationContext = CreateDbContext(lease);
-        var submission = await verificationContext.ReportSubmissions
-            .AsNoTracking()
-            .SingleAsync(candidate => candidate.Id == seed.SubmissionId);
-        var measurement = await verificationContext.Measurements
-            .AsNoTracking()
-            .SingleAsync(candidate => candidate.Id == seed.MeasurementId);
+        var data = await PostgreSqlHistoricalReportingSeed.ReadMigrationPreservationDataAsync(
+            verificationContext,
+            seed.SubmissionId,
+            seed.MeasurementId);
         var appliedMigrations = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
 
         Assert.Multiple(() =>
         {
-            submission.ReportRequestId.Should().Be(seed.RequestId);
-            submission.TraineeId.Should().Be(seed.TraineeId);
-            submission.PayloadJson.Should().Be(seed.PayloadJson);
-            measurement.UserId.Should().Be(seed.TraineeId);
-            measurement.BodyPart.Should().Be(seed.BodyPart);
-            measurement.Unit.Should().Be(seed.Unit);
-            measurement.Value.Should().Be(seed.Value);
-            measurement.CreatedAt.Should().Be(seed.CreatedAtUtc);
+            data.SubmissionRequestId.Should().Be(seed.RequestId);
+            data.SubmissionTraineeId.Should().Be(seed.TraineeId);
+            data.SubmissionPayloadJson.Should().Be(seed.PayloadJson);
+            data.MeasurementUserId.Should().Be(seed.TraineeId);
+            data.MeasurementBodyPart.Should().Be(seed.BodyPart.ToString());
+            data.MeasurementUnit.Should().Be(seed.Unit);
+            data.MeasurementValue.Should().Be(seed.Value);
+            data.MeasurementCreatedAt.Should().Be(seed.CreatedAtUtc);
             appliedMigrations.Should().Contain(ReceiptMigrationId);
         });
         (await TableExistsAsync(verificationContext, ReceiptTableName)).Should().BeTrue();
         (await GetIndexIsUniqueAsync(verificationContext, ReceiptIndexName)).Should().BeTrue();
         TestContext.Progress.WriteLine(
-            $"Receipt migration preservation: submission={submission.Id}; measurement={measurement.Id}; table={ReceiptTableName}; uniqueIndex={ReceiptIndexName}");
+            $"Receipt migration preservation: submission={seed.SubmissionId}; measurement={seed.MeasurementId}; table={ReceiptTableName}; uniqueIndex={ReceiptIndexName}");
     }
 
     private static AppDbContext CreateDbContext(PostgreSqlDatabaseLease lease)
@@ -338,8 +335,11 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         var seed = new RecurringRequestSeed(trainer.Id, trainee.Id, template.Id, assignment.Id);
 
         await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, trainer, trainee);
-        dbContext.AddRange(template, assignment, CreateRequest(seed, "first"));
-        await dbContext.SaveChangesAsync();
+        await PostgreSqlHistoricalReportingSeed.AddRecurringRequestGraphAsync(
+            dbContext,
+            template,
+            assignment,
+            CreateRequest(seed, "first"));
 
         return seed;
     }
@@ -381,8 +381,12 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         };
 
         await PostgreSqlHistoricalUserSeed.AddAsync(dbContext, trainer, trainee);
-        dbContext.AddRange(template, request, submission, measurement);
-        await dbContext.SaveChangesAsync();
+        await PostgreSqlHistoricalReportingSeed.AddMigrationPreservationDataAsync(
+            dbContext,
+            template,
+            request,
+            submission,
+            measurement);
         return new MigrationPreservationSeed(
             request.Id,
             submission.Id,
@@ -397,25 +401,17 @@ public sealed class PostgreSqlRecurringReportMigrationTests
 
     private static async Task AssertDuplicateRequestIsRejectedAsync(AppDbContext dbContext, RecurringRequestSeed seed)
     {
-        dbContext.ReportRequests.Add(CreateRequest(seed, "duplicate"));
-
         try
         {
-            await dbContext.SaveChangesAsync();
+            await PostgreSqlHistoricalReportingSeed.AddRequestAsync(dbContext, CreateRequest(seed, "duplicate"));
             Assert.Fail("Expected the pre-repair unique index to reject a second recurring report request.");
         }
-        catch (DbUpdateException exception)
+        catch (PostgresException exception)
         {
-            var postgresException = exception.InnerException.Should().BeOfType<PostgresException>().Which;
-
-            postgresException.SqlState.Should().Be("23505");
-            postgresException.ConstraintName.Should().Be(RecurringAssignmentIndexName);
+            exception.SqlState.Should().Be("23505");
+            exception.ConstraintName.Should().Be(RecurringAssignmentIndexName);
             TestContext.Progress.WriteLine(
-                $"Pre-repair duplicate signature: SQLSTATE {postgresException.SqlState}; constraint {postgresException.ConstraintName}");
-        }
-        finally
-        {
-            dbContext.ChangeTracker.Clear();
+                $"Pre-repair duplicate signature: SQLSTATE {exception.SqlState}; constraint {exception.ConstraintName}");
         }
     }
 

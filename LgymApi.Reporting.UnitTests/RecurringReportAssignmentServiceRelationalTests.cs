@@ -80,8 +80,25 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
                 CurrentReportRequest = currentRequest,
                 NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
             };
+            var episode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
+            var link = new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episode.Id
+            };
 
             await setupDb.Users.AddRangeAsync(trainer, trainee);
+            await setupDb.CoachingEpisodes.AddAsync(episode);
+            await setupDb.TrainerTraineeLinks.AddAsync(link);
             await setupDb.ReportTemplates.AddAsync(template);
             await setupDb.ReportRequests.AddAsync(currentRequest);
             await setupDb.ReportSubmissions.AddAsync(submission);
@@ -93,6 +110,12 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
 
         await using (var actDb = new AppDbContext(options))
         {
+            var relationshipAccess = new ReportingRelationshipAccessPersistenceRepository(actDb);
+            var access = await relationshipAccess.GetAccessAsync(
+                (await actDb.Users.SingleAsync(user => user.Email == "trainer@example.com")).Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
+                (await actDb.Users.SingleAsync(user => user.Email == "trainee@example.com")).Id.Rebind<LgymApi.Identity.Contracts.AccountReference>());
+            access.HasActiveRelationship.Should().BeTrue();
+            access.ActiveEpisode.Should().NotBeNull();
             var service = CreateService(actDb, commandOutboxWriter);
             await service.ProcessDueAssignmentsAsync();
         }
@@ -204,8 +227,7 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
 
     private static RecurringReportAssignmentService CreateService(AppDbContext db, ICommandOutboxWriter commandOutboxWriter)
     {
-        var relationshipAccess = Substitute.For<IReportingRelationshipAccessPersistence>();
-
+        IReportingRelationshipAccessPersistence relationshipAccess = new ReportingRelationshipAccessPersistenceRepository(db);
         return new RecurringReportAssignmentService(
             new ReportTemplatePersistenceRepository(db),
             new ReportRequestSubmissionPersistenceRepository(db),

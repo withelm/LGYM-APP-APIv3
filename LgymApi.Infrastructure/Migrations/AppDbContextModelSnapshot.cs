@@ -430,6 +430,7 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -820,6 +821,21 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTimeOffset?>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SourceCoachingEpisodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SourceReportAcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SourceReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceReportSubmissionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasColumnType("text");
@@ -835,7 +851,7 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "SourceCoachingEpisodeId", "SourceReportAcceptedAt");
 
                     b.ToTable("Measurements", (string)null);
                 });
@@ -1492,6 +1508,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid?>("RecurringReportAssignmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceCoachingEpisodeId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1514,6 +1533,8 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RecurringReportAssignmentId");
+
+                    b.HasIndex("SourceCoachingEpisodeId");
 
                     b.HasIndex("TemplateId");
 
@@ -1566,6 +1587,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1577,6 +1601,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<Guid>("ReportRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceCoachingEpisodeId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TraineeId")
@@ -1604,6 +1631,8 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("SourceCoachingEpisodeId");
+
                     b.HasIndex("TraineeId");
 
                     b.ToTable("ReportSubmissions", (string)null);
@@ -1623,6 +1652,15 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<Guid>("ReportSubmissionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceCoachingEpisodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SourceReportAcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SourceReportRequestId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1630,6 +1668,8 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.HasIndex("ReportSubmissionId")
                         .IsUnique();
+
+                    b.HasIndex("SourceCoachingEpisodeId");
 
                     b.ToTable("ReportSubmissionProgressReceipts", (string)null);
                 });
@@ -2066,20 +2106,20 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("NewVisibleToTrainee")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("NewContent")
                         .IsRequired()
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
 
-                    b.Property<bool>("PreviousVisibleToTrainee")
+                    b.Property<bool>("NewVisibleToTrainee")
                         .HasColumnType("boolean");
 
                     b.Property<string>("PreviousContent")
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
+
+                    b.Property<bool>("PreviousVisibleToTrainee")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("TraineeNoteId")
                         .HasColumnType("uuid");

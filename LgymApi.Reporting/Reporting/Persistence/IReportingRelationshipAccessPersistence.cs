@@ -9,4 +9,10 @@ public interface IReportingRelationshipAccessPersistence
         Id<AccountReference> trainerId,
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> StageActiveEpisodeRevisionCheckAsync(
+        ReportingActiveRelationshipFact activeEpisode,
+        CancellationToken cancellationToken = default);
+
+    bool IsActiveEpisodeRevisionConflict(Exception exception);
 }

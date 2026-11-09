@@ -27,7 +27,10 @@ public sealed class ReportSubmissionAcceptedProgressPersistenceRepository : IRep
         => _dbContext.ReportSubmissionProgressReceipts.AddAsync(new ReportSubmissionProgressReceipt
         {
             Id = Id<ReportSubmissionProgressReceipt>.New(),
-            ReportSubmissionId = receipt.ReportSubmissionId
+            ReportSubmissionId = receipt.ReportSubmissionId,
+            SourceReportRequestId = receipt.SourceReportRequestId,
+            SourceCoachingEpisodeId = receipt.SourceCoachingEpisodeId,
+            SourceReportAcceptedAt = receipt.SourceReportAcceptedAt
         }, cancellationToken).AsTask();
 
     public Task AddAsync(
@@ -40,6 +43,11 @@ public sealed class ReportSubmissionAcceptedProgressPersistenceRepository : IRep
             BodyPart = measurement.BodyPart,
             Unit = measurement.Unit.ToString(),
             Value = measurement.Value,
-            CreatedAt = measurement.CreatedAt
+            CreatedAt = measurement.CreatedAt,
+            SourceReportSubmissionId = measurement.SourceReportSubmissionId,
+            SourceReportRequestId = measurement.SourceReportRequestId,
+            SourceCoachingEpisodeId = measurement.SourceCoachingEpisodeId,
+            SourceReportAcceptedAt = measurement.SourceReportAcceptedAt,
+            RecordedAt = null
         }, cancellationToken).AsTask();
 }

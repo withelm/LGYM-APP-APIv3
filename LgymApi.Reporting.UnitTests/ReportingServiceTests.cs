@@ -1336,7 +1336,7 @@ public sealed class ReportingServiceTests
         ICommandDispatcher? commandDispatcher = null,
         IUnitOfWork? unitOfWork = null,
         bool userHasTrainerRole = false,
-        bool hasActiveTrainerLink = false,
+        bool hasActiveTrainerLink = true,
         IReadOnlyList<ReportingRelationshipPeriodFact>? relationshipPeriods = null)
     {
         var templatePersistence = Substitute.For<IReportTemplatePersistence>();
@@ -1451,13 +1451,20 @@ public sealed class ReportingServiceTests
         var commandOutboxWriter = Substitute.For<ICommandOutboxWriter>();
         commandOutboxWriter.StageAsync(Arg.Any<ReportSubmissionAcceptedProgressCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
+        var activeEpisode = hasActiveTrainerLink
+            ? new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0)
+            : null;
         relationshipAccessPersistence.GetAccessAsync(
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
                 Arg.Any<CancellationToken>())
             .Returns(relationshipPeriods is null
-                ? new ReportingRelationshipAccessFact(hasActiveTrainerLink)
-                : new ReportingRelationshipAccessFact(hasActiveTrainerLink, relationshipPeriods));
+                ? new ReportingRelationshipAccessFact(hasActiveTrainerLink, [], activeEpisode)
+                : new ReportingRelationshipAccessFact(hasActiveTrainerLink, relationshipPeriods, activeEpisode));
+        relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                Arg.Any<ReportingActiveRelationshipFact>(),
+                Arg.Any<CancellationToken>())
+            .Returns(hasActiveTrainerLink);
 
         if (recurringAssignmentByRequestId != null)
         {

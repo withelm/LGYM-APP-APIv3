@@ -106,6 +106,7 @@ public sealed partial class RecurringReportAssignmentService
                 {
                     var stagedResult = await StageRequestCreationAsync(
                         assignment,
+                        access,
                         DateTimeOffset.UtcNow,
                         cancellationToken);
                     if (stagedResult.IsFailure)
@@ -125,12 +126,31 @@ public sealed partial class RecurringReportAssignmentService
                         }
 
                         var mapped = MapAssignment(staged.Assignment);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        cancellationToken.ThrowIfCancellationRequested();
-                        phase = TransactionPhase.CommitStarted;
-                        await transaction.CommitAsync(cancellationToken);
-                        phase = TransactionPhase.Committed;
-                        result = Result<RecurringReportAssignmentResult, AppError>.Success(mapped);
+                        var revisionConflict = false;
+                        try
+                        {
+                            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        }
+                        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+                        {
+                            revisionConflict = true;
+                        }
+
+                        if (revisionConflict)
+                        {
+                            result = RequestNowFailure(new ReportingNotFoundError(Messages.DidntFind));
+                            var rollback = await RollbackRequestNowDecisionAsync(transaction, cancellationToken);
+                            phase = rollback.Phase;
+                            abort = rollback.Abort;
+                        }
+                        else
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            phase = TransactionPhase.CommitStarted;
+                            await transaction.CommitAsync(cancellationToken);
+                            phase = TransactionPhase.Committed;
+                            result = Result<RecurringReportAssignmentResult, AppError>.Success(mapped);
+                        }
                     }
                 }
             }
@@ -209,6 +229,7 @@ public sealed partial class RecurringReportAssignmentService
 
     private async Task<Result<StagedRequestCreation, AppError>> StageRequestCreationAsync(
         RecurringReportAssignmentPersistenceModel assignment,
+        ReportingRelationshipAccessFact relationshipAccess,
         DateTimeOffset createdAt,
         CancellationToken cancellationToken)
     {
@@ -225,6 +246,14 @@ public sealed partial class RecurringReportAssignmentService
         }
 
         var snapshotJson = ReportTemplateSnapshotFactory.Serialize(snapshotResult.Value);
+        if (relationshipAccess.ActiveEpisode is null
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                relationshipAccess.ActiveEpisode,
+                cancellationToken))
+        {
+            return Result<StagedRequestCreation, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
         var request = new NewReportRequestPersistenceModel(
             Id<ReportRequest>.New(),
             assignment.TrainerId,
@@ -236,7 +265,8 @@ public sealed partial class RecurringReportAssignmentService
             null,
             assignment.Note,
             createdAt,
-            snapshotJson);
+            snapshotJson,
+            relationshipAccess.ActiveEpisode.EpisodeId);
         await _requestSubmissionPersistence.AddRequestAsync(request, cancellationToken);
 
         var updated = assignment with

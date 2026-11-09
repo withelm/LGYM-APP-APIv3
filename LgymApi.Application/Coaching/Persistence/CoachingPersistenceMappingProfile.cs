@@ -64,6 +64,8 @@ public sealed class CoachingPersistenceMappingProfile : IMappingProfile
             source.StartedAt,
             source.EndedAt,
             source.AuthorizationRevision));
+        configuration.CreateMap<(bool HasActiveRelationship, IReadOnlyList<CoachingEpisodeFact> Episodes), CoachingMeasurementsRelationshipAccessFact>(
+            (source, _) => new CoachingMeasurementsRelationshipAccessFact(source.HasActiveRelationship, source.Episodes));
         configuration.CreateMap<CoachingDashboardSource, CoachingDashboardFact>((source, _) => new CoachingDashboardFact(
             source.TraineeId,
             source.ActiveLink,

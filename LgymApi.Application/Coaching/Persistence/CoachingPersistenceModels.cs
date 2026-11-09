@@ -62,6 +62,10 @@ public sealed record CoachingEpisodeFact(
     DateTimeOffset? EndedAt,
     long AuthorizationRevision);
 
+public sealed record CoachingMeasurementsRelationshipAccessFact(
+    bool HasActiveRelationship,
+    IReadOnlyList<CoachingEpisodeFact> Episodes);
+
 public sealed record CoachingDashboardFact(
     Id<UserEntity> TraineeId,
     CoachingActiveLinkFact? ActiveLink,

@@ -1,6 +1,7 @@
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
+using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
@@ -16,12 +17,12 @@ public interface IWorkoutProgressReadWriteService
     Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsHistoryAsync(Id<LgymApi.Identity.Contracts.AccountReference> currentUserId, Id<LgymApi.Identity.Contracts.AccountReference> routeUserId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default);
     Task<Result<MeasurementTrendReadModel, AppError>> GetMeasurementsTrendAsync(Id<LgymApi.Identity.Contracts.AccountReference> currentUserId, Id<LgymApi.Identity.Contracts.AccountReference> routeUserId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default);
     Task<Result<List<MeasurementTrendReadModel>, AppError>> GetMeasurementsTrendsAsync(Id<LgymApi.Identity.Contracts.AccountReference> currentUserId, Id<LgymApi.Identity.Contracts.AccountReference> routeUserId, CancellationToken cancellationToken = default);
-    Task<Result<MeasurementReadModel, AppError>> GetMeasurementDetailForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, Id<LgymApi.Domain.Entities.Measurement> measurementId, CancellationToken cancellationToken = default);
+    Task<Result<MeasurementReadModel, AppError>> GetMeasurementDetailForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, Id<LgymApi.Domain.Entities.Measurement> measurementId, CancellationToken cancellationToken = default, MeasurementReadScope? scope = null);
     Task<Result<Id<LgymApi.Identity.Contracts.AccountReference>, AppError>> GetMeasurementOwnerAsync(Id<LgymApi.Domain.Entities.Measurement> measurementId, CancellationToken cancellationToken = default);
-    Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsListForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default);
-    Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsHistoryForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default);
-    Task<Result<MeasurementTrendReadModel, AppError>> GetMeasurementsTrendForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default);
-    Task<Result<List<MeasurementTrendReadModel>, AppError>> GetMeasurementsTrendsForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, CancellationToken cancellationToken = default);
+    Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsListForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default, MeasurementReadScope? scope = null);
+    Task<Result<List<MeasurementReadModel>, AppError>> GetMeasurementsHistoryForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts? bodyPart, MeasurementUnits? unit, CancellationToken cancellationToken = default, MeasurementReadScope? scope = null);
+    Task<Result<MeasurementTrendReadModel, AppError>> GetMeasurementsTrendForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, BodyParts bodyPart, MeasurementUnits unit, CancellationToken cancellationToken = default, MeasurementReadScope? scope = null);
+    Task<Result<List<MeasurementTrendReadModel>, AppError>> GetMeasurementsTrendsForOwnerAsync(Id<LgymApi.Identity.Contracts.AccountReference> ownerId, CancellationToken cancellationToken = default, MeasurementReadScope? scope = null);
     Task<Result<Unit, AppError>> AddMainRecordAsync(MainRecordCreateWriteModel input, CancellationToken cancellationToken = default);
     Task<Result<List<MainRecordReadModel>, AppError>> GetMainRecordHistoryAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, CancellationToken cancellationToken = default);
     Task<Result<List<MainRecordBestReadModel>, AppError>> GetBestMainRecordsAsync(Id<LgymApi.Identity.Contracts.AccountReference> userId, CancellationToken cancellationToken = default);

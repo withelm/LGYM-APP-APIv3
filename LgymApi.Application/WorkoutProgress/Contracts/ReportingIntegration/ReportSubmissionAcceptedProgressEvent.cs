@@ -13,13 +13,15 @@ public sealed record ReportSubmissionAcceptedProgressEvent(
     Id<AccountReference> TraineeId,
     DateTimeOffset ObservedAt,
     DateTimeOffset AcceptedAt,
-    IReadOnlyList<ReportSubmissionAcceptedMeasurement> Measurements)
+    IReadOnlyList<ReportSubmissionAcceptedMeasurement> Measurements,
+    string? SourceReportRequestId = null,
+    string? SourceCoachingEpisodeId = null)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public ReportSubmissionAcceptedProgressValidationResult Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
+        if (SchemaVersion is not (1 or CurrentSchemaVersion))
         {
             return ReportSubmissionAcceptedProgressValidationResult.UnsupportedSchema(
                 $"Schema version '{SchemaVersion}' is not supported.");
@@ -34,7 +36,10 @@ public sealed record ReportSubmissionAcceptedProgressEvent(
             || AcceptedAt == default
             || Measurements == null
             || Measurements.Count == 0
-            || Measurements.Any(measurement => !IsValidMeasurement(measurement)))
+            || Measurements.Any(measurement => !IsValidMeasurement(measurement))
+            || (SchemaVersion == CurrentSchemaVersion
+                && (!IsCanonicalId(SourceReportRequestId)
+                    || (SourceCoachingEpisodeId is not null && !IsCanonicalId(SourceCoachingEpisodeId)))))
         {
             return ReportSubmissionAcceptedProgressValidationResult.Invalid(
                 "The accepted report submission event contains invalid identifiers, timestamps, or measurements.");

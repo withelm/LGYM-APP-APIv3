@@ -49,6 +49,18 @@ public sealed partial class ReportingService : IReportingService
 
         var createdAt = DateTimeOffset.UtcNow;
         var snapshotJson = ReportTemplateSnapshotFactory.Serialize(snapshotResult.Value);
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        if (!relationshipAccess.HasActiveRelationship
+            || relationshipAccess.ActiveEpisode is null
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                relationshipAccess.ActiveEpisode,
+                cancellationToken))
+        {
+            return Result<ReportRequestResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
 
         var request = new NewReportRequestPersistenceModel(
             Id<ReportRequest>.New(),
@@ -61,7 +73,8 @@ public sealed partial class ReportingService : IReportingService
             null,
             string.IsNullOrWhiteSpace(command.Note) ? null : command.Note.Trim(),
             createdAt,
-            snapshotJson);
+            snapshotJson,
+            relationshipAccess.ActiveEpisode.EpisodeId);
 
         await _requestSubmissionPersistence.AddRequestAsync(request, cancellationToken);
         await _commandOutboxWriter.StageAsync(new ReportRequestCreatedInAppNotificationCommand
@@ -71,7 +84,14 @@ public sealed partial class ReportingService : IReportingService
             TrainerId = currentTrainer.Id,
             TemplateName = templateResult.Value.Name
         }, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<ReportRequestResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
         await transaction.CommitAsync(cancellationToken);
 
         return Result<ReportRequestResult, AppError>.Success(
@@ -127,7 +147,8 @@ public sealed partial class ReportingService : IReportingService
                 request.TemplateId,
                 snapshotJson,
                 ReportTemplateSnapshotFactory.Provenance,
-                request.CreatedAt));
+                request.CreatedAt),
+            request.SourceCoachingEpisodeId);
 
     private static DateTimeOffset? NormalizeDueAt(DateTimeOffset? dueAt)
     {
@@ -143,5 +164,8 @@ public sealed partial class ReportingService : IReportingService
     }
 
     private static bool IsRequestExpired(DateTimeOffset? dueAt, DateTimeOffset now)
-        => dueAt.HasValue && NormalizeDueAt(dueAt).Value <= now;
+    {
+        var normalizedDueAt = NormalizeDueAt(dueAt);
+        return normalizedDueAt.HasValue && normalizedDueAt.Value <= now;
+    }
 }

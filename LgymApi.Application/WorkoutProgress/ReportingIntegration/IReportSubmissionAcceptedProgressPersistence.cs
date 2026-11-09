@@ -10,10 +10,17 @@ public sealed record AcceptedReportMeasurementPersistenceModel(
     BodyParts BodyPart,
     MeasurementUnits Unit,
     double Value,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    Id<ReportSubmission> SourceReportSubmissionId,
+    Id<LgymApi.Domain.Entities.ReportRequest>? SourceReportRequestId,
+    Id<LgymApi.Domain.Entities.CoachingEpisode>? SourceCoachingEpisodeId,
+    DateTimeOffset? SourceReportAcceptedAt);
 
 public sealed record AcceptedReportSubmissionReceiptPersistenceModel(
-    Id<ReportSubmission> ReportSubmissionId);
+    Id<ReportSubmission> ReportSubmissionId,
+    Id<LgymApi.Domain.Entities.ReportRequest>? SourceReportRequestId,
+    Id<LgymApi.Domain.Entities.CoachingEpisode>? SourceCoachingEpisodeId,
+    DateTimeOffset? SourceReportAcceptedAt);
 
 public interface IReportSubmissionAcceptedProgressPersistence
 {

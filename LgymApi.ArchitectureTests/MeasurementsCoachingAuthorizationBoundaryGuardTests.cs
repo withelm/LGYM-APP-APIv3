@@ -24,7 +24,7 @@ public sealed class MeasurementsCoachingAuthorizationBoundaryGuardTests
         Assert.Multiple(() =>
         {
             Assert.That(contract.Namespace, Is.EqualTo("LgymApi.Application.WorkoutProgress.Contracts.Measurements"));
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(Task<bool>)));
+            Assert.That(method.ReturnType, Is.EqualTo(typeof(Task<MeasurementsRelationshipAccessFact>)));
             Assert.That(parameters.Select(parameter => parameter.ParameterType), Is.EqualTo(new[]
             {
                 typeof(Id<AccountReference>),

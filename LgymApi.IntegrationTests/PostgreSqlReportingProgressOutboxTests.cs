@@ -163,7 +163,15 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             delivery.Measurements[0].BodyPart.Should().Be(BodyParts.BodyWeight);
             delivery.Measurements[0].Value.Should().Be(82.4);
             delivery.Measurements[0].Unit.Should().Be(MeasurementUnits.Kilograms.ToString());
+            delivery.Measurements[0].SourceReportSubmissionId.Should().Be(delivery.Receipts[0].ReportSubmissionId);
+            delivery.Measurements[0].SourceReportRequestId.Should().Be(scenario.RequestId);
+            delivery.Measurements[0].SourceCoachingEpisodeId.Should().Be(scenario.EpisodeId);
+            delivery.Measurements[0].SourceReportAcceptedAt.Should().NotBeNull();
+            delivery.Measurements[0].RecordedAt.Should().BeNull();
             delivery.Receipts.Should().ContainSingle();
+            delivery.Receipts[0].SourceReportRequestId.Should().Be(scenario.RequestId);
+            delivery.Receipts[0].SourceCoachingEpisodeId.Should().Be(scenario.EpisodeId);
+            delivery.Receipts[0].SourceReportAcceptedAt.Should().Be(delivery.Measurements[0].SourceReportAcceptedAt);
             stagedEnvelope.PayloadJson.Should().Contain(delivery.Receipts[0].ReportSubmissionId.ToString());
         });
     }
@@ -526,6 +534,23 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             TemplateId = template.Id,
             Status = ReportRequestStatus.Pending
         };
+        var episode = new CoachingEpisode
+        {
+            Id = Id<CoachingEpisode>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            StartedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation,
+            AuthorizationRevision = 0
+        };
+        request.SourceCoachingEpisodeId = episode.Id;
+        var link = new TrainerTraineeLink
+        {
+            Id = Id<TrainerTraineeLink>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            EpisodeId = episode.Id
+        };
 
         template.Fields.Add(new ReportTemplateField
         {
@@ -540,13 +565,16 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         });
 
         database.ReportTemplates.Add(template);
+        database.CoachingEpisodes.Add(episode);
+        database.TrainerTraineeLinks.Add(link);
         database.ReportRequests.Add(request);
         await database.SaveChangesAsync();
 
         return new PendingMeasurementScenario(
             trainee,
             new AuthenticatedAccountContext(trainee.Id.Rebind<AccountReference>(), null, [], [], false, false),
-            request.Id);
+            request.Id,
+            episode.Id);
     }
 
     private async Task<IReadOnlyList<Id<ReportRequest>>> CreateSiblingRequestsAsync(Id<ReportRequest> requestId, int count)
@@ -557,7 +585,8 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var requests = Enumerable.Range(0, count).Select(_ => new ReportRequest
         {
             Id = Id<ReportRequest>.New(), TrainerId = source.TrainerId, TraineeId = source.TraineeId,
-            TemplateId = source.TemplateId, Status = ReportRequestStatus.Pending
+            TemplateId = source.TemplateId, Status = ReportRequestStatus.Pending,
+            SourceCoachingEpisodeId = source.SourceCoachingEpisodeId
         }).ToArray();
         database.ReportRequests.AddRange(requests);
         await database.SaveChangesAsync();
@@ -727,7 +756,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var acceptedAt = new DateTimeOffset(2026, 7, 21, 12, 0, 0, TimeSpan.Zero);
 
         return new ReportSubmissionAcceptedProgressPayload(
-            ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion,
+            1,
             Id<ReportSubmissionAcceptedProgressPayload>.New().ToString(),
             submission.Id.ToString(),
             requestId.ToString(),
@@ -745,7 +774,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         DateTimeOffset observedAt,
         params ReportSubmissionAcceptedMeasurement[] measurements)
         => new(
-            ReportSubmissionAcceptedProgressEvent.CurrentSchemaVersion,
+            1,
             eventId,
             submissionId,
             Id<ReportSubmissionAcceptedProgressEvent>.New().ToString(),
@@ -764,7 +793,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         DateTimeOffset observedAt,
         IReadOnlyList<ReportSubmissionAcceptedProgressMeasurement> measurements)
         => new(
-            ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion,
+            1,
             eventId,
             submissionId,
             Id<ReportSubmissionAcceptedProgressPayload>.New().ToString(),
@@ -881,7 +910,8 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
     private sealed record PendingMeasurementScenario(
         User Trainee,
         AuthenticatedAccountContext Account,
-        Id<ReportRequest> RequestId);
+        Id<ReportRequest> RequestId,
+        Id<CoachingEpisode> EpisodeId);
 
     private sealed record PersistedSubmissionState(
         ReportRequestStatus RequestStatus,

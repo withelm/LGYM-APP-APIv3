@@ -13,13 +13,15 @@ public sealed record ReportSubmissionAcceptedProgressPayload(
     Id<AccountReference> TraineeId,
     DateTimeOffset ObservedAt,
     DateTimeOffset AcceptedAt,
-    IReadOnlyList<ReportSubmissionAcceptedProgressMeasurement> Measurements)
+    IReadOnlyList<ReportSubmissionAcceptedProgressMeasurement> Measurements,
+    string? SourceReportRequestId = null,
+    string? SourceCoachingEpisodeId = null)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public ReportSubmissionAcceptedProgressPayloadValidationResult Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
+        if (SchemaVersion is not (1 or CurrentSchemaVersion))
         {
             return ReportSubmissionAcceptedProgressPayloadValidationResult.UnsupportedSchema(
                 $"Schema version '{SchemaVersion}' is not supported.");
@@ -34,7 +36,10 @@ public sealed record ReportSubmissionAcceptedProgressPayload(
             || AcceptedAt == default
             || Measurements == null
             || Measurements.Count == 0
-            || Measurements.Any(measurement => !IsValidMeasurement(measurement)))
+            || Measurements.Any(measurement => !IsValidMeasurement(measurement))
+            || (SchemaVersion == CurrentSchemaVersion
+                && (!IsCanonicalId(SourceReportRequestId)
+                    || (SourceCoachingEpisodeId is not null && !IsCanonicalId(SourceCoachingEpisodeId)))))
         {
             return ReportSubmissionAcceptedProgressPayloadValidationResult.Invalid(
                 "The accepted report submission payload contains invalid identifiers, timestamps, or measurements.");
