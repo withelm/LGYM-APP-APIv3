@@ -82,7 +82,7 @@ public sealed class CoachingPersistenceRepositoryTests
         await noteRepository.AddNoteAsync(new CoachingTraineeNoteWriteModel(
             noteId, trainerId, traineeId, "Title", "Content", true, true, trainerId, now));
         await noteRepository.AddHistoryEntryAsync(new CoachingTraineeNoteHistoryWriteModel(
-            historyId, noteId, trainerId, now, null, "Content", "Created"));
+            historyId, noteId, trainerId, now, null, "Content", false, true, "Created"));
 
         database.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added).Should().HaveCount(5);
         await database.SaveChangesAsync();
@@ -90,12 +90,13 @@ public sealed class CoachingPersistenceRepositoryTests
 
         (await invitationRepository.FindByIdAsync(invitationId))!.Code.Should().Be("code");
         (await linkRepository.FindByTrainerAndTraineeAsync(trainerId, traineeId))!.Id.Should().Be(linkId);
-        (await noteRepository.FindNoteByIdAsync(noteId))!.Content.Should().Be("Content");
+        var persistedNote = (await noteRepository.FindNoteByIdAsync(noteId))!;
+        persistedNote.Content.Should().Be("Content");
         (await noteRepository.GetNoteHistoryAsync(noteId)).Should().ContainSingle(entry => entry.Id == historyId);
         database.ChangeTracker.Entries().Should().BeEmpty();
 
         await noteRepository.UpdateNoteAsync(new CoachingTraineeNoteWriteModel(
-            noteId, trainerId, traineeId, null, "Updated", false, false, trainerId, now.AddMinutes(1), true));
+            noteId, trainerId, traineeId, null, "Updated", false, false, trainerId, now.AddMinutes(1), true, persistedNote.UpdatedAt));
         database.ChangeTracker.Entries<TraineeNote>().Should().ContainSingle(entry => entry.State == EntityState.Modified);
         await database.SaveChangesAsync();
         database.ChangeTracker.Clear();

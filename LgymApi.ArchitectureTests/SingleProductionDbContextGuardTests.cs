@@ -53,7 +53,11 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
         [MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.cs"] = "1eff428622c0b231dc1ecad811a9966a02e2ddd061e98fab2f19da713ca64114",
         [MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.Designer.cs"] = "59c4622985e297ca90baf193882018a327a16c16711c9f590ccadb4e6ae54359",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "030093915e50ae771df6689232709fb39161023512ae512adae3ea7cfd529b42"
+        [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.cs"] = "b83b471ee554febd7001f0a32417eba1866b5bdd731bc03ce2b4e19646d16a68",
+        [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.Designer.cs"] = "e3907d80e4c04c1735f8ce675fca9986fa9ae5e6dd7aabd81f8e2b5c2c81143c",
+        [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.cs"] = "cc9810729bf6fd033d497af90876eb60cecde575229f76095819e6cba1eaa936",
+        [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.Designer.cs"] = "23b5c30f392eb9796ecb95ca84c5d2b1dd708dfaf7f7dbf0255c5b0509b9da84",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "da0856a8bc7155e42f2b22e4d61214eab3a6f3e4932005595faa07e905c1cabd"
     };
 
     [Test]

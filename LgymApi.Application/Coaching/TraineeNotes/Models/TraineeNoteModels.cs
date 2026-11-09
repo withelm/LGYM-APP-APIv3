@@ -22,7 +22,8 @@ public sealed record TraineeNoteReadModel(
     Id<UserEntity> LastUpdatedByUserId,
     DateTimeOffset LastUpdatedAt,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string OriginalAuthorDisplayName);
 
 public sealed record TraineeNoteHistoryReadModel(
     Id<TraineeNoteHistoryEntity> Id,

@@ -182,5 +182,6 @@ public sealed class TrainerTraineeNotesControllerTests
             Id<User>.New(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            "Original trainer");
 }

@@ -2119,6 +2119,7 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("VisibleToTrainee")
@@ -2157,10 +2158,16 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("NewVisibleToTrainee")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("NewContent")
                         .IsRequired()
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
+
+                    b.Property<bool>("PreviousVisibleToTrainee")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PreviousContent")
                         .HasMaxLength(8000)

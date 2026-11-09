@@ -26,6 +26,12 @@ public sealed class TraineeNoteDto : IResultDto
     [JsonPropertyName("trainerId")]
     public string TrainerId { get; set; } = string.Empty;
 
+    [JsonPropertyName("originalAuthorId")]
+    public string OriginalAuthorId { get; set; } = string.Empty;
+
+    [JsonPropertyName("originalAuthorDisplayName")]
+    public string OriginalAuthorDisplayName { get; set; } = string.Empty;
+
     [JsonPropertyName("traineeId")]
     public string TraineeId { get; set; } = string.Empty;
 

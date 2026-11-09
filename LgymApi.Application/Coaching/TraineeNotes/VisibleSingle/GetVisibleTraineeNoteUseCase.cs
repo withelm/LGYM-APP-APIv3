@@ -2,6 +2,7 @@ using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Coaching.TraineeNotes.Models;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Resources;
 
@@ -10,13 +11,16 @@ namespace LgymApi.Application.Coaching.TraineeNotes.VisibleSingle;
 internal sealed class GetVisibleTraineeNoteUseCase : IGetVisibleTraineeNoteUseCase
 {
     private readonly ICoachingTraineeNotePersistence _notes;
+    private readonly IAccountReadService _accounts;
     private readonly IMapper _mapper;
 
     public GetVisibleTraineeNoteUseCase(
         ICoachingTraineeNotePersistence notes,
+        IAccountReadService accounts,
         IMapper mapper)
     {
         _notes = notes;
+        _accounts = accounts;
         _mapper = mapper;
     }
 
@@ -37,8 +41,9 @@ internal sealed class GetVisibleTraineeNoteUseCase : IGetVisibleTraineeNoteUseCa
                 new NotFoundError(Messages.DidntFind));
         }
 
-        var readModel = _mapper.Map<CoachingTraineeNoteFact, TraineeNoteReadModel>(
-            note,
+        var author = (await _accounts.GetByIdsAsync([note.TrainerId], cancellationToken)).FirstOrDefault();
+        var readModel = _mapper.Map<TraineeNoteReadSource, TraineeNoteReadModel>(
+            new TraineeNoteReadSource(note, author),
             _mapper.CreateContext());
         return Result<TraineeNoteReadModel, AppError>.Success(readModel);
     }

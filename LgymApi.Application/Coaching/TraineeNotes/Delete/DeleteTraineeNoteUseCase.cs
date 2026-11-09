@@ -40,15 +40,10 @@ internal sealed class DeleteTraineeNoteUseCase : IDeleteTraineeNoteUseCase
             command.TrainerId,
             command.TraineeId,
             cancellationToken);
-        var accessError = TraineeNoteRules.GetAccessError(access, command.TraineeId);
+        var accessError = TraineeNoteRules.GetTrainerError(access, command.TraineeId);
         if (accessError is not null)
         {
             return Result<Unit, AppError>.Failure(accessError);
-        }
-
-        if (await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
-        {
-            return Result<Unit, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
         if (command.NoteId.IsEmpty)
@@ -60,6 +55,12 @@ internal sealed class DeleteTraineeNoteUseCase : IDeleteTraineeNoteUseCase
         if (existing is null || !TraineeNoteRules.IsOwnedBy(existing, command.TrainerId, command.TraineeId))
         {
             return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
+        }
+
+        if (access.HasActiveRelationship
+            && await _episodeAuthorization.AuthorizeAndStageAsync(command.TrainerId, command.TrainerId, command.TraineeId, CoachingEpisodeAuthorizationAction.ProtectedWrite, cancellationToken) is null)
+        {
+            return Result<Unit, AppError>.Failure(new LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError(Messages.DidntFind));
         }
 
         var deleted = _mapper.Map<DeleteTraineeNoteSource, CoachingTraineeNoteWriteModel>(
@@ -75,6 +76,8 @@ internal sealed class DeleteTraineeNoteUseCase : IDeleteTraineeNoteUseCase
                 DateTimeOffset.UtcNow,
                 existing.Content,
                 existing.Content,
+                existing.VisibleToTrainee,
+                false,
                 "Deleted"),
             _mapper.CreateContext());
         await _notes.AddHistoryEntryAsync(history, cancellationToken);

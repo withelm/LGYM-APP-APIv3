@@ -36,6 +36,7 @@ public sealed class CoachingTraineeNotePersistenceRepository : ICoachingTraineeN
         entry.Property(candidate => candidate.LastUpdatedByUserId).IsModified = true;
         entry.Property(candidate => candidate.LastUpdatedAt).IsModified = true;
         entry.Property(candidate => candidate.IsDeleted).IsModified = true;
+        entry.Property(candidate => candidate.UpdatedAt).OriginalValue = note.ExpectedUpdatedAt!.Value;
         return Task.CompletedTask;
     }
 
@@ -89,5 +90,20 @@ public sealed class CoachingTraineeNotePersistenceRepository : ICoachingTraineeN
             .ToListAsync(cancellationToken);
 
         return _mapper.MapList<TraineeNoteHistory, CoachingTraineeNoteHistoryFact>(historyEntries, _mapper.CreateContext());
+    }
+
+    public async Task<CoachingVisibleNoteHistoryResult?> GetVisibleHistoryAsync(Id<User> traineeId, Id<TraineeNote> noteId, CancellationToken cancellationToken = default)
+    {
+        var rows = await _dbContext.TraineeNotes.AsNoTracking()
+            .Where(note => note.Id == noteId && note.TraineeId == traineeId && note.VisibleToTrainee)
+            .SelectMany(note => _dbContext.TraineeNoteHistories.Where(history => history.TraineeNoteId == note.Id && history.NewVisibleToTrainee).DefaultIfEmpty())
+            .OrderByDescending(history => history == null ? DateTimeOffset.MinValue : history.ChangedAt)
+            .ToListAsync(cancellationToken);
+        if (rows.Count == 0)
+        {
+            return null;
+        }
+        var history = rows.Where(history => history is not null).Cast<TraineeNoteHistory>().ToList();
+        return new CoachingVisibleNoteHistoryResult(_mapper.MapList<TraineeNoteHistory, CoachingTraineeNoteHistoryFact>(history, _mapper.CreateContext()));
     }
 }

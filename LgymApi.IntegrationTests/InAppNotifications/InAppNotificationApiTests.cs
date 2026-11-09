@@ -527,6 +527,63 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         trainerPage!.Items.Select(item => item.Message).Should().BeEquivalentTo("accepted", "rejected", "submission", "ended");
     }
 
+    [Test]
+    public async Task GetNotifications_QueuedTraineeNoteNotificationIsRevokedWhenItsSourceBecomesHiddenOrDeleted()
+    {
+        var trainee = await SeedUserAsync(name: "queued-note-trainee", email: "queued-note-trainee@example.test");
+        var trainer = await SeedUserAsync(name: "queued-note-trainer", email: "queued-note-trainer@example.test");
+        var now = DateTimeOffset.UtcNow;
+        var note = new TraineeNote
+        {
+            Id = Id<TraineeNote>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id,
+            Content = "Sensitive queued title", VisibleToTrainee = true,
+            LastUpdatedByUserId = trainer.Id, LastUpdatedAt = now
+        };
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TraineeNotes.Add(note);
+            database.InAppNotifications.Add(CreateSourceNotification(
+                trainee.Id, trainer.Id, NotificationTypes.TraineeNoteUpdated,
+                $"trainee-note:{note.Id}:{now:O}", "Sensitive queued title", now));
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        using (var visibleResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications"))
+        {
+            visibleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await visibleResponse.Content.ReadAsStringAsync()).Should().Contain("Sensitive queued title");
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var tracked = await database.TraineeNotes.SingleAsync(candidate => candidate.Id == note.Id);
+            tracked.VisibleToTrainee = false;
+            await database.SaveChangesAsync();
+        }
+
+        using (var hiddenResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications"))
+        {
+            hiddenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await hiddenResponse.Content.ReadAsStringAsync()).Should().NotContain("Sensitive queued title");
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var tracked = await database.TraineeNotes.SingleAsync(candidate => candidate.Id == note.Id);
+            tracked.IsDeleted = true;
+            await database.SaveChangesAsync();
+        }
+
+        using var deletedResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications");
+        deletedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await deletedResponse.Content.ReadAsStringAsync()).Should().NotContain("Sensitive queued title");
+    }
+
     private async Task<NotificationEntity> SeedNotificationAsync(
         Id<User> recipientId,
         string message,
