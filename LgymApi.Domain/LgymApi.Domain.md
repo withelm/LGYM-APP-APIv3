@@ -21,3 +21,4 @@
 - `Measurements/MeasurementUnitResolver.cs` is a Domain helper used by Reporting and Workout & Progress without introducing an Application dependency.
 
 - Workout & Progress owns ExerciseMediaUpload, a scoped durable staging/operation receipt with source/published digests and optimistic revision, and the opaque ExerciseMediaOperationReference marker. Exercise.Image remains the permanent URL field; no general ExerciseMedia aggregate is introduced.
+- `IExerciseMediaState` describes only that ledger's common scalar state. Persisted and application actors retain their distinct typed IDs; the registered Infrastructure profile alone copies the common state and converts actor identity.

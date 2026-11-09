@@ -1,10 +1,11 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ExerciseMedia;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Application.WorkoutProgress.ExerciseMedia;
 
-public sealed class ExerciseMediaSession
+public sealed class ExerciseMediaSession : IExerciseMediaState
 {
     public Id<ExerciseMediaUpload> Id { get; set; }
     public Id<AccountReference> ActorId { get; set; }

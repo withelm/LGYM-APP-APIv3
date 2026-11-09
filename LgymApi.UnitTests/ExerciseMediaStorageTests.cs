@@ -32,11 +32,13 @@ public sealed class ExerciseMediaStorageTests
         await client.Received(1).GetObjectAsync("exercise-private", "verified/fixture/digest", Arg.Any<CancellationToken>());
     }
 
-    [Test]
-    public async Task ImmutableWrite_RejectsSuccessfulPutWithCorruptReadback()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ImmutableWrite_RejectsCorruptReadbackForNewAndDuplicateObjects(bool duplicate)
     {
         var client = Substitute.For<IAmazonS3>();
-        client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(new PutObjectResponse()));
+        client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Returns(_ => duplicate ? Task.FromException<PutObjectResponse>(new AmazonS3Exception("synthetic existing key") { StatusCode = HttpStatusCode.PreconditionFailed }) : Task.FromResult(new PutObjectResponse()));
         client.GetObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(Response([4, 3, 2, 1])));
         using var storage = Create(client);
         await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.WriteVerifiedAsync("verified/fixture/digest", [1, 2, 3, 4], "image/gif", default));
@@ -65,6 +67,63 @@ public sealed class ExerciseMediaStorageTests
         client.GetObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(response));
         using var storage = Create(client);
         await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.ReadPrivateAsync("staging/fixture/source", default));
+    }
+
+    [TestCase(-1)]
+    [TestCase(0)]
+    [TestCase(ExerciseMediaLimits.MaxBytes + 1)]
+    public async Task PrivateRead_RejectsInvalidDeclaredSizeBeforeReading(int declaredSize)
+    {
+        var client = Substitute.For<IAmazonS3>();
+        var response = Response([1]);
+        response.ContentLength = declaredSize;
+        client.GetObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(response));
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.ReadPrivateAsync("staging/fixture/source", default));
+    }
+
+    [Test]
+    public async Task PrivateRead_RejectsTruncatedObject()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        var response = Response([1]);
+        response.ContentLength = 2;
+        client.GetObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(response));
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.ReadPrivateAsync("staging/fixture/source", default));
+    }
+
+    [Test]
+    public async Task ImmutableWrite_RejectsObjectWithDifferentLength()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(new PutObjectResponse()));
+        client.GetObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(Response([1])));
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.WriteVerifiedAsync("verified/fixture/digest", [1, 2], "image/gif", default));
+    }
+
+    [TestCase("staging/private/source")]
+    [TestCase("exercises/00000000-0000-0000-0000-000000000001/animation.gif")]
+    [TestCase("exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/source.gif")]
+    [TestCase("exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/image.svg")]
+    public async Task Publish_RejectsKeysOutsideSanitizedPublicLayoutBeforeStorage(string key)
+    {
+        var client = Substitute.For<IAmazonS3>();
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await storage.PublishAsync(key, [1], "image/gif", default));
+        await client.DidNotReceive().PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void SignedPut_RespectsCancellationBeforeCreatingBearerUrl()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        using var storage = Create(client);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Action sign = () => storage.SignUploadAsync("staging/fixture/source", "image/gif", DateTimeOffset.UtcNow.AddMinutes(5), cancellation.Token);
+        sign.Should().Throw<OperationCanceledException>();
     }
 
     private static GetObjectResponse Response(byte[] bytes) => new() { ContentLength = bytes.Length, ResponseStream = new MemoryStream(bytes, false) };

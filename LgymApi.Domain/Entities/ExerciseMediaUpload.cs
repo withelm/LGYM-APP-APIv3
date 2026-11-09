@@ -1,9 +1,10 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.ExerciseMedia;
 
 namespace LgymApi.Domain.Entities;
 
 /// <summary>Scoped upload state and durable media-operation receipt, not an exercise-media aggregate.</summary>
-public sealed class ExerciseMediaUpload : EntityBase<ExerciseMediaUpload>
+public sealed class ExerciseMediaUpload : EntityBase<ExerciseMediaUpload>, IExerciseMediaState
 {
     public Id<User> ActorId { get; set; }
     public Id<Exercise>? TargetExerciseId { get; set; }

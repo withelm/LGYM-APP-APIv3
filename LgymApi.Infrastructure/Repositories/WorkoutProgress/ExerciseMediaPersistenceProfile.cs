@@ -1,6 +1,7 @@
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ExerciseMedia;
 
 namespace LgymApi.Infrastructure.Repositories.WorkoutProgress;
 
@@ -8,49 +9,37 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
-        configuration.CreateMap<ExerciseMediaUpload, ExerciseMediaSession>((source, _) => new()
+        configuration.CreateMap<ExerciseMediaUpload, ExerciseMediaSession>((source, _) => CopyState(source, new ExerciseMediaSession
         {
             ActorId = WorkoutPersistenceAccountIds.ToContract(source.ActorId),
             Id = source.Id,
-            TargetExerciseId = source.TargetExerciseId,
-            ContentType = source.ContentType,
-            SizeBytes = source.SizeBytes,
-            SourceSha256 = source.SourceSha256,
-            PublishedSha256 = source.PublishedSha256,
-            Extension = source.Extension,
-            Width = source.Width,
-            Height = source.Height,
-            Frames = source.Frames,
-            ExpiresAt = source.ExpiresAt,
-            Status = source.Status,
-            Revision = source.Revision,
-            OperationId = source.OperationId,
-            OperationHash = source.OperationHash,
-            PreviousImage = source.PreviousImage,
-            ResultImage = source.ResultImage,
-            PrivateObjectsCleaned = source.PrivateObjectsCleaned,
-        });
-        configuration.CreateMap<ExerciseMediaSession, ExerciseMediaUpload>((source, _) => new()
+        }));
+        configuration.CreateMap<ExerciseMediaSession, ExerciseMediaUpload>((source, _) => CopyState(source, new ExerciseMediaUpload
         {
             ActorId = WorkoutPersistenceAccountIds.ToPersisted(source.ActorId),
             Id = source.Id,
-            TargetExerciseId = source.TargetExerciseId,
-            ContentType = source.ContentType,
-            SizeBytes = source.SizeBytes,
-            SourceSha256 = source.SourceSha256,
-            PublishedSha256 = source.PublishedSha256,
-            Extension = source.Extension,
-            Width = source.Width,
-            Height = source.Height,
-            Frames = source.Frames,
-            ExpiresAt = source.ExpiresAt,
-            Status = source.Status,
-            Revision = source.Revision,
-            OperationId = source.OperationId,
-            OperationHash = source.OperationHash,
-            PreviousImage = source.PreviousImage,
-            ResultImage = source.ResultImage,
-            PrivateObjectsCleaned = source.PrivateObjectsCleaned,
-        });
+        }));
+    }
+
+    private static TTarget CopyState<TTarget>(IExerciseMediaState source, TTarget target) where TTarget : IExerciseMediaState
+    {
+        target.TargetExerciseId = source.TargetExerciseId;
+        target.ContentType = source.ContentType;
+        target.SizeBytes = source.SizeBytes;
+        target.SourceSha256 = source.SourceSha256;
+        target.PublishedSha256 = source.PublishedSha256;
+        target.Extension = source.Extension;
+        target.Width = source.Width;
+        target.Height = source.Height;
+        target.Frames = source.Frames;
+        target.ExpiresAt = source.ExpiresAt;
+        target.Status = source.Status;
+        target.Revision = source.Revision;
+        target.OperationId = source.OperationId;
+        target.OperationHash = source.OperationHash;
+        target.PreviousImage = source.PreviousImage;
+        target.ResultImage = source.ResultImage;
+        target.PrivateObjectsCleaned = source.PrivateObjectsCleaned;
+        return target;
     }
 }

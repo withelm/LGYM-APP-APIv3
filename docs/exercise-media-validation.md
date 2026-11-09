@@ -53,3 +53,19 @@ These checks are **technical only**. Historical archive UUIDs are not verified c
 The implementation is prepared for human review. Staging acceptance and production release are separate, incomplete milestones.
 
 Canonical byte normalization: the initial Windows working export used a trailing CRLF (SHA-256 `5fa542318229a7660ee607c57d82ea70338e9c5e95cf5c1a28d47be71e13c475`). The committed LF document is pinned above. The API exporter and Git attributes now enforce LF; both Orval generation commands were rerun and produced byte-identical generated clients. Earlier behavior evidence remains valid and retains its original provenance.
+
+## CI quality-gate follow-up
+
+[Ubuntu run 42652940432](https://github.com/withelm/LGYM-APP-APIv3/actions/runs/42652940432), head `b2af897fd8f159da4846bd27ca65e068f35ae602`, passed the Release build, cleanup probe, all nine full suites (**5,153 passing tests**) and the final evidence/aggregate gates. Its same-SHA evidence validates PR merge SHA `1de81211d9d493bf349f41142f1345d9e6574c63`. Sonar then reported new-code coverage 78.7% (required 80%), duplication 3.6% (maximum 3%) and Security B (required A), with the security finding identifying a missing regex timeout. These are quality-gate findings in the feature, not test failures or an external service outage.
+
+The scoped correction bounds the public-key regex with nonbacktracking matching and a 100 ms timeout, adds fail-closed origin/credentials, cancellation, malformed-key, truncated/oversized-object and corrupt immutable-replay tests, and consolidates ledger copying in the existing registered profile through the feature-local typed state interface. Both mapping directions still allocate fresh objects and explicitly convert actor IDs; entity audit state, schema and HTTP contracts are unchanged. No Sonar thresholds, exclusions or strict architecture guards changed.
+
+| Correction check | Result and evidence |
+| --- | --- |
+| Focused exercise-media UnitTests with OpenCover | **47/47**, zero skipped; includes both complete ledger/actor mapping directions and source-object isolation. `TestResults/ExerciseMediaSonar/exercise-media-sonar-feature.trx` |
+| Storage/options focused subset | **36/36**; options cover all 46 measured branch points in the focused OpenCover result. `TestResults/ExerciseMediaSonar/exercise-media-sonar-storage.trx` |
+| Strict public-surface/compiled-export/Workout ownership slice | **57/57**, zero skipped; no inventory changes or exemptions. `TestResults/ExerciseMediaStateSurface/exercise-media-state-surface.trx` |
+| EF pending-model check after state-interface extraction | Passed: no changes since the canonical migration |
+| Canonical OpenAPI and whitespace | SHA-256 remains `36c5c52a121f0d2eca0e94006018336f3cb72bde33137869c9c0c200d479dd88`; `git diff --check` clean |
+
+The full same-head CI/Sonar rerun for this correction is recorded in the cross-repository checkpoint after completion; the earlier run above retains its original outcome.

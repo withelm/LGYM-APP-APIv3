@@ -21,6 +21,64 @@ public sealed class ExerciseMediaStorageOptionsTests
         options = Options(); options.Endpoint += "/?secret=unexpected"; invalid = options.Validate; invalid.Should().Throw<InvalidOperationException>();
     }
 
+    [TestCase("not an absolute URI")]
+    [TestCase("http://technical-account.r2.cloudflarestorage.com")]
+    [TestCase("https://technical-account.r2.cloudflarestorage.com/private")]
+    [TestCase("https://user@technical-account.r2.cloudflarestorage.com")]
+    [TestCase("https://technical-account.r2.cloudflarestorage.com/#fragment")]
+    [TestCase("https://technical-account.r2.cloudflarestorage.com:8443")]
+    public void R2Endpoint_WithUnsupportedAuthorityOrPrivatePath_IsRejected(string endpoint)
+    {
+        var options = Options();
+        options.Endpoint = endpoint;
+        Action validate = options.Validate;
+        validate.Should().Throw<InvalidOperationException>();
+    }
+
+    [TestCase("not an absolute URI")]
+    [TestCase("https://exercise.example.invalid/path")]
+    [TestCase("https://exercise.example.invalid/?signature=private")]
+    [TestCase("https://exercise.example.invalid/#fragment")]
+    [TestCase("https://user@exercise.example.invalid")]
+    [TestCase("https://exercise.example.invalid:8443")]
+    [TestCase("https://technical-account.r2.cloudflarestorage.com")]
+    public void PublicOrigin_WithPrivateAuthorityOrNonOriginComponents_IsRejected(string origin)
+    {
+        var options = Options();
+        options.PublicBaseUrl = origin;
+        Action validate = options.Validate;
+        validate.Should().Throw<InvalidOperationException>();
+    }
+
+    [TestCase("PrivateBucket")]
+    [TestCase("PublishedBucket")]
+    [TestCase("AccessKeyId")]
+    [TestCase("SecretAccessKey")]
+    public void MissingDedicatedStorageSetting_FailsClosed(string setting)
+    {
+        var options = Options();
+        switch (setting)
+        {
+            case "PrivateBucket": options.PrivateBucket = " "; break;
+            case "PublishedBucket": options.PublishedBucket = " "; break;
+            case "AccessKeyId": options.AccessKeyId = " "; break;
+            case "SecretAccessKey": options.SecretAccessKey = " "; break;
+        }
+        Action validate = options.Validate;
+        validate.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void DisabledStorage_DoesNotRequireCredentialsOrPermitSigning()
+    {
+        var options = new ExerciseMediaStorageOptions();
+        options.Validate();
+        using var storage = new ExerciseMediaStorage(options);
+        storage.IsConfigured.Should().BeFalse();
+        Action sign = () => storage.SignUploadAsync("staging/fixture/source", "image/gif", DateTimeOffset.UtcNow, default);
+        sign.Should().Throw<InvalidOperationException>();
+    }
+
     [Test]
     public async Task SignedPut_UsesPrivateBucketContentTypeAndShortExpirationWithoutSecret()
     {

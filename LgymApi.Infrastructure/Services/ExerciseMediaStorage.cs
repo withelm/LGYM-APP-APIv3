@@ -61,7 +61,7 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
 
     public async Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
     {
-        if (!Regex.IsMatch(key, @"\Aexercises/[0-9a-f-]{36}/[0-9a-f]{64}/(?:animation\.gif|image\.(?:png|jpg|webp))\z", RegexOptions.CultureInvariant)) throw new ExerciseMediaRejectedException();
+        if (!Regex.IsMatch(key, @"\Aexercises/[0-9a-f-]{36}/[0-9a-f]{64}/(?:animation\.gif|image\.(?:png|jpg|webp))\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100))) throw new ExerciseMediaRejectedException();
         await PutImmutableAsync(_options.PublishedBucket, key, bytes, contentType, true, cancellationToken);
         return _options.PublicBaseUrl.TrimEnd('/') + "/" + key;
     }
