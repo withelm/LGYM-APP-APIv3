@@ -126,6 +126,21 @@ public sealed class ExerciseMediaStorageTests
         sign.Should().Throw<OperationCanceledException>();
     }
 
+    [Test]
+    public async Task PrivateReadAndCleanup_UseOnlyPrivateBucketAndPreserveCallerCancellation()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        var bytes = new byte[] { 3, 2, 1 };
+        using var cancellation = new CancellationTokenSource();
+        client.GetObjectAsync("exercise-private", "staging/fixture/source", cancellation.Token).Returns(_ => Task.FromResult(Response(bytes)));
+        using var storage = Create(client);
+        var read = await storage.ReadPrivateAsync("staging/fixture/source", cancellation.Token);
+        read.Should().Equal(bytes);
+        await storage.DeletePrivateAsync("staging/fixture/source", cancellation.Token);
+        await client.Received(1).DeleteObjectAsync("exercise-private", "staging/fixture/source", cancellation.Token);
+        await client.DidNotReceive().DeleteObjectAsync("exercise-published", Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
     private static GetObjectResponse Response(byte[] bytes) => new() { ContentLength = bytes.Length, ResponseStream = new MemoryStream(bytes, false) };
 
     private static ExerciseMediaStorage Create(IAmazonS3 client)

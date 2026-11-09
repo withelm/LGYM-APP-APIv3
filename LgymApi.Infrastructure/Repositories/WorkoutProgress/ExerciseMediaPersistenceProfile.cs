@@ -21,7 +21,7 @@ internal sealed class ExerciseMediaPersistenceProfile : IMappingProfile
         }));
     }
 
-    private static TTarget CopyState<TTarget>(IExerciseMediaState source, TTarget target) where TTarget : IExerciseMediaState
+    private static TTarget CopyState<TTarget>(IExerciseMediaState source, TTarget target) where TTarget : class, IExerciseMediaState
     {
         target.TargetExerciseId = source.TargetExerciseId;
         target.ContentType = source.ContentType;

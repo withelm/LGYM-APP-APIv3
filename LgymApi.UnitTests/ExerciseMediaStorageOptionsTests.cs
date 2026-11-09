@@ -1,6 +1,10 @@
 using FluentAssertions;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
+using LgymApi.Infrastructure;
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
+using LgymApi.TestUtils;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.UnitTests;
 
@@ -77,6 +81,45 @@ public sealed class ExerciseMediaStorageOptionsTests
         storage.IsConfigured.Should().BeFalse();
         Action sign = () => storage.SignUploadAsync("staging/fixture/source", "image/gif", DateTimeOffset.UtcNow, default);
         sign.Should().Throw<InvalidOperationException>();
+    }
+
+    [TestCase("private")]
+    [TestCase("published")]
+    [TestCase("credentials")]
+    public void InfrastructureRegistration_RejectsSharedPrivateReportAuthority(string sharedAuthority)
+    {
+        var values = DedicatedConfiguration();
+        if (sharedAuthority == "private") values["PhotoStorage:BucketName"] = values["ExerciseMediaStorage:PrivateBucket"];
+        if (sharedAuthority == "published") values["PhotoStorage:BucketName"] = values["ExerciseMediaStorage:PublishedBucket"];
+        if (sharedAuthority == "credentials") values["PhotoStorage:AccessKeyId"] = values["ExerciseMediaStorage:AccessKeyId"];
+        var services = new ServiceCollection();
+        Action register = () => services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
+        register.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void InfrastructureRegistration_AcceptsDedicatedExerciseAuthority()
+    {
+        var services = new ServiceCollection();
+        services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(DedicatedConfiguration()), enableSensitiveLogging: false, isTesting: true);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured.Should().BeTrue();
+    }
+
+    private static Dictionary<string, string?> DedicatedConfiguration()
+    {
+        var values = TestConfigurationBuilder.ToDictionary(CompositionRootTestHost.CreateConfiguration());
+        values["ExerciseMediaStorage:Enabled"] = "true";
+        values["ExerciseMediaStorage:Endpoint"] = "https://technical-account.r2.cloudflarestorage.com";
+        values["ExerciseMediaStorage:AccessKeyId"] = "synthetic-exercise-access";
+        values["ExerciseMediaStorage:SecretAccessKey"] = "synthetic-exercise-secret";
+        values["ExerciseMediaStorage:PrivateBucket"] = "exercise-private-staging";
+        values["ExerciseMediaStorage:PublishedBucket"] = "exercise-published-staging";
+        values["ExerciseMediaStorage:PublicBaseUrl"] = "https://exercise-staging.example.invalid";
+        values["PhotoStorage:BucketName"] = "report-private-staging";
+        values["PhotoStorage:AccessKeyId"] = "synthetic-report-access";
+        return values;
     }
 
     [Test]
