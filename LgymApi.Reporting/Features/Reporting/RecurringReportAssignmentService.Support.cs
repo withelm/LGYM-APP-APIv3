@@ -274,6 +274,7 @@ public sealed partial class RecurringReportAssignmentService
         SubmissionMissing,
         FeedbackNotAdded,
         FeedbackNotRead,
+        RelationshipUnavailable,
         TemplatePhotoTypeUnavailable
     }
 

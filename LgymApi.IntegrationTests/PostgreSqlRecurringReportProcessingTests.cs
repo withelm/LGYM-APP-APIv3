@@ -21,6 +21,40 @@ namespace LgymApi.IntegrationTests;
 public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegrationTestBase
 {
     [Test]
+    public async Task ProcessDueAssignmentsAsync_DeletedTemplate_WithCurrentSource_ClosesScheduleLifecycle()
+    {
+        var scenario = await SeedDeletedTemplateLifecycleScenarioAsync(relink: false);
+        await using var processingScope = Factory.Services.CreateAsyncScope();
+        var service = processingScope.ServiceProvider.GetRequiredService<IRecurringReportAssignmentService>();
+
+        await service.ProcessDueAssignmentsAsync();
+
+        await AssertDeletedTemplateLifecycleAsync(
+            scenario,
+            expectedActive: false,
+            expectedRevision: 5,
+            RecurringReportScheduleChangeStatus.Superseded,
+            RecurringReportScheduleChangeStatus.Invalidated);
+    }
+
+    [Test]
+    public async Task ProcessDueAssignmentsAsync_DeletedTemplate_AfterSameTrainerRelink_DeniesWithoutMutation()
+    {
+        var scenario = await SeedDeletedTemplateLifecycleScenarioAsync(relink: true);
+        await using var processingScope = Factory.Services.CreateAsyncScope();
+        var service = processingScope.ServiceProvider.GetRequiredService<IRecurringReportAssignmentService>();
+
+        await service.ProcessDueAssignmentsAsync();
+
+        await AssertDeletedTemplateLifecycleAsync(
+            scenario,
+            expectedActive: true,
+            expectedRevision: 4,
+            RecurringReportScheduleChangeStatus.Active,
+            RecurringReportScheduleChangeStatus.Pending);
+    }
+
+    [Test]
     public async Task ProcessDueAssignmentsAsync_WhenFirstAssignmentSaveFails_RollsBackAndProcessesSecond()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -318,6 +352,143 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
             second.Request.Id);
     }
 
+    private async Task<DeletedTemplateLifecycleScenario> SeedDeletedTemplateLifecycleScenarioAsync(bool relink)
+    {
+        var trainer = await SeedUserAsync(
+            name: $"deleted-template-trainer-{Id<User>.New()}",
+            email: $"deleted-template-trainer-{Id<User>.New()}@example.com");
+        var trainee = await SeedUserAsync(
+            name: $"deleted-template-trainee-{Id<User>.New()}",
+            email: $"deleted-template-trainee-{Id<User>.New()}@example.com");
+        var now = DateTimeOffset.UtcNow;
+        var episode = new CoachingEpisode
+        {
+            Id = Id<CoachingEpisode>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            StartedAt = now.AddDays(-10),
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+        };
+        var template = new ReportTemplate
+        {
+            Id = Id<ReportTemplate>.New(),
+            TrainerId = trainer.Id,
+            Name = "Deleted lifecycle template",
+            IsDeleted = true
+        };
+        var assignment = new RecurringReportAssignment
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            TemplateId = template.Id,
+            Template = template,
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            StartsAt = now.AddDays(-7),
+            IsActive = true,
+            NextEligibleAt = now.AddDays(-1),
+            ScheduleRevision = 4,
+            SourceCoachingEpisodeId = episode.Id
+        };
+        var activeOverride = new RecurringReportScheduleChange
+        {
+            Id = Id<RecurringReportScheduleChange>.New(),
+            RecurringReportAssignmentId = assignment.Id,
+            RecurringReportAssignment = assignment,
+            Kind = RecurringReportScheduleChangeKind.TrainerOverride,
+            Status = RecurringReportScheduleChangeStatus.Active,
+            ScheduleRevision = 4,
+            OldScheduledAt = now.AddDays(-1),
+            ProposedScheduledAt = now.AddDays(2),
+            RequestedByUserId = trainer.Id,
+            RequestedAt = now.AddHours(-2)
+        };
+        var pendingProposal = new RecurringReportScheduleChange
+        {
+            Id = Id<RecurringReportScheduleChange>.New(),
+            RecurringReportAssignmentId = assignment.Id,
+            RecurringReportAssignment = assignment,
+            Kind = RecurringReportScheduleChangeKind.TraineeProposal,
+            Status = RecurringReportScheduleChangeStatus.Pending,
+            ScheduleRevision = 4,
+            OldScheduledAt = now.AddDays(2),
+            ProposedScheduledAt = now.AddDays(3),
+            RequestedByUserId = trainee.Id,
+            RequestedAt = now.AddHours(-1)
+        };
+        assignment.ScheduleChanges.Add(activeOverride);
+        assignment.ScheduleChanges.Add(pendingProposal);
+
+        await using (var scope = Factory.Services.CreateAsyncScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.AddRange(
+                episode,
+                new TrainerTraineeLink
+                {
+                    Id = Id<TrainerTraineeLink>.New(),
+                    TrainerId = trainer.Id,
+                    TraineeId = trainee.Id,
+                    EpisodeId = episode.Id
+                },
+                template,
+                assignment,
+                activeOverride,
+                pendingProposal);
+            await database.SaveChangesAsync();
+        }
+
+        if (relink)
+        {
+            await using var scope = Factory.Services.CreateAsyncScope();
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var link = await database.TrainerTraineeLinks.SingleAsync(candidate => candidate.TraineeId == trainee.Id);
+            database.TrainerTraineeLinks.Remove(link);
+            await database.SaveChangesAsync();
+            var replacementEpisode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow,
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
+            database.AddRange(
+                replacementEpisode,
+                new TrainerTraineeLink
+                {
+                    Id = Id<TrainerTraineeLink>.New(),
+                    TrainerId = trainer.Id,
+                    TraineeId = trainee.Id,
+                    EpisodeId = replacementEpisode.Id
+                });
+            await database.SaveChangesAsync();
+        }
+
+        return new DeletedTemplateLifecycleScenario(assignment.Id, activeOverride.Id, pendingProposal.Id);
+    }
+
+    private async Task AssertDeletedTemplateLifecycleAsync(
+        DeletedTemplateLifecycleScenario scenario,
+        bool expectedActive,
+        int expectedRevision,
+        RecurringReportScheduleChangeStatus expectedOverrideStatus,
+        RecurringReportScheduleChangeStatus expectedProposalStatus)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var assignment = await database.RecurringReportAssignments.AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == scenario.AssignmentId);
+        var changes = await database.RecurringReportScheduleChanges.AsNoTracking()
+            .Where(change => change.RecurringReportAssignmentId == scenario.AssignmentId)
+            .ToListAsync();
+        assignment.IsActive.Should().Be(expectedActive);
+        assignment.ScheduleRevision.Should().Be(expectedRevision);
+        changes.Single(change => change.Id == scenario.OverrideId).Status.Should().Be(expectedOverrideStatus);
+        changes.Single(change => change.Id == scenario.ProposalId).Status.Should().Be(expectedProposalStatus);
+    }
+
     private static AssignmentGraph CreateDueAssignmentGraph(
         Id<User> trainerId,
         Id<User> traineeId,
@@ -382,6 +553,11 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         Id<ReportRequest> FirstCurrentRequestId,
         Id<RecurringReportAssignment> SecondAssignmentId,
         Id<ReportRequest> SecondCurrentRequestId);
+
+    private sealed record DeletedTemplateLifecycleScenario(
+        Id<RecurringReportAssignment> AssignmentId,
+        Id<RecurringReportScheduleChange> OverrideId,
+        Id<RecurringReportScheduleChange> ProposalId);
 
     private sealed record AssignmentGraph(
         RecurringReportAssignment Assignment,

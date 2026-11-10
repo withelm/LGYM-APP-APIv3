@@ -79,32 +79,22 @@ public sealed partial class RecurringReportAssignmentService
                         ? TransactionPhase.RolledBack
                         : TransactionPhase.RollbackFailed;
                 }
-                else if (assignment.Template.IsDeleted)
-                {
-                    var inactive = assignment with { IsActive = false };
-                    await _assignmentPersistence.UpdateAsync(inactive.Id, ToUpdateModel(inactive), cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    phase = TransactionPhase.CommitStarted;
-                    await transaction.CommitAsync(cancellationToken);
-                    phase = TransactionPhase.Committed;
-                    result = ProcessingResult.Deactivated(assignmentId);
-                }
                 else
                 {
                     var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
                         assignment.TrainerId,
                         assignment.TraineeId,
                         cancellationToken);
-                    var stagedResult = relationshipAccess.HasActiveRelationship
-                        ? await StageRequestCreationAsync(assignment, relationshipAccess, now, cancellationToken)
-                        : Result<StagedRequestCreation, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
-                    if (stagedResult.IsFailure)
+                    var episodeCheck = await StageAssignmentEpisodeRevisionCheckAsync(
+                        assignment,
+                        relationshipAccess,
+                        cancellationToken);
+                    if (episodeCheck.IsFailure)
                     {
                         var rollback = await RollbackBusinessDecisionAsync(
                             transaction,
                             assignmentId,
-                            AutomaticEligibilityReason.TemplatePhotoTypeUnavailable,
+                            AutomaticEligibilityReason.RelationshipUnavailable,
                             cancellationToken);
                         result = rollback.Result;
                         abort = rollback.Failure == null ? null : ExceptionDispatchInfo.Capture(rollback.Failure);
@@ -112,21 +102,74 @@ public sealed partial class RecurringReportAssignmentService
                             ? TransactionPhase.RolledBack
                             : TransactionPhase.RollbackFailed;
                     }
+                    else if (assignment.Template.IsDeleted)
+                    {
+                        var inactive = await InvalidatePendingScheduleStateAsync(
+                            assignment,
+                            assignment.TrainerId,
+                            cancellationToken);
+                        inactive = inactive with
+                        {
+                            IsActive = false,
+                            ScheduleRevision = inactive.ScheduleRevision + 1
+                        };
+                        await _assignmentPersistence.UpdateAsync(
+                            inactive.Id,
+                            ToUpdateModel(inactive),
+                            cancellationToken);
+                        var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+                        if (saveResult.IsFailure)
+                        {
+                            phase = TransactionPhase.RolledBack;
+                            result = ProcessingResult.Skipped(
+                                assignmentId,
+                                AutomaticEligibilityReason.RelationshipUnavailable);
+                        }
+                        else
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            phase = TransactionPhase.CommitStarted;
+                            await transaction.CommitAsync(cancellationToken);
+                            phase = TransactionPhase.Committed;
+                            result = ProcessingResult.Deactivated(assignmentId);
+                        }
+                    }
                     else
                     {
-                        var staged = stagedResult.Value;
-                        if (staged.EnvelopeId == null)
+                        var stagedResult = await StageRequestCreationAsync(
+                            assignment,
+                            relationshipAccess,
+                            now,
+                            cancellationToken);
+                        if (stagedResult.IsFailure)
                         {
-                            preCommitReason = ProcessingReason.EnvelopeMissing;
-                            throw new InvalidOperationException("The recurring report notification envelope was not staged.");
+                            var rollback = await RollbackBusinessDecisionAsync(
+                                transaction,
+                                assignmentId,
+                                AutomaticEligibilityReason.TemplatePhotoTypeUnavailable,
+                                cancellationToken);
+                            result = rollback.Result;
+                            abort = rollback.Failure == null ? null : ExceptionDispatchInfo.Capture(rollback.Failure);
+                            phase = rollback.Failure == null
+                                ? TransactionPhase.RolledBack
+                                : TransactionPhase.RollbackFailed;
                         }
+                        else
+                        {
+                            var staged = stagedResult.Value;
+                            if (staged.EnvelopeId == null)
+                            {
+                                preCommitReason = ProcessingReason.EnvelopeMissing;
+                                throw new InvalidOperationException("The recurring report notification envelope was not staged.");
+                            }
 
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-                        cancellationToken.ThrowIfCancellationRequested();
-                        phase = TransactionPhase.CommitStarted;
-                        await transaction.CommitAsync(cancellationToken);
-                        phase = TransactionPhase.Committed;
-                        result = CreateProcessingResult(assignmentId, staged.RequestId, staged.EnvelopeId);
+                            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            phase = TransactionPhase.CommitStarted;
+                            await transaction.CommitAsync(cancellationToken);
+                            phase = TransactionPhase.Committed;
+                            result = CreateProcessingResult(assignmentId, staged.RequestId, staged.EnvelopeId);
+                        }
                     }
                 }
             }

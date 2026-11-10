@@ -19,6 +19,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ReportSubmissionPhotoHydrationFailureTests
 {
+    private static readonly Id<CoachingEpisode> ActiveEpisodeId = Id<CoachingEpisode>.New();
+
     [Test]
     public async Task SubmitReportRequestAsync_WhenPhotoHydrationFails_DoesNotCommitSubmission()
     {
@@ -60,6 +62,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
             {
                 photos = new[] { new { photoId = Id<Photo>.New().ToString() } }
             }),
+            SourceCoachingEpisodeId = request.SourceCoachingEpisodeId,
             TrainerFeedbackAddedAt = DateTimeOffset.UtcNow,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -110,7 +113,8 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
             TraineeId = traineeId,
             TemplateId = template.Id,
             Template = template,
-            Status = ReportRequestStatus.Pending
+            Status = ReportRequestStatus.Pending,
+            SourceCoachingEpisodeId = ActiveEpisodeId
         };
     }
 
@@ -130,7 +134,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
         IUnitOfWork unitOfWork)
     {
         var relationships = Substitute.For<IReportingRelationshipAccessPersistence>();
-        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
+        var activeEpisode = new ReportingActiveRelationshipFact(ActiveEpisodeId, 0);
         relationships.GetAccessAsync(
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),

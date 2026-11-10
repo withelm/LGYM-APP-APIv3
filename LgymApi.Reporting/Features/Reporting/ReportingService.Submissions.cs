@@ -67,11 +67,14 @@ public sealed partial class ReportingService : IReportingService
             request.TrainerId,
             request.TraineeId,
             cancellationToken);
-        var sourceEpisodeId = request.SourceCoachingEpisodeId ?? relationshipAccess.ActiveEpisode?.EpisodeId;
+        var activeEpisode = relationshipAccess.ActiveEpisode;
+        var sourceEpisodeId = request.SourceCoachingEpisodeId;
         if (!relationshipAccess.HasActiveRelationship
-            || (sourceEpisodeId is not null && relationshipAccess.ActiveEpisode?.EpisodeId != sourceEpisodeId)
+            || activeEpisode is null
+            || sourceEpisodeId is null
+            || activeEpisode.EpisodeId != sourceEpisodeId
             || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
-                relationshipAccess.ActiveEpisode,
+                activeEpisode,
                 cancellationToken))
         {
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
@@ -161,6 +164,30 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
+        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestForUpdateAsync(
+            submission.ReportRequestId,
+            cancellationToken);
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        var activeEpisode = relationshipAccess.ActiveEpisode;
+        if (!relationshipAccess.HasActiveRelationship
+            || activeEpisode is null
+            || submission.SourceCoachingEpisodeId is null
+            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || submission.ReportRequest.SourceCoachingEpisodeId is null
+            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || (assignment is not null
+                && (assignment.SourceCoachingEpisodeId is null
+                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                activeEpisode,
+                cancellationToken))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
         var normalizedFieldComments = NormalizeTrainerFieldComments(command.FieldComments);
         var effectiveTemplate = ReportTemplateSnapshotFactory.EffectiveTemplate(submission.ReportRequest);
         var validationResult = ValidateTrainerFieldComments(effectiveTemplate, normalizedFieldComments);
@@ -197,7 +224,6 @@ public sealed partial class ReportingService : IReportingService
                     feedbackReadAt),
                 cancellationToken);
 
-            var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestForUpdateAsync(submission.ReportRequestId, cancellationToken);
             if (assignment != null)
             {
                 await _recurringAssignmentPersistence.UpdateAsync(
@@ -286,11 +312,15 @@ public sealed partial class ReportingService : IReportingService
             submission.ReportRequestId,
             cancellationToken);
         var activeEpisode = relationshipAccess.ActiveEpisode;
-        var sourceEpisodeId = submission.SourceCoachingEpisodeId ?? submission.ReportRequest.SourceCoachingEpisodeId;
         if (!relationshipAccess.HasActiveRelationship
             || activeEpisode is null
-            || (sourceEpisodeId is not null && activeEpisode.EpisodeId != sourceEpisodeId)
-            || (assignment is not null && assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId)
+            || submission.SourceCoachingEpisodeId is null
+            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || submission.ReportRequest.SourceCoachingEpisodeId is null
+            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || (assignment is not null
+                && (assignment.SourceCoachingEpisodeId is null
+                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
             || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
                 activeEpisode,
                 cancellationToken))

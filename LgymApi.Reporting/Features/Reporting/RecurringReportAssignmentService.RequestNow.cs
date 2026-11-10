@@ -64,7 +64,11 @@ public sealed partial class RecurringReportAssignmentService
                     cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (!access.HasActiveRelationship)
+                var episodeCheck = await StageAssignmentEpisodeRevisionCheckAsync(
+                    assignment,
+                    access,
+                    cancellationToken);
+                if (episodeCheck.IsFailure)
                 {
                     result = RequestNowFailure(new ReportingNotFoundError(Messages.DidntFind));
                     var rollback = await RollbackRequestNowDecisionAsync(transaction, cancellationToken);
@@ -73,18 +77,34 @@ public sealed partial class RecurringReportAssignmentService
                 }
                 else if (assignment.Template.IsDeleted)
                 {
-                    var inactive = assignment with { IsActive = false };
+                    var inactive = await InvalidatePendingScheduleStateAsync(
+                        assignment,
+                        currentTrainer.Id,
+                        cancellationToken);
+                    inactive = inactive with
+                    {
+                        IsActive = false,
+                        ScheduleRevision = inactive.ScheduleRevision + 1
+                    };
                     await _assignmentPersistence.UpdateAsync(
                         inactive.Id,
                         ToUpdateModel(inactive),
                         cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    phase = TransactionPhase.CommitStarted;
-                    await transaction.CommitAsync(cancellationToken);
-                    phase = TransactionPhase.Committed;
-                    result = RequestNowFailure(
-                        new ReportingConflictError(Messages.RecurringReportTemplateUnavailable));
+                    var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+                    if (saveResult.IsFailure)
+                    {
+                        phase = TransactionPhase.RolledBack;
+                        result = RequestNowFailure(saveResult.Error);
+                    }
+                    else
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        phase = TransactionPhase.CommitStarted;
+                        await transaction.CommitAsync(cancellationToken);
+                        phase = TransactionPhase.Committed;
+                        result = RequestNowFailure(
+                            new ReportingConflictError(Messages.RecurringReportTemplateUnavailable));
+                    }
                 }
                 else if (!IsWithinManualRequestWindow(assignment, DateTimeOffset.UtcNow))
                 {
@@ -237,15 +257,6 @@ public sealed partial class RecurringReportAssignmentService
         DateTimeOffset createdAt,
         CancellationToken cancellationToken)
     {
-        var episodeCheck = await StageAssignmentEpisodeRevisionCheckAsync(
-            assignment,
-            relationshipAccess,
-            cancellationToken);
-        if (episodeCheck.IsFailure)
-        {
-            return Result<StagedRequestCreation, AppError>.Failure(episodeCheck.Error);
-        }
-
         await _templatePersistence.LockTrainerDefinitionsAsync(assignment.TrainerId, cancellationToken);
         var currentTemplate = await _templatePersistence.FindByIdAsync(assignment.TemplateId, cancellationToken);
         if (currentTemplate is null || currentTemplate.IsDeleted)

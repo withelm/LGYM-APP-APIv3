@@ -457,6 +457,8 @@ public sealed class ReportingServiceTests
     #endif
 
     #if REPORTING_UNIT_TESTS
+    private static readonly Id<CoachingEpisode> DefaultCoachingEpisodeId = Id<CoachingEpisode>.New();
+
     [Test]
     public async Task SubmitReportRequest_WithInvalidPhotoModuleConfig_ShouldReturnValidationError()
     {
@@ -800,7 +802,8 @@ public sealed class ReportingServiceTests
             TraineeId = traineeId,
             TemplateId = request.TemplateId,
             Template = request.Template,
-            NextEligibleAt = DateTimeOffset.UtcNow.AddDays(2)
+            NextEligibleAt = DateTimeOffset.UtcNow.AddDays(2),
+            SourceCoachingEpisodeId = DefaultCoachingEpisodeId
         };
         var commandDispatcher = Substitute.For<ICommandDispatcher>();
         var service = CreateReportingService(
@@ -852,6 +855,7 @@ public sealed class ReportingServiceTests
         var submissionId = Id<ReportSubmission>.New();
         var activeEpisodeId = Id<CoachingEpisode>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.SourceCoachingEpisodeId = activeEpisodeId;
         var submission = CreateSubmission(submissionId, traineeId, request);
         submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddHours(-2);
         var assignment = new RecurringReportAssignment
@@ -888,6 +892,7 @@ public sealed class ReportingServiceTests
         var templateId = Id<ReportTemplate>.New();
         var activeEpisodeId = Id<CoachingEpisode>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.SourceCoachingEpisodeId = activeEpisodeId;
         var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
         submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddHours(-1);
         var assignment = new RecurringReportAssignment
@@ -1584,7 +1589,8 @@ public sealed class ReportingServiceTests
             TrainerId = Id<User>.New(),
             TemplateId = templateId,
             Template = template,
-            Status = ReportRequestStatus.Pending
+            Status = ReportRequestStatus.Pending,
+            SourceCoachingEpisodeId = DefaultCoachingEpisodeId
         };
     }
 
@@ -1616,6 +1622,7 @@ public sealed class ReportingServiceTests
             ReportRequest = request,
             TraineeId = traineeId,
             PayloadJson = "{}",
+            SourceCoachingEpisodeId = request.SourceCoachingEpisodeId,
             CreatedAt = DateTimeOffset.UtcNow
         };
     }
@@ -1781,7 +1788,7 @@ public sealed class ReportingServiceTests
         commandOutboxWriter.StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
         var activeEpisode = hasActiveTrainerLink
-            ? new ReportingActiveRelationshipFact(activeEpisodeId ?? Id<CoachingEpisode>.New(), 0)
+            ? new ReportingActiveRelationshipFact(activeEpisodeId ?? DefaultCoachingEpisodeId, 0)
             : null;
         relationshipAccessPersistence.GetAccessAsync(
                 Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(),

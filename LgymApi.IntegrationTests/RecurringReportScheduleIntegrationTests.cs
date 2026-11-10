@@ -198,6 +198,88 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Test]
+    public async Task RequestNow_DeletedTemplate_WithCurrentSource_DeactivatesAndClosesScheduleLifecycle()
+    {
+        var scenario = await CreateScenarioAsync("deleted-template-current-source");
+        var schedule = await CreatePendingScheduleStateAsync(scenario);
+        await DeleteTemplateAsync(scenario.Assignment.TemplateId);
+
+        using var response = await Client.PostAsync(
+            $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/request-now",
+            content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var assignmentId = ParseId<RecurringReportAssignment>(scenario.Assignment.Id);
+        var assignment = await database.RecurringReportAssignments.AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == assignmentId);
+        var changes = await database.RecurringReportScheduleChanges.AsNoTracking()
+            .Where(change => change.RecurringReportAssignmentId == assignmentId)
+            .ToListAsync();
+        assignment.IsActive.Should().BeFalse();
+        assignment.ScheduleRevision.Should().Be(2);
+        changes.Single(change => change.Id == schedule.OverrideId).Status
+            .Should().Be(RecurringReportScheduleChangeStatus.Superseded);
+        changes.Single(change => change.Id == schedule.ProposalId).Status
+            .Should().Be(RecurringReportScheduleChangeStatus.Invalidated);
+    }
+
+    [Test]
+    public async Task RequestNow_DeletedTemplate_AfterSameTrainerRelink_DeniesWithoutLifecycleMutation()
+    {
+        var scenario = await CreateScenarioAsync("deleted-template-relink");
+        var schedule = await CreatePendingScheduleStateAsync(scenario);
+        await DeleteTemplateAsync(scenario.Assignment.TemplateId);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var link = await database.TrainerTraineeLinks.SingleAsync(candidate =>
+                candidate.TrainerId == scenario.Trainer.Id && candidate.TraineeId == scenario.Trainee.Id);
+            database.TrainerTraineeLinks.Remove(link);
+            await database.SaveChangesAsync();
+            var replacementEpisode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = scenario.Trainer.Id,
+                TraineeId = scenario.Trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow,
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
+            database.AddRange(
+                replacementEpisode,
+                new TrainerTraineeLink
+                {
+                    Id = Id<TrainerTraineeLink>.New(),
+                    TrainerId = scenario.Trainer.Id,
+                    TraineeId = scenario.Trainee.Id,
+                    EpisodeId = replacementEpisode.Id
+                });
+            await database.SaveChangesAsync();
+        }
+
+        using var response = await Client.PostAsync(
+            $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/request-now",
+            content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await using var assertionScope = Factory.Services.CreateAsyncScope();
+        var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var assignmentId = ParseId<RecurringReportAssignment>(scenario.Assignment.Id);
+        var assignment = await assertionDatabase.RecurringReportAssignments.AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == assignmentId);
+        var changes = await assertionDatabase.RecurringReportScheduleChanges.AsNoTracking()
+            .Where(change => change.RecurringReportAssignmentId == assignmentId)
+            .ToListAsync();
+        assignment.IsActive.Should().BeTrue();
+        assignment.ScheduleRevision.Should().Be(1);
+        changes.Single(change => change.Id == schedule.OverrideId).Status
+            .Should().Be(RecurringReportScheduleChangeStatus.Active);
+        changes.Single(change => change.Id == schedule.ProposalId).Status
+            .Should().Be(RecurringReportScheduleChangeStatus.Pending);
+    }
+
     private async Task<ScheduleScenario> CreateScenarioAsync(string prefix)
     {
         var trainer = await SeedUserAsync($"{prefix}-trainer", $"{prefix}-trainer@example.com");
@@ -241,6 +323,49 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
 
     private static string TrainerOverrideUrl(ScheduleScenario scenario) =>
         $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/next-report-override";
+
+    private async Task<PendingScheduleState> CreatePendingScheduleStateAsync(ScheduleScenario scenario)
+    {
+        var overrideResponse = await PostAsJsonWithApiOptionsAsync(
+            TrainerOverrideUrl(scenario),
+            new { scheduledAt = DateTimeOffset.UtcNow.AddDays(2), expectedScheduleRevision = 0 });
+        overrideResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var overridden = await ReadAsync<RecurringReportAssignmentDto>(overrideResponse);
+
+        SetAuthorizationHeader(scenario.Trainee.Id);
+        var proposalResponse = await PostAsJsonWithApiOptionsAsync(
+            $"/api/trainee/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals",
+            new { scheduledAt = DateTimeOffset.UtcNow.AddDays(3), reason = "Pending cleanup", expectedScheduleRevision = 1 });
+        proposalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var proposed = await ReadAsync<RecurringReportAssignmentDto>(proposalResponse);
+        SetAuthorizationHeader(scenario.Trainer.Id);
+
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var assignmentId = ParseId<RecurringReportAssignment>(scenario.Assignment.Id);
+        var changes = await database.RecurringReportScheduleChanges.AsNoTracking()
+            .Where(change => change.RecurringReportAssignmentId == assignmentId)
+            .ToListAsync();
+        var activeOverride = changes.Single(change =>
+            change.Kind == RecurringReportScheduleChangeKind.TrainerOverride
+            && change.Status == RecurringReportScheduleChangeStatus.Active);
+        var pendingProposal = changes.Single(change =>
+            change.Kind == RecurringReportScheduleChangeKind.TraineeProposal
+            && change.Status == RecurringReportScheduleChangeStatus.Pending);
+        overridden.ScheduleRevision.Should().Be(1);
+        proposed.ScheduleRevision.Should().Be(1);
+        return new PendingScheduleState(activeOverride.Id, pendingProposal.Id);
+    }
+
+    private async Task DeleteTemplateAsync(string templateId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var id = ParseId<ReportTemplate>(templateId);
+        var template = await database.ReportTemplates.SingleAsync(candidate => candidate.Id == id);
+        template.IsDeleted = true;
+        await database.SaveChangesAsync();
+    }
 
     private async Task AssertProposalHistoryVisibleToBothActorsAsync(
         ScheduleScenario scenario,
@@ -305,6 +430,10 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
     };
 
     private sealed record ScheduleScenario(User Trainer, User Trainee, RecurringReportAssignmentDto Assignment);
+
+    private sealed record PendingScheduleState(
+        Id<RecurringReportScheduleChange> OverrideId,
+        Id<RecurringReportScheduleChange> ProposalId);
 
     private sealed record ProposalAuditExpectation(
         string Id,
