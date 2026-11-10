@@ -125,7 +125,10 @@ public sealed record RecurringReportAssignmentPersistenceModel(
     DateTimeOffset CreatedAt,
     bool IsDeleted,
     ReportTemplatePersistenceModel Template,
-    ReportRequestPersistenceModel? CurrentReportRequest);
+    ReportRequestPersistenceModel? CurrentReportRequest,
+    int ScheduleRevision = 0,
+    IReadOnlyList<RecurringReportScheduleChangePersistenceModel>? ScheduleChanges = null,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null);
 
 public sealed record NewRecurringReportAssignmentPersistenceModel(
     Id<RecurringReportAssignment> Id,
@@ -141,7 +144,9 @@ public sealed record NewRecurringReportAssignmentPersistenceModel(
     Id<ReportRequest>? CurrentReportRequestId,
     DateTimeOffset? LastRequestCreatedAt,
     DateTimeOffset? NextEligibleAt,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    int ScheduleRevision = 0,
+    Id<CoachingEpisode>? SourceCoachingEpisodeId = null);
 
 public sealed record RecurringReportAssignmentUpdatePersistenceModel(
     Id<ReportTemplate> TemplateId,
@@ -154,7 +159,43 @@ public sealed record RecurringReportAssignmentUpdatePersistenceModel(
     Id<ReportRequest>? CurrentReportRequestId,
     DateTimeOffset? LastRequestCreatedAt,
     DateTimeOffset? NextEligibleAt,
-    bool IsDeleted);
+    bool IsDeleted,
+    int ScheduleRevision = 0);
+
+public sealed record RecurringReportScheduleChangePersistenceModel(
+    Id<RecurringReportScheduleChange> Id,
+    Id<RecurringReportAssignment> AssignmentId,
+    RecurringReportScheduleChangeKind Kind,
+    RecurringReportScheduleChangeStatus Status,
+    int ScheduleRevision,
+    DateTimeOffset OldScheduledAt,
+    DateTimeOffset ProposedScheduledAt,
+    string? Reason,
+    Id<AccountReference> RequestedByAccountId,
+    DateTimeOffset RequestedAt,
+    Id<AccountReference>? ResolvedByAccountId,
+    DateTimeOffset? ResolvedAt,
+    Id<RecurringReportScheduleChange>? SourceProposalId);
+
+public sealed record NewRecurringReportScheduleChangePersistenceModel(
+    Id<RecurringReportScheduleChange> Id,
+    Id<RecurringReportAssignment> AssignmentId,
+    RecurringReportScheduleChangeKind Kind,
+    RecurringReportScheduleChangeStatus Status,
+    int ScheduleRevision,
+    DateTimeOffset OldScheduledAt,
+    DateTimeOffset ProposedScheduledAt,
+    string? Reason,
+    Id<AccountReference> RequestedByAccountId,
+    DateTimeOffset RequestedAt,
+    Id<AccountReference>? ResolvedByAccountId = null,
+    DateTimeOffset? ResolvedAt = null,
+    Id<RecurringReportScheduleChange>? SourceProposalId = null);
+
+public sealed record RecurringReportScheduleChangeResolutionPersistenceModel(
+    RecurringReportScheduleChangeStatus Status,
+    Id<AccountReference>? ResolvedByAccountId,
+    DateTimeOffset? ResolvedAt);
 
 public sealed record ReportPhotoPersistenceModel(
     Id<Photo> Id,

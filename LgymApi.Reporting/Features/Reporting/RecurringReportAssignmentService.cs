@@ -3,6 +3,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -10,6 +11,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Features.Reporting;
@@ -57,6 +59,20 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
             return Result<RecurringReportAssignmentResult, AppError>.Failure(validation.Error);
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        if (!relationshipAccess.HasActiveRelationship
+            || relationshipAccess.ActiveEpisode is null
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                relationshipAccess.ActiveEpisode,
+                cancellationToken))
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
         var assignment = new NewRecurringReportAssignmentPersistenceModel(
             Id<RecurringReportAssignment>.New(),
             currentTrainer.Id,
@@ -71,10 +87,20 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
             null,
             null,
             command.StartsAt,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            0,
+            relationshipAccess.ActiveEpisode.EpisodeId);
 
         await _assignmentPersistence.AddAsync(assignment, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<RecurringReportAssignmentResult, AppError>.Success(
             MapAssignment(ToPersistenceModel(assignment, validation.Value)));
@@ -91,12 +117,38 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
             return Result<List<RecurringReportAssignmentResult>, AppError>.Failure(ownershipCheck.Error);
         }
 
+        var access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, traineeId, cancellationToken);
         var assignments = await _assignmentPersistence.ListByTrainerAndTraineeAsync(
             currentTrainer.Id,
             traineeId,
             cancellationToken);
         return Result<List<RecurringReportAssignmentResult>, AppError>.Success(
-            _mapper.MapList<RecurringReportAssignmentPersistenceModel, RecurringReportAssignmentResult>(assignments));
+            _mapper.MapList<RecurringReportAssignmentPersistenceModel, RecurringReportAssignmentResult>(
+                assignments.Where(assignment =>
+                    access.ActiveEpisode is not null
+                    && assignment.SourceCoachingEpisodeId == access.ActiveEpisode.EpisodeId)));
+    }
+
+    public async Task<Result<List<RecurringReportAssignmentResult>, AppError>> GetForTraineeAsync(
+        AuthenticatedAccountContext currentTrainee,
+        CancellationToken cancellationToken = default)
+    {
+        var assignments = await _assignmentPersistence.ListByTraineeAsync(currentTrainee.Id, cancellationToken);
+        var visibleAssignments = new List<RecurringReportAssignmentPersistenceModel>();
+        foreach (var assignment in assignments)
+        {
+            var access = await _relationshipAccessPersistence.GetAccessAsync(
+                assignment.TrainerId,
+                currentTrainee.Id,
+                cancellationToken);
+            if (access.ActiveEpisode is not null
+                && assignment.SourceCoachingEpisodeId == access.ActiveEpisode.EpisodeId)
+            {
+                visibleAssignments.Add(assignment);
+            }
+        }
+        return Result<List<RecurringReportAssignmentResult>, AppError>.Success(
+            _mapper.MapList<RecurringReportAssignmentPersistenceModel, RecurringReportAssignmentResult>(visibleAssignments));
     }
 
     public async Task<Result<RecurringReportAssignmentResult, AppError>> UpdateAsync(
@@ -106,16 +158,17 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
         UpsertRecurringReportAssignmentCommand command,
         CancellationToken cancellationToken = default)
     {
-        var assignmentResult = await GetOwnedAssignmentAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
-        if (assignmentResult.IsFailure)
-        {
-            return Result<RecurringReportAssignmentResult, AppError>.Failure(assignmentResult.Error);
-        }
-
         var validation = await ValidateTrainerAndCommandAsync(currentTrainer, traineeId, command, cancellationToken);
         if (validation.IsFailure)
         {
             return Result<RecurringReportAssignmentResult, AppError>.Failure(validation.Error);
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var assignmentResult = await GetOwnedAssignmentForUpdateAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
+        if (assignmentResult.IsFailure)
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(assignmentResult.Error);
         }
 
         var updated = assignmentResult.Value with
@@ -128,11 +181,18 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
             EndsAt = command.EndsAt,
             Note = NormalizeNote(command.Note)
         };
-        updated = updated with { NextEligibleAt = RecalculateNextEligibleAt(updated) };
+        updated = await InvalidatePendingScheduleStateAsync(updated, currentTrainer.Id, cancellationToken);
+        updated = updated with { NextEligibleAt = RecalculateNextEligibleAt(updated), ScheduleRevision = updated.ScheduleRevision + 1 };
 
         await _assignmentPersistence.UpdateAsync(updated.Id, ToUpdateModel(updated), cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<RecurringReportAssignmentResult, AppError>.Success(MapAssignment(updated));
+        var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(saveResult.Error);
+        }
+        var reloaded = await _assignmentPersistence.FindByIdAsync(updated.Id, cancellationToken) ?? updated;
+        await transaction.CommitAsync(cancellationToken);
+        return Result<RecurringReportAssignmentResult, AppError>.Success(MapAssignment(reloaded));
     }
 
     public Task<Result<RecurringReportAssignmentResult, AppError>> PauseAsync(
@@ -155,15 +215,28 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
         Id<RecurringReportAssignment> assignmentId,
         CancellationToken cancellationToken = default)
     {
-        var assignmentResult = await GetOwnedAssignmentAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
+        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        if (ownershipCheck.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(ownershipCheck.Error);
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var assignmentResult = await GetOwnedAssignmentForUpdateAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
         if (assignmentResult.IsFailure)
         {
             return Result<Unit, AppError>.Failure(assignmentResult.Error);
         }
 
-        var deleted = assignmentResult.Value with { IsActive = false, IsDeleted = true };
+        var deleted = await InvalidatePendingScheduleStateAsync(assignmentResult.Value, currentTrainer.Id, cancellationToken);
+        deleted = deleted with { IsActive = false, IsDeleted = true, ScheduleRevision = deleted.ScheduleRevision + 1 };
         await _assignmentPersistence.UpdateAsync(deleted.Id, ToUpdateModel(deleted), cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return Result<Unit, AppError>.Failure(saveResult.Error);
+        }
+        await transaction.CommitAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -174,20 +247,34 @@ public sealed partial class RecurringReportAssignmentService : IRecurringReportA
         bool isActive,
         CancellationToken cancellationToken)
     {
-        var assignmentResult = await GetOwnedAssignmentAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
+        var ownershipCheck = await EnsureTrainerOwnsTraineeAsync(currentTrainer, traineeId, cancellationToken);
+        if (ownershipCheck.IsFailure)
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(ownershipCheck.Error);
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var assignmentResult = await GetOwnedAssignmentForUpdateAsync(currentTrainer, traineeId, assignmentId, cancellationToken);
         if (assignmentResult.IsFailure)
         {
             return Result<RecurringReportAssignmentResult, AppError>.Failure(assignmentResult.Error);
         }
 
-        var updated = assignmentResult.Value with { IsActive = isActive };
+        var updated = await InvalidatePendingScheduleStateAsync(assignmentResult.Value, currentTrainer.Id, cancellationToken);
+        updated = updated with { IsActive = isActive, ScheduleRevision = updated.ScheduleRevision + 1 };
         if (isActive)
         {
             updated = updated with { NextEligibleAt = RecalculateNextEligibleAt(updated) };
         }
 
         await _assignmentPersistence.UpdateAsync(updated.Id, ToUpdateModel(updated), cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<RecurringReportAssignmentResult, AppError>.Success(MapAssignment(updated));
+        var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return Result<RecurringReportAssignmentResult, AppError>.Failure(saveResult.Error);
+        }
+        var reloaded = await _assignmentPersistence.FindByIdAsync(updated.Id, cancellationToken) ?? updated;
+        await transaction.CommitAsync(cancellationToken);
+        return Result<RecurringReportAssignmentResult, AppError>.Success(MapAssignment(reloaded));
     }
 }

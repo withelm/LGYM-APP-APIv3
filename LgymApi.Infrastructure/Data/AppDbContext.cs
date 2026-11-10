@@ -48,6 +48,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<ReportTemplate> ReportTemplates => Set<ReportTemplate>();
     public DbSet<ReportTemplateField> ReportTemplateFields => Set<ReportTemplateField>();
     public DbSet<RecurringReportAssignment> RecurringReportAssignments => Set<RecurringReportAssignment>();
+    public DbSet<RecurringReportScheduleChange> RecurringReportScheduleChanges => Set<RecurringReportScheduleChange>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<ReportSubmission> ReportSubmissions => Set<ReportSubmission>();
     public DbSet<SupplementPlan> SupplementPlans => Set<SupplementPlan>();

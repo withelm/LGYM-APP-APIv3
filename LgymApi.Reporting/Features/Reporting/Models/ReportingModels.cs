@@ -103,7 +103,15 @@ public sealed class ReportSubmissionResult
     public Dictionary<string, string> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
     public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
+    public NextRecurringReportRequestResult? NextRecurringRequest { get; set; }
     public ReportRequestResult Request { get; set; } = new();
+}
+
+public sealed class NextRecurringReportRequestResult
+{
+    public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.RecurringReportAssignment>? AssignmentId { get; set; }
+    public DateTimeOffset? ScheduledAt { get; set; }
+    public NextRecurringReportRequestStatus Status { get; set; }
 }
 
 public sealed class InitiatePhotoUploadCommand

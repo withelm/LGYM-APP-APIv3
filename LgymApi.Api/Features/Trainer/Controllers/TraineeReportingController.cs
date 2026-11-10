@@ -22,13 +22,60 @@ public sealed class TraineeReportingController : ControllerBase
 {
     private readonly ITraineeReportRequestApiPort _requests;
     private readonly ITraineeReportPhotoApiPort _photos;
+    private readonly ITraineeRecurringReportAssignmentApiPort? _recurringAssignments;
     private readonly IMapper _mapper;
 
-    public TraineeReportingController(ITraineeReportRequestApiPort requests, ITraineeReportPhotoApiPort photos, IMapper mapper)
+    public TraineeReportingController(ITraineeReportRequestApiPort requests, ITraineeReportPhotoApiPort photos, IMapper mapper, ITraineeRecurringReportAssignmentApiPort? recurringAssignments = null)
     {
         _requests = requests;
         _photos = photos;
         _mapper = mapper;
+        _recurringAssignments = recurringAssignments;
+    }
+
+    [HttpGet("recurring-report-assignments")]
+    [ProducesResponseType(typeof(List<RecurringReportAssignmentDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRecurringReportAssignments(CancellationToken cancellationToken = default)
+    {
+        var result = await _recurringAssignments!.GetAllAsync(HttpContext.GetAuthenticatedAccountContext()!, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.MapList<RecurringReportAssignmentResult, RecurringReportAssignmentDto>(result.Value));
+    }
+
+    [HttpPost("recurring-report-assignments/{assignmentId}/next-report-proposals")]
+    [ProducesResponseType(typeof(RecurringReportAssignmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ProposeNextRecurringReportSchedule(
+        [FromRoute] string assignmentId,
+        [FromBody] ProposeNextRecurringReportScheduleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Id<RecurringReportAssignment>.TryParse(assignmentId, out var parsedAssignmentId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var result = await _recurringAssignments!.ProposeAsync(
+            HttpContext.GetAuthenticatedAccountContext()!,
+            parsedAssignmentId,
+            new ProposeNextRecurringReportScheduleCommand
+            {
+                ScheduledAt = request.ScheduledAt!.Value,
+                Reason = request.Reason,
+                ExpectedScheduleRevision = request.ExpectedScheduleRevision!.Value
+            },
+            cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<RecurringReportAssignmentResult, RecurringReportAssignmentDto>(result.Value));
     }
 
     [HttpGet("report-requests")]

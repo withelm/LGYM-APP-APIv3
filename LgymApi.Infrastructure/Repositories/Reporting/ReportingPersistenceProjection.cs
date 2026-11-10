@@ -87,7 +87,26 @@ internal static class ReportingPersistenceProjection
             entity.CreatedAt,
             entity.IsDeleted,
             Template(entity.Template),
-            entity.CurrentReportRequest is null ? null : Request(entity.CurrentReportRequest));
+            entity.CurrentReportRequest is null ? null : Request(entity.CurrentReportRequest),
+            entity.ScheduleRevision,
+            entity.ScheduleChanges.Select(ScheduleChange).ToList(),
+            entity.SourceCoachingEpisodeId);
+
+    public static RecurringReportScheduleChangePersistenceModel ScheduleChange(RecurringReportScheduleChange entity)
+        => new(
+            entity.Id,
+            entity.RecurringReportAssignmentId,
+            entity.Kind,
+            entity.Status,
+            entity.ScheduleRevision,
+            entity.OldScheduledAt,
+            entity.ProposedScheduledAt,
+            entity.Reason,
+            ReportingPersistenceAccountIds.ToReference(entity.RequestedByUserId),
+            entity.RequestedAt,
+            entity.ResolvedByUserId is null ? null : ReportingPersistenceAccountIds.ToReference(entity.ResolvedByUserId.Value),
+            entity.ResolvedAt,
+            entity.SourceProposalId);
 
     public static ReportPhotoPersistenceModel Photo(Photo entity)
         => new(

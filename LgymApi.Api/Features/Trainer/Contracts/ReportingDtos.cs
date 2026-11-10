@@ -193,6 +193,9 @@ public sealed class ReportSubmissionDto : IResultDto
     [JsonPropertyName("trainerFeedbackReadAt")]
     public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
 
+    [JsonPropertyName("nextRecurringRequest")]
+    public NextRecurringReportRequestDto? NextRecurringRequest { get; set; }
+
     [JsonPropertyName("request")]
     public ReportRequestDto Request { get; set; } = new();
 }
@@ -237,6 +240,18 @@ public sealed class RecurringReportAssignmentDto : IResultDto
 
     [JsonPropertyName("nextEligibleAt")]
     public DateTimeOffset? NextEligibleAt { get; set; }
+
+    [JsonPropertyName("scheduleRevision")]
+    public int ScheduleRevision { get; set; }
+
+    [JsonPropertyName("effectiveNextRecurringRequest")]
+    public NextRecurringReportRequestDto EffectiveNextRecurringRequest { get; set; } = new();
+
+    [JsonPropertyName("pendingScheduleProposal")]
+    public RecurringReportScheduleProposalDto? PendingScheduleProposal { get; set; }
+
+    [JsonPropertyName("scheduleProposalHistory")]
+    public IReadOnlyList<RecurringReportScheduleProposalDto> ScheduleProposalHistory { get; set; } = [];
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }

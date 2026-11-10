@@ -207,6 +207,9 @@
   <data name="ReportRequestNotPending" xml:space="preserve">
     <value>Zgłoszenie raportu nie jest już oczekujące.</value>
   </data>
+  <data name="ReportFeedbackAlreadyRead" xml:space="preserve">
+    <value>Informacja zwrotna została już przeczytana i nie może być zmieniona.</value>
+  </data>
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Termin zgłoszenia raportu minął.</value>
   </data>
@@ -218,6 +221,15 @@
   </data>
   <data name="RecurringReportTemplateUnavailable" xml:space="preserve">
     <value>Szablon raportu dla tego cyklu raportu okresowego jest niedostępny.</value>
+  </data>
+  <data name="RecurringReportProposalPending" xml:space="preserve">
+    <value>Propozycja terminu oczekuje już na decyzję trenera.</value>
+  </data>
+  <data name="RecurringReportProposalResolved" xml:space="preserve">
+    <value>Ta propozycja terminu nie oczekuje już na decyzję.</value>
+  </data>
+  <data name="RecurringReportScheduleRevisionChanged" xml:space="preserve">
+    <value>Harmonogram raportu okresowego uległ zmianie. Odśwież go i spróbuj ponownie.</value>
   </data>
   <data name="MissingRequiredPhotoViews" xml:space="preserve">
     <value>Brakuje wymaganych ujęć zdjęć.</value>
@@ -278,6 +290,12 @@
   </data>
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
+  </data>
+  <data name="TraineeReportFeedbackReadScheduled" xml:space="preserve">
+    <value>{0} przeczytał(a) Twoją informację zwrotną do raportu. Następna cykliczna prośba o raport jest zaplanowana na {1}.</value>
+  </data>
+  <data name="TraineeReportFeedbackReadUnscheduled" xml:space="preserve">
+    <value>{0} przeczytał(a) Twoją informację zwrotną do raportu. Następna cykliczna prośba o raport nie jest jeszcze zaplanowana.</value>
   </data>
   <data name="TrainerReportSubmissionReceived" xml:space="preserve">
     <value>{0} wysłał raport: {1}.</value>

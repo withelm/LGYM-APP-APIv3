@@ -40,6 +40,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         AssertHydratedPhoto(document.RootElement, scenario.Photo.StorageKey);
+        document.RootElement.GetProperty("trainerFeedbackReadAt").ValueKind.Should().Be(JsonValueKind.String);
+        document.RootElement.GetProperty("nextRecurringRequest").GetProperty("status").GetString()
+            .Should().Be(nameof(NextRecurringReportRequestStatus.Unscheduled));
     }
 
     [Test]

@@ -185,4 +185,36 @@ public sealed partial class ReportingService
             _ => readAt.AddDays(intervalValue)
         };
     }
+
+    private static NextRecurringReportRequestResult GetNextRecurringRequest(
+        RecurringReportAssignmentPersistenceModel? assignment,
+        DateTimeOffset readAt,
+        bool usePersistedSchedule)
+    {
+        if (assignment is null || !assignment.IsActive || assignment.IsDeleted)
+        {
+            return new NextRecurringReportRequestResult { Status = NextRecurringReportRequestStatus.Unscheduled };
+        }
+
+        var activeOverride = RecurringReportSchedulePolicy.ActiveOverride(assignment);
+        var scheduledAt = activeOverride?.ProposedScheduledAt
+            ?? (usePersistedSchedule && assignment.NextEligibleAt.HasValue
+                ? assignment.NextEligibleAt.Value
+                : CalculateNextEligibleAt(readAt, assignment.IntervalValue, assignment.IntervalUnit));
+        if (assignment.EndsAt.HasValue && assignment.EndsAt < scheduledAt)
+        {
+            return new NextRecurringReportRequestResult
+            {
+                AssignmentId = assignment.Id,
+                Status = NextRecurringReportRequestStatus.Unscheduled
+            };
+        }
+
+        return new NextRecurringReportRequestResult
+        {
+            AssignmentId = assignment.Id,
+            ScheduledAt = scheduledAt,
+            Status = NextRecurringReportRequestStatus.Scheduled
+        };
+    }
 }

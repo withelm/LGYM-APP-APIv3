@@ -3,6 +3,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
+using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
@@ -40,6 +41,65 @@ public sealed partial class RecurringReportAssignmentService
         return assignment == null
             ? Result<RecurringReportAssignmentPersistenceModel, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind))
             : Result<RecurringReportAssignmentPersistenceModel, AppError>.Success(assignment);
+    }
+
+    private async Task<Result<RecurringReportAssignmentPersistenceModel, AppError>> GetOwnedAssignmentForUpdateAsync(
+        AuthenticatedAccountContext currentTrainer,
+        Id<AccountReference> traineeId,
+        Id<RecurringReportAssignment> assignmentId,
+        CancellationToken cancellationToken)
+    {
+        if (assignmentId.IsEmpty)
+        {
+            return Result<RecurringReportAssignmentPersistenceModel, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        var assignment = await _assignmentPersistence.FindByIdForUpdateAsync(assignmentId, cancellationToken);
+        if (assignment is null || assignment.TrainerId != currentTrainer.Id || assignment.TraineeId != traineeId)
+        {
+            return Result<RecurringReportAssignmentPersistenceModel, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, traineeId, cancellationToken);
+        var episodeCheck = await StageAssignmentEpisodeRevisionCheckAsync(assignment, access, cancellationToken);
+        return episodeCheck.IsFailure
+            ? Result<RecurringReportAssignmentPersistenceModel, AppError>.Failure(episodeCheck.Error)
+            : Result<RecurringReportAssignmentPersistenceModel, AppError>.Success(assignment);
+    }
+
+    private async Task<Result<Unit, AppError>> StageAssignmentEpisodeRevisionCheckAsync(
+        RecurringReportAssignmentPersistenceModel assignment,
+        ReportingRelationshipAccessFact access,
+        CancellationToken cancellationToken)
+    {
+        if (!access.HasActiveRelationship
+            || access.ActiveEpisode is null
+            || assignment.SourceCoachingEpisodeId is null
+            || assignment.SourceCoachingEpisodeId != access.ActiveEpisode.EpisodeId
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                access.ActiveEpisode,
+                cancellationToken))
+        {
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private async Task<Result<Unit, AppError>> SaveEpisodeFencedChangesAsync(
+        IUnitOfWorkTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result<Unit, AppError>.Success(Unit.Value);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
     }
 
     private async Task<Result<ReportTemplatePersistenceModel, AppError>> ValidateTrainerAndCommandAsync(
@@ -94,15 +154,6 @@ public sealed partial class RecurringReportAssignmentService
     private static string? NormalizeNote(string? note)
         => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 
-    private static DateTimeOffset AddInterval(DateTimeOffset value, int intervalValue, RecurringReportIntervalUnit intervalUnit)
-        => intervalUnit switch
-        {
-            RecurringReportIntervalUnit.Day => value.AddDays(intervalValue),
-            RecurringReportIntervalUnit.Week => value.AddDays(intervalValue * 7d),
-            RecurringReportIntervalUnit.Month => value.AddMonths(intervalValue),
-            _ => value.AddDays(intervalValue)
-        };
-
     private static DateTimeOffset? RecalculateNextEligibleAt(RecurringReportAssignmentPersistenceModel assignment)
     {
         if (!assignment.IsActive)
@@ -112,7 +163,7 @@ public sealed partial class RecurringReportAssignmentService
 
         if (assignment.CurrentReportRequest?.Submission?.TrainerFeedbackReadAt is { } readAt)
         {
-            return AddInterval(readAt, assignment.IntervalValue, assignment.IntervalUnit);
+            return RecurringReportSchedulePolicy.AddInterval(readAt, assignment.IntervalValue, assignment.IntervalUnit);
         }
 
         return assignment.CurrentReportRequestId.HasValue ? null : assignment.StartsAt;
@@ -152,7 +203,7 @@ public sealed partial class RecurringReportAssignmentService
 
         var statusReason = request.Status switch
         {
-            ReportRequestStatus.Submitted => AutomaticEligibilityReason.Eligible,
+            ReportRequestStatus.Submitted or ReportRequestStatus.Completed => AutomaticEligibilityReason.Eligible,
             ReportRequestStatus.Pending => AutomaticEligibilityReason.CurrentRequestPending,
             ReportRequestStatus.Expired => AutomaticEligibilityReason.CurrentRequestExpired,
             ReportRequestStatus.Cancelled => AutomaticEligibilityReason.CurrentRequestCancelled,
@@ -180,7 +231,7 @@ public sealed partial class RecurringReportAssignmentService
         }
 
         var eligibleAt = assignment.NextEligibleAt
-            ?? AddInterval(submission.TrainerFeedbackReadAt.Value, assignment.IntervalValue, assignment.IntervalUnit);
+            ?? RecurringReportSchedulePolicy.AddInterval(submission.TrainerFeedbackReadAt.Value, assignment.IntervalValue, assignment.IntervalUnit);
         return eligibleAt <= now
             ? AutomaticEligibilityDecision.Eligible()
             : AutomaticEligibilityDecision.Blocked(AutomaticEligibilityReason.NotDue);
@@ -249,7 +300,10 @@ public sealed partial class RecurringReportAssignmentService
             assignment.CreatedAt,
             false,
             template,
-            null);
+            null,
+            assignment.ScheduleRevision,
+            [],
+            assignment.SourceCoachingEpisodeId);
 
     private static RecurringReportAssignmentUpdatePersistenceModel ToUpdateModel(
         RecurringReportAssignmentPersistenceModel assignment)
@@ -264,7 +318,8 @@ public sealed partial class RecurringReportAssignmentService
             assignment.CurrentReportRequestId,
             assignment.LastRequestCreatedAt,
             assignment.NextEligibleAt,
-            assignment.IsDeleted);
+            assignment.IsDeleted,
+            assignment.ScheduleRevision);
 
     private static ReportRequestPersistenceModel ToRequestPersistenceModel(
         NewReportRequestPersistenceModel request,

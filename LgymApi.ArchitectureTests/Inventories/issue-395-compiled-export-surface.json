@@ -13,8 +13,8 @@
     },
     {
       "name": "LgymApi.Notifications",
-      "exportedTypeCount": 82,
-      "sha256": "70e7ffb17ec9b0acb0e126c7a1d6611c8db9ecad836f8db493a6b500ec91fb23"
+      "exportedTypeCount": 83,
+      "sha256": "4f7eb560ccbc38198d74d410705a0ef029bbc8a5852f45a265d46e560cd9d671"
     },
     {
       "name": "LgymApi.Platform",
@@ -23,8 +23,8 @@
     },
     {
       "name": "LgymApi.Reporting",
-      "exportedTypeCount": 84,
-      "sha256": "67a85bab530feb4b354d6954468ba7b6d842b68db75e64b1848456d33e8df799"
+      "exportedTypeCount": 93,
+      "sha256": "09bee1bf74a081f069fd5fef067b78052ca0bbcee361a77e82da62a2185ba887"
     },
     {
       "name": "LgymApi.TrainingPlanning",

@@ -66,7 +66,8 @@ public sealed class ApplicationApiAdapterRegistrationTests
             [typeof(ITraineeReportRequestApiPort)] = typeof(TraineeReportRequestApiAdapter),
             [typeof(ITrainerReportPhotoApiPort)] = typeof(TrainerReportPhotoApiAdapter),
             [typeof(ITraineeReportPhotoApiPort)] = typeof(TraineeReportPhotoApiAdapter),
-            [typeof(IRecurringReportAssignmentApiPort)] = typeof(RecurringReportAssignmentApiAdapter)
+            [typeof(IRecurringReportAssignmentApiPort)] = typeof(RecurringReportAssignmentApiAdapter),
+            [typeof(ITraineeRecurringReportAssignmentApiPort)] = typeof(TraineeRecurringReportAssignmentApiAdapter)
         };
 
     private static readonly IReadOnlyDictionary<Type, Type> ExpectedNotificationsApiRegistrations =
@@ -94,7 +95,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
     }
 
     [Test]
-    public void ApiAdapterFacades_RegisterTheExact19Plus7Plus3ManifestExactlyOnceAsScoped()
+    public void ApiAdapterFacades_RegisterTheExact19Plus8Plus3ManifestExactlyOnceAsScoped()
     {
         var services = new ServiceCollection();
         services.AddReportingApiAdapters();
@@ -116,9 +117,9 @@ public sealed class ApplicationApiAdapterRegistrationTests
 
         discoveredContracts.Should().Equal(ExpectedRegistrations.Keys.OrderBy(type => type.FullName, StringComparer.Ordinal));
         ExpectedApplicationRegistrations.Should().HaveCount(19);
-        ExpectedReportingRegistrations.Should().HaveCount(7);
+        ExpectedReportingRegistrations.Should().HaveCount(8);
         ExpectedNotificationsApiRegistrations.Should().HaveCount(3);
-        ExpectedRegistrations.Should().HaveCount(29);
+        ExpectedRegistrations.Should().HaveCount(30);
     }
 
     [TestCase(true)]

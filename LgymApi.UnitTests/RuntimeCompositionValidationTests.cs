@@ -279,7 +279,7 @@ public sealed class RuntimeCompositionValidationTests
                 && descriptor.ServiceType.Namespace == "LgymApi.Notifications.ApiAdapters")
             .ToArray();
 
-        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 26, "Application and Reporting API adapters");
+        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 27, "Application and Reporting API adapters");
         AssertExactScopedInternalAdapters(notificationsAdapters, expectedCount: 3, "Notifications API adapters");
 
         var retainedIntegrationContracts = new HashSet<string>(StringComparer.Ordinal)

@@ -88,7 +88,7 @@ internal sealed class ReportingAuthorizationCoordinator(
             && !request.TraineeId.IsEmpty
             && submission.ReportRequestId == request.Id
             && submission.TraineeId == request.TraineeId
-            && Evaluate(actor, request.TrainerId, request.TraineeId, access, request.Status == ReportRequestStatus.Submitted, request.CreatedAt, ReportingAuthorizationAction.ReadSubmission);
+            && Evaluate(actor, request.TrainerId, request.TraineeId, access, request.Status is ReportRequestStatus.Submitted or ReportRequestStatus.Completed, request.CreatedAt, ReportingAuthorizationAction.ReadSubmission);
     }
 
     public bool CanReadPhoto(AuthenticatedAccountContext actor, ReportRequestPersistenceModel request, ReportingRelationshipAccessFact access)
@@ -96,7 +96,7 @@ internal sealed class ReportingAuthorizationCoordinator(
             && !request.TrainerId.IsEmpty
             && !request.TraineeId.IsEmpty
             && request.Status != ReportRequestStatus.Cancelled
-            && Evaluate(actor, request.TrainerId, request.TraineeId, access, request.Status == ReportRequestStatus.Submitted, request.CreatedAt, ReportingAuthorizationAction.ReadPhoto);
+            && Evaluate(actor, request.TrainerId, request.TraineeId, access, request.Status is ReportRequestStatus.Submitted or ReportRequestStatus.Completed, request.CreatedAt, ReportingAuthorizationAction.ReadPhoto);
 
     private bool Evaluate(
         AuthenticatedAccountContext actor,

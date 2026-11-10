@@ -4,6 +4,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories.Reporting;
@@ -75,6 +76,9 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
         CancellationToken cancellationToken = default)
         => SetRequestStateAsync(requestId, ReportRequestStatus.Submitted, submittedAt, cancellationToken);
 
+    public Task SetRequestCompletedAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
+        => SetRequestStateAsync(requestId, ReportRequestStatus.Completed, null, cancellationToken);
+
     public Task AddSubmissionAsync(NewReportSubmissionPersistenceModel submission, CancellationToken cancellationToken = default)
         => _dbContext.ReportSubmissions.AddAsync(new ReportSubmission
         {
@@ -104,6 +108,44 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
         => FindSubmissionAsync(query => query.Where(submission =>
             submission.Id == submissionId
             && submission.TraineeId == ReportingPersistenceAccountIds.ToPersisted(traineeId)), cancellationToken);
+
+    public async Task<ReportSubmissionPersistenceModel?> FindSubmissionForTraineeForUpdateAsync(
+        Id<ReportSubmission> submissionId,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _dbContext.ReportSubmissions
+            .Where(submission => submission.Id == submissionId
+                && submission.TraineeId == ReportingPersistenceAccountIds.ToPersisted(traineeId))
+            .StageUpdateAsync(
+                _dbContext,
+                submission => submission.UpdatedAt,
+                submission => submission.UpdatedAt,
+                cancellationToken);
+        return affectedRows == 0
+            ? null
+            : await FindSubmissionForTraineeAsync(submissionId, traineeId, cancellationToken);
+    }
+
+    public async Task<ReportSubmissionPersistenceModel?> FindSubmissionForTrainerForUpdateAsync(
+        Id<ReportSubmission> submissionId,
+        Id<AccountReference> trainerId,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default)
+    {
+        var affectedRows = await _dbContext.ReportSubmissions
+            .Where(submission => submission.Id == submissionId
+                && submission.TraineeId == ReportingPersistenceAccountIds.ToPersisted(traineeId)
+                && submission.ReportRequest.TrainerId == ReportingPersistenceAccountIds.ToPersisted(trainerId))
+            .StageUpdateAsync(
+                _dbContext,
+                submission => submission.UpdatedAt,
+                submission => submission.UpdatedAt,
+                cancellationToken);
+        return affectedRows == 0
+            ? null
+            : await FindSubmissionForTrainerAsync(submissionId, trainerId, traineeId, cancellationToken);
+    }
 
     public Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSubmissionsByTraineeAsync(
         Id<AccountReference> traineeId,

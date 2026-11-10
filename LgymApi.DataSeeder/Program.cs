@@ -203,6 +203,7 @@ services.AddScoped<IEntitySeeder, TrainerTraineeLinkSeeder>();
         services.AddScoped<IEntitySeeder, ReportRequestSeeder>();
         services.AddScoped<IEntitySeeder, ReportSubmissionSeeder>();
         services.AddScoped<IEntitySeeder, RecurringReportAssignmentSeeder>();
+        services.AddScoped<IEntitySeeder, RecurringReportScheduleChangeSeeder>();
         services.AddScoped<IEntitySeeder, SupplementPlanSeeder>();
         services.AddScoped<IEntitySeeder, SupplementPlanItemSeeder>();
         services.AddScoped<IEntitySeeder, SupplementIntakeLogSeeder>();

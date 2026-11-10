@@ -64,6 +64,14 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             };
             currentRequest.Submission = submission;
 
+            var episode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
             var assignment = new RecurringReportAssignment
             {
                 Id = Id<RecurringReportAssignment>.New(),
@@ -78,15 +86,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
                 Note = "weekly check-in",
                 CurrentReportRequestId = currentRequest.Id,
                 CurrentReportRequest = currentRequest,
-                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
-            };
-            var episode = new CoachingEpisode
-            {
-                Id = Id<CoachingEpisode>.New(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id,
-                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
-                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1),
+                SourceCoachingEpisodeId = episode.Id
             };
             var link = new TrainerTraineeLink
             {

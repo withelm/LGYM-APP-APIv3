@@ -34,7 +34,7 @@ public sealed class ReportingProfile : IMappingProfile
             TrainerId = source?.TrainerId.ToString() ?? string.Empty,
             TraineeId = source?.TraineeId.ToString() ?? string.Empty,
             TemplateId = source?.TemplateId.ToString() ?? string.Empty,
-            Status = source?.Status ?? default,
+            Status = ToLegacyRequestStatus(source?.Status ?? default),
             DueAt = source?.DueAt,
             Note = source?.Note,
             CreatedAt = source?.CreatedAt ?? default,
@@ -54,7 +54,17 @@ public sealed class ReportingProfile : IMappingProfile
             TrainerFieldComments = source?.TrainerFieldComments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             TrainerFeedbackAddedAt = source?.TrainerFeedbackAddedAt,
             TrainerFeedbackReadAt = source?.TrainerFeedbackReadAt,
+            NextRecurringRequest = source?.NextRecurringRequest is null
+                ? null
+                : mapper.Map<NextRecurringReportRequestResult, NextRecurringReportRequestDto>(source.NextRecurringRequest),
             Request = MapRequest(source?.Request, mapper)
+        });
+
+        configuration.CreateMap<NextRecurringReportRequestResult, NextRecurringReportRequestDto>((source, _) => new NextRecurringReportRequestDto
+        {
+            AssignmentId = source?.AssignmentId?.ToString(),
+            ScheduledAt = source?.ScheduledAt,
+            Status = source?.Status ?? default
         });
 
         configuration.CreateMap<RecurringReportAssignmentResult, RecurringReportAssignmentDto>((source, mapper) => new RecurringReportAssignmentDto
@@ -72,9 +82,34 @@ public sealed class ReportingProfile : IMappingProfile
             CurrentReportRequestId = source?.CurrentReportRequestId?.ToString(),
             LastRequestCreatedAt = source?.LastRequestCreatedAt,
             NextEligibleAt = source?.NextEligibleAt,
+            ScheduleRevision = source?.ScheduleRevision ?? 0,
+            EffectiveNextRecurringRequest = source?.EffectiveNextRecurringRequest is null
+                ? new NextRecurringReportRequestDto()
+                : mapper.Map<NextRecurringReportRequestResult, NextRecurringReportRequestDto>(source.EffectiveNextRecurringRequest),
+            PendingScheduleProposal = source?.PendingScheduleProposal is null
+                ? null
+                : mapper.Map<RecurringReportScheduleProposalResult, RecurringReportScheduleProposalDto>(source.PendingScheduleProposal),
+            ScheduleProposalHistory = source is null
+                ? []
+                : mapper.MapList<RecurringReportScheduleProposalResult, RecurringReportScheduleProposalDto>(source.ScheduleProposalHistory),
             CreatedAt = source?.CreatedAt ?? default,
             Template = MapTemplate(source?.Template, mapper),
             CurrentReportRequest = MapNullableRequest(source?.CurrentReportRequest, mapper)
+        });
+
+        configuration.CreateMap<RecurringReportScheduleProposalResult, RecurringReportScheduleProposalDto>((source, _) => new RecurringReportScheduleProposalDto
+        {
+            Id = source?.Id.ToString() ?? string.Empty,
+            AssignmentId = source?.AssignmentId.ToString() ?? string.Empty,
+            OldScheduledAt = source?.OldScheduledAt ?? default,
+            ProposedScheduledAt = source?.ProposedScheduledAt ?? default,
+            Reason = source?.Reason,
+            ScheduleRevision = source?.ScheduleRevision ?? 0,
+            Status = source?.Status ?? default,
+            RequestedAt = source?.RequestedAt ?? default,
+            RequestedByAccountId = source?.RequestedByAccountId.ToString() ?? string.Empty,
+            ResolvedAt = source?.ResolvedAt,
+            ResolvedByAccountId = source?.ResolvedByAccountId?.ToString()
         });
 
         configuration.CreateMap<InitiatePhotoUploadResult, InitiatePhotoUploadResponse>((source, _) => new InitiatePhotoUploadResponse
@@ -165,4 +200,7 @@ public sealed class ReportingProfile : IMappingProfile
 
         return mapper.Map<ReportRequestResult, ReportRequestDto>(source);
     }
+
+    private static ReportRequestStatus ToLegacyRequestStatus(ReportRequestStatus status)
+        => status == ReportRequestStatus.Completed ? ReportRequestStatus.Submitted : status;
 }

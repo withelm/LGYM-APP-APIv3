@@ -79,6 +79,79 @@ public sealed partial class TrainerReportingController
             _mapper.Map<RecurringReportAssignmentResult, RecurringReportAssignmentDto>(result.Value));
     }
 
+    [HttpPost("trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override")]
+    [ProducesResponseType(typeof(RecurringReportAssignmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SetNextRecurringReportOverride(
+        [FromRoute] string traineeId,
+        [FromRoute] string id,
+        [FromBody] SetNextRecurringReportOverrideRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<RecurringReportAssignment>.TryParse(id, out var parsedAssignmentId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var result = await _recurringAssignments.SetNextOverrideAsync(
+            HttpContext.GetAuthenticatedAccountContext()!,
+            parsedTraineeId,
+            parsedAssignmentId,
+            new SetNextRecurringReportOverrideCommand
+            {
+                ScheduledAt = request.ScheduledAt!.Value,
+                ExpectedScheduleRevision = request.ExpectedScheduleRevision!.Value
+            },
+            cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        return Ok(_mapper.Map<RecurringReportAssignmentResult, RecurringReportAssignmentDto>(result.Value));
+    }
+
+    [HttpPost("trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept")]
+    [ProducesResponseType(typeof(RecurringReportAssignmentDto), StatusCodes.Status200OK)]
+    public Task<IActionResult> AcceptNextRecurringReportProposal([FromRoute] string traineeId, [FromRoute] string id, [FromRoute] string proposalId, CancellationToken cancellationToken = default)
+        => ResolveNextRecurringReportProposal(traineeId, id, proposalId, true, cancellationToken);
+
+    [HttpPost("trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject")]
+    [ProducesResponseType(typeof(RecurringReportAssignmentDto), StatusCodes.Status200OK)]
+    public Task<IActionResult> RejectNextRecurringReportProposal([FromRoute] string traineeId, [FromRoute] string id, [FromRoute] string proposalId, CancellationToken cancellationToken = default)
+        => ResolveNextRecurringReportProposal(traineeId, id, proposalId, false, cancellationToken);
+
+    private async Task<IActionResult> ResolveNextRecurringReportProposal(string traineeId, string id, string proposalId, bool accept, CancellationToken cancellationToken)
+    {
+        if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.UserIdRequired));
+        }
+
+        if (!Id<RecurringReportAssignment>.TryParse(id, out var parsedAssignmentId)
+            || !Id<RecurringReportScheduleChange>.TryParse(proposalId, out var parsedProposalId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var result = await _recurringAssignments.ResolveProposalAsync(
+            HttpContext.GetAuthenticatedAccountContext()!,
+            parsedTraineeId,
+            parsedAssignmentId,
+            parsedProposalId,
+            accept,
+            cancellationToken);
+        return result.IsFailure
+            ? result.ToActionResult()
+            : Ok(_mapper.Map<RecurringReportAssignmentResult, RecurringReportAssignmentDto>(result.Value));
+    }
+
     [HttpGet("trainees/{traineeId}/recurring-report-assignments")]
     [ProducesResponseType(typeof(List<RecurringReportAssignmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]

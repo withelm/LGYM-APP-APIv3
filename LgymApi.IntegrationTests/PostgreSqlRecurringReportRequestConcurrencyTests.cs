@@ -159,6 +159,14 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
             TrainerId = trainer.Id,
             Name = "Concurrency template"
         };
+        var episode = new CoachingEpisode
+        {
+            Id = Id<CoachingEpisode>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            StartedAt = DateTimeOffset.UtcNow.AddDays(-10),
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+        };
         var assignment = new RecurringReportAssignment
         {
             Id = Id<RecurringReportAssignment>.New(),
@@ -170,15 +178,17 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
             IntervalUnit = RecurringReportIntervalUnit.Week,
             StartsAt = DateTimeOffset.UtcNow.AddDays(-10),
             IsActive = true,
-            NextEligibleAt = nextEligibleAt
+            NextEligibleAt = nextEligibleAt,
+            SourceCoachingEpisodeId = episode.Id
         };
         database.TrainerTraineeLinks.Add(new TrainerTraineeLink
         {
             Id = Id<TrainerTraineeLink>.New(),
             TrainerId = trainer.Id,
-            TraineeId = trainee.Id
+            TraineeId = trainee.Id,
+            EpisodeId = episode.Id
         });
-        database.AddRange(template, assignment);
+        database.AddRange(template, assignment, episode);
         await database.SaveChangesAsync(cancellationToken);
         return new RaceScenario(
             new AuthenticatedAccountContext(
@@ -321,6 +331,9 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
 
         public Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
             => inner.FindByCurrentRequestAsync(reportRequestId, cancellationToken);
+
+        public Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestForUpdateAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
+            => inner.FindByCurrentRequestForUpdateAsync(reportRequestId, cancellationToken);
 
         public Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTrainerAndTraineeAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default)
             => inner.ListByTrainerAndTraineeAsync(trainerId, traineeId, cancellationToken);

@@ -96,5 +96,6 @@ public sealed partial class ReportingService
             assignment.CurrentReportRequestId,
             assignment.LastRequestCreatedAt,
             assignment.NextEligibleAt,
-            assignment.IsDeleted);
+            assignment.IsDeleted,
+            assignment.ScheduleRevision);
 }

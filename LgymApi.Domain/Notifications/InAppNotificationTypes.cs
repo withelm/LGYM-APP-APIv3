@@ -10,6 +10,7 @@ public static class InAppNotificationTypes
     // Keep this value aligned with the existing mobile notification contract.
     public static readonly InAppNotificationType ReportRequestReceived = InAppNotificationType.Define("ReportRequestReceived");
     public static readonly InAppNotificationType ReportFeedbackReceived = InAppNotificationType.Define("ReportFeedbackReceived");
+    public static readonly InAppNotificationType ReportFeedbackRead = InAppNotificationType.Define("ReportFeedbackRead");
     public static readonly InAppNotificationType DietPlanUpdated = InAppNotificationType.Define("DietPlanUpdated");
     public static readonly InAppNotificationType TraineeNoteUpdated = InAppNotificationType.Define("TraineeNoteUpdated");
 
@@ -22,6 +23,7 @@ public static class InAppNotificationTypes
         TrainerRelationshipEnded,
         ReportRequestReceived,
         ReportFeedbackReceived,
+        ReportFeedbackRead,
         DietPlanUpdated,
         TraineeNoteUpdated
     ];

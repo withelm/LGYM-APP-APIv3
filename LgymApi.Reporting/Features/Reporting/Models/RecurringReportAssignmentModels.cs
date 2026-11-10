@@ -15,6 +15,19 @@ public sealed class UpsertRecurringReportAssignmentCommand
     public string? Note { get; set; }
 }
 
+public sealed class SetNextRecurringReportOverrideCommand
+{
+    public DateTimeOffset ScheduledAt { get; set; }
+    public int ExpectedScheduleRevision { get; set; }
+}
+
+public sealed class ProposeNextRecurringReportScheduleCommand
+{
+    public DateTimeOffset ScheduledAt { get; set; }
+    public string? Reason { get; set; }
+    public int ExpectedScheduleRevision { get; set; }
+}
+
 public sealed class RecurringReportAssignmentResult
 {
     public Id<RecurringReportAssignment> Id { get; set; }
@@ -30,7 +43,26 @@ public sealed class RecurringReportAssignmentResult
     public Id<ReportRequest>? CurrentReportRequestId { get; set; }
     public DateTimeOffset? LastRequestCreatedAt { get; set; }
     public DateTimeOffset? NextEligibleAt { get; set; }
+    public int ScheduleRevision { get; set; }
+    public NextRecurringReportRequestResult EffectiveNextRecurringRequest { get; set; } = new();
+    public RecurringReportScheduleProposalResult? PendingScheduleProposal { get; set; }
+    public IReadOnlyList<RecurringReportScheduleProposalResult> ScheduleProposalHistory { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; }
     public ReportTemplateResult Template { get; set; } = new();
     public ReportRequestResult? CurrentReportRequest { get; set; }
+}
+
+public sealed class RecurringReportScheduleProposalResult
+{
+    public Id<RecurringReportScheduleChange> Id { get; set; }
+    public Id<RecurringReportAssignment> AssignmentId { get; set; }
+    public DateTimeOffset OldScheduledAt { get; set; }
+    public DateTimeOffset ProposedScheduledAt { get; set; }
+    public string? Reason { get; set; }
+    public int ScheduleRevision { get; set; }
+    public RecurringReportScheduleChangeStatus Status { get; set; }
+    public DateTimeOffset RequestedAt { get; set; }
+    public Id<AccountReference> RequestedByAccountId { get; set; }
+    public DateTimeOffset? ResolvedAt { get; set; }
+    public Id<AccountReference>? ResolvedByAccountId { get; set; }
 }

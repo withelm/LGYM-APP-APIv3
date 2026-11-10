@@ -49,6 +49,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
     {
         var traineeId = Id<User>.New();
         var request = CreatePhotoRequest(traineeId);
+        request.Status = ReportRequestStatus.Submitted;
         var submission = new ReportSubmission
         {
             Id = Id<ReportSubmission>.New(),
@@ -64,6 +65,11 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
         };
         var requestPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
         requestPersistence.FindSubmissionForTraineeAsync(
+                submission.Id,
+                ReportingTestData.AccountId(traineeId),
+                Arg.Any<CancellationToken>())
+            .Returns(ReportingTestData.Submission(submission));
+        requestPersistence.FindSubmissionForTraineeForUpdateAsync(
                 submission.Id,
                 ReportingTestData.AccountId(traineeId),
                 Arg.Any<CancellationToken>())

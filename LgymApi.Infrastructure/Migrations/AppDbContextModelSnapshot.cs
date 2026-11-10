@@ -1457,6 +1457,14 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int>("ScheduleRevision")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid?>("SourceCoachingEpisodeId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("StartsAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1478,6 +1486,8 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"CurrentReportRequestId\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
+                    b.HasIndex("SourceCoachingEpisodeId");
+
                     b.HasIndex("TemplateId");
 
                     b.HasIndex("TraineeId", "NextEligibleAt");
@@ -1485,6 +1495,80 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("TrainerId", "TraineeId", "IsActive");
 
                     b.ToTable("RecurringReportAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.RecurringReportScheduleChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("OldScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ProposedScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("RecurringReportAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ScheduleRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SourceProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.HasIndex("SourceProposalId");
+
+                    b.HasIndex("RecurringReportAssignmentId", "Status");
+
+                    b.HasIndex(new[] { "RecurringReportAssignmentId", "Kind", "Status" }, "UX_RecurringReportScheduleChanges_ActiveOverride")
+                        .IsUnique()
+                        .HasFilter("\"Kind\" = 'TrainerOverride' AND \"Status\" = 'Active'");
+
+                    b.HasIndex(new[] { "RecurringReportAssignmentId", "Kind", "Status" }, "UX_RecurringReportScheduleChanges_PendingProposal")
+                        .IsUnique()
+                        .HasFilter("\"Kind\" = 'TraineeProposal' AND \"Status\" = 'Pending'");
+
+                    b.ToTable("RecurringReportScheduleChanges", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
@@ -3007,6 +3091,11 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasForeignKey("CurrentReportRequestId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("LgymApi.Domain.Entities.CoachingEpisode", "SourceCoachingEpisode")
+                        .WithMany()
+                        .HasForeignKey("SourceCoachingEpisodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LgymApi.Domain.Entities.ReportTemplate", "Template")
                         .WithMany()
                         .HasForeignKey("TemplateId")
@@ -3027,11 +3116,46 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Navigation("CurrentReportRequest");
 
+                    b.Navigation("SourceCoachingEpisode");
+
                     b.Navigation("Template");
 
                     b.Navigation("Trainee");
 
                     b.Navigation("Trainer");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.RecurringReportScheduleChange", b =>
+                {
+                    b.HasOne("LgymApi.Domain.Entities.RecurringReportAssignment", "RecurringReportAssignment")
+                        .WithMany("ScheduleChanges")
+                        .HasForeignKey("RecurringReportAssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LgymApi.Domain.Entities.User", "ResolvedByUser")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LgymApi.Domain.Entities.RecurringReportScheduleChange", "SourceProposal")
+                        .WithMany()
+                        .HasForeignKey("SourceProposalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("RecurringReportAssignment");
+
+                    b.Navigation("RequestedByUser");
+
+                    b.Navigation("ResolvedByUser");
+
+                    b.Navigation("SourceProposal");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>
@@ -3446,6 +3570,11 @@ namespace LgymApi.Infrastructure.Migrations
             modelBuilder.Entity("LgymApi.Domain.Entities.PlanDay", b =>
                 {
                     b.Navigation("Exercises");
+                });
+
+            modelBuilder.Entity("LgymApi.Domain.Entities.RecurringReportAssignment", b =>
+                {
+                    b.Navigation("ScheduleChanges");
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ReportRequest", b =>

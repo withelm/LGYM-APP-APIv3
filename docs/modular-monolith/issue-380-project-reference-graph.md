@@ -209,7 +209,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.BackgroundWorker -> LgymApi.Application` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:1` |
 | `LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common` | `LgymApi.BackgroundWorker/Actions/SendRegistrationEmailHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Identity` | `LgymApi.BackgroundWorker/Actions/LocalizedReportNotificationDispatcher.cs:13` |
-| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:51` |
+| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:52` |
 | `LgymApi.BackgroundWorker -> LgymApi.Notifications` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Platform` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:4` |
 | `LgymApi.BackgroundWorker -> LgymApi.Reporting` | `LgymApi.BackgroundWorker/Jobs/RecurringReportAssignmentProcessingJob.cs:1` |
@@ -220,7 +220,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.DataSeeder.Tests -> LgymApi.DataSeeder` | `LgymApi.DataSeeder.Tests/ConsolePromptTests.cs:37` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Domain` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:3` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Identity` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:1` |
-| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:91` |
+| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:92` |
 | `LgymApi.Identity -> LgymApi.Authorization` | `LgymApi.Identity/Mapping/IdentityAccountContractMappingProfile.cs:2` |
 | `LgymApi.Identity -> LgymApi.Domain` | `LgymApi.Identity/Access/AccountReadService.cs:4` |
 | `LgymApi.Identity -> LgymApi.Platform` | `LgymApi.Identity/Access/AccountReadService.cs:2` |
@@ -298,7 +298,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.UnitTests -> LgymApi.Platform` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:4` |
 | `LgymApi.UnitTests -> LgymApi.Resources` | `LgymApi.UnitTests/CoachingNotificationIntentInAppTests.cs:99` |
 | `LgymApi.UnitTests -> LgymApi.Reporting` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:14` |
-| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:129` |
+| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:130` |
 | `LgymApi.UnitTests -> LgymApi.TrainingPlanning` | `LgymApi.UnitTests/CoachingManagedPlanSliceTests.cs:17` |
 
 ## Locked topology
