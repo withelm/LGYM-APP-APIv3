@@ -202,14 +202,18 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
     {
         var trainer = await SeedTrainerAsync();
         var trainee = await SeedUserAsync("request-now-error-trainee", "request-now-error-trainee@example.com");
-        if (linkRelationship)
-        {
-            await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
-        }
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var timestamp = DateTimeOffset.UtcNow;
+        var episode = new CoachingEpisode
+        {
+            Id = Id<CoachingEpisode>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            StartedAt = timestamp.AddDays(-1),
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+        };
         var template = new ReportTemplate
         {
             Id = Id<ReportTemplate>.New(),
@@ -229,13 +233,28 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
             StartsAt = timestamp.AddDays(-1),
             EndsAt = timestamp.AddDays(30),
             IsActive = true,
+            SourceCoachingEpisodeId = episode.Id,
             CreatedAt = timestamp,
             UpdatedAt = timestamp
         };
+        var link = linkRelationship
+            ? new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episode.Id
+            }
+            : null;
         database.ReportTemplates.Add(template);
+        database.CoachingEpisodes.Add(episode);
+        if (link is not null)
+        {
+            database.TrainerTraineeLinks.Add(link);
+        }
         database.RecurringReportAssignments.Add(assignment);
         await database.SaveChangesAsync();
-        return new Scenario(trainer.Id, trainee.Id, template.Id, assignment.Id);
+        return new Scenario(trainer.Id, trainee.Id, template.Id, assignment.Id, episode.Id);
     }
 
     private async Task<Id<ReportRequest>> AddPendingCurrentRequestAsync(Scenario scenario)
@@ -250,6 +269,7 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
             TraineeId = scenario.TraineeId,
             TemplateId = scenario.TemplateId,
             RecurringReportAssignmentId = scenario.AssignmentId,
+            SourceCoachingEpisodeId = scenario.EpisodeId,
             Status = ReportRequestStatus.Pending,
             CreatedAt = timestamp,
             UpdatedAt = timestamp
@@ -292,19 +312,6 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
         return trainer;
     }
 
-    private async Task LinkTrainerAndTraineeAsync(Id<User> trainerId, Id<User> traineeId)
-    {
-        using var scope = Factory.Services.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        database.TrainerTraineeLinks.Add(new TrainerTraineeLink
-        {
-            Id = Id<TrainerTraineeLink>.New(),
-            TrainerId = trainerId,
-            TraineeId = traineeId
-        });
-        await database.SaveChangesAsync();
-    }
-
     private static string Route(Id<User> traineeId, Id<RecurringReportAssignment> assignmentId) =>
         $"/api/trainer/trainees/{traineeId}/recurring-report-assignments/{assignmentId}/request-now";
 
@@ -319,5 +326,6 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
         Id<User> TrainerId,
         Id<User> TraineeId,
         Id<ReportTemplate> TemplateId,
-        Id<RecurringReportAssignment> AssignmentId);
+        Id<RecurringReportAssignment> AssignmentId,
+        Id<CoachingEpisode> EpisodeId);
 }
