@@ -54,7 +54,7 @@ public sealed partial class ReportingService
         }
 
         var access = await _relationshipAccessPersistence.GetAccessAsync(currentUser.Id, traineeId, cancellationToken);
-        if (!access.HasActiveRelationship)
+        if (!access.HasActiveRelationship && access.RelationshipPeriods.Count == 0)
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
@@ -127,12 +127,7 @@ public sealed partial class ReportingService
             return subjectAvailability;
         }
 
-        if (currentUser.Id == request.TraineeId)
-        {
-            return Result<Unit, AppError>.Success(Unit.Value);
-        }
-
-        if (currentUser.Id != request.TrainerId)
+        if (currentUser.Id != request.TraineeId && currentUser.Id != request.TrainerId)
         {
             var trainerCheck = EnsureTrainer(currentUser);
             return trainerCheck.IsFailure
@@ -140,11 +135,14 @@ public sealed partial class ReportingService
                 : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
-        return await ValidateTrainerSourcePhotoAccessAsync(
-            currentUser,
-            request.TraineeId,
-            request.CreatedAt,
-            cancellationToken);
+        var access = currentUser.Id == request.TraineeId && request.Status == ReportRequestStatus.Submitted
+            ? new ReportingRelationshipAccessFact(false)
+            : currentUser.Id == request.TraineeId
+                ? await _relationshipAccessPersistence.GetAccessAsync(request.TrainerId, request.TraineeId, cancellationToken)
+            : await _relationshipAccessPersistence.GetAccessAsync(currentUser.Id, request.TraineeId, cancellationToken);
+        return _authorization.CanReadPhoto(currentUser, request, access)
+            ? Result<Unit, AppError>.Success(Unit.Value)
+            : Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
     }
 
     private static string GenerateStorageKey(

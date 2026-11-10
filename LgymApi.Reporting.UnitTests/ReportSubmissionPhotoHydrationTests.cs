@@ -171,7 +171,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(traineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        result.Value.Should().BeEmpty();
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -416,6 +416,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
                 Substitute.For<IRecurringReportAssignmentPersistence>(),
                 _photos,
                 Substitute.For<IReportingRelationshipAccessPersistence>(),
+                ReportingAuthorizationTestFactory.Create(),
                 accountLookup,
                 new ReportSubmissionAcceptedProgressCommandFactory(),
                 Substitute.For<ICommandDispatcher>(),

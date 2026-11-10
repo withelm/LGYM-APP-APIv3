@@ -83,7 +83,9 @@ public sealed partial class ReportingService
         }
         else if (command.TraineeId.HasValue && !command.TraineeId.Value.IsEmpty)
         {
-            var authCheck = await ValidatePhotoAccessAsync(currentUser, command.TraineeId.Value, cancellationToken);
+            var authCheck = currentUser.Id == command.TraineeId.Value
+                ? await ValidatePhotoSubjectAvailabilityAsync(command.TraineeId.Value, cancellationToken)
+                : await ValidatePhotoAccessAsync(currentUser, command.TraineeId.Value, cancellationToken);
             if (authCheck.IsFailure)
             {
                 return Result<List<PhotoHistoryItemResult>, AppError>.Failure(authCheck.Error);

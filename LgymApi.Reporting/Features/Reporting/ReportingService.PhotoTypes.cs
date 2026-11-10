@@ -50,7 +50,7 @@ public sealed partial class ReportingService
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         await _templatePersistence.LockTrainerDefinitionsAsync(trainer.Id, cancellationToken);
         var type = await _templatePersistence.FindPhotoTypeAsync(photoTypeId, cancellationToken);
-        if (type is null || type.TrainerId != trainer.Id) return Result<TrainerPhotoTypeResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        if (type is null || !_authorization.CanManageOwnedDefinition(trainer, type.TrainerId)) return Result<TrainerPhotoTypeResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         var normalized = name is null ? type.Name : NormalizePhotoTypeName(name);
         if (normalized is null) return Result<TrainerPhotoTypeResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         var all = await _templatePersistence.ListPhotoTypesAsync(trainer.Id, cancellationToken);
@@ -71,7 +71,7 @@ public sealed partial class ReportingService
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         await _templatePersistence.LockTrainerDefinitionsAsync(trainer.Id, cancellationToken);
         var type = await _templatePersistence.FindPhotoTypeAsync(photoTypeId, cancellationToken);
-        if (type is null || type.TrainerId != trainer.Id) return Result<TrainerPhotoTypeResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        if (type is null || !_authorization.CanManageOwnedDefinition(trainer, type.TrainerId)) return Result<TrainerPhotoTypeResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         if (string.IsNullOrWhiteSpace(type.SystemKey)) return Result<TrainerPhotoTypeResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
 
         var all = await _templatePersistence.ListPhotoTypesAsync(trainer.Id, cancellationToken);

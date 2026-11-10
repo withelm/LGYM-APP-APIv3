@@ -178,6 +178,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             Substitute.For<IReportPhotoPersistence>(),
             relationshipAccess,
+            ReportingAuthorizationTestFactory.Create(),
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             dispatcher,
