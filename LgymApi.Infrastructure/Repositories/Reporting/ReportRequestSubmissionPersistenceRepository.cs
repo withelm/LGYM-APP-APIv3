@@ -140,6 +140,8 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
 
     private IQueryable<ReportSubmission> SubmissionQuery()
         => _dbContext.ReportSubmissions
+            .IgnoreQueryFilters()
+            .Where(submission => !submission.IsDeleted && !submission.ReportRequest.IsDeleted)
             .Include(submission => submission.ReportRequest)
                 .ThenInclude(request => request.Template)
                     .ThenInclude(template => template.Fields.OrderBy(field => field.Order).ThenBy(field => field.CreatedAt))

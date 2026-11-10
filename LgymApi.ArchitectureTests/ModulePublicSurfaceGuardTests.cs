@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 832;
+    private const int ManifestEntryCount = 834;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -45,6 +45,7 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/WorkoutProgress/Persistence/WorkoutProgressPersistenceModels.cs\tLgymApi.Application.WorkoutProgress.Persistence.MeasurementReadScope",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingRelationshipPeriodFact",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.ReportingActiveRelationshipFact",
+        "LgymApi.Reporting/Reporting/Authorization/ReportingAuthorization.cs\tLgymApi.Application.Reporting.Authorization.IReportingAuthorizationCoordinator",
         "LgymApi.Reporting/Options/PhotoStorageOptions.cs\tLgymApi.Application.Options.PhotoStorageOptions",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.LocalCalendarDay",
         "LgymApi.Application/WorkoutProgress/TrainingExecution/LocalCalendarDay.cs\tLgymApi.Application.WorkoutProgress.TrainingExecution.UtcTimeRange",
@@ -70,6 +71,7 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAuthenticatedAccountAuthorizationService",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessCapabilityOwner",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerCapabilities",
+        "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.ReportingAccountAccessOwnerCapabilities",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.IAccountAccessOwnerCapabilityExtension",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessApplicationCapabilities",
         "LgymApi.Identity/Contracts/Authorization/AccountAccessCapabilitiesContracts.cs\tLgymApi.Identity.Contracts.Authorization.AccountAccessOwnerExtensions",

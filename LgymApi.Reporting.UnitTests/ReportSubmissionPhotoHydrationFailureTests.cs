@@ -139,6 +139,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             photoPersistence,
             relationships,
+            ReportingAuthorizationTestFactory.Create(),
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),

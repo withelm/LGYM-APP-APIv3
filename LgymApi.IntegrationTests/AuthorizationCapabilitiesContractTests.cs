@@ -44,9 +44,15 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var extensions = payload.RootElement.GetProperty("extensions");
         extensions.EnumerateObject().Select(property => property.Name)
             .Should().Equal("reporting", "trainingPlanning", "coaching", "nutrition", "workoutProgress", "notifications");
-        extensions.EnumerateObject().Where(property => property.Name is not "notifications" and not "nutrition").Should().OnlyContain(property =>
+        extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition").Should().OnlyContain(property =>
             property.Value.EnumerateObject().Select(nested => nested.Name).SequenceEqual(new[] { "available" })
             && !property.Value.GetProperty("available").GetBoolean());
+        var reporting = extensions.GetProperty("reporting");
+        reporting.GetProperty("available").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canReadOwnSubmissions").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canSubmitReportRequests").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canManageReportTemplates").GetBoolean().Should().BeFalse();
+        reporting.GetProperty("canManagePhotoTypes").GetBoolean().Should().BeFalse();
         var nutrition = extensions.GetProperty("nutrition");
         nutrition.GetProperty("available").GetBoolean().Should().BeTrue();
         nutrition.GetProperty("canReadOwnDietPlans").GetBoolean().Should().BeTrue();
@@ -158,6 +164,9 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
             .Select(property => property.Name).Should().BeEquivalentTo("schemaVersion", "account", "application", "extensions");
         schemas.GetProperty("AccountAccessOwnerCapabilitiesDto").GetProperty("properties").GetProperty("available")
             .GetProperty("type").GetString().Should().Be("boolean");
+        schemas.GetProperty("ReportingAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
+            .EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("available", "canReadOwnSubmissions", "canSubmitReportRequests", "canManageReportTemplates", "canManagePhotoTypes");
         schemas.GetProperty("NotificationsAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
             .EnumerateObject().Select(property => property.Name)
             .Should().BeEquivalentTo("available", "canReadNotifications", "canMarkNotificationsRead", "canManagePushInstallations");
@@ -192,8 +201,14 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         application.GetProperty("canAccessTrainerWorkspace").GetBoolean().Should().BeTrue();
         application.GetProperty("canAccessAdminWorkspace").GetBoolean().Should().Be(isAdmin);
         var extensions = payload.RootElement.GetProperty("extensions");
-        extensions.EnumerateObject().Where(property => property.Name is not "notifications" and not "nutrition")
+        extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition")
             .Should().OnlyContain(property => !property.Value.GetProperty("available").GetBoolean());
+        var reporting = extensions.GetProperty("reporting");
+        reporting.GetProperty("available").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canReadOwnSubmissions").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canSubmitReportRequests").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canManageReportTemplates").GetBoolean().Should().BeTrue();
+        reporting.GetProperty("canManagePhotoTypes").GetBoolean().Should().BeTrue();
         extensions.GetProperty("nutrition").GetProperty("canCreateDietPlans").GetBoolean().Should().BeTrue();
         extensions.GetProperty("nutrition").GetProperty("canManageSupplementation").GetBoolean().Should().BeTrue();
         extensions.GetProperty("notifications").GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();

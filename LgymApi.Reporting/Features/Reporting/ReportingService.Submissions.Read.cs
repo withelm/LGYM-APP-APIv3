@@ -32,8 +32,7 @@ public sealed partial class ReportingService
             traineeId,
             cancellationToken);
         var authorizedSubmissions = submissions
-            .Where(submission => submission.ReportRequest.TrainerId == currentTrainer.Id
-                && access.CanReadTrainerAuthoredRecordAt(submission.ReportRequest.CreatedAt))
+            .Where(submission => _authorization.CanReadSubmission(currentTrainer, submission, access))
             .ToList();
         var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(authorizedSubmissions);
         await HydrateSubmissionPhotosAsync(currentTrainer, results, cancellationToken);
@@ -45,7 +44,11 @@ public sealed partial class ReportingService
         CancellationToken cancellationToken = default)
     {
         var submissions = await _requestSubmissionPersistence.ListSubmissionsByTraineeAsync(currentTrainee.Id, cancellationToken);
-        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions);
+        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions
+            .Where(submission => _authorization.CanReadSubmission(
+                currentTrainee,
+                submission,
+                new ReportingRelationshipAccessFact(false))));
         await HydrateSubmissionPhotosAsync(currentTrainee, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }

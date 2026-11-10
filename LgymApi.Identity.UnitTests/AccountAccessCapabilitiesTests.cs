@@ -72,6 +72,16 @@ public sealed class AccountAccessCapabilitiesTests
 
     private static IAccountAccessOwnerCapabilityExtension Extension(AccountAccessCapabilityOwner owner)
     {
+        if (owner == AccountAccessCapabilityOwner.Reporting)
+        {
+            var reporting = Substitute.For<IAccountAccessOwnerCapabilityExtension<ReportingAccountAccessOwnerCapabilities>>();
+            reporting.Owner.Returns(owner);
+            reporting.GetAvailability().Returns(new AccountAccessOwnerCapabilities(true));
+            reporting.GetCapabilities(Arg.Any<AuthenticatedAccountContext>())
+                .Returns(new ReportingAccountAccessOwnerCapabilities(true));
+            return reporting;
+        }
+
         var extension = Substitute.For<IAccountAccessOwnerCapabilityExtension>();
         extension.Owner.Returns(owner);
         extension.GetAvailability().Returns(new AccountAccessOwnerCapabilities(true));

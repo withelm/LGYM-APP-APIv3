@@ -34,7 +34,8 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
         ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
         ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
-        ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
+        ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "2a5fdd38868cdc785710932c29a9f65b471d4c5874c7f48aa217ce0bc3fb3dca",
+        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {

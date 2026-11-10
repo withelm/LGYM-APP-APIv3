@@ -149,6 +149,60 @@ public sealed class PhotoHistoryServiceTests
     }
 
     [Test]
+    public async Task GetPhotoHistoryAsync_WhenFormerSourceTrainerRequestsTraineeCollection_FiltersOtherSourcesBeforeSigning()
+    {
+        var traineeId = Id<User>.New();
+        var sourceTrainerId = Id<User>.New();
+        var otherTrainerId = Id<User>.New();
+        var sourceRequestId = Id<ReportRequest>.New();
+        var otherRequestId = Id<ReportRequest>.New();
+        var sourceCreatedAt = new DateTimeOffset(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
+        var sourceRequest = PhotoServiceTestFactory.CreateReportRequest(sourceRequestId, traineeId, sourceTrainerId);
+        sourceRequest.Status = ReportRequestStatus.Submitted;
+        sourceRequest.CreatedAt = sourceCreatedAt;
+        var otherRequest = PhotoServiceTestFactory.CreateReportRequest(otherRequestId, traineeId, otherTrainerId);
+        otherRequest.Status = ReportRequestStatus.Submitted;
+        otherRequest.CreatedAt = sourceCreatedAt;
+        var sourcePhoto = new Photo
+        {
+            Id = Id<Photo>.New(), ReportRequestId = sourceRequestId, OwnerUserId = traineeId, UploaderUserId = traineeId,
+            ViewType = PhotoViewType.Front.ToString(), StorageKey = "photos/source.jpg", ThumbnailStorageKey = "photos/source-thumb.jpg",
+            MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "source"
+        };
+        var otherPhoto = new Photo
+        {
+            Id = Id<Photo>.New(), ReportRequestId = otherRequestId, OwnerUserId = traineeId, UploaderUserId = traineeId,
+            ViewType = PhotoViewType.Side.ToString(), StorageKey = "photos/other.jpg", ThumbnailStorageKey = "photos/other-thumb.jpg",
+            MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "other"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.ListByTraineeAsync(ReportingTestData.AccountId(traineeId), Arg.Any<CancellationToken>())
+            .Returns([ReportingTestData.Photo(sourcePhoto), ReportingTestData.Photo(otherPhoto)]);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        storageProvider.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns("https://storage.example.com/read-url");
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (requestId, _) => Task.FromResult<ReportRequest?>(requestId == sourceRequestId ? sourceRequest : otherRequest),
+            relationshipAccessFact: (trainerId, _, _) => Task.FromResult(
+                trainerId == sourceTrainerId
+                    ? new ReportingRelationshipAccessFact(false, [new ReportingRelationshipPeriodFact(sourceCreatedAt.AddDays(-1), sourceCreatedAt.AddDays(1))])
+                    : new ReportingRelationshipAccessFact(false)),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetPhotoHistoryAsync(
+            PhotoServiceTestFactory.CreateUser(sourceTrainerId, "source-trainer@example.com"),
+            new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId) });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle(item => item.Id == sourcePhoto.Id);
+        await storageProvider.Received(1).GenerateSignedReadUrlAsync(sourcePhoto.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+        await storageProvider.Received(1).GenerateSignedReadUrlAsync(sourcePhoto.ThumbnailStorageKey!, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(otherPhoto.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(otherPhoto.ThumbnailStorageKey!, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task GetPhotoHistoryAsync_WhenNeitherRequestNorTraineeProvided_ReturnsInvalidError()
     {
         var currentUser = PhotoServiceTestFactory.CreateUser(Id<User>.New(), "user@example.com");
@@ -211,6 +265,35 @@ public sealed class PhotoHistoryServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetPhotoHistoryAsync_WhenSourceRequestIsCancelled_DoesNotSignOriginalOrThumbnail()
+    {
+        var traineeId = Id<User>.New();
+        var requestId = Id<ReportRequest>.New();
+        var request = PhotoServiceTestFactory.CreateReportRequest(requestId, traineeId);
+        request.Status = ReportRequestStatus.Cancelled;
+        var photo = new Photo
+        {
+            Id = Id<Photo>.New(), ReportRequestId = requestId, OwnerUserId = traineeId, UploaderUserId = traineeId,
+            ViewType = PhotoViewType.Front.ToString(), StorageKey = "photos/cancelled.jpg", ThumbnailStorageKey = "photos/cancelled-thumb.jpg",
+            MimeType = "image/jpeg", SizeBytes = 1024, Checksum = "cancelled"
+        };
+        var repository = Substitute.For<IReportPhotoPersistence>();
+        repository.ListByRequestAsync(requestId, Arg.Any<CancellationToken>()).Returns([ReportingTestData.Photo(photo)]);
+        var storageProvider = Substitute.For<IPhotoStorageProvider>();
+        var service = PhotoServiceTestFactory.CreateService(
+            findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request),
+            reportingRepository: repository,
+            photoStorageProvider: storageProvider);
+
+        var result = await service.GetPhotoHistoryAsync(
+            PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
+            new GetPhotoHistoryCommand { RequestId = requestId });
+
+        result.IsFailure.Should().BeTrue();
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 }

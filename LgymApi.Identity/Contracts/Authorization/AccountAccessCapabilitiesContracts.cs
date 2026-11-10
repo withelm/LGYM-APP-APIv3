@@ -16,6 +16,13 @@ public enum AccountAccessCapabilityOwner
 
 public sealed record AccountAccessOwnerCapabilities(bool IsAvailable);
 
+public sealed record ReportingAccountAccessOwnerCapabilities(
+    bool IsAvailable,
+    bool CanReadOwnSubmissions = false,
+    bool CanSubmitReportRequests = false,
+    bool CanManageReportTemplates = false,
+    bool CanManagePhotoTypes = false);
+
 public sealed record NutritionAccountAccessOwnerCapabilities(
     bool IsAvailable,
     bool CanReadOwnDietPlans,
@@ -49,7 +56,7 @@ public sealed record AccountAccessApplicationCapabilities(
     bool CanAccessTrainerWorkspace);
 
 public sealed record AccountAccessOwnerExtensions(
-    AccountAccessOwnerCapabilities Reporting,
+    ReportingAccountAccessOwnerCapabilities Reporting,
     AccountAccessOwnerCapabilities TrainingPlanning,
     AccountAccessOwnerCapabilities Coaching,
     NutritionAccountAccessOwnerCapabilities Nutrition,

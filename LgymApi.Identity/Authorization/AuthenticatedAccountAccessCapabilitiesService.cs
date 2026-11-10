@@ -7,6 +7,7 @@ namespace LgymApi.Application.Identity.Authorization;
 internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthenticatedAccountAccessCapabilitiesService
 {
     private static readonly AccountAccessOwnerCapabilities Unavailable = new(false);
+    private static readonly ReportingAccountAccessOwnerCapabilities ReportingUnavailable = new(false, false, false, false, false);
     private static readonly NotificationsAccountAccessOwnerCapabilities NotificationsUnavailable = new(false, false, false, false);
     private static readonly NutritionAccountAccessOwnerCapabilities NutritionUnavailable = new(false, false, false, false, false);
     private readonly IAuthenticatedAccountAuthorizationService _authorizationService;
@@ -37,7 +38,7 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
                 _authorizationService.HasPermission(accountContext, AuthConstants.Permissions.ManageGlobalExercises),
                 _authorizationService.HasPermission(accountContext, AuthConstants.Permissions.TrainerAccess)),
             new AccountAccessOwnerExtensions(
-                GetOwnerCapabilities(AccountAccessCapabilityOwner.Reporting),
+                GetReportingCapabilities(accountContext),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.TrainingPlanning),
                 GetOwnerCapabilities(AccountAccessCapabilityOwner.Coaching),
                 GetNutritionCapabilities(accountContext),
@@ -57,6 +58,13 @@ internal sealed class AuthenticatedAccountAccessCapabilitiesService : IAuthentic
             && extension is IAccountAccessOwnerCapabilityExtension<NotificationsAccountAccessOwnerCapabilities> typedExtension
                 ? typedExtension.GetCapabilities(accountContext)
                 : NotificationsUnavailable;
+
+    private ReportingAccountAccessOwnerCapabilities GetReportingCapabilities(
+        AuthenticatedAccountContext accountContext) =>
+        _extensions.TryGetValue(AccountAccessCapabilityOwner.Reporting, out var extension)
+        && extension is IAccountAccessOwnerCapabilityExtension<ReportingAccountAccessOwnerCapabilities> typedExtension
+            ? typedExtension.GetCapabilities(accountContext)
+            : ReportingUnavailable;
 
     private NutritionAccountAccessOwnerCapabilities GetNutritionCapabilities(
         AuthenticatedAccountContext accountContext) =>

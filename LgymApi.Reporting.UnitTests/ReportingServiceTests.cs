@@ -1166,6 +1166,34 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
+    public async Task GetTraineeSubmissionsAsync_AfterUnlink_ExcludesNonSubmittedSourceRequests()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var startedAt = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        var pendingRequest = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        pendingRequest.TrainerId = trainerId;
+        pendingRequest.CreatedAt = startedAt.AddDays(1);
+        pendingRequest.Status = ReportRequestStatus.Pending;
+        var invalidSubmission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, pendingRequest);
+        pendingRequest.Status = ReportRequestStatus.Pending;
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) => Task.FromResult(new List<ReportSubmission>
+            {
+                invalidSubmission
+            }),
+            userHasTrainerRole: true,
+            hasActiveTrainerLink: false,
+            relationshipPeriods: [new ReportingRelationshipPeriodFact(startedAt, startedAt.AddDays(10))]);
+
+        var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task GetOwnSubmissionsAsync_ReturnsMappedResults()
     {
         var traineeId = Id<User>.New();
@@ -1314,7 +1342,9 @@ public sealed class ReportingServiceTests
     }
 
     private static ReportSubmission CreateSubmission(Id<ReportSubmission> submissionId, Id<User> traineeId, ReportRequest request)
-        => new()
+    {
+        request.Status = ReportRequestStatus.Submitted;
+        return new ReportSubmission
         {
             Id = submissionId,
             ReportRequestId = request.Id,
@@ -1323,6 +1353,7 @@ public sealed class ReportingServiceTests
             PayloadJson = "{}",
             CreatedAt = DateTimeOffset.UtcNow
         };
+    }
 
     private static ReportingService CreateReportingService(
         Func<Id<ReportRequest>, CancellationToken, Task<ReportRequest?>>? findRequestById = null,
@@ -1514,6 +1545,7 @@ public sealed class ReportingServiceTests
             recurringAssignmentPersistence,
             photoPersistence,
             relationshipAccessPersistence,
+            ReportingAuthorizationTestFactory.Create(),
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             commandDispatcher,
