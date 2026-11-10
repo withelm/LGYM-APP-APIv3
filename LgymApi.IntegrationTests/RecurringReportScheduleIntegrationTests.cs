@@ -10,6 +10,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
+using LgymApi.IntegrationTests.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +21,27 @@ namespace LgymApi.IntegrationTests;
 public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurringReportHttpTestBase
 {
     [Test]
+    [AuthorizationEvidence("GET", "/api/trainee/recurring-report-assignments", "own", "owner-allow")]
+    [AuthorizationEvidence("GET", "/api/trainee/recurring-report-assignments", "own", "anonymous-denial")]
+    [AuthorizationEvidence("GET", "/api/trainee/recurring-report-assignments", "own", "no-client-subject")]
+    [AuthorizationEvidence("POST", "/api/trainee/recurring-report-assignments/{assignmentId}/next-report-proposals", "own", "owner-allow")]
+    [AuthorizationEvidence("POST", "/api/trainee/recurring-report-assignments/{assignmentId}/next-report-proposals", "own", "anonymous-denial")]
+    [AuthorizationEvidence("POST", "/api/trainee/recurring-report-assignments/{assignmentId}/next-report-proposals", "own", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override", "trainer-shared", "active-relationship-allow")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override", "trainer-shared", "unrelated-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override", "trainer-shared", "former-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override", "trainer-shared", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-override", "trainer-shared", "anonymous-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept", "trainer-shared", "active-relationship-allow")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept", "trainer-shared", "unrelated-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept", "trainer-shared", "former-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept", "trainer-shared", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/accept", "trainer-shared", "anonymous-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject", "trainer-shared", "active-relationship-allow")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject", "trainer-shared", "unrelated-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject", "trainer-shared", "former-relationship-denial")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject", "trainer-shared", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/next-report-proposals/{proposalId}/reject", "trainer-shared", "anonymous-denial")]
     public async Task ScheduleWorkflow_EnforcesOffsetRevisionProposalAcceptanceAndRequestNowConsumption()
     {
         var scenario = await CreateScenarioAsync("schedule-workflow");
