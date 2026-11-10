@@ -69,7 +69,7 @@ public sealed class IndependentExportedSurfaceTests
         File.WriteAllText(observedPath, serialized);
         Assert.That(CompiledExportInventory.Serialize(roundTripped), Is.EqualTo(serialized));
         Assert.That(inventory.Assemblies.Select(assembly => assembly.Name), Is.EqualTo(AssemblyNames.OrderBy(name => name, StringComparer.Ordinal)));
-        Assert.That(inventory.TotalExportedTypeCount, Is.EqualTo(811));
+        Assert.That(inventory.TotalExportedTypeCount, Is.EqualTo(813));
 
         foreach (var assembly in inventory.Assemblies)
         {

@@ -137,6 +137,7 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Reporting", ProjectKind.Production,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Platform",
@@ -144,6 +145,7 @@ internal static class ProjectReferenceGraphManifest
         ]),
         new("LgymApi.Reporting.UnitTests", ProjectKind.Test,
         [
+            "LgymApi.Authorization",
             "LgymApi.Domain",
             "LgymApi.Identity",
             "LgymApi.Infrastructure",

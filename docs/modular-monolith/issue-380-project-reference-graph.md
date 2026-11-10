@@ -127,10 +127,12 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Identity`
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Notifications`
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Platform`
+- `LgymApi.Reporting` -> `LgymApi.Authorization`
 - `LgymApi.Reporting` -> `LgymApi.Domain`
 - `LgymApi.Reporting` -> `LgymApi.Identity`
 - `LgymApi.Reporting` -> `LgymApi.Platform`
 - `LgymApi.Reporting` -> `LgymApi.Resources`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Authorization`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Domain`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Identity`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Infrastructure`
@@ -259,10 +261,12 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Notifications.UnitTests -> LgymApi.Identity` | `LgymApi.Notifications.UnitTests/NotificationsModuleTests.cs:6` |
 | `LgymApi.Notifications.UnitTests -> LgymApi.Notifications` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:2` |
 | `LgymApi.Notifications.UnitTests -> LgymApi.Platform` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:5` |
+| `LgymApi.Reporting -> LgymApi.Authorization` | `LgymApi.Reporting/Reporting/Authorization/ReportingAuthorization.cs:1` |
 | `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
 | `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
 | `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
 | `LgymApi.Reporting -> LgymApi.Resources` | `LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs:54` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Authorization` | `LgymApi.Reporting.UnitTests/ReportingAuthorizationTestFactory.cs:3` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Domain` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:18` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Identity` | `LgymApi.Reporting.UnitTests/PhotoServiceTestFactory.cs:10` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Reporting.UnitTests/CloudflareR2PhotoStorageProviderTests.cs:24` |
@@ -299,7 +303,7 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-Current derived snapshot: 24 approved projects, 125 approved direct `ProjectReference` edges, and 427 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 124 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 24 approved projects, 127 approved direct `ProjectReference` edges, and 425 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 126 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
 Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Notifications.UnitTests` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 
