@@ -2,9 +2,10 @@
 
 Reviewable copy of `.omo/evidence/lgym-55/AUTH-A02/validation.md`.
 
-- Source SHA: `de9a1edba8bbe5d02c6e98c39ae730ac449efbe3`.
+- Source SHA: `42223961ab683bf9854ac2029341ba1f729dd7e0`.
 - Release build: exit `0`, 0 warnings and 0 errors.
 - Reporting unit suite: exit `0`, 235 passed.
+- Unit full suite: exit `0`, 2156 passed.
 - Testing-host Reporting/authorization HTTP slice (`ReportingEngineTests` and `AuthorizationCapabilitiesContractTests`): exit `0`, 37 passed.
 - Topology and project-reference guards: exit `0`, 31 passed.
 
