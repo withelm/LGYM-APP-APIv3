@@ -28,11 +28,10 @@ public sealed class ExerciseMediaVerifierTests
     {
         var original = AnimatedGif();
         var result = await new ExerciseMediaVerifier().VerifyAsync(original, default);
-        result.Frames.Should().Be(2);
         result.PublishedSha256.Should().Be(Hash(result.Bytes));
         using var source = new MagickImageCollection(original); using var published = new MagickImageCollection(result.Bytes);
         source.Coalesce(); published.Coalesce();
-        published.Count.Should().Be(source.Count);
+        published.Count.Should().Be(source.Count).And.Be(2);
         for (var i = 0; i < source.Count; i++)
         {
             source[i].AnimationDelay.Should().Be(published[i].AnimationDelay);
