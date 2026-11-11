@@ -14,7 +14,7 @@ public static class ExerciseMediaLimits
 }
 
 public sealed record ExerciseMediaUploadResult(string Image);
-public sealed record VerifiedExerciseMedia(byte[] Bytes, string ContentType, string Extension, string PublishedSha256, int Width = 0, int Height = 0, int Frames = 0);
+public sealed record VerifiedExerciseMedia(byte[] Bytes, string ContentType, string Extension, string PublishedSha256);
 
 public interface IExerciseMediaService
 {

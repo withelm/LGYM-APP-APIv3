@@ -50,7 +50,7 @@ public sealed class ExerciseMediaVerifier : IExerciseMediaVerifier
             if (check.Count != images.Count || check.Any(x => x.ProfileNames.Any())) throw new ExerciseMediaRejectedException();
             for (var i = 0; i < check.Count; i++)
                 if (check[i].Width != images[i].Width || check[i].Height != images[i].Height || (mime == "image/gif" && (check[i].AnimationDelay != images[i].AnimationDelay || check[i].AnimationIterations != images[i].AnimationIterations))) throw new ExerciseMediaRejectedException();
-            return new(published, mime, extension, Convert.ToHexStringLower(SHA256.HashData(published)), (int)images[0].Width, (int)images[0].Height, images.Count);
+            return new(published, mime, extension, Convert.ToHexStringLower(SHA256.HashData(published)));
         }
         catch (MagickException) { throw new ExerciseMediaRejectedException(); }
         finally { DecodeGate.Release(); }
