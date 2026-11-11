@@ -16,85 +16,85 @@
     <value>Utworzono</value>
   </data>
   <data name="FieldRequired" xml:space="preserve">
-    <value>Wymagane sÄ… wszystkie pola</value>
+    <value>Wymagane są wszystkie pola</value>
   </data>
   <data name="ChooseDays" xml:space="preserve">
-    <value>Wybierz liczbÄ™ dni od 1 do 7</value>
+    <value>Wybierz liczbę dni od 1 do 7</value>
   </data>
   <data name="Updated" xml:space="preserve">
     <value>Zaktualizowano</value>
   </data>
   <data name="TryAgain" xml:space="preserve">
-    <value>BĹ‚Ä…d, sprĂłbuj ponownie</value>
+    <value>Błąd, spróbuj ponownie</value>
   </data>
   <data name="Deleted" xml:space="preserve">
-    <value>UsuniÄ™to!</value>
+    <value>Usunięto!</value>
   </data>
   <data name="DidntFind" xml:space="preserve">
     <value>Nie znaleziono!</value>
   </data>
   <data name="InvalidToken" xml:space="preserve">
-    <value>NieprawidĹ‚owy token JWT</value>
+    <value>Nieprawidłowy token JWT</value>
   </data>
   <data name="ExpiredToken" xml:space="preserve">
-    <value>Token wygasĹ‚</value>
+    <value>Token wygasł</value>
   </data>
   <data name="InputsMustBeNumbers" xml:space="preserve">
-    <value>Wprowadzone wartoĹ›ci muszÄ… byÄ‡ liczbami</value>
+    <value>Wprowadzone wartości muszą być liczbami</value>
   </data>
   <data name="NameIsRequired" xml:space="preserve">
-    <value>Nazwa jest wymagana i musi mieÄ‡ co najmniej jeden znak</value>
+    <value>Nazwa jest wymagana i musi mieć co najmniej jeden znak</value>
   </data>
   <data name="MaximumLengthExceeded" xml:space="preserve">
-    <value>WartoĹ›Ä‡ przekracza maksymalnÄ… dozwolonÄ… dĹ‚ugoĹ›Ä‡</value>
+    <value>Wartość przekracza maksymalną dozwoloną długość</value>
   </data>
   <data name="EmailInvalid" xml:space="preserve">
-    <value>Ten email jest nieprawidĹ‚owy!</value>
+    <value>Ten email jest nieprawidłowy!</value>
   </data>
   <data name="PasswordMin" xml:space="preserve">
-    <value>HasĹ‚o musi mieÄ‡ co najmniej szeĹ›Ä‡ znakĂłw</value>
+    <value>Hasło musi mieć co najmniej sześć znaków</value>
   </data>
   <data name="SamePassword" xml:space="preserve">
-    <value>HasĹ‚a muszÄ… byÄ‡ takie same</value>
+    <value>Hasła muszą być takie same</value>
   </data>
   <data name="UserWithThatName" xml:space="preserve">
-    <value>Istnieje uĹĽytkownik o takiej nazwie</value>
+    <value>Istnieje użytkownik o takiej nazwie</value>
   </data>
   <data name="UserWithThatEmail" xml:space="preserve">
-    <value>Istnieje uĹĽytkownik z takim adresem email</value>
+    <value>Istnieje użytkownik z takim adresem email</value>
   </data>
   <data name="Unauthorized" xml:space="preserve">
     <value>Brak autoryzacji</value>
   </data>
   <data name="Forbidden" xml:space="preserve">
-    <value>Brak dostÄ™pu</value>
+    <value>Brak dostępu</value>
   </data>
   <data name="BodyPartRequired" xml:space="preserve">
-    <value>Partia ciaĹ‚a jest wymagana.</value>
+    <value>Partia ciała jest wymagana.</value>
   </data>
   <data name="InvalidExerciseEloFormula" xml:space="preserve">
-    <value>NieprawidĹ‚owa formuĹ‚a ELO Ä‡wiczenia.</value>
+    <value>Nieprawidłowa formuła ELO ćwiczenia.</value>
   </data>
   <data name="ExerciseIdRequired" xml:space="preserve">
-    <value>ID Ä‡wiczenia jest wymagane.</value>
+    <value>ID ćwiczenia jest wymagane.</value>
   </data>
   <data name="CultureRequired" xml:space="preserve">
     <value>Kultura jest wymagana.</value>
   </data>
   <data name="SeriesMustBeGreaterThanZero" xml:space="preserve">
-    <value>Liczba serii musi byÄ‡ wiÄ™ksza od 0.</value>
+    <value>Liczba serii musi być większa od 0.</value>
   </data>
   <data name="SeriesMustBeBetweenOneAndThirty" xml:space="preserve">
-    <value>Liczba serii musi mieĹ›ciÄ‡ siÄ™ w zakresie od 1 do 30.</value>
+    <value>Liczba serii musi mieścić się w zakresie od 1 do 30.</value>
   </data>
   <data name="ExerciseNameRequired" xml:space="preserve">
-    <value>Nazwa Ä‡wiczenia jest wymagana.</value>
+    <value>Nazwa ćwiczenia jest wymagana.</value>
   </data>
   <data name="PasswordRequired" xml:space="preserve">
-    <value>HasĹ‚o jest wymagane.</value>
+    <value>Hasło jest wymagane.</value>
   </data>
   <data name="GymIdRequired" xml:space="preserve">
-    <value>ID siĹ‚owni jest wymagane.</value>
+    <value>ID siłowni jest wymagane.</value>
   </data>
   <data name="PlanDayIdRequired" xml:space="preserve">
     <value>ID dnia planu jest wymagane.</value>
@@ -106,166 +106,166 @@
     <value>Jednostka jest wymagana.</value>
   </data>
   <data name="WeightMustBePositive" xml:space="preserve">
-    <value>Waga musi byÄ‡ liczbÄ… dodatniÄ….</value>
+    <value>Waga musi być liczbą dodatnią.</value>
   </data>
   <data name="RepsMustBePositive" xml:space="preserve">
-    <value>Liczba powtĂłrzeĹ„ musi byÄ‡ dodatnia.</value>
+    <value>Liczba powtórzeń musi być dodatnia.</value>
   </data>
   <data name="RepsRequired" xml:space="preserve">
-    <value>Liczba powtĂłrzeĹ„ jest wymagana.</value>
+    <value>Liczba powtórzeń jest wymagana.</value>
   </data>
   <data name="ShareCodeRequired" xml:space="preserve">
-    <value>Kod udostÄ™pniania jest wymagany.</value>
+    <value>Kod udostępniania jest wymagany.</value>
   </data>
   <data name="ValueMustBePositive" xml:space="preserve">
-    <value>WartoĹ›Ä‡ musi byÄ‡ liczbÄ… dodatniÄ….</value>
+    <value>Wartość musi być liczbą dodatnią.</value>
   </data>
   <data name="ValueMustBeNonNegative" xml:space="preserve">
-    <value>WartoĹ›Ä‡ nie moĹĽe byÄ‡ ujemna</value>
+    <value>Wartość nie może być ujemna</value>
   </data>
   <data name="TrainingIdRequired" xml:space="preserve">
     <value>ID treningu jest wymagane.</value>
   </data>
   <data name="UserIdRequired" xml:space="preserve">
-    <value>ID uĹĽytkownika jest wymagane.</value>
+    <value>ID użytkownika jest wymagane.</value>
   </data>
   <data name="PermissionAdminAccess" xml:space="preserve">
-    <value>DostÄ™p administratora</value>
+    <value>Dostęp administratora</value>
   </data>
   <data name="PermissionManageUserRoles" xml:space="preserve">
-    <value>ZarzÄ…dzanie rolami uĹĽytkownikĂłw</value>
+    <value>Zarządzanie rolami użytkowników</value>
   </data>
   <data name="PermissionManageAppConfig" xml:space="preserve">
-    <value>ZarzÄ…dzanie konfiguracjÄ… wersji aplikacji</value>
+    <value>Zarządzanie konfiguracją wersji aplikacji</value>
   </data>
   <data name="PermissionManageGlobalExercises" xml:space="preserve">
-    <value>ZarzÄ…dzanie globalnymi Ä‡wiczeniami</value>
+    <value>Zarządzanie globalnymi ćwiczeniami</value>
   </data>
   <data name="PermissionTrainerAccess" xml:space="preserve">
-    <value>DostÄ™p trenera</value>
+    <value>Dostęp trenera</value>
   </data>
   <data name="RoleWithThatName" xml:space="preserve">
     <value>Istnieje rola o takiej nazwie.</value>
   </data>
   <data name="InvalidRoleSelection" xml:space="preserve">
-    <value>Jedna lub wiÄ™cej wybranych rĂłl jest nieprawidĹ‚owa.</value>
+    <value>Jedna lub więcej wybranych ról jest nieprawidłowa.</value>
   </data>
   <data name="InvalidPermissionClaims" xml:space="preserve">
-    <value>Jedno lub wiÄ™cej wybranych uprawnieĹ„ jest nieprawidĹ‚owe.</value>
+    <value>Jedno lub więcej wybranych uprawnień jest nieprawidłowe.</value>
   </data>
   <data name="DefaultRoleMissing" xml:space="preserve">
-    <value>Brakuje konfiguracji domyĹ›lnej roli uĹĽytkownika.</value>
+    <value>Brakuje konfiguracji domyślnej roli użytkownika.</value>
   </data>
   <data name="TrainerRoleRequired" xml:space="preserve">
     <value>Wymagana jest rola trenera.</value>
   </data>
   <data name="CannotInviteYourself" xml:space="preserve">
-    <value>Nie moĹĽesz zaprosiÄ‡ samego siebie.</value>
+    <value>Nie możesz zaprosić samego siebie.</value>
   </data>
   <data name="TraineeAlreadyLinked" xml:space="preserve">
-    <value>Ten podopieczny jest juĹĽ powiÄ…zany z trenerem.</value>
+    <value>Ten podopieczny jest już powiązany z trenerem.</value>
   </data>
   <data name="InvitationNoLongerPending" xml:space="preserve">
-    <value>Zaproszenie nie jest juĹĽ oczekujÄ…ce.</value>
+    <value>Zaproszenie nie jest już oczekujące.</value>
   </data>
   <data name="InvitationExpired" xml:space="preserve">
-    <value>Zaproszenie wygasĹ‚o.</value>
+    <value>Zaproszenie wygasło.</value>
   </data>
   <data name="InvitationPendingForEmail" xml:space="preserve">
-    <value>Aktywne zaproszenie dla tego adresu email juĹĽ istnieje.</value>
+    <value>Aktywne zaproszenie dla tego adresu email już istnieje.</value>
   </data>
   <data name="EmailAlreadyYourTrainee" xml:space="preserve">
-    <value>UĹĽytkownik z tym adresem email jest juĹĽ Twoim podopiecznym.</value>
+    <value>Użytkownik z tym adresem email jest już Twoim podopiecznym.</value>
   </data>
   <data name="InvitationRevokedByTrainer" xml:space="preserve">
-    <value>To zaproszenie zostaĹ‚o anulowane przez trenera.</value>
+    <value>To zaproszenie zostało anulowane przez trenera.</value>
   </data>
   <data name="InvitationInvalidCode" xml:space="preserve">
-    <value>NieprawidĹ‚owy kod zaproszenia.</value>
+    <value>Nieprawidłowy kod zaproszenia.</value>
   </data>
   <data name="DashboardPageMustBeGreaterThanZero" xml:space="preserve">
-    <value>Numer strony musi byÄ‡ wiÄ™kszy niĹĽ 0.</value>
+    <value>Numer strony musi być większy niż 0.</value>
   </data>
   <data name="DashboardPageRange" xml:space="preserve">
-    <value>Numer strony musi mieĹ›ciÄ‡ siÄ™ w zakresie od 1 do 21474837.</value>
+    <value>Numer strony musi mieścić się w zakresie od 1 do 21474837.</value>
   </data>
   <data name="DashboardPageSizeRange" xml:space="preserve">
-    <value>Rozmiar strony musi mieĹ›ciÄ‡ siÄ™ w zakresie od 1 do 100.</value>
+    <value>Rozmiar strony musi mieścić się w zakresie od 1 do 100.</value>
   </data>
   <data name="DashboardSortByInvalid" xml:space="preserve">
-    <value>NieprawidĹ‚owa wartoĹ›Ä‡ sortBy. Dozwolone: name, createdAt, status.</value>
+    <value>Nieprawidłowa wartość sortBy. Dozwolone: name, createdAt, status.</value>
   </data>
   <data name="DashboardSortDirectionInvalid" xml:space="preserve">
-    <value>NieprawidĹ‚owa wartoĹ›Ä‡ sortDirection. Dozwolone: asc, desc.</value>
+    <value>Nieprawidłowa wartość sortDirection. Dozwolone: asc, desc.</value>
   </data>
   <data name="DashboardStatusInvalid" xml:space="preserve">
-    <value>NieprawidĹ‚owa wartoĹ›Ä‡ status.</value>
+    <value>Nieprawidłowa wartość status.</value>
   </data>
   <data name="ReportFieldValidationFailed" xml:space="preserve">
-    <value>PrzesĹ‚ane pola raportu sÄ… nieprawidĹ‚owe.</value>
+    <value>Przesłane pola raportu są nieprawidłowe.</value>
   </data>
   <data name="ReportRequestNotPending" xml:space="preserve">
-    <value>ZgĹ‚oszenie raportu nie jest juĹĽ oczekujÄ…ce.</value>
+    <value>Zgłoszenie raportu nie jest już oczekujące.</value>
   </data>
   <data name="ReportFeedbackAlreadyRead" xml:space="preserve">
-    <value>Informacja zwrotna zostaĹ‚a juĹĽ przeczytana i nie moĹĽe byÄ‡ zmieniona.</value>
+    <value>Informacja zwrotna została już przeczytana i nie może być zmieniona.</value>
   </data>
   <data name="ReportRequestExpired" xml:space="preserve">
-    <value>Termin zgĹ‚oszenia raportu minÄ…Ĺ‚.</value>
+    <value>Termin zgłoszenia raportu minął.</value>
   </data>
   <data name="RecurringReportRequestInProgress" xml:space="preserve">
-    <value>BieĹĽÄ…ca proĹ›ba o raport okresowy musi zostaÄ‡ zakoĹ„czona przed utworzeniem kolejnej.</value>
+    <value>Bieżąca prośba o raport okresowy musi zostać zakończona przed utworzeniem kolejnej.</value>
   </data>
   <data name="RecurringReportAssignmentUnavailable" xml:space="preserve">
     <value>Ten cykl raportu okresowego nie jest teraz aktywny.</value>
   </data>
   <data name="RecurringReportTemplateUnavailable" xml:space="preserve">
-    <value>Szablon raportu dla tego cyklu raportu okresowego jest niedostÄ™pny.</value>
+    <value>Szablon raportu dla tego cyklu raportu okresowego jest niedostępny.</value>
   </data>
   <data name="RecurringReportProposalPending" xml:space="preserve">
-    <value>Propozycja terminu oczekuje juĹĽ na decyzjÄ™ trenera.</value>
+    <value>Propozycja terminu oczekuje już na decyzję trenera.</value>
   </data>
   <data name="RecurringReportProposalResolved" xml:space="preserve">
-    <value>Ta propozycja terminu nie oczekuje juĹĽ na decyzjÄ™.</value>
+    <value>Ta propozycja terminu nie oczekuje już na decyzję.</value>
   </data>
   <data name="RecurringReportScheduleRevisionChanged" xml:space="preserve">
-    <value>Harmonogram raportu okresowego ulegĹ‚ zmianie. OdĹ›wieĹĽ go i sprĂłbuj ponownie.</value>
+    <value>Harmonogram raportu okresowego uległ zmianie. Odśwież go i spróbuj ponownie.</value>
   </data>
   <data name="MissingRequiredPhotoViews" xml:space="preserve">
-    <value>Brakuje wymaganych ujÄ™Ä‡ zdjÄ™Ä‡.</value>
+    <value>Brakuje wymaganych ujęć zdjęć.</value>
   </data>
   <data name="InvalidDateRange" xml:space="preserve">
-    <value>NieprawidĹ‚owy zakres dat. toDate musi byÄ‡ rĂłwne lub pĂłĹşniejsze niĹĽ fromDate.</value>
+    <value>Nieprawidłowy zakres dat. toDate musi być równe lub późniejsze niż fromDate.</value>
   </data>
   <data name="DateRangeTooLarge" xml:space="preserve">
-    <value>Zakres dat przekracza maksymalny dozwolony przedziaĹ‚.</value>
+    <value>Zakres dat przekracza maksymalny dozwolony przedział.</value>
   </data>
   <data name="DateRangeRequired" xml:space="preserve">
-    <value>Parametry zapytania fromDate i toDate sÄ… wymagane.</value>
+    <value>Parametry zapytania fromDate i toDate są wymagane.</value>
   </data>
    <data name="InvalidTimeZone" xml:space="preserve">
-     <value>NieprawidĹ‚owy identyfikator strefy czasowej.</value>
+     <value>Nieprawidłowy identyfikator strefy czasowej.</value>
    </data>
    <data name="ForgotPasswordRequested" xml:space="preserve">
-     <value>JeĹ›li konto z tym adresem email istnieje, link do resetowania hasĹ‚a zostaĹ‚ wysĹ‚any.</value>
+     <value>Jeśli konto z tym adresem email istnieje, link do resetowania hasła został wysłany.</value>
    </data>
     <data name="PasswordResetSucceeded" xml:space="preserve">
-      <value>HasĹ‚o zostaĹ‚o zresetowane pomyĹ›lnie.</value>
+      <value>Hasło zostało zresetowane pomyślnie.</value>
     </data>
   <data name="PasswordResetInvalidOrExpiredToken" xml:space="preserve">
-      <value>NieprawidĹ‚owy lub wygaĹ›niÄ™ty token resetowania.</value>
+      <value>Nieprawidłowy lub wygaśnięty token resetowania.</value>
     </data>
   <data name="InAppNotificationNotFound" xml:space="preserve">
     <value>Nie znaleziono powiadomienia.</value>
   </data>
   <data name="InAppNotificationForbidden" xml:space="preserve">
-    <value>Nie masz dostÄ™pu do tego powiadomienia.</value>
+    <value>Nie masz dostępu do tego powiadomienia.</value>
   </data>
   <data name="InAppNotificationInvalidRedirectUrl" xml:space="preserve">
-    <value>Adres przekierowania musi byÄ‡ Ĺ›cieĹĽkÄ… wzglÄ™dnÄ… zaczynajÄ…cÄ… siÄ™ od '/'.</value>
+    <value>Adres przekierowania musi być ścieżką względną zaczynającą się od '/'.</value>
   </data>
   <data name="InAppNotificationLimitOutOfRange" xml:space="preserve">
-    <value>Limit musi wynosiÄ‡ od 1 do 50.</value>
+    <value>Limit musi wynosić od 1 do 50.</value>
   </data>
   <data name="InAppNotificationMarkedAsRead" xml:space="preserve">
     <value>Powiadomienie oznaczone jako przeczytane.</value>
@@ -274,34 +274,34 @@
     <value>Wszystkie powiadomienia oznaczone jako przeczytane.</value>
   </data>
   <data name="TrainerInvitationSent" xml:space="preserve">
-    <value>Twoje zaproszenie do trenera zostaĹ‚o wysĹ‚ane.</value>
+    <value>Twoje zaproszenie do trenera zostało wysłane.</value>
   </data>
   <data name="TrainerInvitationCreatedNotification" xml:space="preserve">
-    <value>{0} zaprasza CiÄ™ do wspĂłĹ‚pracy trenerskiej.</value>
+    <value>{0} zaprasza Cię do współpracy trenerskiej.</value>
   </data>
   <data name="TrainerInvitationAccepted" xml:space="preserve">
-    <value>Podopieczny zaakceptowaĹ‚ Twoje zaproszenie.</value>
+    <value>Podopieczny zaakceptował Twoje zaproszenie.</value>
   </data>
   <data name="TrainerInvitationRejected" xml:space="preserve">
-    <value>UczeĹ„ odrzuciĹ‚ Twoje zaproszenie.</value>
+    <value>Uczeń odrzucił Twoje zaproszenie.</value>
   </data>
   <data name="TrainerReportRequestReceived" xml:space="preserve">
-    <value>{0} wysĹ‚aĹ‚ Ci proĹ›bÄ™ o raport: {1}.</value>
+    <value>{0} wysłał Ci prośbę o raport: {1}.</value>
   </data>
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
-    <value>{0} dodaĹ‚ komentarz do Twojego raportu: {1}.</value>
+    <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
   </data>
   <data name="TraineeReportFeedbackReadScheduled" xml:space="preserve">
-    <value>{0} przeczytaĹ‚(a) TwojÄ… informacjÄ™ zwrotnÄ… do raportu. NastÄ™pna cykliczna proĹ›ba o raport jest zaplanowana na {1}.</value>
+    <value>{0} przeczytał(a) Twoją informację zwrotną do raportu. Następna cykliczna prośba o raport jest zaplanowana na {1}.</value>
   </data>
   <data name="TraineeReportFeedbackReadUnscheduled" xml:space="preserve">
-    <value>{0} przeczytaĹ‚(a) TwojÄ… informacjÄ™ zwrotnÄ… do raportu. NastÄ™pna cykliczna proĹ›ba o raport nie jest jeszcze zaplanowana.</value>
+    <value>{0} przeczytał(a) Twoją informację zwrotną do raportu. Następna cykliczna prośba o raport nie jest jeszcze zaplanowana.</value>
   </data>
   <data name="TrainerReportSubmissionReceived" xml:space="preserve">
-    <value>{0} wysĹ‚aĹ‚ raport: {1}.</value>
+    <value>{0} wysłał raport: {1}.</value>
   </data>
   <data name="TrainerRelationshipEnded" xml:space="preserve">
-    <value>{0} zakoĹ„czyĹ‚ wspĂłĹ‚pracÄ™.</value>
+    <value>{0} zakończył współpracę.</value>
   </data>
   <data name="GenericTrainerDisplayName" xml:space="preserve">
     <value>Trener</value>
@@ -313,7 +313,7 @@
     <value>raport</value>
   </data>
   <data name="TrainerDietPlanUpdated" xml:space="preserve">
-    <value>{0} zaktualizowaĹ‚ TwĂłj plan diety: {1}.</value>
+    <value>{0} zaktualizował Twój plan diety: {1}.</value>
   </data>
   <data name="GenericDietPlanDisplayName" xml:space="preserve">
     <value>plan diety</value>
@@ -322,54 +322,53 @@
     <value>notatka trenera</value>
   </data>
   <data name="TrainerTraineeNoteUpdated" xml:space="preserve">
-    <value>{0} zaktualizowaĹ‚ TwojÄ… notatkÄ™: {1}</value>
+    <value>{0} zaktualizował Twoją notatkę: {1}</value>
   </data>
   <data name="AccountBlocked" xml:space="preserve">
-    <value>Twoje konto zostaĹ‚o zablokowane.</value>
+    <value>Twoje konto zostało zablokowane.</value>
   </data>
   <data name="CannotBlockSelf" xml:space="preserve">
-    <value>Nie moĹĽesz zablokowaÄ‡ samego siebie.</value>
+    <value>Nie możesz zablokować samego siebie.</value>
   </data>
   <data name="CannotDeleteSelf" xml:space="preserve">
-    <value>Nie moĹĽesz usunÄ…Ä‡ samego siebie.</value>
+    <value>Nie możesz usunąć samego siebie.</value>
   </data>
   <data name="ReportingProtocolUnsupported" xml:space="preserve">
-    <value>NagĹ‚Ăłwek protokoĹ‚u raportowania jest nieprawidĹ‚owy lub nieobsĹ‚ugiwany.</value>
+    <value>Nagłówek protokołu raportowania jest nieprawidłowy lub nieobsługiwany.</value>
   </data>
   <data name="ReportingProtocolV2Disabled" xml:space="preserve">
-    <value>ProtokĂłĹ‚ raportowania 2 nie jest wĹ‚Ä…czony.</value>
+    <value>Protokół raportowania 2 nie jest włączony.</value>
   </data>
   <data name="ReportingProtocolV2Required" xml:space="preserve">
-    <value>Ta operacja wymaga protokoĹ‚u raportowania 2.</value>
+    <value>Ta operacja wymaga protokołu raportowania 2.</value>
   </data>
   <data name="ReportingProtocolUpgradeRequired" xml:space="preserve">
-    <value>Zaktualizuj aplikacjÄ™, aby bezpiecznie odczytaÄ‡ lub edytowaÄ‡ ten raport.</value>
+    <value>Zaktualizuj aplikację, aby bezpiecznie odczytać lub edytować ten raport.</value>
   </data>
   <data name="ReportingProtocolPhotoTypeRequired" xml:space="preserve">
-    <value>photoTypeId jest wymagane dla przesyĹ‚ania zdjÄ™Ä‡ w protokole raportowania 2.</value>
+    <value>photoTypeId jest wymagane dla przesyłania zdjęć w protokole raportowania 2.</value>
   </data>
   <data name="ReportingProtocolPayloadTooLarge" xml:space="preserve">
-    <value>Ĺ»Ä…danie raportowania jest zbyt duĹĽe, aby zweryfikowaÄ‡ protokĂłĹ‚.</value>
+    <value>Żądanie raportowania jest zbyt duże, aby zweryfikować protokół.</value>
   </data>
   <data name="TrainerPendingApproval" xml:space="preserve">
-    <value>Twoje konto trenera zostaĹ‚o utworzone i oczekuje na zatwierdzenie przez administratora LGYM. Po zatwierdzeniu moĹĽesz zalogowaÄ‡ siÄ™ do Panelu Trenera.</value>
+    <value>Twoje konto trenera zostało utworzone i oczekuje na zatwierdzenie przez administratora LGYM. Po zatwierdzeniu możesz zalogować się do Panelu Trenera.</value>
   </data>
   <data name="TrainerRejected" xml:space="preserve">
-    <value>TwĂłj wniosek o konto trenera zostaĹ‚ odrzucony. DostÄ™p do Panelu Trenera jest niedostÄ™pny.</value>
+    <value>Twój wniosek o konto trenera został odrzucony. Dostęp do Panelu Trenera jest niedostępny.</value>
   </data>
   <data name="TrainerApprovalRequired" xml:space="preserve">
-    <value>Przed nadaniem roli Trenera zatwierdĹş konto w sekcji wnioskĂłw trenerĂłw.</value>
+    <value>Przed nadaniem roli Trenera zatwierdź konto w sekcji wniosków trenerów.</value>
   </data>
   <data name="TrainerApprovalConflict" xml:space="preserve">
-    <value>Ten wniosek zostaĹ‚ juĹĽ rozpatrzony lub nie moĹĽna go teraz rozpatrzyÄ‡. OdĹ›wieĹĽ listÄ™, aby zobaczyÄ‡ aktualny stan.</value>
+    <value>Ten wniosek został już rozpatrzony lub nie można go teraz rozpatrzyć. Odśwież listę, aby zobaczyć aktualny stan.</value>
   </data>
   <data name="TrainerApprovalDecisionInvalid" xml:space="preserve">
     <value>Wybierz zatwierdzenie lub odrzucenie.</value>
   </data>
   <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
-    <value>Numer strony musi byÄ‡ dodatni, a rozmiar strony musi wynosiÄ‡ od 1 do 100.</value>
+    <value>Numer strony musi być dodatni, a rozmiar strony musi wynosić od 1 do 100.</value>
   </data>
-  <data name="ExerciseMediaInvalid" xml:space="preserve"><value>Plik lub identyfikator przesyĹ‚ania jest nieprawidĹ‚owy. Wybierz GIF, PNG, JPEG lub statyczny WebP do 5 MiB; HEIC oraz animowane PNG/WebP nie sÄ… obsĹ‚ugiwane.</value></data>
-  <data name="ExerciseMediaExpired" xml:space="preserve"><value>PrzesyĹ‚anie wygasĹ‚o. Wybierz plik ponownie i sprĂłbuj jeszcze raz.</value></data>
+  <data name="ExerciseMediaInvalid" xml:space="preserve"><value>Plik lub identyfikator przesyłania jest nieprawidłowy. Wybierz GIF, PNG, JPEG lub statyczny WebP do 5 MiB; HEIC oraz animowane PNG/WebP nie są obsługiwane.</value></data>
   <data name="ExerciseMediaUnavailable" xml:space="preserve"><value>Magazyn zdjęć ćwiczeń jest niedostępny. Spróbuj ponownie.</value></data>
 </root>
