@@ -16,6 +16,10 @@ public interface IRecurringReportAssignmentPersistence
     Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTraineeAsync(Id<AccountReference> traineeId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<RecurringReportAssignmentPersistenceModel>>([]);
     Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListDueAsync(DateTimeOffset now, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListActiveBySourceEpisodeAsync(
+        Id<CoachingEpisode> episodeId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<RecurringReportAssignmentPersistenceModel>>([]);
     Task AddScheduleChangeAsync(NewRecurringReportScheduleChangePersistenceModel scheduleChange, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
     Task UpdateScheduleChangeResolutionAsync(Id<RecurringReportScheduleChange> scheduleChangeId, RecurringReportScheduleChangeResolutionPersistenceModel resolution, CancellationToken cancellationToken = default)

@@ -76,6 +76,7 @@ public static class NotificationsModule
         services.AddScoped<ITrainerInvitationAcceptedInAppDeliveryPort, TrainerInvitationAcceptedInAppDeliveryService>();
         services.AddScoped<ITrainerInvitationRejectedInAppDeliveryPort, TrainerInvitationRejectedInAppDeliveryService>();
         services.AddScoped<IReportRequestCreatedActionExecutionPort, ReportRequestCreatedActionExecutionPort>();
+        services.AddScoped<IRecurringReportReminderActionExecutionPort, RecurringReportReminderActionExecutionPort>();
         services.AddScoped<IReportFeedbackAddedActionExecutionPort, ReportFeedbackAddedActionExecutionPort>();
         services.AddScoped<IReportFeedbackReadActionExecutionPort, ReportFeedbackReadActionExecutionPort>();
         services.AddScoped<IReportSubmissionCreatedActionExecutionPort, ReportSubmissionCreatedActionExecutionPort>();

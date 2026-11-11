@@ -7,6 +7,7 @@ using ApplicationInvitationRevokedCommand = LgymApi.Application.Coaching.Contrac
 using ApplicationReportFeedbackAddedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
 using ApplicationReportFeedbackReadCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand;
 using ApplicationReportRequestCreatedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
+using ApplicationRecurringReportReminderCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.RecurringReportReminderInAppNotificationCommand;
 using ApplicationReportSubmissionAcceptedProgressCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand;
 using ApplicationReportSubmissionCreatedCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand;
 using ApplicationTraineeNoteUpdatedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TraineeNoteUpdatedInAppNotificationCommand;
@@ -14,6 +15,7 @@ using ApplicationTrainerInvitationAcceptedCommand = LgymApi.Application.Coaching
 using ApplicationTrainerInvitationCreatedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationCreatedInAppNotificationCommand;
 using ApplicationTrainerInvitationRejectedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationRejectedInAppNotificationCommand;
 using ApplicationTrainerRelationshipEndedCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerRelationshipEndedInAppNotificationCommand;
+using ApplicationRelationshipEndedReportCancellationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.RelationshipEndedReportCancellationCommand;
 using ApplicationTrainingCompletedCommand = LgymApi.Application.WorkoutProgress.Contracts.BackgroundCommands.TrainingCompletedCommand;
 using ApplicationUserRegisteredCommand = LgymApi.Application.Identity.Contracts.BackgroundCommands.UserRegisteredCommand;
 
@@ -54,6 +56,9 @@ public sealed partial class CommandContractRegistry
         Create<ApplicationReportRequestCreatedCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.ReportRequestCreatedInAppNotificationCommand",
             typeof(ReportRequestCreatedInAppNotificationCommandHandler)),
+        Create<ApplicationRecurringReportReminderCommand>(
+            "LgymApi.BackgroundWorker.Common.Commands.RecurringReportReminderInAppNotificationCommand",
+            typeof(RecurringReportReminderInAppNotificationCommandHandler)),
         Create<ApplicationReportFeedbackAddedCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackAddedInAppNotificationCommand",
             typeof(ReportFeedbackAddedInAppNotificationCommandHandler)),
@@ -71,7 +76,10 @@ public sealed partial class CommandContractRegistry
             typeof(TrainerInvitationRejectedInAppNotificationCommandHandler)),
         Create<ApplicationTrainerRelationshipEndedCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.TrainerRelationshipEndedInAppNotificationCommand",
-            typeof(TrainerRelationshipEndedInAppNotificationCommandHandler))
+            typeof(TrainerRelationshipEndedInAppNotificationCommandHandler)),
+        Create<ApplicationRelationshipEndedReportCancellationCommand>(
+            "LgymApi.BackgroundWorker.Common.Commands.RelationshipEndedReportCancellationCommand",
+            typeof(RelationshipEndedReportCancellationCommandHandler))
     ];
 
     private static CommandContract Create<TCommand>(string canonicalId, params Type[] handlerTypes)

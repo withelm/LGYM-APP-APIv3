@@ -1,10 +1,12 @@
 using System.Runtime.ExceptionServices;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.Extensions.Logging;
@@ -20,8 +22,125 @@ public sealed partial class RecurringReportAssignmentService
 
         foreach (var candidate in candidates)
         {
+            if (CreateDueReminder(candidate, now) is not null)
+            {
+                await ProcessDueReminderAsync(candidate.Id, now, cancellationToken);
+            }
+        }
+
+        foreach (var candidate in candidates)
+        {
             await ProcessCandidateAsync(candidate.Id, now, cancellationToken);
         }
+    }
+
+    private async Task ProcessDueReminderAsync(
+        Id<RecurringReportAssignment> assignmentId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var assignment = await _assignmentPersistence.FindByIdForUpdateAsync(assignmentId, cancellationToken);
+        if (assignment is null)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            return;
+        }
+
+        var reminder = CreateDueReminder(assignment, now);
+        if (reminder is null)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            return;
+        }
+
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            assignment.TrainerId,
+            assignment.TraineeId,
+            cancellationToken);
+        var episodeCheck = await StageAssignmentEpisodeRevisionCheckAsync(
+            assignment,
+            relationshipAccess,
+            cancellationToken);
+        if (episodeCheck.IsFailure)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            return;
+        }
+
+        if (reminder.IsUpcomingRequestReminder)
+        {
+            await _templatePersistence.LockTrainerDefinitionsAsync(assignment.TrainerId, cancellationToken);
+            var template = await _templatePersistence.FindByIdAsync(assignment.TemplateId, cancellationToken);
+            if (template is null || template.IsDeleted)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return;
+            }
+
+            var photoTypes = await ReportTemplateSnapshotFactory.EnsureDefaultsAsync(
+                _templatePersistence, assignment.TrainerId, cancellationToken, stageDefaults: false);
+            if (ReportTemplateSnapshotFactory.Create(template, photoTypes).IsFailure)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return;
+            }
+        }
+
+        await _commandOutboxWriter.StageAsync(reminder, cancellationToken);
+        var saveResult = await SaveEpisodeFencedChangesAsync(transaction, cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return;
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static RecurringReportReminderInAppNotificationCommand? CreateDueReminder(
+        RecurringReportAssignmentPersistenceModel assignment,
+        DateTimeOffset now)
+    {
+        if (!assignment.IsActive || assignment.IsDeleted)
+        {
+            return null;
+        }
+
+        if ((assignment.NextEligibleAt ?? RecalculateNextEligibleAt(assignment)) is { } nextEligibleAt
+            && nextEligibleAt > now
+            && now >= nextEligibleAt.AddHours(-24)
+            && !assignment.Template.IsDeleted
+            && EvaluateAutomaticEligibility(assignment, nextEligibleAt).CanCreate)
+        {
+            return new RecurringReportReminderInAppNotificationCommand
+            {
+                TraineeId = assignment.TraineeId,
+                TrainerId = assignment.TrainerId,
+                AssignmentId = assignment.Id,
+                ScheduleRevision = assignment.ScheduleRevision,
+                ScheduledFor = nextEligibleAt,
+                IsUpcomingRequestReminder = true
+            };
+        }
+
+        var request = assignment.CurrentReportRequest;
+        if (request is null
+            || request.Status != ReportRequestStatus.Pending
+            || request.CreatedAt.AddHours(48) > now)
+        {
+            return null;
+        }
+
+        return new RecurringReportReminderInAppNotificationCommand
+        {
+            TraineeId = assignment.TraineeId,
+            TrainerId = assignment.TrainerId,
+            AssignmentId = assignment.Id,
+            ScheduleRevision = assignment.ScheduleRevision,
+            ScheduledFor = request.CreatedAt.AddHours(48),
+            ReportRequestId = request.Id,
+            IsUpcomingRequestReminder = false
+        };
     }
 
     private async Task ProcessCandidateAsync(

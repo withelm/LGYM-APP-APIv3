@@ -22,6 +22,65 @@ namespace LgymApi.UnitTests;
 public sealed class RecurringReportAssignmentServiceRelationalTests
 {
     [Test]
+    public async Task ProcessDueAssignmentsAsync_EndedScheduleRemindsPendingRequestWithoutIssuingAnother_OnSqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        var now = DateTimeOffset.UtcNow;
+        var requestId = Id<ReportRequest>.New();
+        var assignmentId = Id<RecurringReportAssignment>.New();
+        var createdAt = now.AddHours(-49);
+
+        await using (var db = new AppDbContext(options))
+        {
+            await db.Database.EnsureCreatedAsync();
+            var trainer = CreateUser("trainer@example.com", "Trainer");
+            var trainee = CreateUser("trainee@example.com", "Trainee");
+            var template = CreateTemplate(trainer.Id);
+            var episode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id,
+                StartedAt = now.AddDays(-10), StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
+            var request = new ReportRequest
+            {
+                Id = requestId, TrainerId = trainer.Id, TraineeId = trainee.Id, TemplateId = template.Id,
+                Template = template, Status = ReportRequestStatus.Pending, CreatedAt = createdAt
+            };
+            var assignment = new RecurringReportAssignment
+            {
+                Id = assignmentId, TrainerId = trainer.Id, TraineeId = trainee.Id, TemplateId = template.Id,
+                Template = template, IntervalValue = 1, IntervalUnit = RecurringReportIntervalUnit.Week,
+                StartsAt = now.AddDays(-3), EndsAt = now.AddHours(-1), IsActive = true,
+                CurrentReportRequestId = requestId, CurrentReportRequest = request, SourceCoachingEpisodeId = episode.Id
+            };
+            db.AddRange(trainer, trainee, template, episode, request, assignment, new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id, EpisodeId = episode.Id
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var outbox = CreateOutboxWriter();
+        await using (var db = new AppDbContext(options))
+        {
+            await CreateService(db, outbox).ProcessDueAssignmentsAsync();
+        }
+
+        await using var assertDb = new AppDbContext(options);
+        (await assertDb.ReportRequests.CountAsync()).Should().Be(1);
+        (await assertDb.RecurringReportAssignments.SingleAsync()).CurrentReportRequestId.Should().Be(requestId);
+        await outbox.Received(1).StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command =>
+                command.AssignmentId == assignmentId && command.ReportRequestId == requestId
+                && !command.IsUpcomingRequestReminder && command.ScheduledFor == createdAt.AddHours(48)),
+            Arg.Any<CancellationToken>());
+        await outbox.DidNotReceiveWithAnyArgs().StageAsync(
+            Arg.Any<ReportRequestCreatedInAppNotificationCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task ProcessDueAssignmentsAsync_CreatesNextRequest_AfterFeedbackReadAndIntervalElapsed_OnSqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
