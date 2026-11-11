@@ -49,6 +49,7 @@ internal static class PersistedEntityOwnershipCatalog
         new(typeof(ReportRequest), ReportingModuleName),
         new(typeof(ReportSubmission), ReportingModuleName),
         new(typeof(RecurringReportAssignment), ReportingModuleName),
+        new(typeof(RecurringReportScheduleChange), ReportingModuleName),
         new(typeof(Photo), ReportingModuleName),
         new(typeof(PhotoUploadSession), ReportingModuleName),
         new(typeof(TrainerPhotoType), ReportingModuleName),
@@ -88,7 +89,7 @@ internal static class PersistedEntityOwnershipCatalog
     {
         [IdentityModuleName] = 10,
         [NotificationsModuleName] = 5,
-        [ReportingModuleName] = 9,
+        [ReportingModuleName] = 10,
         [TrainingPlanningModuleName] = 3,
         [WorkoutProgressModuleName] = 11,
         [CoachingModuleName] = 5,

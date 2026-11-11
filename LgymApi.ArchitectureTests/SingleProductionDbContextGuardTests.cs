@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 53;
+    private const int PersistedEntityCount = 54;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -58,7 +58,9 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.Designer.cs"] = "23b5c30f392eb9796ecb95ca84c5d2b1dd708dfaf7f7dbf0255c5b0509b9da84",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.cs"] = "1e3ee8c63fb2830698e9547b492eb613a2c3ed46a03f6d84827162ddd35bded8",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.Designer.cs"] = "afc02d9a47b8039af77f64e47fa23c1b699c8e81105b01f2ff6d915c49897b6e",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "566a36483934bcca8230d58c0b48dccc6f24d16e6c8eb090ab8eb5980386f36f"
+        [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.cs"] = "5e65b89311aa8c4892345b3bd9984c8dd0989039fff52446108ede7c2540e527",
+        [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.Designer.cs"] = "f2c4aad620c31c016df128c20f2ff9d8cfa24f426c90f3aa84b33fa4ff07feaf",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "9a902c10ffa1169075a26ae0987c1bfe1b116ff247d94ae5792436123ceb852c"
     };
 
     [Test]

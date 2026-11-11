@@ -48,6 +48,26 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
         var submissionRequests = await database.ReportRequests.IgnoreQueryFilters().AsNoTracking()
             .Where(request => submissionRequestIds.Contains(request.Id))
             .ToDictionaryAsync(request => request.Id, cancellationToken);
+        var sourceEpisodeIds = submissions.Values
+            .Select(submission => submission.SourceCoachingEpisodeId
+                ?? (submissionRequests.TryGetValue(submission.ReportRequestId, out var request)
+                    ? request.SourceCoachingEpisodeId
+                    : null))
+            .Where(episodeId => episodeId.HasValue)
+            .Select(episodeId => episodeId!.Value)
+            .Distinct()
+            .ToArray();
+        var activeSourceEpisodeIds = sourceEpisodeIds.Length == 0
+            ? []
+            : await database.TrainerTraineeLinks.IgnoreQueryFilters().AsNoTracking()
+                .Where(link => !link.IsDeleted && link.EpisodeId != null && sourceEpisodeIds.Contains(link.EpisodeId.Value))
+                .Join(
+                    database.CoachingEpisodes.IgnoreQueryFilters().AsNoTracking()
+                        .Where(episode => !episode.IsDeleted && episode.EndedAt == null),
+                    link => link.EpisodeId,
+                    episode => (Id<CoachingEpisode>?)episode.Id,
+                    (_, episode) => episode.Id)
+                .ToHashSetAsync(cancellationToken);
 
         var dietIds = SourceIds<DietPlan>(references, NotificationSourceKind.DietPlan);
         var diets = await database.DietPlans.IgnoreQueryFilters().AsNoTracking()
@@ -82,7 +102,13 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
             {
                 NotificationSourceKind.Invitation => InvitationFacts(reference, invitations, recipientAvailable, senderAvailable),
                 NotificationSourceKind.ReportRequest => ReportRequestFacts(reference, directRequests, recipientAvailable, senderAvailable),
-                NotificationSourceKind.ReportSubmission => ReportSubmissionFacts(reference, submissions, submissionRequests, recipientAvailable, senderAvailable),
+                NotificationSourceKind.ReportSubmission => ReportSubmissionFacts(
+                    reference,
+                    submissions,
+                    submissionRequests,
+                    activeSourceEpisodeIds,
+                    recipientAvailable,
+                    senderAvailable),
                 NotificationSourceKind.DietPlan => DietFacts(reference, diets, recipientAvailable, senderAvailable),
                 NotificationSourceKind.TraineeNote => NoteFacts(reference, notes, recipientAvailable, senderAvailable),
                 NotificationSourceKind.Relationship => RelationshipFacts(reference, activeRelationships, recipientAvailable, senderAvailable),
@@ -154,6 +180,7 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
         NotificationSourceReference reference,
         IReadOnlyDictionary<Id<ReportSubmission>, ReportSubmission> submissions,
         IReadOnlyDictionary<Id<ReportRequest>, ReportRequest> requests,
+        IReadOnlySet<Id<CoachingEpisode>> activeSourceEpisodeIds,
         bool recipientAvailable,
         bool senderAvailable)
     {
@@ -167,13 +194,16 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
             ? request.TrainerId == reference.RecipientId && request.TraineeId == reference.SenderId
             : request.TraineeId == reference.RecipientId && request.TrainerId == reference.SenderId;
         participantsMatch = participantsMatch && submission.TraineeId == request.TraineeId;
+        var sourceEpisodeId = submission.SourceCoachingEpisodeId ?? request.SourceCoachingEpisodeId;
         return Facts(
             submission.IsDeleted || request.IsDeleted,
             recipientAvailable,
             senderAvailable,
             participantsMatch,
             ReportState(request.Status),
-            hasExpectedContent: submission.TrainerFeedbackAddedAt.HasValue);
+            hasExpectedContent: submission.TrainerFeedbackAddedAt.HasValue,
+            hasActiveMatchingSourceEpisode: sourceEpisodeId.HasValue
+                && activeSourceEpisodeIds.Contains(sourceEpisodeId.Value));
     }
 
     private static NotificationSourceFacts DietFacts(
@@ -237,7 +267,8 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
         NotificationSourceState state = NotificationSourceState.None,
         bool visibleToRecipient = true,
         bool hasExpectedContent = true,
-        bool relationshipCurrentlyActive = false)
+        bool relationshipCurrentlyActive = false,
+        bool hasActiveMatchingSourceEpisode = false)
         => new(
             true,
             sourceDeleted,
@@ -247,7 +278,8 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
             state,
             visibleToRecipient,
             hasExpectedContent,
-            relationshipCurrentlyActive);
+            relationshipCurrentlyActive,
+            hasActiveMatchingSourceEpisode);
 
     private static NotificationSourceState ReportState(ReportRequestStatus status) => status switch
     {
@@ -255,6 +287,7 @@ internal sealed class NotificationSourceFactProvider(AppDbContext database) : IN
         ReportRequestStatus.Submitted => NotificationSourceState.Submitted,
         ReportRequestStatus.Cancelled => NotificationSourceState.Cancelled,
         ReportRequestStatus.Expired => NotificationSourceState.Expired,
+        ReportRequestStatus.Completed => NotificationSourceState.Completed,
         _ => NotificationSourceState.None
     };
 

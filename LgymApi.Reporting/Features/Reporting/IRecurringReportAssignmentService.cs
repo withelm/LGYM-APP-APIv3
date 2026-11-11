@@ -16,6 +16,10 @@ public interface IRecurringReportAssignmentService
     Task<Result<RecurringReportAssignmentResult, AppError>> PauseAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<Result<RecurringReportAssignmentResult, AppError>> ResumeAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<Result<RecurringReportAssignmentResult, AppError>> RequestNowAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> SetNextOverrideAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, SetNextRecurringReportOverrideCommand command, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> ProposeNextScheduleAsync(AuthenticatedAccountContext currentTrainee, Id<RecurringReportAssignment> assignmentId, ProposeNextRecurringReportScheduleCommand command, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> ResolveScheduleProposalAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, Id<RecurringReportScheduleChange> proposalId, bool accept, CancellationToken cancellationToken = default);
+    Task<Result<List<RecurringReportAssignmentResult>, AppError>> GetForTraineeAsync(AuthenticatedAccountContext currentTrainee, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> DeleteAsync(AuthenticatedAccountContext currentTrainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task ProcessDueAssignmentsAsync(CancellationToken cancellationToken = default);
 }

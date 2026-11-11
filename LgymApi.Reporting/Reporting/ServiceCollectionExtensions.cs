@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITrainerReportPhotoApiPort, TrainerReportPhotoApiAdapter>();
         services.AddScoped<ITraineeReportPhotoApiPort, TraineeReportPhotoApiAdapter>();
         services.AddScoped<IRecurringReportAssignmentApiPort, RecurringReportAssignmentApiAdapter>();
+        services.AddScoped<ITraineeRecurringReportAssignmentApiPort, TraineeRecurringReportAssignmentApiAdapter>();
 
         return services;
     }

@@ -64,6 +64,14 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             };
             currentRequest.Submission = submission;
 
+            var episode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
             var assignment = new RecurringReportAssignment
             {
                 Id = Id<RecurringReportAssignment>.New(),
@@ -78,15 +86,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
                 Note = "weekly check-in",
                 CurrentReportRequestId = currentRequest.Id,
                 CurrentReportRequest = currentRequest,
-                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
-            };
-            var episode = new CoachingEpisode
-            {
-                Id = Id<CoachingEpisode>.New(),
-                TrainerId = trainer.Id,
-                TraineeId = trainee.Id,
-                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
-                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1),
+                SourceCoachingEpisodeId = episode.Id
             };
             var link = new TrainerTraineeLink
             {
@@ -163,6 +164,14 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             var trainee = CreateUser("trainee@example.com", "Trainee");
             var template = CreateTemplate(trainer.Id);
             template.IsDeleted = true;
+            var episode = new CoachingEpisode
+            {
+                Id = Id<CoachingEpisode>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                StartedAt = DateTimeOffset.UtcNow.AddDays(-30),
+                StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+            };
             var assignment = new RecurringReportAssignment
             {
                 Id = assignmentId,
@@ -174,10 +183,20 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
                 IntervalUnit = RecurringReportIntervalUnit.Week,
                 StartsAt = DateTimeOffset.UtcNow.AddDays(-20),
                 IsActive = true,
-                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1)
+                NextEligibleAt = DateTimeOffset.UtcNow.AddDays(-1),
+                SourceCoachingEpisodeId = episode.Id
+            };
+            var link = new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episode.Id
             };
 
             await setupDb.Users.AddRangeAsync(trainer, trainee);
+            await setupDb.CoachingEpisodes.AddAsync(episode);
+            await setupDb.TrainerTraineeLinks.AddAsync(link);
             await setupDb.ReportTemplates.AddAsync(template);
             await setupDb.RecurringReportAssignments.AddAsync(assignment);
             await setupDb.SaveChangesAsync();

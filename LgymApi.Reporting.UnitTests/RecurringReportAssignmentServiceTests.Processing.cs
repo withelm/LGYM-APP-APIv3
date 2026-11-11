@@ -320,10 +320,17 @@ public sealed partial class RecurringReportAssignmentServiceTests
             .Returns(call => byId[call.ArgAt<Id<RecurringReportAssignment>>(0)]);
         relationshipPersistence
             .GetAccessAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
-            .Returns(new ReportingRelationshipAccessFact(
-                true,
-                [],
-                new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0)));
+            .Returns(call =>
+            {
+                var trainerId = call.ArgAt<Id<AccountReference>>(0);
+                var traineeId = call.ArgAt<Id<AccountReference>>(1);
+                var assignment = assignments.Single(candidate =>
+                    candidate.TrainerId == trainerId && candidate.TraineeId == traineeId);
+                return new ReportingRelationshipAccessFact(
+                    true,
+                    [],
+                    new ReportingActiveRelationshipFact(assignment.SourceCoachingEpisodeId!.Value, 0));
+            });
         relationshipPersistence
             .StageActiveEpisodeRevisionCheckAsync(Arg.Any<ReportingActiveRelationshipFact>(), Arg.Any<CancellationToken>())
             .Returns(true);
@@ -400,7 +407,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             DateTimeOffset.UtcNow.AddDays(-20),
             false,
             template,
-            request);
+            request,
+            0,
+            [],
+            Id<CoachingEpisode>.New());
     }
 
     private sealed record ProcessingHarness(

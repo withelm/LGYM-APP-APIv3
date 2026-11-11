@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 834;
+    private const int ManifestEntryCount = 845;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -65,6 +65,17 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Application/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.TrainerPhotoTypePersistenceModel",
         "LgymApi.Application/Features/Reporting/ReportingService.Submissions.PhotoHydration.cs\tLgymApi.Application.Features.Reporting.ReportingService",
         "LgymApi.Application/Reporting/Errors/ReportingErrors.cs\tLgymApi.Application.Reporting.Errors.ReportingConflictError",
+        "LgymApi.Notifications/InApp/ReportFeedbackReadActionExecutionPort.cs\tLgymApi.Application.Notifications.Contracts.InApp.IReportFeedbackReadActionExecutionPort",
+        "LgymApi.Reporting/Features/Reporting/Models/RecurringReportAssignmentModels.cs\tLgymApi.Application.Features.Reporting.Models.ProposeNextRecurringReportScheduleCommand",
+        "LgymApi.Reporting/Features/Reporting/Models/RecurringReportAssignmentModels.cs\tLgymApi.Application.Features.Reporting.Models.RecurringReportScheduleProposalResult",
+        "LgymApi.Reporting/Features/Reporting/Models/RecurringReportAssignmentModels.cs\tLgymApi.Application.Features.Reporting.Models.SetNextRecurringReportOverrideCommand",
+        "LgymApi.Reporting/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.NextRecurringReportRequestResult",
+        "LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.ScheduleChanges.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
+        "LgymApi.Reporting/Reporting/ApiAdapters/ReportingApiAdapterContracts.cs\tLgymApi.Application.Reporting.ApiAdapters.ITraineeRecurringReportAssignmentApiPort",
+        "LgymApi.Reporting/Reporting/Contracts/BackgroundCommands/ReportFeedbackReadInAppNotificationCommand.cs\tLgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.NewRecurringReportScheduleChangePersistenceModel",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.RecurringReportScheduleChangePersistenceModel",
+        "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.RecurringReportScheduleChangeResolutionPersistenceModel",
         "LgymApi.Platform/Repositories/IActorRowSecurityScopeFactory.cs\tLgymApi.Application.Repositories.IActorRowSecurityScopeFactory",
         "LgymApi.Identity/Contracts/Accounts/IAccountPushInstallationCleanupPort.cs\tLgymApi.Application.Identity.Contracts.Accounts.IAccountPushInstallationCleanupPort",
         "LgymApi.Identity/Contracts/Authorization/AuthenticatedAccountAuthorizationContracts.cs\tLgymApi.Identity.Contracts.Authorization.GlobalPermissionAuthorizationContext",

@@ -12,12 +12,12 @@ namespace LgymApi.UnitTests;
 public sealed class CommandContractRegistryTests
 {
     [Test]
-    public void CreateDefault_ContainsTheExactFifteenApplicationCommandsAndSixteenHandlers()
+    public void CreateDefault_ContainsTheExactSixteenApplicationCommandsAndSeventeenHandlers()
     {
         var registry = CommandContractRegistry.CreateDefault();
 
-        registry.Contracts.Should().HaveCount(15);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(16);
+        registry.Contracts.Should().HaveCount(16);
+        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(17);
 
         foreach (var legacyContract in LegacyCommandContractManifest.All)
         {
@@ -113,10 +113,10 @@ public sealed class CommandContractRegistryTests
 
         AssertInvalidDefault(
             rows[..^1],
-            "The default command registry must contain exactly 15 rows.");
+            "The default command registry must contain exactly 16 rows.");
         AssertInvalidDefault(
             rows.Append(CreateValidRows()[0]).ToArray(),
-            "The default command registry must contain exactly 15 rows.");
+            "The default command registry must contain exactly 16 rows.");
         AssertInvalidDefault(
             ReplaceFirst(rows, rows[0] with
             {
@@ -125,7 +125,7 @@ public sealed class CommandContractRegistryTests
                 ReadAlias = typeof(FirstCommand).FullName!,
                 ExpectedHandlerTypes = [typeof(FirstHandler)]
             }),
-            "Default canonical command IDs must match the fixed 15-command contract.");
+            "Default canonical command IDs must match the fixed 16-command contract.");
         AssertInvalidDefault(
             ReplaceFirst(rows, rows[0] with
             {
@@ -149,7 +149,7 @@ public sealed class CommandContractRegistryTests
                     typeof(AlternateUserRegisteredHandler)
                 ]
             }),
-            "The default command registry must declare exactly 16 handlers.");
+            "The default command registry must declare exactly 17 handlers.");
 
         var trainingCompleted = rows.Single(row => row.CanonicalId.EndsWith(
             ".TrainingCompletedCommand",
@@ -158,7 +158,7 @@ public sealed class CommandContractRegistryTests
             rows.Select(row => row == trainingCompleted
                 ? trainingCompleted with { ExpectedHandlerTypes = [trainingCompleted.ExpectedHandlerTypes[0]] }
                 : row).ToArray(),
-            "The default command registry must declare exactly 16 handlers.");
+            "The default command registry must declare exactly 17 handlers.");
         AssertInvalidDefault(
             rows.Select(row => row == trainingCompleted
                 ? trainingCompleted with
@@ -170,7 +170,7 @@ public sealed class CommandContractRegistryTests
                     ]
                 }
                 : row).ToArray(),
-            "The default command registry must declare exactly 16 handlers.");
+            "The default command registry must declare exactly 17 handlers.");
 
         var changedTrainingHandlers = trainingCompleted with
         {
