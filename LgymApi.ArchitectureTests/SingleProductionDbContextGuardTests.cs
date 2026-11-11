@@ -27,13 +27,13 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Authorization/LgymApi.Authorization.csproj"] = "0c39e15658290889c3dd0b540c854a9971d4f4e87b920c9460ab985936b96545",
         ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
-        ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
+        ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "951d7c86c428c1bf87ed83f78c4d4d82a254a341de345ffa8e3452b4ed6271fe",
         ["LgymApi.Application/LgymApi.Application.csproj"] = "afacd804b7178a428a230ce11d5d500a46214afdb73726f608818c8247b913c7",
         ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
         ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
         ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
         ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "76afea8337dfa625eb9e1ac0e24473f1e5fb37363556d9767bf2645646785af9",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "2a5fdd38868cdc785710932c29a9f65b471d4c5874c7f48aa217ce0bc3fb3dca",
         ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2"
     };
