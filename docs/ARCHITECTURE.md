@@ -51,26 +51,9 @@ If you add a repository method that mutates data, make it stage-only and ensure 
 
 ### Persistence ownership and identifier contract
 
-The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 55 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
+The production system has one `AppDbContext`, one design-time `AppDbContextFactory`, one `AppDbContextModelSnapshot`, one database, and one migration stream rooted in Infrastructure. The factory constructs the same Npgsql model without API/runtime DI. Each of the 54 persisted entities still has exactly one module owner. This is logical write ownership only; it does not introduce a physical database, `DbContext`, schema, or migration-stream split. `LgymApi.ArchitectureTests/PersistedEntityOwnershipCatalog.cs` is the executable ownership source of truth, and `docs/modular-monolith/issue-376-ownership-map.md` is its tested documentation view.
 
 Workout execution and completed-training history belong to `Workout & Progress`. `Training.TypePlanDayId` may reference the `Training Planning` definition used to perform a workout, but that reference does not give Training Planning write ownership over the completed `Training` row.
-
-Exercise media uses the Workout & Progress-owned `ExerciseMediaUpload` operation
-ledger and `ExerciseMediaObjectFence` immutable-key fence. Authenticated multipart
-bytes are bounded, decoded and sanitized by the API before publication directly
-to the single private exercise bucket selected by that backend configuration.
-Actor-scoped receipts preserve
-idempotency. Only file publication reserves ledger/key authority before external
-PUT; DB-only create/remove/restore use one atomic exercise-and-receipt save.
-Expired operations are independently revision-fenced even without a deletable key.
-Cleanup must win the shared-key revision before any DELETE, permanently retires
-claimed never-bound keys and periodically reconciles late writes. After a failed
-candidate, only owned
-ledger/fence tracking is discarded so later candidates read fresh state. Current or
-retained bindings and unresolved intents protect their bytes. `Exercise.Image`
-remains the permanent Worker/CDN URL. The single Infrastructure context/migration
-stream and Workout & Progress ownership remain authoritative; Reporting photos
-keep separate private storage. See `exercise-media.md` and the OFFICIAL LGYM-242 ADR.
 
 Nutrition owns six persisted entities and 18 focused actions: Diet D1 through D9 and Supplementation S1 through S9. Its four existing controller adapters preserve legacy routes and payloads. Nutrition consumes Coaching only through `ICoachingRelationshipAccessService`, uses module-local stage-only persistence ports, and retains the canonical Diet command ID and payload for D3, D4, and D5 after a successful active-plan save. This is logical ownership only, with the same one `AppDbContext`, database, and migration stream.
 
@@ -334,7 +317,7 @@ Use the [Module Contribution Guide](MODULE_CONTRIBUTION_GUIDE.md) for owner-firs
 
 The project-reference manifest is an explicit project-promotion allowlist. Every approved project declares its identity, kind, and exact direct targets; those declarations derive the current edges, forbidden complement, and deterministic dependency-first order. Counts are diagnostic output rather than promotion constraints. The guards reject unknown projects, unapproved or missing edges, unused edges, missing direct imports, transitive reliance, duplicates, cycles, and order drift.
 A project promotion must update the manifest, solution membership, root Project Purpose Map, adjacent project document, and issue-380 graph and direct-use evidence in one reviewed change. Wildcard targets and exception-based permissions are forbidden. The current approved snapshot remains unchanged, and the SignalR test client remains a centrally pinned package reference rather than a project-reference edge.
-The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 13, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 55 persisted entities. Coaching protected writes receive a typed grant for the active `CoachingEpisode` and stage its optimistic authorization revision in the same unit-of-work commit; unlink closes the episode and removes the active link atomically.
+The production topology remains one `AppDbContext`, one PostgreSQL database, and one migration stream. The eight owner totals remain Identity & Accounts 10, Notifications 5, Reporting 10, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 54 persisted entities. Coaching protected writes receive a typed grant for the active `CoachingEpisode` and stage its optimistic authorization revision in the same unit-of-work commit; unlink closes the episode and removes the active link atomically.
 The compatibility, persistence, and Unit of Work guidance elsewhere in this guide continues to apply and is not restated here.
 
 The final handoff has 25 scoped Application API adapters and three scoped Notifications API adapters. Migration-era `Task7`, `ApiCompatibility`, and `Compatibility.Task7` adapter CLR identities are removed, but established HTTP, JSON, DTO, route, policy, and endpoint-specific legacy-field contracts remain unchanged. The three retained Notifications integration adapters are owner-to-owner seams, not API adapters: `PushInstallationSessionDisassociationAdapter`, `CoachingEmailNotificationSchedulerAdapter`, and `PasswordRecoveryEmailSchedulerAdapter`. See ADR-007 and issue-395 final verification for their removal conditions and the Todo 22 clean same-SHA evidence workflow.

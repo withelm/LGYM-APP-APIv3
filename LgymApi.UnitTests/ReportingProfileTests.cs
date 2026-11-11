@@ -96,6 +96,20 @@ public sealed class ReportingProfileTests
     }
 
     [Test]
+    public void ReportingProfile_MapsCompletedInternalRequestToLegacySubmittedStatus()
+    {
+        var mapper = CreateMapper(new ReportingProfile());
+
+        var dto = mapper.Map<ReportRequestResult, ReportRequestDto>(new ReportRequestResult
+        {
+            Status = ReportRequestStatus.Completed,
+            Template = new ReportTemplateResult()
+        });
+
+        dto.Status.Should().Be(ReportRequestStatus.Submitted);
+    }
+
+    [Test]
     public void ReportingProfile_MapsPhotoDtosAndNullSources_WithSafeDefaults()
     {
         var mapper = CreateMapper(new ReportingProfile());

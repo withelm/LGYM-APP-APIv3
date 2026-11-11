@@ -40,6 +40,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         AssertHydratedPhoto(document.RootElement, scenario.Photo.StorageKey);
+        document.RootElement.GetProperty("trainerFeedbackReadAt").ValueKind.Should().Be(JsonValueKind.String);
+        document.RootElement.GetProperty("nextRecurringRequest").GetProperty("status").GetString()
+            .Should().Be(nameof(NextRecurringReportRequestStatus.Unscheduled));
     }
 
     [Test]
@@ -282,6 +285,14 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
                 }
             ]
         };
+        var episode = new CoachingEpisode
+        {
+            Id = Id<CoachingEpisode>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            StartedAt = now,
+            StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+        };
         var request = new ReportRequest
         {
             Id = Id<ReportRequest>.New(),
@@ -291,7 +302,8 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             Template = template,
             Status = ReportRequestStatus.Submitted,
             SubmittedAt = now,
-            CreatedAt = now
+            CreatedAt = now,
+            SourceCoachingEpisodeId = episode.Id
         };
         var photo = new Photo
         {
@@ -341,6 +353,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             ReportRequest = request,
             TraineeId = trainee.Id,
             PayloadJson = payloadJson,
+            SourceCoachingEpisodeId = episode.Id,
             TrainerFeedbackAddedAt = feedbackAddedAt,
             CreatedAt = now
         };
@@ -350,7 +363,14 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             database.ReportTemplates.Add(template);
             database.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
-            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
+            database.CoachingEpisodes.Add(episode);
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink
+            {
+                Id = Id<TrainerTraineeLink>.New(),
+                TrainerId = trainer.Id,
+                TraineeId = trainee.Id,
+                EpisodeId = episode.Id
+            });
             database.ReportRequests.Add(request);
             database.Photos.Add(photo);
             database.ReportSubmissions.Add(submission);

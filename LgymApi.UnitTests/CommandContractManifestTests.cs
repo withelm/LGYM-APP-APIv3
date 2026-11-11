@@ -21,7 +21,7 @@ namespace LgymApi.UnitTests;
 public sealed class CommandContractManifestTests
 {
     [Test]
-    public void LegacyCommandManifest_ContainsExactlyFifteenCommands()
+    public void LegacyCommandManifest_ContainsExactlySixteenCommands()
     {
         // Given
         var manifest = LegacyCommandContractManifest.All;
@@ -30,7 +30,7 @@ public sealed class CommandContractManifestTests
         var commandCount = manifest.Count;
 
         // Then
-        commandCount.Should().Be(15);
+        commandCount.Should().Be(16);
     }
 
     [Test]
@@ -47,7 +47,7 @@ public sealed class CommandContractManifestTests
             .Should().Equal(LegacyCommandContractManifest.ExpectedFutureClrNameReadAliases)
             .And.OnlyHaveUniqueItems();
         LegacyCommandContractManifest.All.Sum(contract => contract.HandlerTypeFullNames.Count)
-            .Should().Be(16);
+            .Should().Be(17);
     }
 
     [TestCaseSource(nameof(InvalidManifestCases))]
@@ -107,7 +107,7 @@ public sealed class CommandContractManifestTests
 
         yield return new TestCaseData(
                 manifest[..^1],
-                "The durable command manifest must contain exactly 15 rows.")
+                "The durable command manifest must contain exactly 16 rows.")
             .SetName("Missing_command_row_is_rejected");
 
         yield return new TestCaseData(
@@ -117,7 +117,7 @@ public sealed class CommandContractManifestTests
                     CanonicalId = "Unexpected.Command",
                     FutureClrNameReadAlias = "Unexpected.Application.Command"
                 }).ToArray(),
-                "The durable command manifest must contain exactly 15 rows.")
+                "The durable command manifest must contain exactly 16 rows.")
             .SetName("Extra_command_row_is_rejected");
 
         yield return new TestCaseData(
@@ -127,7 +127,7 @@ public sealed class CommandContractManifestTests
 
         yield return new TestCaseData(
                 ReplaceLast(manifest, manifest[^1] with { CanonicalId = "Unexpected.Canonical.Command" }),
-                "Canonical command IDs must exactly match the fixed 15-command membership.")
+                "Canonical command IDs must exactly match the fixed 16-command membership.")
             .SetName("Altered_canonical_id_is_rejected");
 
         yield return new TestCaseData(
@@ -142,7 +142,7 @@ public sealed class CommandContractManifestTests
 
         yield return new TestCaseData(
                 ReplaceLast(manifest, manifest[^1] with { FutureClrNameReadAlias = string.Empty }),
-                "Future CLR-name read aliases must exactly match the fixed 15-command membership.")
+                "Future CLR-name read aliases must exactly match the fixed 16-command membership.")
             .SetName("Missing_future_alias_is_rejected");
 
         yield return new TestCaseData(
@@ -157,7 +157,7 @@ public sealed class CommandContractManifestTests
                     Command = new UnexpectedCommand(),
                     FutureClrNameReadAlias = typeof(UnexpectedCommand).FullName!
                 }),
-                "Runtime command types must exactly match the fixed 15-command membership.")
+                "Runtime command types must exactly match the fixed 16-command membership.")
             .SetName("Altered_runtime_type_is_rejected");
 
         yield return new TestCaseData(
@@ -199,6 +199,7 @@ public static class LegacyCommandContractManifest
         "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand",
         "LgymApi.BackgroundWorker.Common.Commands.ReportRequestCreatedInAppNotificationCommand",
         "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackAddedInAppNotificationCommand",
+        "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackReadInAppNotificationCommand",
         "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationAcceptedInAppNotificationCommand",
         "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationCreatedInAppNotificationCommand",
         "LgymApi.BackgroundWorker.Common.Commands.TrainerInvitationRejectedInAppNotificationCommand",
@@ -218,6 +219,7 @@ public static class LegacyCommandContractManifest
         typeof(ReportSubmissionAcceptedProgressCommand),
         typeof(ReportRequestCreatedInAppNotificationCommand),
         typeof(ReportFeedbackAddedInAppNotificationCommand),
+        typeof(ReportFeedbackReadInAppNotificationCommand),
         typeof(TrainerInvitationAcceptedInAppNotificationCommand),
         typeof(TrainerInvitationCreatedInAppNotificationCommand),
         typeof(TrainerInvitationRejectedInAppNotificationCommand),
@@ -237,6 +239,7 @@ public static class LegacyCommandContractManifest
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand",
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand",
         "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand",
+        "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand",
         "LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand",
         "LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationCreatedInAppNotificationCommand",
         "LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationRejectedInAppNotificationCommand",
@@ -261,6 +264,7 @@ public static class LegacyCommandContractManifest
             [typeof(ReportSubmissionAcceptedProgressCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportSubmissionAcceptedProgressCommandHandler"],
             [typeof(ReportRequestCreatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportRequestCreatedInAppNotificationCommandHandler"],
             [typeof(ReportFeedbackAddedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportFeedbackAddedInAppNotificationCommandHandler"],
+            [typeof(ReportFeedbackReadInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.ReportFeedbackReadInAppNotificationCommandHandler"],
             [typeof(TrainerInvitationAcceptedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.TrainerInvitationAcceptedInAppNotificationCommandHandler"],
             [typeof(TrainerInvitationCreatedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.TrainerInvitationCreatedInAppNotificationCommandHandler"],
             [typeof(TrainerInvitationRejectedInAppNotificationCommand)] = ["LgymApi.BackgroundWorker.Actions.TrainerInvitationRejectedInAppNotificationCommandHandler"],
@@ -432,6 +436,23 @@ public static class LegacyCommandContractManifest
             "e858765b-d2f3-054e-14aa-91deb66fc3fa",
             ["LgymApi.BackgroundWorker.Actions.ReportFeedbackAddedInAppNotificationCommandHandler"]),
         new(
+            "ReportFeedbackReadInAppNotification",
+            typeof(ReportFeedbackReadInAppNotificationCommand),
+            new ReportFeedbackReadInAppNotificationCommand
+            {
+                SubmissionId = ParseId<ReportSubmission>("00000000-0000-0000-0000-000000000038"),
+                TraineeId = ParseId<AccountReference>("00000000-0000-0000-0000-000000000039"),
+                TrainerId = ParseId<AccountReference>("00000000-0000-0000-0000-000000000040"),
+                TriggeredAt = new DateTimeOffset(2026, 7, 18, 12, 34, 59, TimeSpan.Zero),
+                NextRecurringRequestAt = new DateTimeOffset(2026, 7, 25, 12, 34, 59, TimeSpan.Zero)
+            },
+            "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackReadInAppNotificationCommand",
+            "LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand",
+            "{\"submissionId\":\"00000000-0000-0000-0000-000000000038\",\"traineeId\":\"00000000-0000-0000-0000-000000000039\",\"trainerId\":\"00000000-0000-0000-0000-000000000040\",\"triggeredAt\":\"2026-07-18T12:34:59+00:00\",\"nextRecurringRequestAt\":\"2026-07-25T12:34:59+00:00\"}",
+            "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackReadInAppNotificationCommand|{\"submissionId\":\"00000000-0000-0000-0000-000000000038\",\"traineeId\":\"00000000-0000-0000-0000-000000000039\",\"trainerId\":\"00000000-0000-0000-0000-000000000040\",\"triggeredAt\":\"2026-07-18T12:34:59+00:00\",\"nextRecurringRequestAt\":\"2026-07-25T12:34:59+00:00\"}",
+            "1c3dd6a1-3af0-e61f-2b9c-e05462d577fe",
+            ["LgymApi.BackgroundWorker.Actions.ReportFeedbackReadInAppNotificationCommandHandler"]),
+        new(
             "TrainerInvitationAcceptedInAppNotification",
             typeof(TrainerInvitationAcceptedInAppNotificationCommand),
             new TrainerInvitationAcceptedInAppNotificationCommand
@@ -499,9 +520,9 @@ public static class LegacyCommandContractManifest
 
     public static void Validate(IReadOnlyList<LegacyCommandContract> manifest)
     {
-        if (manifest.Count != 15)
+        if (manifest.Count != 16)
         {
-            throw new InvalidOperationException("The durable command manifest must contain exactly 15 rows.");
+            throw new InvalidOperationException("The durable command manifest must contain exactly 16 rows.");
         }
 
         if (manifest.Select(contract => contract.CanonicalId).Distinct(StringComparer.Ordinal).Count() != manifest.Count)
@@ -524,7 +545,7 @@ public static class LegacyCommandContractManifest
         if (!manifest.Select(contract => contract.CanonicalId)
             .SequenceEqual(ExpectedCanonicalIds, StringComparer.Ordinal))
         {
-            throw new InvalidOperationException("Canonical command IDs must exactly match the fixed 15-command membership.");
+            throw new InvalidOperationException("Canonical command IDs must exactly match the fixed 16-command membership.");
         }
 
         if (manifest.Select(contract => contract.CommandType).Distinct().Count() != manifest.Count)
@@ -534,14 +555,14 @@ public static class LegacyCommandContractManifest
 
         if (!manifest.Select(contract => contract.CommandType).ToHashSet().SetEquals(ExpectedRuntimeTypes))
         {
-            throw new InvalidOperationException("Runtime command types must exactly match the fixed 15-command membership.");
+            throw new InvalidOperationException("Runtime command types must exactly match the fixed 16-command membership.");
         }
 
 
         if (!manifest.Select(contract => contract.FutureClrNameReadAlias)
             .SequenceEqual(ExpectedFutureClrNameReadAliases, StringComparer.Ordinal))
         {
-            throw new InvalidOperationException("Future CLR-name read aliases must exactly match the fixed 15-command membership.");
+            throw new InvalidOperationException("Future CLR-name read aliases must exactly match the fixed 16-command membership.");
         }
 
         if (manifest.Any(contract => contract.Command.GetType() != contract.CommandType))
@@ -563,9 +584,9 @@ public static class LegacyCommandContractManifest
             throw new InvalidOperationException("Every command except TrainingCompletedCommand must declare exactly one handler.");
         }
 
-        if (manifest.Sum(contract => contract.HandlerTypeFullNames.Count) != 16)
+        if (manifest.Sum(contract => contract.HandlerTypeFullNames.Count) != 17)
         {
-            throw new InvalidOperationException("The durable command manifest must declare exactly 16 handlers.");
+            throw new InvalidOperationException("The durable command manifest must declare exactly 17 handlers.");
         }
 
         foreach (var contract in manifest)

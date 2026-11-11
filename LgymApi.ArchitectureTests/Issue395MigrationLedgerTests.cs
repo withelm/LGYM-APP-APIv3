@@ -190,7 +190,7 @@ public sealed class Issue395MigrationLedgerTests
     private static readonly PartialRow[] PartialContributors =
     [
         Partial("Reporting", "LgymApi.Application.Features.Reporting.ReportingService", "Features/Reporting", "ReportingService.cs", "ReportingService.Templates.cs", "ReportingService.PhotoTypes.cs", "ReportingService.Submissions.cs", "ReportingService.Submissions.Read.cs", "ReportingService.Submissions.PhotoHydration.cs", "ReportingService.Submissions.PhotoValidation.cs", "ReportingService.Submissions.Helpers.cs", "ReportingService.Requests.cs", "ReportingService.Photos.cs", "ReportingService.Photos.Support.cs", "ReportingService.Photos.Access.cs", "ReportingService.Photos.Completion.cs", "ReportingService.Photos.Read.cs"),
-        Partial("Reporting", "LgymApi.Application.Features.Reporting.RecurringReportAssignmentService", "Features/Reporting", "RecurringReportAssignmentService.cs", "RecurringReportAssignmentService.Support.cs", "RecurringReportAssignmentService.Processing.cs", "RecurringReportAssignmentService.ProcessingTypes.cs", "RecurringReportAssignmentService.RequestNow.cs"),
+        Partial("Reporting", "LgymApi.Application.Features.Reporting.RecurringReportAssignmentService", "Features/Reporting", "RecurringReportAssignmentService.cs", "RecurringReportAssignmentService.Support.cs", "RecurringReportAssignmentService.Processing.cs", "RecurringReportAssignmentService.ProcessingTypes.cs", "RecurringReportAssignmentService.RequestNow.cs", "RecurringReportAssignmentService.ScheduleChanges.cs"),
         Partial("Application", "LgymApi.Application.WorkoutProgress.ProgressData.WorkoutProgressReadWriteService", "WorkoutProgress/ProgressData", "WorkoutProgressReadWriteService.cs", "WorkoutProgressReadWriteService.Measurements.cs", "WorkoutProgressReadWriteService.MainRecords.cs"),
         Partial("Application", "LgymApi.Application.Features.Exercise.ExerciseService", "Exercise", "ExerciseService.cs", "ExerciseService.Scores.cs", "ExerciseService.Queries.cs", "ExerciseService.Management.cs"),
         Partial("Application", "LgymApi.Application.Features.Training.TrainingService", "Training", "TrainingService.cs", "TrainingService.Queries.cs", "TrainingService.AddTraining.cs"),
@@ -384,8 +384,8 @@ public sealed class Issue395MigrationLedgerTests
     [Test]
     public void PartialServiceLedger_Resolves_All_Approved_Compiled_Contributors()
     {
-        Assert.That(PartialContributors.Sum(row => row.Files.Length), Is.EqualTo(31));
-        Assert.That(PartialContributors.Select(row => row.Files.Length), Is.EqualTo(new[] { 14, 5, 3, 4, 3, 2 }));
+        Assert.That(PartialContributors.Sum(row => row.Files.Length), Is.EqualTo(32));
+        Assert.That(PartialContributors.Select(row => row.Files.Length), Is.EqualTo(new[] { 14, 6, 3, 4, 3, 2 }));
         ValidatePartialRows(PartialContributors);
     }
 
@@ -414,11 +414,11 @@ public sealed class Issue395MigrationLedgerTests
         var expectedCounts = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["LgymApi.Platform"] = 70,
-            ["LgymApi.Identity"] = 83,
+            ["LgymApi.Identity"] = 84,
             ["LgymApi.TrainingPlanning"] = 69,
-            ["LgymApi.Notifications"] = 82,
-            ["LgymApi.Application"] = 441,
-            ["LgymApi.Reporting"] = 83
+            ["LgymApi.Notifications"] = 83,
+            ["LgymApi.Application"] = 424,
+            ["LgymApi.Reporting"] = 93
         };
 
         var inventory = expectedCounts.ToDictionary(

@@ -9,16 +9,11 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 55;
+    private const int PersistedEntityCount = 54;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
     private const string SignalRClientTestPackageProject = "LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj";
-    private static readonly string[] RetiredUnreleasedExerciseMediaMigrationPaths =
-    [
-        MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.cs",
-        MigrationRoot + "/20261109150046_AddExerciseMediaUploadSessions.Designer.cs"
-    ];
     private static readonly string[] ExpectedSolutionProjectPaths = ProjectReferenceGraphManifest.ProjectNames
         .Select(name => name + "/" + name + ".csproj")
         .OrderBy(path => path, StringComparer.Ordinal)
@@ -32,14 +27,15 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Authorization/LgymApi.Authorization.csproj"] = "0c39e15658290889c3dd0b540c854a9971d4f4e87b920c9460ab985936b96545",
         ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
-        ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "951d7c86c428c1bf87ed83f78c4d4d82a254a341de345ffa8e3452b4ed6271fe",
+        ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "082c91ec55218916e80b8cb0394b1bc92306d54ee1157b9224b8637e74467207",
         ["LgymApi.Application/LgymApi.Application.csproj"] = "afacd804b7178a428a230ce11d5d500a46214afdb73726f608818c8247b913c7",
         ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
         ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
         ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
         ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "76afea8337dfa625eb9e1ac0e24473f1e5fb37363556d9767bf2645646785af9",
-        ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "4453c4766317025d9eefd24a05e6ff9841e7c0fcaf71c2d62c9a5622dad66339"
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
+        ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "2a5fdd38868cdc785710932c29a9f65b471d4c5874c7f48aa217ce0bc3fb3dca",
+        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -56,15 +52,15 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261107094438_AddCoachingEpisodes.Designer.cs"] = "9f802f8b1097ec56c5478ece5fd9685f39637fa59e48b5a625b307c6a83cf85c",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.cs"] = "d6a64a469455b5e5fa220c7bb8e7c6fe3975c00b9db192bbf3a8c75f78322070",
         [MigrationRoot + "/20261108093628_EnforceUniquePushInstallationTokens.Designer.cs"] = "1417f96bcd7abf046858cde05ebb26faa354862f5c9c99aeaac2ce05152c1758",
-        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.cs"] = "50b44b3ec4eb78a650d9439f2ffbec38d9e18f721dbe7a504442125f5cd4e2cf",
-        [MigrationRoot + "/20261109212642_AddExerciseMediaOperationsAndObjectFences.Designer.cs"] = "f55340c14ebde58053eabccbf90f69ba05425cda68791470fffd9b5f88dd9dd0",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.cs"] = "b83b471ee554febd7001f0a32417eba1866b5bdd731bc03ce2b4e19646d16a68",
         [MigrationRoot + "/20261108120000_AddTraineeNoteHistoryVisibility.Designer.cs"] = "e3907d80e4c04c1735f8ce675fca9986fa9ae5e6dd7aabd81f8e2b5c2c81143c",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.cs"] = "cc9810729bf6fd033d497af90876eb60cecde575229f76095819e6cba1eaa936",
         [MigrationRoot + "/20261108222532_AddTraineeNoteUpdatedAtConcurrency.Designer.cs"] = "23b5c30f392eb9796ecb95ca84c5d2b1dd708dfaf7f7dbf0255c5b0509b9da84",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.cs"] = "1e3ee8c63fb2830698e9547b492eb613a2c3ed46a03f6d84827162ddd35bded8",
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.Designer.cs"] = "afc02d9a47b8039af77f64e47fa23c1b699c8e81105b01f2ff6d915c49897b6e",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "0f26296e8ce4ce7a121943b89bf591e1602ad143ea42cffecc269f5b5698279e"
+        [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.cs"] = "5e65b89311aa8c4892345b3bd9984c8dd0989039fff52446108ede7c2540e527",
+        [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.Designer.cs"] = "f2c4aad620c31c016df128c20f2ff9d8cfa24f426c90f3aa84b33fa4ff07feaf",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "9a902c10ffa1169075a26ae0987c1bfe1b116ff247d94ae5792436123ceb852c"
     };
 
     [Test]
@@ -190,16 +186,6 @@ public sealed class SingleProductionDbContextGuardTests
         Assert.That(
             () => AssertProductionMigrationWorktreeIsClean([], [snapshotPath]),
             Throws.InstanceOf<AssertionException>().With.Message.Contains(snapshotPath));
-    }
-
-    [TestCase("20261109150046_AddExerciseMediaUploadSessions.cs")]
-    [TestCase("20261109150046_AddExerciseMediaUploadSessions.Designer.cs")]
-    public void Retired_Unreleased_Migration_Fixture_Should_Reject_Reintroduced_Source(string fileName)
-    {
-        var path = MigrationRoot + "/" + fileName;
-        Assert.That(RetiredUnreleasedExerciseMediaMigrationPaths, Does.Contain(path));
-        Assert.That(() => AssertRetiredMigrationAbsent(path, exists: true),
-            Throws.InstanceOf<AssertionException>().With.Message.Contains(path));
     }
 
     [Test]
@@ -491,21 +477,11 @@ public sealed class SingleProductionDbContextGuardTests
             AssertApprovedFileHash(repoRoot, entry, "project file");
         }
 
-        foreach (var path in RetiredUnreleasedExerciseMediaMigrationPaths)
-        {
-            AssertRetiredMigrationAbsent(path, File.Exists(Path.Combine(repoRoot, path)));
-        }
-
         var approvedChanges = ApprovedRetentionMigrationLedger.Keys
             .Concat(ApprovedProjectFileLedger.Keys)
             .ToList();
 
         AssertPhysicalTopologyWorktreeIsClean(headChanges, untrackedFiles, approvedChanges);
-    }
-
-    private static void AssertRetiredMigrationAbsent(string path, bool exists)
-    {
-        Assert.That(exists, Is.False, $"Retired unreleased migration must remain absent: {path}");
     }
 
     private static void AssertApprovedFileHash(

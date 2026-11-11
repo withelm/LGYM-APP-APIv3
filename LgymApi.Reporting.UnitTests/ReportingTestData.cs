@@ -111,7 +111,9 @@ internal static class ReportingTestData
             entity.CreatedAt,
             entity.IsDeleted,
             Template(entity.Template),
-            entity.CurrentReportRequest is null ? null : Request(entity.CurrentReportRequest));
+            entity.CurrentReportRequest is null ? null : Request(entity.CurrentReportRequest),
+            ScheduleRevision: entity.ScheduleRevision,
+            SourceCoachingEpisodeId: entity.SourceCoachingEpisodeId);
 
     public static ReportPhotoPersistenceModel Photo(Photo entity)
         => new(

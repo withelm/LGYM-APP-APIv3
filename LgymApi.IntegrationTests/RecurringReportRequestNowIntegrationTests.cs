@@ -190,6 +190,7 @@ public sealed class RecurringReportRequestNowIntegrationTests : PostgreSqlRecurr
         feedbackReadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var feedbackRead = await ReadAsync<ReportSubmissionDto>(feedbackReadResponse);
         feedbackRead.TrainerFeedbackReadAt.Should().NotBeNull();
+        feedbackRead.Request.Status.Should().Be(ReportRequestStatus.Submitted);
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -201,6 +202,8 @@ public sealed class RecurringReportRequestNowIntegrationTests : PostgreSqlRecurr
             .SingleAsync(candidate => candidate.Id == assignmentId);
         storedSubmission.TrainerFeedbackAddedAt.Should().NotBeNull();
         storedSubmission.TrainerFeedbackReadAt.Should().NotBeNull();
+        (await verificationDatabase.ReportRequests.AsNoTracking().SingleAsync(candidate => candidate.Id == requestId)).Status
+            .Should().Be(ReportRequestStatus.Completed);
         storedSubmission.TrainerFeedbackReadAt!.Value.Should().BeCloseTo(
             feedbackRead.TrainerFeedbackReadAt!.Value,
             TimeSpan.FromMicroseconds(1));

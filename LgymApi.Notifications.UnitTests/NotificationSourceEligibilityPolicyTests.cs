@@ -22,6 +22,7 @@ public sealed class NotificationSourceEligibilityPolicyTests
 
     [TestCase((int)NotificationSourceState.Pending, false)]
     [TestCase((int)NotificationSourceState.Submitted, true)]
+    [TestCase((int)NotificationSourceState.Completed, true)]
     [TestCase((int)NotificationSourceState.Cancelled, false)]
     [TestCase((int)NotificationSourceState.Expired, false)]
     public void CanDisclose_ReportSubmissionRequiresSubmittedState(int stateValue, bool expected)
@@ -44,6 +45,24 @@ public sealed class NotificationSourceEligibilityPolicyTests
         NotificationSourceEligibilityPolicy.CanDisclose(
             source,
             Facts(state: NotificationSourceState.Submitted, hasExpectedContent: hasExpectedContent)).Should().Be(expected);
+    }
+
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public void CanDisclose_ReportFeedbackReadRequiresActiveMatchingSourceEpisode(
+        bool hasActiveMatchingSourceEpisode,
+        bool expected)
+    {
+        var source = Reference(NotificationSourceKind.ReportSubmission, NotificationSourceState.Completed) with
+        {
+            RequiresActiveSourceEpisode = true
+        };
+
+        NotificationSourceEligibilityPolicy.CanDisclose(
+            source,
+            Facts(
+                state: NotificationSourceState.Completed,
+                hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode)).Should().Be(expected);
     }
 
     [TestCase(false, true, true)]
@@ -83,7 +102,8 @@ public sealed class NotificationSourceEligibilityPolicyTests
         bool senderAvailable = true,
         bool recipientAvailable = true,
         bool participantsMatch = true,
-        bool hasExpectedContent = true) => new(
+        bool hasExpectedContent = true,
+        bool hasActiveMatchingSourceEpisode = false) => new(
         true,
         false,
         recipientAvailable,
@@ -92,5 +112,6 @@ public sealed class NotificationSourceEligibilityPolicyTests
         state,
         true,
         hasExpectedContent,
-        false);
+        false,
+        hasActiveMatchingSourceEpisode);
 }

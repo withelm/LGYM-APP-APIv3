@@ -30,6 +30,8 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
             CurrentReportRequestId = assignment.CurrentReportRequestId,
             LastRequestCreatedAt = assignment.LastRequestCreatedAt,
             NextEligibleAt = assignment.NextEligibleAt,
+            ScheduleRevision = assignment.ScheduleRevision,
+            SourceCoachingEpisodeId = assignment.SourceCoachingEpisodeId,
             CreatedAt = assignment.CreatedAt
         }, cancellationToken).AsTask();
 
@@ -91,6 +93,21 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
         return entity is null ? null : ReportingPersistenceProjection.Assignment(entity);
     }
 
+    public async Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestForUpdateAsync(
+        Id<ReportRequest> reportRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        RequireActiveTransaction();
+        var assignmentId = await _dbContext.RecurringReportAssignments
+            .AsNoTracking()
+            .Where(assignment => !assignment.IsDeleted && assignment.CurrentReportRequestId == reportRequestId)
+            .Select(assignment => (Id<RecurringReportAssignment>?)assignment.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        return assignmentId is null
+            ? null
+            : await FindByIdForUpdateAsync(assignmentId.Value, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTrainerAndTraineeAsync(
         Id<AccountReference> trainerId,
         Id<AccountReference> traineeId,
@@ -101,6 +118,19 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
         var entities = await BaseQuery()
             .AsNoTracking()
             .Where(assignment => assignment.TrainerId == persistedTrainerId && assignment.TraineeId == persistedTraineeId)
+            .OrderByDescending(assignment => assignment.CreatedAt)
+            .ToListAsync(cancellationToken);
+        return entities.Select(ReportingPersistenceProjection.Assignment).ToList();
+    }
+
+    public async Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTraineeAsync(
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default)
+    {
+        var persistedTraineeId = ReportingPersistenceAccountIds.ToPersisted(traineeId);
+        var entities = await BaseQuery()
+            .AsNoTracking()
+            .Where(assignment => assignment.TraineeId == persistedTraineeId)
             .OrderByDescending(assignment => assignment.CreatedAt)
             .ToListAsync(cancellationToken);
         return entities.Select(ReportingPersistenceProjection.Assignment).ToList();
@@ -142,7 +172,45 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
         entity.CurrentReportRequestId = update.CurrentReportRequestId;
         entity.LastRequestCreatedAt = update.LastRequestCreatedAt;
         entity.NextEligibleAt = update.NextEligibleAt;
+        entity.ScheduleRevision = update.ScheduleRevision;
         entity.IsDeleted = update.IsDeleted;
+    }
+
+    public Task AddScheduleChangeAsync(
+        NewRecurringReportScheduleChangePersistenceModel scheduleChange,
+        CancellationToken cancellationToken = default)
+        => _dbContext.RecurringReportScheduleChanges.AddAsync(new RecurringReportScheduleChange
+        {
+            Id = scheduleChange.Id,
+            RecurringReportAssignmentId = scheduleChange.AssignmentId,
+            Kind = scheduleChange.Kind,
+            Status = scheduleChange.Status,
+            ScheduleRevision = scheduleChange.ScheduleRevision,
+            OldScheduledAt = scheduleChange.OldScheduledAt,
+            ProposedScheduledAt = scheduleChange.ProposedScheduledAt,
+            Reason = scheduleChange.Reason,
+            RequestedByUserId = ReportingPersistenceAccountIds.ToPersisted(scheduleChange.RequestedByAccountId),
+            RequestedAt = scheduleChange.RequestedAt,
+            ResolvedByUserId = scheduleChange.ResolvedByAccountId is null
+                ? null
+                : ReportingPersistenceAccountIds.ToPersisted(scheduleChange.ResolvedByAccountId.Value),
+            ResolvedAt = scheduleChange.ResolvedAt,
+            SourceProposalId = scheduleChange.SourceProposalId,
+            CreatedAt = scheduleChange.RequestedAt
+        }, cancellationToken).AsTask();
+
+    public async Task UpdateScheduleChangeResolutionAsync(
+        Id<RecurringReportScheduleChange> scheduleChangeId,
+        RecurringReportScheduleChangeResolutionPersistenceModel resolution,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.RecurringReportScheduleChanges
+            .FirstAsync(change => change.Id == scheduleChangeId, cancellationToken);
+        entity.Status = resolution.Status;
+        entity.ResolvedByUserId = resolution.ResolvedByAccountId is null
+            ? null
+            : ReportingPersistenceAccountIds.ToPersisted(resolution.ResolvedByAccountId.Value);
+        entity.ResolvedAt = resolution.ResolvedAt;
     }
 
     private IQueryable<RecurringReportAssignment> BaseQuery()
@@ -154,11 +222,12 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
                 .ThenInclude(request => request!.Template)
                     .ThenInclude(template => template.Fields)
             .Include(assignment => assignment.CurrentReportRequest)
-                .ThenInclude(request => request!.Submission);
+                .ThenInclude(request => request!.Submission)
+            .Include(assignment => assignment.ScheduleChanges);
 
     private void RequireActiveTransaction()
     {
-        if (_dbContext.Database.CurrentTransaction == null)
+        if (_dbContext.Database.IsRelational() && _dbContext.Database.CurrentTransaction == null)
         {
             throw new InvalidOperationException("Recurring report assignment locking requires an active transaction.");
         }

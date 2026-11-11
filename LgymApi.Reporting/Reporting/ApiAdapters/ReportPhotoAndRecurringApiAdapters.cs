@@ -78,6 +78,25 @@ internal sealed class RecurringReportAssignmentApiAdapter : IRecurringReportAssi
     public Task<Result<RecurringReportAssignmentResult, AppError>> RequestNowAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default)
         => _recurringService.RequestNowAsync(trainer, traineeId, assignmentId, cancellationToken);
 
+    public Task<Result<RecurringReportAssignmentResult, AppError>> SetNextOverrideAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, SetNextRecurringReportOverrideCommand command, CancellationToken cancellationToken = default)
+        => _recurringService.SetNextOverrideAsync(trainer, traineeId, assignmentId, command, cancellationToken);
+
+    public Task<Result<RecurringReportAssignmentResult, AppError>> ResolveProposalAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, Id<RecurringReportScheduleChange> proposalId, bool accept, CancellationToken cancellationToken = default)
+        => _recurringService.ResolveScheduleProposalAsync(trainer, traineeId, assignmentId, proposalId, accept, cancellationToken);
+
     public Task<Result<Unit, AppError>> DeleteAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default)
         => _recurringService.DeleteAsync(trainer, traineeId, assignmentId, cancellationToken);
+}
+
+internal sealed class TraineeRecurringReportAssignmentApiAdapter : ITraineeRecurringReportAssignmentApiPort
+{
+    private readonly IRecurringReportAssignmentService _recurringService;
+
+    public TraineeRecurringReportAssignmentApiAdapter(IRecurringReportAssignmentService recurringService) => _recurringService = recurringService;
+
+    public Task<Result<List<RecurringReportAssignmentResult>, AppError>> GetAllAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default)
+        => _recurringService.GetForTraineeAsync(trainee, cancellationToken);
+
+    public Task<Result<RecurringReportAssignmentResult, AppError>> ProposeAsync(AuthenticatedAccountContext trainee, Id<RecurringReportAssignment> assignmentId, ProposeNextRecurringReportScheduleCommand command, CancellationToken cancellationToken = default)
+        => _recurringService.ProposeNextScheduleAsync(trainee, assignmentId, command, cancellationToken);
 }

@@ -21,6 +21,8 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class ReportingServiceAcceptedProgressOutboxTests
 {
+    private static readonly Id<CoachingEpisode> ActiveEpisodeId = Id<CoachingEpisode>.New();
+
     [Test]
     public async Task Submit_StagesValidMeasurementsBeforeCommitAndEnqueuesNotificationAfterCommit()
     {
@@ -163,7 +165,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
         ICommandDispatcher dispatcher,
         ICommandOutboxWriter outbox)
     {
-        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
+        var activeEpisode = new ReportingActiveRelationshipFact(ActiveEpisodeId, 0);
         var relationshipAccess = Substitute.For<IReportingRelationshipAccessPersistence>();
         relationshipAccess.GetAccessAsync(
                 Arg.Any<Id<AccountReference>>(),
@@ -178,6 +180,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             Substitute.For<IReportPhotoPersistence>(),
             relationshipAccess,
+            ReportingAuthorizationTestFactory.Create(),
             Substitute.For<IAccountLookupService>(),
             new ReportSubmissionAcceptedProgressCommandFactory(),
             dispatcher,
@@ -200,7 +203,21 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
         Id<AccountReference> traineeId,
         Id<AccountReference> trainerId,
         ReportTemplatePersistenceModel template)
-        => new(requestId, trainerId, traineeId, template.Id, null, ReportRequestStatus.Pending, null, null, null, DateTimeOffset.UtcNow, false, template, null);
+        => new(
+            requestId,
+            trainerId,
+            traineeId,
+            template.Id,
+            null,
+            ReportRequestStatus.Pending,
+            null,
+            null,
+            null,
+            DateTimeOffset.UtcNow,
+            false,
+            template,
+            null,
+            SourceCoachingEpisodeId: ActiveEpisodeId);
 
     private static JsonElement ParseJson(string json) => JsonDocument.Parse(json).RootElement.Clone();
 }

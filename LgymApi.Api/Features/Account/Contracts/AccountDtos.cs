@@ -64,7 +64,7 @@ public sealed class AccountAccessApplicationCapabilitiesDto : IResultDto
 public sealed class AccountAccessOwnerExtensionsDto : IResultDto
 {
     [JsonPropertyName("reporting")]
-    public AccountAccessOwnerCapabilitiesDto Reporting { get; init; } = new();
+    public ReportingAccountAccessOwnerCapabilitiesDto Reporting { get; init; } = new();
 
     [JsonPropertyName("trainingPlanning")]
     public AccountAccessOwnerCapabilitiesDto TrainingPlanning { get; init; } = new();
@@ -87,6 +87,24 @@ public sealed class AccountAccessOwnerCapabilitiesDto : IResultDto
     /// <summary>False when the owner is missing, unsupported, or intentionally denies it. Clients must not infer access from availability.</summary>
     [JsonPropertyName("available")]
     public bool IsAvailable { get; init; }
+}
+
+public sealed class ReportingAccountAccessOwnerCapabilitiesDto : IResultDto
+{
+    [JsonPropertyName("available")]
+    public bool IsAvailable { get; init; }
+
+    [JsonPropertyName("canReadOwnSubmissions")]
+    public bool CanReadOwnSubmissions { get; init; }
+
+    [JsonPropertyName("canSubmitReportRequests")]
+    public bool CanSubmitReportRequests { get; init; }
+
+    [JsonPropertyName("canManageReportTemplates")]
+    public bool CanManageReportTemplates { get; init; }
+
+    [JsonPropertyName("canManagePhotoTypes")]
+    public bool CanManagePhotoTypes { get; init; }
 }
 
 public sealed class NotificationsAccountAccessOwnerCapabilitiesDto : IResultDto

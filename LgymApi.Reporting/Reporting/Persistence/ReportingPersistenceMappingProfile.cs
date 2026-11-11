@@ -2,6 +2,7 @@ using System.Text.Json;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Mapping.Core;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Reporting.Persistence;
 
@@ -77,6 +78,21 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
                     source.ReadUrl,
                     string.IsNullOrWhiteSpace(source.CanonicalPhoto.ThumbnailStorageKey) ? null : source.ThumbnailUrl));
 
+        configuration.CreateMap<RecurringReportScheduleChangePersistenceModel, RecurringReportScheduleProposalResult>((source, _) => new RecurringReportScheduleProposalResult
+        {
+            Id = source.Id,
+            AssignmentId = source.AssignmentId,
+            OldScheduledAt = source.OldScheduledAt,
+            ProposedScheduledAt = source.ProposedScheduledAt,
+            Reason = source.Reason,
+            ScheduleRevision = source.ScheduleRevision,
+            Status = source.Status,
+            RequestedAt = source.RequestedAt,
+            RequestedByAccountId = source.RequestedByAccountId,
+            ResolvedAt = source.ResolvedAt,
+            ResolvedByAccountId = source.ResolvedByAccountId
+        });
+
         configuration.CreateMap<RecurringReportAssignmentPersistenceModel, RecurringReportAssignmentResult>((source, context) => new RecurringReportAssignmentResult
         {
             Id = source.Id,
@@ -92,11 +108,20 @@ public sealed class ReportingPersistenceMappingProfile : IMappingProfile
             CurrentReportRequestId = source.CurrentReportRequestId,
             LastRequestCreatedAt = source.LastRequestCreatedAt,
             NextEligibleAt = source.NextEligibleAt,
+            ScheduleRevision = source.ScheduleRevision,
             CreatedAt = source.CreatedAt,
             Template = context.Map<ReportTemplatePersistenceModel, ReportTemplateResult>(source.Template),
             CurrentReportRequest = source.CurrentReportRequest is null
                 ? null
-                : context.Map<ReportRequestPersistenceModel, ReportRequestResult>(source.CurrentReportRequest)
+                : context.Map<ReportRequestPersistenceModel, ReportRequestResult>(source.CurrentReportRequest),
+            EffectiveNextRecurringRequest = RecurringReportSchedulePolicy.EffectiveSchedule(source),
+            PendingScheduleProposal = RecurringReportSchedulePolicy.PendingProposal(source),
+            ScheduleProposalHistory = context.MapList<RecurringReportScheduleChangePersistenceModel, RecurringReportScheduleProposalResult>(
+                (source.ScheduleChanges ?? [])
+                    .Where(change => change.Kind == RecurringReportScheduleChangeKind.TraineeProposal)
+                    .OrderByDescending(change => change.RequestedAt)
+                    .ThenBy(change => change.Id.ToString(), StringComparer.Ordinal)
+                    .ToList())
         });
     }
 

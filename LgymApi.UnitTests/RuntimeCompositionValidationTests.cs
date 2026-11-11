@@ -183,8 +183,8 @@ public sealed class RuntimeCompositionValidationTests
         {
             [typeof(LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator)] = 4,
             [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 6,
-            [typeof(IAccountAccessOwnerCapabilityExtension)] = 2,
-            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 49
+            [typeof(IAccountAccessOwnerCapabilityExtension)] = 3,
+            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 47
         };
 
         foreach (var group in moduleDescriptors)
@@ -249,7 +249,7 @@ public sealed class RuntimeCompositionValidationTests
     {
         var controllerTypes = GetApiControllerTypes();
 
-        controllerTypes.Should().HaveCount(36);
+        controllerTypes.Should().HaveCount(35);
         foreach (var controllerType in controllerTypes)
         {
             serviceProvider.GetRequiredService(controllerType)
@@ -279,7 +279,7 @@ public sealed class RuntimeCompositionValidationTests
                 && descriptor.ServiceType.Namespace == "LgymApi.Notifications.ApiAdapters")
             .ToArray();
 
-        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 26, "Application and Reporting API adapters");
+        AssertExactScopedInternalAdapters(applicationAdapters, expectedCount: 27, "Application and Reporting API adapters");
         AssertExactScopedInternalAdapters(notificationsAdapters, expectedCount: 3, "Notifications API adapters");
 
         var retainedIntegrationContracts = new HashSet<string>(StringComparer.Ordinal)

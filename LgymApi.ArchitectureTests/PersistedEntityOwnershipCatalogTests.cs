@@ -34,8 +34,8 @@ public sealed class PersistedEntityOwnershipCatalogTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(55));
-            Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(55));
+            Assert.That(PersistedEntityOwnershipCatalog.Entries, Has.Count.EqualTo(54));
+            Assert.That(PersistenceIdentityContract.DbSets, Has.Count.EqualTo(54));
             Assert.That(expectedDbSetIdentities.Select(identity => identity.PropertyName), Is.Unique);
             Assert.That(expectedEntityTypeNames, Is.Unique);
             Assert.That(catalogEntityTypeNames, Is.EqualTo(expectedEntityTypeNames));
@@ -47,9 +47,9 @@ public sealed class PersistedEntityOwnershipCatalogTests
                 Is.EquivalentTo(PersistedEntityOwnershipCatalog.CanonicalOwners));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.IdentityModuleName), Is.EqualTo(10));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.NotificationsModuleName), Is.EqualTo(5));
-            Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.ReportingModuleName), Is.EqualTo(9));
+            Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.ReportingModuleName), Is.EqualTo(10));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.TrainingPlanningModuleName), Is.EqualTo(3));
-            Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.WorkoutProgressModuleName), Is.EqualTo(13));
+            Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.WorkoutProgressModuleName), Is.EqualTo(11));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.CoachingModuleName), Is.EqualTo(5));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.NutritionModuleName), Is.EqualTo(6));
             Assert.That(CountEntriesFor(PersistedEntityOwnershipCatalog.PlatformModuleName), Is.EqualTo(4));

@@ -106,6 +106,65 @@ public sealed partial class RecurringReportAssignmentServiceTests
     }
 
     [Test]
+    public async Task RequestNowAsync_ConsumesOverrideInvalidatesProposalAndAdvancesScheduleRevision()
+    {
+        var assignment = CreateProcessingAssignment();
+        var activeOverride = new RecurringReportScheduleChangePersistenceModel(
+            Id<RecurringReportScheduleChange>.New(),
+            assignment.Id,
+            RecurringReportScheduleChangeKind.TrainerOverride,
+            RecurringReportScheduleChangeStatus.Active,
+            4,
+            DateTimeOffset.UtcNow.AddDays(2),
+            DateTimeOffset.UtcNow.AddDays(3),
+            null,
+            assignment.TrainerId,
+            DateTimeOffset.UtcNow.AddHours(-2),
+            null,
+            null,
+            null);
+        var proposal = new RecurringReportScheduleChangePersistenceModel(
+            Id<RecurringReportScheduleChange>.New(),
+            assignment.Id,
+            RecurringReportScheduleChangeKind.TraineeProposal,
+            RecurringReportScheduleChangeStatus.Pending,
+            4,
+            DateTimeOffset.UtcNow.AddDays(3),
+            DateTimeOffset.UtcNow.AddDays(4),
+            "Later",
+            assignment.TraineeId,
+            DateTimeOffset.UtcNow.AddHours(-1),
+            null,
+            null,
+            null);
+        assignment = assignment with
+        {
+            ScheduleRevision = 4,
+            ScheduleChanges = [activeOverride, proposal]
+        };
+        var harness = CreateRequestNowHarness(assignment);
+
+        var result = await harness.Service.RequestNowAsync(
+            RequestNowAccount(assignment.TrainerId),
+            assignment.TraineeId,
+            assignment.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ScheduleRevision.Should().Be(5);
+        result.Value.PendingScheduleProposal.Should().BeNull();
+        await harness.AssignmentPersistence.Received(1).UpdateScheduleChangeResolutionAsync(
+            activeOverride.Id,
+            Arg.Is<RecurringReportScheduleChangeResolutionPersistenceModel>(resolution =>
+                resolution.Status == RecurringReportScheduleChangeStatus.Consumed),
+            Arg.Any<CancellationToken>());
+        await harness.AssignmentPersistence.Received(1).UpdateScheduleChangeResolutionAsync(
+            proposal.Id,
+            Arg.Is<RecurringReportScheduleChangeResolutionPersistenceModel>(resolution =>
+                resolution.Status == RecurringReportScheduleChangeStatus.Invalidated),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task RequestNowAsync_WhenCallerIsNotTrainer_ReturnsLocalizedForbiddenBeforeTransaction()
     {
         var assignment = CreateProcessingAssignment();
@@ -742,7 +801,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
             .Returns(_ => new ReportingRelationshipAccessFact(
                 relationshipCall++ == 0 ? preflightRelationship : lockedRelationship,
                 [],
-                new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0)));
+                new ReportingActiveRelationshipFact(assignment.SourceCoachingEpisodeId!.Value, 0)));
         relationshipPersistence
             .StageActiveEpisodeRevisionCheckAsync(Arg.Any<ReportingActiveRelationshipFact>(), Arg.Any<CancellationToken>())
             .Returns(true);

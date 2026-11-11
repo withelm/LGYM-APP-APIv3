@@ -92,6 +92,104 @@ public sealed class ReportingEngineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SubmittedArchive_AfterSourceTemplateEditAndDelete_PreservesIssuedTemplateAndPhotoTypeSnapshot()
+    {
+        var trainer = await SeedTrainerAsync("archive-snapshot-trainer", "archive-snapshot-trainer@example.test");
+        var trainee = await SeedUserAsync("archive-snapshot-trainee", "archive-snapshot-trainee@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        using var templateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
+        {
+            name = "Issued archive template",
+            fields = new object[]
+            {
+                new { key = "checkIn", label = "Issued check-in", type = "Text", isRequired = true, order = 0 },
+                new { key = "photos", label = "Issued photos", type = "Photos", isRequired = false, order = 1, moduleConfig = new { requiredViews = new[] { "Front" } } }
+            }
+        });
+        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
+        template.Should().NotBeNull();
+
+        using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template!.Id });
+        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
+        request.Should().NotBeNull();
+
+        SetAuthorizationHeader(trainee.Id);
+        using var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new { answers = new { checkIn = "immutable archive" } });
+        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(trainer.Id);
+        using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/report-templates/{template.Id}/update", new
+        {
+            name = "Mutated source template",
+            fields = new[] { new { key = "replacement", label = "Replacement", type = "Text", isRequired = true, order = 0 } }
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var deleteResponse = await Client.PostAsync($"/api/trainer/report-templates/{template.Id}/delete", null);
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SetAuthorizationHeader(trainee.Id);
+        using var archiveRequest = new HttpRequestMessage(HttpMethod.Get, "/api/trainee/report-submissions");
+        archiveRequest.Headers.Add("X-LGYM-Reporting-Protocol", "2");
+        using var archiveResponse = await Client.SendAsync(archiveRequest);
+        archiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var archive = JsonDocument.Parse(await archiveResponse.Content.ReadAsStringAsync());
+        var archivedRequest = archive.RootElement[0].GetProperty("request");
+        archivedRequest.GetProperty("definitionSnapshotProvenance").GetString().Should().Be("Issued");
+        var archivedTemplate = archivedRequest.GetProperty("template");
+        archivedTemplate.GetProperty("name").GetString().Should().Be("Issued archive template");
+        var archivedFields = archivedTemplate.GetProperty("fields");
+        archivedFields.EnumerateArray().Select(field => field.GetProperty("key").GetString()).Should().Contain(["checkIn", "photos"]);
+        archivedFields.EnumerateArray()
+            .Single(field => field.GetProperty("key").GetString() == "photos")
+            .GetProperty("moduleConfig").GetProperty("photoTypes").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Test]
+    public async Task SubmissionCollections_ExcludeSoftDeletedSubmissionAndRequestRows()
+    {
+        var trainer = await SeedTrainerAsync("deleted-archive-trainer", "deleted-archive-trainer@example.test");
+        var trainee = await SeedUserAsync("deleted-archive-trainee", "deleted-archive-trainee@example.test");
+        var now = DateTimeOffset.UtcNow;
+        var template = new ReportTemplate { Id = Id<ReportTemplate>.New(), TrainerId = trainer.Id, Name = "Archive privacy" };
+        var visibleRequest = new ReportRequest { Id = Id<ReportRequest>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id, TemplateId = template.Id, Template = template, Status = ReportRequestStatus.Submitted, CreatedAt = now };
+        var deletedRequest = new ReportRequest { Id = Id<ReportRequest>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id, TemplateId = template.Id, Template = template, Status = ReportRequestStatus.Submitted, CreatedAt = now, IsDeleted = true };
+        var deletedSubmissionRequest = new ReportRequest { Id = Id<ReportRequest>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id, TemplateId = template.Id, Template = template, Status = ReportRequestStatus.Submitted, CreatedAt = now };
+        var visibleSubmission = new ReportSubmission { Id = Id<ReportSubmission>.New(), ReportRequestId = visibleRequest.Id, ReportRequest = visibleRequest, TraineeId = trainee.Id, PayloadJson = "{}", CreatedAt = now };
+        var deletedRequestSubmission = new ReportSubmission { Id = Id<ReportSubmission>.New(), ReportRequestId = deletedRequest.Id, ReportRequest = deletedRequest, TraineeId = trainee.Id, PayloadJson = "{}", CreatedAt = now };
+        var deletedSubmission = new ReportSubmission { Id = Id<ReportSubmission>.New(), ReportRequestId = deletedSubmissionRequest.Id, ReportRequest = deletedSubmissionRequest, TraineeId = trainee.Id, PayloadJson = "{}", CreatedAt = now, IsDeleted = true };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
+            database.ReportTemplates.Add(template);
+            database.ReportRequests.AddRange(visibleRequest, deletedRequest, deletedSubmissionRequest);
+            database.ReportSubmissions.AddRange(visibleSubmission, deletedRequestSubmission, deletedSubmission);
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainee.Id);
+        using var traineeResponse = await Client.GetAsync("/api/trainee/report-submissions");
+        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var traineeBody = await traineeResponse.Content.ReadAsStringAsync();
+        traineeBody.Should().Contain(visibleSubmission.Id.ToString()).And.NotContain(deletedRequestSubmission.Id.ToString()).And.NotContain(deletedSubmission.Id.ToString());
+
+        SetAuthorizationHeader(trainer.Id);
+        using var trainerResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/report-submissions");
+        trainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var trainerBody = await trainerResponse.Content.ReadAsStringAsync();
+        trainerBody.Should().Contain(visibleSubmission.Id.ToString()).And.NotContain(deletedRequestSubmission.Id.ToString()).And.NotContain(deletedSubmission.Id.ToString());
+    }
+
+    [Test]
     [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/report-requests", "trainer-shared", "active-relationship-allow")]
     [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/report-requests", "trainer-shared", "unrelated-relationship-denial")]
     [AuthorizationEvidence("POST", "/api/trainer/trainees/{traineeId}/report-requests", "trainer-shared", "former-relationship-denial")]
@@ -628,7 +726,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             TrainerId = trainer.Id,
             TraineeId = trainee.Id,
             TemplateId = template.Id,
-            Status = ReportRequestStatus.Pending,
+            Status = ReportRequestStatus.Submitted,
             Note = "Protected photo history request"
         };
         var photo = new Photo
@@ -713,7 +811,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             TrainerId = trainer.Id,
             TraineeId = trainee.Id,
             TemplateId = template.Id,
-            Status = ReportRequestStatus.Pending,
+            Status = ReportRequestStatus.Submitted,
             Note = "Protected trainer photo history request"
         };
         var photo = new Photo
@@ -781,6 +879,12 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         formerHistory.Should().NotBeNull();
         formerHistory!.Photos.Should().ContainSingle(item => item.Id == photo.Id.ToString());
 
+        using var formerCollectionResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={trainee.Id}");
+        formerCollectionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var formerCollection = await formerCollectionResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
+        formerCollection.Should().NotBeNull();
+        formerCollection!.Photos.Should().ContainSingle(item => item.Id == photo.Id.ToString());
+
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(route);
         ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -825,7 +929,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             TrainerId = trainer.Id,
             TraineeId = trainee.Id,
             TemplateId = template.Id,
-            Status = ReportRequestStatus.Pending,
+            Status = ReportRequestStatus.Submitted,
             Note = "Protected signed URL request"
         };
         var foreignRequest = new ReportRequest

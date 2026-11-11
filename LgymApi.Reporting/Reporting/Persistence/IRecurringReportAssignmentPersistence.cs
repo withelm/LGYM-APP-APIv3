@@ -11,7 +11,14 @@ public interface IRecurringReportAssignmentPersistence
     Task<RecurringReportAssignmentPersistenceModel?> FindByIdAsync(Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<RecurringReportAssignmentPersistenceModel?> FindByIdForUpdateAsync(Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default);
+    Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestForUpdateAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTrainerAndTraineeAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByTraineeAsync(Id<AccountReference> traineeId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<RecurringReportAssignmentPersistenceModel>>([]);
     Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListDueAsync(DateTimeOffset now, CancellationToken cancellationToken = default);
+    Task AddScheduleChangeAsync(NewRecurringReportScheduleChangePersistenceModel scheduleChange, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+    Task UpdateScheduleChangeResolutionAsync(Id<RecurringReportScheduleChange> scheduleChangeId, RecurringReportScheduleChangeResolutionPersistenceModel resolution, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
     Task UpdateAsync(Id<RecurringReportAssignment> assignmentId, RecurringReportAssignmentUpdatePersistenceModel update, CancellationToken cancellationToken = default);
 }

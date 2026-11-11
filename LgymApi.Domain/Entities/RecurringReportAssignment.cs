@@ -17,9 +17,13 @@ public sealed class RecurringReportAssignment : EntityBase<RecurringReportAssign
     public Id<ReportRequest>? CurrentReportRequestId { get; set; }
     public DateTimeOffset? LastRequestCreatedAt { get; set; }
     public DateTimeOffset? NextEligibleAt { get; set; }
+    public int ScheduleRevision { get; set; }
+    public Id<CoachingEpisode>? SourceCoachingEpisodeId { get; set; }
 
     public User Trainer { get; set; } = null!;
     public User Trainee { get; set; } = null!;
     public ReportTemplate Template { get; set; } = null!;
     public ReportRequest? CurrentReportRequest { get; set; }
+    public CoachingEpisode? SourceCoachingEpisode { get; set; }
+    public ICollection<RecurringReportScheduleChange> ScheduleChanges { get; set; } = [];
 }

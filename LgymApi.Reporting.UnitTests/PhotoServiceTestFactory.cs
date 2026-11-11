@@ -127,6 +127,7 @@ internal static class PhotoServiceTestFactory
             Substitute.For<IRecurringReportAssignmentPersistence>(),
             photoPersistence,
             relationshipPersistence,
+            ReportingAuthorizationTestFactory.Create(),
             accountLookup,
             new ReportSubmissionAcceptedProgressCommandFactory(),
             Substitute.For<ICommandDispatcher>(),

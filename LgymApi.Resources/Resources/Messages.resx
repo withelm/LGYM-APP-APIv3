@@ -213,6 +213,9 @@
   <data name="ReportRequestNotPending" xml:space="preserve">
     <value>Report request is no longer pending.</value>
   </data>
+  <data name="ReportFeedbackAlreadyRead" xml:space="preserve">
+    <value>Feedback has already been read and cannot be changed.</value>
+  </data>
   <data name="ReportRequestExpired" xml:space="preserve">
     <value>Report request has expired.</value>
   </data>
@@ -224,6 +227,15 @@
   </data>
   <data name="RecurringReportTemplateUnavailable" xml:space="preserve">
     <value>The report template for this recurring report cycle is unavailable.</value>
+  </data>
+  <data name="RecurringReportProposalPending" xml:space="preserve">
+    <value>A schedule proposal is already awaiting the trainer's decision.</value>
+  </data>
+  <data name="RecurringReportProposalResolved" xml:space="preserve">
+    <value>This schedule proposal is no longer awaiting a decision.</value>
+  </data>
+  <data name="RecurringReportScheduleRevisionChanged" xml:space="preserve">
+    <value>The recurring report schedule changed. Refresh it and try again.</value>
   </data>
   <data name="MissingRequiredPhotoViews" xml:space="preserve">
     <value>Missing required photo views.</value>
@@ -287,6 +299,12 @@
   </data>
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} added feedback to your report: {1}.</value>
+  </data>
+  <data name="TraineeReportFeedbackReadScheduled" xml:space="preserve">
+    <value>{0} read your report feedback. The next recurring report request is scheduled for {1}.</value>
+  </data>
+  <data name="TraineeReportFeedbackReadUnscheduled" xml:space="preserve">
+    <value>{0} read your report feedback. The next recurring report request is not yet scheduled.</value>
   </data>
   <data name="TrainerReportSubmissionReceived" xml:space="preserve">
     <value>{0} submitted a report: {1}.</value>

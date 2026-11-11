@@ -25,7 +25,8 @@ internal enum NotificationSourceState
     Rejected,
     Submitted,
     Cancelled,
-    Expired
+    Expired,
+    Completed
 }
 
 internal enum NotificationSourceRecipientRole
@@ -42,7 +43,8 @@ internal sealed record NotificationSourceReference(
     Id<User>? SenderId,
     NotificationSourceRecipientRole RecipientRole,
     NotificationSourceState RequiredState,
-    bool RequiresVisibleContent);
+    bool RequiresVisibleContent,
+    bool RequiresActiveSourceEpisode = false);
 
 internal sealed record NotificationSourceFacts(
     bool SourceExists,
@@ -53,7 +55,8 @@ internal sealed record NotificationSourceFacts(
     NotificationSourceState State,
     bool VisibleToRecipient,
     bool HasExpectedContent,
-    bool RelationshipCurrentlyActive)
+    bool RelationshipCurrentlyActive,
+    bool HasActiveMatchingSourceEpisode = false)
 {
     public static NotificationSourceFacts Missing { get; } = new(
         false,
@@ -91,8 +94,10 @@ internal static class NotificationSourceEligibilityPolicy
         {
             NotificationSourceKind.Invitation => facts.State == source.RequiredState,
             NotificationSourceKind.ReportRequest => facts.State == source.RequiredState,
-            NotificationSourceKind.ReportSubmission => facts.State == source.RequiredState
-                && (!source.RequiresVisibleContent || facts.HasExpectedContent),
+            NotificationSourceKind.ReportSubmission => (facts.State == source.RequiredState
+                    || (source.RequiredState == NotificationSourceState.Submitted && facts.State == NotificationSourceState.Completed))
+                && (!source.RequiresVisibleContent || facts.HasExpectedContent)
+                && (!source.RequiresActiveSourceEpisode || facts.HasActiveMatchingSourceEpisode),
             NotificationSourceKind.DietPlan => true,
             NotificationSourceKind.TraineeNote => facts.VisibleToRecipient,
             NotificationSourceKind.Relationship => !facts.RelationshipCurrentlyActive,
@@ -146,6 +151,17 @@ internal static class NotificationSourceReferenceParser
         {
             return TryCreate(notification, "report-feedback:", ":", NotificationSourceKind.ReportSubmission,
                 NotificationSourceRecipientRole.Trainee, NotificationSourceState.Submitted, true, out source);
+        }
+
+        if (type == InAppNotificationTypes.ReportFeedbackRead)
+        {
+            var parsed = TryCreate(notification, "report-feedback-read:", null, NotificationSourceKind.ReportSubmission,
+                NotificationSourceRecipientRole.Trainer, NotificationSourceState.Completed, false, out source);
+            if (parsed)
+            {
+                source = source with { RequiresActiveSourceEpisode = true };
+            }
+            return parsed;
         }
 
         if (type == InAppNotificationTypes.DietPlanUpdated)

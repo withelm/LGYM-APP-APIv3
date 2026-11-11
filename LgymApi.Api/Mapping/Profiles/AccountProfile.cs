@@ -36,7 +36,7 @@ public sealed class AccountProfile : IMappingProfile
         });
         configuration.CreateMap<AccountAccessOwnerExtensions, AccountAccessOwnerExtensionsDto>((source, context) => new AccountAccessOwnerExtensionsDto
         {
-            Reporting = context!.Map<AccountAccessOwnerCapabilitiesDto>(source.Reporting),
+            Reporting = context!.Map<ReportingAccountAccessOwnerCapabilitiesDto>(source.Reporting),
             TrainingPlanning = context.Map<AccountAccessOwnerCapabilitiesDto>(source.TrainingPlanning),
             Coaching = context.Map<AccountAccessOwnerCapabilitiesDto>(source.Coaching),
             Nutrition = context.Map<NutritionAccountAccessOwnerCapabilitiesDto>(source.Nutrition),
@@ -46,6 +46,14 @@ public sealed class AccountProfile : IMappingProfile
         configuration.CreateMap<AccountAccessOwnerCapabilities, AccountAccessOwnerCapabilitiesDto>((source, _) => new AccountAccessOwnerCapabilitiesDto
         {
             IsAvailable = source.IsAvailable
+        });
+        configuration.CreateMap<ReportingAccountAccessOwnerCapabilities, ReportingAccountAccessOwnerCapabilitiesDto>((source, _) => new ReportingAccountAccessOwnerCapabilitiesDto
+        {
+            IsAvailable = source.IsAvailable,
+            CanReadOwnSubmissions = source.CanReadOwnSubmissions,
+            CanSubmitReportRequests = source.CanSubmitReportRequests,
+            CanManageReportTemplates = source.CanManageReportTemplates,
+            CanManagePhotoTypes = source.CanManagePhotoTypes
         });
         configuration.CreateMap<NotificationsAccountAccessOwnerCapabilities, NotificationsAccountAccessOwnerCapabilitiesDto>((source, _) => new NotificationsAccountAccessOwnerCapabilitiesDto
         {

@@ -8,13 +8,13 @@
     },
     {
       "name": "LgymApi.Identity",
-      "exportedTypeCount": 83,
-      "sha256": "94dc6fc81551215422fedea996009a441c33e6b469ee280bfc07e57e7fadccdb"
+      "exportedTypeCount": 84,
+      "sha256": "4bf227941ed9999efa92687a686ae6c1237646caf7c5abba3bf20930989c0a6b"
     },
     {
       "name": "LgymApi.Notifications",
-      "exportedTypeCount": 82,
-      "sha256": "70e7ffb17ec9b0acb0e126c7a1d6611c8db9ecad836f8db493a6b500ec91fb23"
+      "exportedTypeCount": 83,
+      "sha256": "4f7eb560ccbc38198d74d410705a0ef029bbc8a5852f45a265d46e560cd9d671"
     },
     {
       "name": "LgymApi.Platform",
@@ -23,8 +23,8 @@
     },
     {
       "name": "LgymApi.Reporting",
-      "exportedTypeCount": 83,
-      "sha256": "def9cdd4dad501ed828b04624bf4477b4f74c553fa0ab045f0e146cd05faf901"
+      "exportedTypeCount": 93,
+      "sha256": "09bee1bf74a081f069fd5fef067b78052ca0bbcee361a77e82da62a2185ba887"
     },
     {
       "name": "LgymApi.TrainingPlanning",

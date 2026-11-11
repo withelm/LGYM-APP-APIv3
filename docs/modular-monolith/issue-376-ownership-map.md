@@ -121,7 +121,7 @@ This file contains the fixed one-owner matrix for the #375 hotspot and cross-fea
 - All owner rows describe logical write ownership only. They do not create a physical database, `DbContext`, schema, or migration-stream split.
 - Completed `Training` rows remain `Workout & Progress`-owned. `Training.TypePlanDayId` references the `Training Planning` definition used for a performed workout; it does not grant Training Planning write ownership over completed training.
 - Workout & Progress publishes `ProgressData`, dashboard, ranking, training execution/history, and the production `#386` accepted-progress consumer surface as explicit contracts/read models. Foreign modules do not reference its entities, repositories, or implementation classes. Reporting stages the accepted-progress command in the shared `CommandEnvelope` outbox, and Workout & Progress owns measurement persistence. Legacy API routes remain unchanged.
-- Nutrition ownership remains six of the 55 persisted entities. Its D1-D9 and S1-S9 actions are logical capability ownership only, with four existing controller adapters and no physical database, `DbContext`, schema, or migration-stream split.
+- Nutrition ownership remains six of the 48 persisted entities. Its D1-D9 and S1-S9 actions are logical capability ownership only, with four existing controller adapters and no physical database, `DbContext`, schema, or migration-stream split.
 - The exact BuildingBlocks manifest is `Result<T, TError>`, `Result`, `Unit`, `AppError`, `NotFoundError`, `BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `UnprocessableEntityError`, and `InternalServerError`.
 - AppConfig protected operations cross the Identity boundary only through its ID-only authorization port. The Identity adapter owns active-user and `ManageAppConfig` permission checks, while latest-by-platform remains unauthenticated.
 - Reference Data owns the enum lookup service and concrete mappings. API consumers do not duplicate enum formatting.
@@ -156,6 +156,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `ReportRequest` | `Reporting` |
 | `ReportSubmission` | `Reporting` |
 | `RecurringReportAssignment` | `Reporting` |
+| `RecurringReportScheduleChange` | `Reporting` |
 | `Photo` | `Reporting` |
 | `PhotoUploadSession` | `Reporting` |
 | `TrainerPhotoType` | `Reporting` |
@@ -165,8 +166,6 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `PlanDayExercise` | `Training Planning` |
 | `Exercise` | `Workout & Progress` |
 | `ExerciseTranslation` | `Workout & Progress` |
-| `ExerciseMediaUpload` | `Workout & Progress` |
-| `ExerciseMediaObjectFence` | `Workout & Progress` |
 | `Training` | `Workout & Progress` |
 | `TrainingExerciseScore` | `Workout & Progress` |
 | `ExerciseScore` | `Workout & Progress` |
@@ -192,14 +191,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 9, Training Planning 3, Workout & Progress 13, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 55 persisted entities.
-
-LGYM-244/247 adds the Workout & Progress-owned `ExerciseMediaUpload` operation
-ledger and account-free `ExerciseMediaObjectFence` for immutable-key retirement
-and cleanup fencing. Direct API upload automatically publishes technically valid
-media; actor-scoped operation receipts support exact replay. It retains
-`Exercise.Image` as the final URL field and does not add a general media aggregate,
-new context, database or migration stream.
+Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 10, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 54 persisted entities.
 
 ## Ownership tie-breaker
 

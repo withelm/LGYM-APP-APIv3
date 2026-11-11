@@ -435,7 +435,30 @@ public sealed partial class RecurringReportAssignmentServiceTests
         bool isTrainer = true)
     {
         var relationshipAccess = Substitute.For<IReportingRelationshipAccessPersistence>();
-        var activeEpisode = new ReportingActiveRelationshipFact(Id<CoachingEpisode>.New(), 0);
+        var assignments = db.RecurringReportAssignments.IgnoreQueryFilters().ToList();
+        var activeEpisodeId = assignments.Select(assignment => assignment.SourceCoachingEpisodeId)
+            .FirstOrDefault(episodeId => episodeId.HasValue)
+            ?? Id<CoachingEpisode>.New();
+        if (assignments.Count > 0)
+        {
+            if (db.Database.IsRelational() && !db.CoachingEpisodes.Any(episode => episode.Id == activeEpisodeId))
+            {
+                db.CoachingEpisodes.Add(new CoachingEpisode
+                {
+                    Id = activeEpisodeId,
+                    TrainerId = trainerId,
+                    TraineeId = traineeId,
+                    StartedAt = DateTimeOffset.UtcNow.AddYears(-1),
+                    StartedAtProvenance = CoachingEpisodeStartProvenance.ServerAcceptedInvitation
+                });
+            }
+            foreach (var assignment in assignments.Where(assignment => assignment.SourceCoachingEpisodeId is null))
+            {
+                assignment.SourceCoachingEpisodeId = activeEpisodeId;
+            }
+            db.SaveChanges();
+        }
+        var activeEpisode = new ReportingActiveRelationshipFact(activeEpisodeId, 0);
         relationshipAccess
             .GetAccessAsync(ReportingTestData.AccountId(trainerId), ReportingTestData.AccountId(traineeId), Arg.Any<CancellationToken>())
             .Returns(new ReportingRelationshipAccessFact(ownsTrainee, [], ownsTrainee ? activeEpisode : null));

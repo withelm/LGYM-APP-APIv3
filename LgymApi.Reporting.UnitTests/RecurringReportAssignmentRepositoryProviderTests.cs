@@ -43,7 +43,7 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
     }
 
     [Test]
-    public async Task InMemoryWithoutTransaction_RequiresAnActiveTransaction()
+    public async Task InMemoryWithoutTransaction_UsesTheNoOpTransactionPath()
     {
         await using var database = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"recurring-lock-{Id<RecurringReportAssignmentRepositoryProviderTests>.New():N}")
@@ -51,9 +51,9 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
         var assignmentId = await SeedAssignmentAsync(database);
         var repository = new RecurringReportAssignmentPersistenceRepository(database);
 
-        var action = () => repository.FindByIdForUpdateAsync(assignmentId);
+        var result = await repository.FindByIdForUpdateAsync(assignmentId);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        AssertCompleteGraph(result);
     }
 
     private static AppDbContext CreateSqliteDatabase(SqliteConnection connection)

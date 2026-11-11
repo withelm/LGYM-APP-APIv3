@@ -282,6 +282,7 @@ public sealed class CommandDispatcherTests
         ReportSubmissionAcceptedProgressCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
         ReportRequestCreatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
         ReportFeedbackAddedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
+        ReportFeedbackReadInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
         TrainerInvitationAcceptedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
         TrainerInvitationCreatedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),
         TrainerInvitationRejectedInAppNotificationCommand typedCommand => dispatcher.EnqueueAsync(typedCommand),

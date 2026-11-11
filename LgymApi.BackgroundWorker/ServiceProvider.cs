@@ -29,6 +29,7 @@ using ReportSubmissionCreatedInAppNotificationCommand = LgymApi.Application.Repo
 using ReportSubmissionAcceptedProgressCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand;
 using ReportRequestCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
 using ReportFeedbackAddedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
+using ReportFeedbackReadInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand;
 using TrainerInvitationAcceptedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand;
 using TrainerInvitationCreatedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationCreatedInAppNotificationCommand;
 using TrainerInvitationRejectedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationRejectedInAppNotificationCommand;
@@ -129,6 +130,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportSubmissionAcceptedProgressCommand, ReportSubmissionAcceptedProgressCommandHandler>();
         services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<ReportFeedbackReadInAppNotificationCommand, ReportFeedbackReadInAppNotificationCommandHandler>();
         services.AddBackgroundAction<DietPlanUpdatedInAppNotificationCommand, DietPlanUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();

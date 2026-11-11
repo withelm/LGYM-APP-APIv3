@@ -127,10 +127,12 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Identity`
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Notifications`
 - `LgymApi.Notifications.UnitTests` -> `LgymApi.Platform`
+- `LgymApi.Reporting` -> `LgymApi.Authorization`
 - `LgymApi.Reporting` -> `LgymApi.Domain`
 - `LgymApi.Reporting` -> `LgymApi.Identity`
 - `LgymApi.Reporting` -> `LgymApi.Platform`
 - `LgymApi.Reporting` -> `LgymApi.Resources`
+- `LgymApi.Reporting.UnitTests` -> `LgymApi.Authorization`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Domain`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Identity`
 - `LgymApi.Reporting.UnitTests` -> `LgymApi.Infrastructure`
@@ -207,7 +209,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.BackgroundWorker -> LgymApi.Application` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:1` |
 | `LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common` | `LgymApi.BackgroundWorker/Actions/SendRegistrationEmailHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Identity` | `LgymApi.BackgroundWorker/Actions/LocalizedReportNotificationDispatcher.cs:13` |
-| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:51` |
+| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:52` |
 | `LgymApi.BackgroundWorker -> LgymApi.Notifications` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Platform` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:4` |
 | `LgymApi.BackgroundWorker -> LgymApi.Reporting` | `LgymApi.BackgroundWorker/Jobs/RecurringReportAssignmentProcessingJob.cs:1` |
@@ -218,7 +220,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.DataSeeder.Tests -> LgymApi.DataSeeder` | `LgymApi.DataSeeder.Tests/ConsolePromptTests.cs:37` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Domain` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:3` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Identity` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:1` |
-| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:93` |
+| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:92` |
 | `LgymApi.Identity -> LgymApi.Authorization` | `LgymApi.Identity/Mapping/IdentityAccountContractMappingProfile.cs:2` |
 | `LgymApi.Identity -> LgymApi.Domain` | `LgymApi.Identity/Access/AccountReadService.cs:4` |
 | `LgymApi.Identity -> LgymApi.Platform` | `LgymApi.Identity/Access/AccountReadService.cs:2` |
@@ -259,10 +261,12 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Notifications.UnitTests -> LgymApi.Identity` | `LgymApi.Notifications.UnitTests/NotificationsModuleTests.cs:6` |
 | `LgymApi.Notifications.UnitTests -> LgymApi.Notifications` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:2` |
 | `LgymApi.Notifications.UnitTests -> LgymApi.Platform` | `LgymApi.Notifications.UnitTests/NotificationOwnershipPolicyTests.cs:5` |
+| `LgymApi.Reporting -> LgymApi.Authorization` | `LgymApi.Reporting/Reporting/Authorization/ReportingAuthorization.cs:1` |
 | `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
 | `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
 | `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
 | `LgymApi.Reporting -> LgymApi.Resources` | `LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs:54` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Authorization` | `LgymApi.Reporting.UnitTests/ReportingAuthorizationTestFactory.cs:3` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Domain` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:18` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Identity` | `LgymApi.Reporting.UnitTests/PhotoServiceTestFactory.cs:10` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Reporting.UnitTests/CloudflareR2PhotoStorageProviderTests.cs:24` |
@@ -294,12 +298,12 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.UnitTests -> LgymApi.Platform` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:4` |
 | `LgymApi.UnitTests -> LgymApi.Resources` | `LgymApi.UnitTests/CoachingNotificationIntentInAppTests.cs:99` |
 | `LgymApi.UnitTests -> LgymApi.Reporting` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:14` |
-| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:129` |
+| `LgymApi.UnitTests -> LgymApi.TestUtils` | `LgymApi.UnitTests/ApplicationApiAdapterRegistrationTests.cs:130` |
 | `LgymApi.UnitTests -> LgymApi.TrainingPlanning` | `LgymApi.UnitTests/CoachingManagedPlanSliceTests.cs:17` |
 
 ## Locked topology
 
-Current derived snapshot: 24 approved projects, 125 approved direct `ProjectReference` edges, and 427 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 124 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 24 approved projects, 127 approved direct `ProjectReference` edges, and 425 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 126 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
 Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Notifications.UnitTests` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
 

@@ -40,6 +40,12 @@ public interface ITraineeReportRequestApiPort
     Task<Result<ReportSubmissionResult, AppError>> MarkFeedbackReadAsync(AuthenticatedAccountContext trainee, Id<ReportSubmission> submissionId, CancellationToken cancellationToken = default);
 }
 
+public interface ITraineeRecurringReportAssignmentApiPort
+{
+    Task<Result<List<RecurringReportAssignmentResult>, AppError>> GetAllAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> ProposeAsync(AuthenticatedAccountContext trainee, Id<RecurringReportAssignment> assignmentId, ProposeNextRecurringReportScheduleCommand command, CancellationToken cancellationToken = default);
+}
+
 public interface ITrainerReportPhotoApiPort
 {
     Task<Result<InitiatePhotoUploadResult, AppError>> InitiateAsync(AuthenticatedAccountContext actor, InitiatePhotoUploadCommand command, CancellationToken cancellationToken = default);
@@ -63,5 +69,7 @@ public interface IRecurringReportAssignmentApiPort
     Task<Result<RecurringReportAssignmentResult, AppError>> PauseAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<Result<RecurringReportAssignmentResult, AppError>> ResumeAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
     Task<Result<RecurringReportAssignmentResult, AppError>> RequestNowAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> SetNextOverrideAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, SetNextRecurringReportOverrideCommand command, CancellationToken cancellationToken = default);
+    Task<Result<RecurringReportAssignmentResult, AppError>> ResolveProposalAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, Id<RecurringReportScheduleChange> proposalId, bool accept, CancellationToken cancellationToken = default);
     Task<Result<Unit, AppError>> DeleteAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<RecurringReportAssignment> assignmentId, CancellationToken cancellationToken = default);
 }

@@ -67,12 +67,14 @@ public sealed partial class ReportingService : IReportingService
             request.TrainerId,
             request.TraineeId,
             cancellationToken);
-        var sourceEpisodeId = request.SourceCoachingEpisodeId ?? relationshipAccess.ActiveEpisode?.EpisodeId;
+        var activeEpisode = relationshipAccess.ActiveEpisode;
+        var sourceEpisodeId = request.SourceCoachingEpisodeId;
         if (!relationshipAccess.HasActiveRelationship
+            || activeEpisode is null
             || sourceEpisodeId is null
-            || relationshipAccess.ActiveEpisode?.EpisodeId != sourceEpisodeId
+            || activeEpisode.EpisodeId != sourceEpisodeId
             || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
-                relationshipAccess.ActiveEpisode,
+                activeEpisode,
                 cancellationToken))
         {
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
@@ -151,12 +153,37 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
-        var submission = await _requestSubmissionPersistence.FindSubmissionForTrainerAsync(
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var submission = await _requestSubmissionPersistence.FindSubmissionForTrainerForUpdateAsync(
             submissionId,
             currentTrainer.Id,
             traineeId,
             cancellationToken);
         if (submission == null)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestForUpdateAsync(
+            submission.ReportRequestId,
+            cancellationToken);
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            currentTrainer.Id,
+            traineeId,
+            cancellationToken);
+        var activeEpisode = relationshipAccess.ActiveEpisode;
+        if (!relationshipAccess.HasActiveRelationship
+            || activeEpisode is null
+            || submission.SourceCoachingEpisodeId is null
+            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || submission.ReportRequest.SourceCoachingEpisodeId is null
+            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || (assignment is not null
+                && (assignment.SourceCoachingEpisodeId is null
+                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                activeEpisode,
+                cancellationToken))
         {
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
@@ -177,9 +204,14 @@ public sealed partial class ReportingService : IReportingService
             : JsonSerializer.Serialize(normalizedFieldComments);
         var feedbackChanged = !string.Equals(submission.TrainerOverallComment, overallComment, StringComparison.Ordinal)
             || !string.Equals(submission.TrainerFieldCommentsJson, fieldCommentsJson, StringComparison.Ordinal);
+        if (feedbackChanged && submission.TrainerFeedbackReadAt.HasValue)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingConflictError(Messages.ReportFeedbackAlreadyRead));
+        }
+
         var hasFeedback = overallComment != null || normalizedFieldComments.Count > 0;
         var feedbackAddedAt = feedbackChanged && hasFeedback ? DateTimeOffset.UtcNow : feedbackChanged ? null : submission.TrainerFeedbackAddedAt;
-        var feedbackReadAt = feedbackChanged ? null : submission.TrainerFeedbackReadAt;
+        var feedbackReadAt = submission.TrainerFeedbackReadAt;
 
         if (feedbackChanged)
         {
@@ -192,7 +224,6 @@ public sealed partial class ReportingService : IReportingService
                     feedbackReadAt),
                 cancellationToken);
 
-            var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestAsync(submission.ReportRequestId, cancellationToken);
             if (assignment != null)
             {
                 await _recurringAssignmentPersistence.UpdateAsync(
@@ -212,17 +243,25 @@ public sealed partial class ReportingService : IReportingService
 
         if (feedbackChanged && hasFeedback)
         {
-            await _commandDispatcher.EnqueueAsync(new ReportFeedbackAddedInAppNotificationCommand
+            await _commandOutboxWriter.StageAsync(new ReportFeedbackAddedInAppNotificationCommand
             {
                 SubmissionId = submission.Id,
                 TraineeId = traineeId,
                 TrainerId = currentTrainer.Id,
                 TemplateName = effectiveTemplate.Name,
                 TriggeredAt = DateTimeOffset.UtcNow
-            });
+            }, cancellationToken);
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<ReportSubmissionResult, AppError>.Success(result);
     }
@@ -237,7 +276,8 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
         }
 
-        var submission = await _requestSubmissionPersistence.FindSubmissionForTraineeAsync(
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var submission = await _requestSubmissionPersistence.FindSubmissionForTraineeForUpdateAsync(
             submissionId,
             currentTrainee.Id,
             cancellationToken);
@@ -253,8 +293,39 @@ public sealed partial class ReportingService : IReportingService
 
         if (submission.TrainerFeedbackReadAt.HasValue)
         {
-            return Result<ReportSubmissionResult, AppError>.Success(
-                await MapAndHydrateSubmissionAsync(currentTrainee, submission, cancellationToken));
+            var existingResult = await MapAndHydrateSubmissionAsync(currentTrainee, submission, cancellationToken);
+            var existingAssignment = await _recurringAssignmentPersistence.FindByCurrentRequestAsync(submission.ReportRequestId, cancellationToken);
+            existingResult.NextRecurringRequest = GetNextRecurringRequest(existingAssignment, submission.TrainerFeedbackReadAt.Value, usePersistedSchedule: true);
+            return Result<ReportSubmissionResult, AppError>.Success(existingResult);
+        }
+
+        if (submission.ReportRequest.Status != ReportRequestStatus.Submitted)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.DidntFind));
+        }
+
+        var relationshipAccess = await _relationshipAccessPersistence.GetAccessAsync(
+            submission.ReportRequest.TrainerId,
+            currentTrainee.Id,
+            cancellationToken);
+        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestForUpdateAsync(
+            submission.ReportRequestId,
+            cancellationToken);
+        var activeEpisode = relationshipAccess.ActiveEpisode;
+        if (!relationshipAccess.HasActiveRelationship
+            || activeEpisode is null
+            || submission.SourceCoachingEpisodeId is null
+            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || submission.ReportRequest.SourceCoachingEpisodeId is null
+            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
+            || (assignment is not null
+                && (assignment.SourceCoachingEpisodeId is null
+                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
+                activeEpisode,
+                cancellationToken))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
 
         var readAt = DateTimeOffset.UtcNow;
@@ -267,23 +338,46 @@ public sealed partial class ReportingService : IReportingService
                 readAt),
             cancellationToken);
 
-        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestAsync(submission.ReportRequestId, cancellationToken);
-        if (assignment != null)
+        await _requestSubmissionPersistence.SetRequestCompletedAsync(submission.ReportRequestId, cancellationToken);
+
+        var nextRecurringRequest = GetNextRecurringRequest(assignment, readAt, usePersistedSchedule: false);
+        if (assignment != null && nextRecurringRequest.ScheduledAt.HasValue)
         {
             await _recurringAssignmentPersistence.UpdateAsync(
                 assignment.Id,
                 ToUpdateModel(assignment with
                 {
-                    NextEligibleAt = CalculateNextEligibleAt(readAt, assignment.IntervalValue, assignment.IntervalUnit)
+                    NextEligibleAt = nextRecurringRequest.ScheduledAt
                 }),
                 cancellationToken);
         }
 
         var result = await MapAndHydrateSubmissionAsync(
             currentTrainee,
-            submission with { TrainerFeedbackReadAt = readAt },
+            submission with
+            {
+                TrainerFeedbackReadAt = readAt,
+                ReportRequest = submission.ReportRequest with { Status = ReportRequestStatus.Completed }
+            },
             cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        result.NextRecurringRequest = nextRecurringRequest;
+        await _commandOutboxWriter.StageAsync(new ReportFeedbackReadInAppNotificationCommand
+        {
+            SubmissionId = submission.Id,
+            TraineeId = currentTrainee.Id,
+            TrainerId = submission.ReportRequest.TrainerId,
+            TriggeredAt = readAt,
+            NextRecurringRequestAt = nextRecurringRequest.ScheduledAt
+        }, cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+        await transaction.CommitAsync(cancellationToken);
         return Result<ReportSubmissionResult, AppError>.Success(result);
     }
 

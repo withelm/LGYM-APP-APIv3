@@ -9,6 +9,7 @@ using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Reporting.Persistence;
+using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Enums;
@@ -27,6 +28,7 @@ public sealed partial class ReportingService : IReportingService
     private readonly IRecurringReportAssignmentPersistence _recurringAssignmentPersistence;
     private readonly IReportPhotoPersistence _photoPersistence;
     private readonly IReportingRelationshipAccessPersistence _relationshipAccessPersistence;
+    private readonly IReportingAuthorizationCoordinator _authorization;
     private readonly IAccountLookupService _accountLookupService;
     private readonly IReportSubmissionAcceptedProgressCommandFactory _reportSubmissionAcceptedProgressCommandFactory;
     private readonly ICommandDispatcher _commandDispatcher;
@@ -43,6 +45,7 @@ public sealed partial class ReportingService : IReportingService
         IRecurringReportAssignmentPersistence recurringAssignmentPersistence,
         IReportPhotoPersistence photoPersistence,
         IReportingRelationshipAccessPersistence relationshipAccessPersistence,
+        IReportingAuthorizationCoordinator authorization,
         IAccountLookupService accountLookupService,
         IReportSubmissionAcceptedProgressCommandFactory reportSubmissionAcceptedProgressCommandFactory,
         ICommandDispatcher commandDispatcher,
@@ -58,6 +61,7 @@ public sealed partial class ReportingService : IReportingService
         _recurringAssignmentPersistence = recurringAssignmentPersistence;
         _photoPersistence = photoPersistence;
         _relationshipAccessPersistence = relationshipAccessPersistence;
+        _authorization = authorization;
         _accountLookupService = accountLookupService;
         _reportSubmissionAcceptedProgressCommandFactory = reportSubmissionAcceptedProgressCommandFactory;
         _commandDispatcher = commandDispatcher;
@@ -69,9 +73,9 @@ public sealed partial class ReportingService : IReportingService
         _photoStorageOptions = photoStorageOptions;
     }
 
-    private static Result<Unit, AppError> EnsureTrainer(AuthenticatedAccountContext currentTrainer)
+    private Result<Unit, AppError> EnsureTrainer(AuthenticatedAccountContext currentTrainer)
     {
-        if (!currentTrainer.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal))
+        if (!_authorization.CanManageOwnedDefinition(currentTrainer, currentTrainer.Id))
         {
             return Result<Unit, AppError>.Failure(new ReportingForbiddenError(Messages.TrainerRoleRequired));
         }
@@ -93,7 +97,7 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, traineeId, cancellationToken);
-        if (!access.HasActiveRelationship)
+        if (!_authorization.CanManageActiveRequest(currentTrainer, traineeId, access))
         {
             return Result<Unit, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
@@ -109,7 +113,7 @@ public sealed partial class ReportingService : IReportingService
         }
 
         var template = await _templatePersistence.FindByIdAsync(templateId, cancellationToken);
-        if (template == null || template.TrainerId != currentTrainer.Id || template.IsDeleted)
+        if (template == null || template.IsDeleted || !_authorization.CanManageOwnedDefinition(currentTrainer, template.TrainerId))
         {
             return Result<ReportTemplatePersistenceModel, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
         }
