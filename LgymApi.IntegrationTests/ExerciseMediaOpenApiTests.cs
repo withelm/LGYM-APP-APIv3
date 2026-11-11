@@ -19,6 +19,11 @@ public sealed class ExerciseMediaOpenApiTests : IntegrationTestBase
             .And.NotContain("/api/exercise/media/create").And.NotContain("/api/exercise/{id}/media")
             .And.NotContain("/api/exercise/media/cleanup").And.NotContain("X-Exercise-Media-Operation-Id")
             .And.NotContain("sourceSha256").And.NotContain("expectedImage");
+        using var parsed = System.Text.Json.JsonDocument.Parse(json);
+        parsed.RootElement.GetProperty("paths").GetProperty("/api/exercise/media/upload").GetProperty("post")
+            .GetProperty("requestBody").GetProperty("content").GetProperty("multipart/form-data")
+            .GetProperty("schema").GetProperty("required").EnumerateArray().Select(x => x.GetString())
+            .Should().Equal("file");
         var output = Environment.GetEnvironmentVariable("LGYM_OPENAPI_OUTPUT");
         if (!string.IsNullOrWhiteSpace(output))
         {
