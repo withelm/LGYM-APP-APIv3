@@ -1,6 +1,7 @@
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Reporting.ApiAdapters;
 using LgymApi.Application.Reporting.Authorization;
+using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Authorization;
 using LgymApi.Identity.Contracts.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IReportSubmissionAcceptedProgressCommandFactory, ReportSubmissionAcceptedProgressCommandFactory>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IRecurringReportAssignmentService, RecurringReportAssignmentService>();
+        services.AddScoped<IRelationshipEndedReportCancellationActionExecutionPort, RelationshipEndedReportCancellationActionExecutionPort>();
         services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
 
         return services;

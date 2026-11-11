@@ -28,12 +28,14 @@ using TraineeNoteUpdatedInAppNotificationCommand = LgymApi.Application.Coaching.
 using ReportSubmissionCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionCreatedInAppNotificationCommand;
 using ReportSubmissionAcceptedProgressCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportSubmissionAcceptedProgressCommand;
 using ReportRequestCreatedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportRequestCreatedInAppNotificationCommand;
+using RecurringReportReminderInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.RecurringReportReminderInAppNotificationCommand;
 using ReportFeedbackAddedInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackAddedInAppNotificationCommand;
 using ReportFeedbackReadInAppNotificationCommand = LgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand;
 using TrainerInvitationAcceptedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationAcceptedInAppNotificationCommand;
 using TrainerInvitationCreatedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationCreatedInAppNotificationCommand;
 using TrainerInvitationRejectedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerInvitationRejectedInAppNotificationCommand;
 using TrainerRelationshipEndedInAppNotificationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.TrainerRelationshipEndedInAppNotificationCommand;
+using RelationshipEndedReportCancellationCommand = LgymApi.Application.Coaching.Contracts.BackgroundCommands.RelationshipEndedReportCancellationCommand;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -127,6 +129,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<TrainerInvitationAcceptedInAppNotificationCommand, TrainerInvitationAcceptedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerInvitationRejectedInAppNotificationCommand, TrainerInvitationRejectedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportRequestCreatedInAppNotificationCommand, ReportRequestCreatedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<RecurringReportReminderInAppNotificationCommand, RecurringReportReminderInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportSubmissionCreatedInAppNotificationCommand, ReportSubmissionCreatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<ReportSubmissionAcceptedProgressCommand, ReportSubmissionAcceptedProgressCommandHandler>();
         services.AddBackgroundAction<ReportFeedbackAddedInAppNotificationCommand, ReportFeedbackAddedInAppNotificationCommandHandler>();
@@ -134,6 +137,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<DietPlanUpdatedInAppNotificationCommand, DietPlanUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
+        services.AddBackgroundAction<RelationshipEndedReportCancellationCommand, RelationshipEndedReportCancellationCommandHandler>();
 
         BackgroundActionRegistrationValidator.Validate(services, commandContractRegistry);
         return services;

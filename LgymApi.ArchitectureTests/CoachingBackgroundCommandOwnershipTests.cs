@@ -52,6 +52,7 @@ public sealed class CoachingBackgroundCommandOwnershipTests
         new("InvitationCreatedCommand.cs", "InvitationCreatedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
         new("InvitationAcceptedCommand.cs", "InvitationAcceptedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
         new("InvitationRevokedCommand.cs", "InvitationRevokedCommand", [new("InvitationId", "Id<TrainerInvitation>")]),
+        new("RelationshipEndedReportCancellationCommand.cs", "RelationshipEndedReportCancellationCommand", [new("EpisodeId", "Id<CoachingEpisode>")]),
         new("TrainerInvitationCreatedInAppNotificationCommand.cs", "TrainerInvitationCreatedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TraineeId", "Id<User>"), new("TrainerId", "Id<User>")]),
         new("TrainerInvitationAcceptedInAppNotificationCommand.cs", "TrainerInvitationAcceptedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TrainerId", "Id<User>"), new("TraineeId", "Id<User>")]),
         new("TrainerInvitationRejectedInAppNotificationCommand.cs", "TrainerInvitationRejectedInAppNotificationCommand", [new("InvitationId", "Id<TrainerInvitation>"), new("TrainerId", "Id<User>"), new("TraineeId", "Id<User>")]),

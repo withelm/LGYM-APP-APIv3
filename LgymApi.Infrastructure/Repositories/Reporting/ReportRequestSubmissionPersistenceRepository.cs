@@ -67,8 +67,16 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
         return entities.Select(ReportingPersistenceProjection.Request).ToList();
     }
 
-    public Task SetRequestExpiredAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
-        => SetRequestStateAsync(requestId, ReportRequestStatus.Expired, null, cancellationToken);
+    public async Task SetRequestExpiredAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
+    {
+        var request = await _dbContext.ReportRequests.FirstAsync(request => request.Id == requestId, cancellationToken);
+        if (request.Status != ReportRequestStatus.Pending)
+        {
+            throw new DbUpdateConcurrencyException("The report request is no longer pending.");
+        }
+
+        request.Status = ReportRequestStatus.Expired;
+    }
 
     public Task SetRequestSubmittedAsync(
         Id<ReportRequest> requestId,
@@ -78,6 +86,20 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
 
     public Task SetRequestCompletedAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default)
         => SetRequestStateAsync(requestId, ReportRequestStatus.Completed, null, cancellationToken);
+
+    public async Task CancelPendingForSourceEpisodeAsync(
+        Id<CoachingEpisode> episodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var pendingRequests = await _dbContext.ReportRequests
+            .Where(request => request.SourceCoachingEpisodeId == episodeId
+                && (request.Status == ReportRequestStatus.Pending || request.Status == ReportRequestStatus.Expired))
+            .ToListAsync(cancellationToken);
+        foreach (var request in pendingRequests)
+        {
+            request.Status = ReportRequestStatus.Cancelled;
+        }
+    }
 
     public Task AddSubmissionAsync(NewReportSubmissionPersistenceModel submission, CancellationToken cancellationToken = default)
         => _dbContext.ReportSubmissions.AddAsync(new ReportSubmission

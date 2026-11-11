@@ -269,7 +269,7 @@ public sealed class BackgroundActionRegistrationTests
     }
 
     [Test]
-    public void AddBackgroundWorkerServices_RegistersTheSixteenCommandManifest()
+    public void AddBackgroundWorkerServices_RegistersTheClosedCommandManifest()
     {
         var services = new ServiceCollection();
         services.AddBackgroundWorkerServices(isTesting: true);
@@ -277,7 +277,7 @@ public sealed class BackgroundActionRegistrationTests
         var action = () => ValidateClosedWorldBackgroundActionRegistrations(services);
 
         action.Should().NotThrow();
-        GetClosedBackgroundActionRegistrations(services).Should().HaveCount(17);
+        GetClosedBackgroundActionRegistrations(services).Should().HaveCount(19);
     }
 
     [Test]

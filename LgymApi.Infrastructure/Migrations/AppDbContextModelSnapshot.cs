@@ -1597,6 +1597,7 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .IsConcurrencyToken()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("SubmittedAt")

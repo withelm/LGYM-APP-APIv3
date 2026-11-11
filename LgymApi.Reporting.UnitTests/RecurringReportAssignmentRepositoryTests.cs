@@ -69,14 +69,37 @@ public sealed class RecurringReportAssignmentRepositoryTests
             CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddDays(-10), note: "open"),
             CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddDays(-20), endsAt: now.AddDays(5), note: "ending"),
             CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddDays(-30), endsAt: now.AddDays(-5), note: "ended"),
+            CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddHours(24), note: "upcoming"),
+            CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddHours(24).AddTicks(1), note: "outside"),
             CreateAssignment(trainer.Id, trainee.Id, template, startsAt: now.AddDays(5), note: "future"));
         await db.SaveChangesAsync();
         var persistence = new RecurringReportAssignmentPersistenceRepository(db);
 
         var result = await persistence.ListDueAsync(now);
 
-        result.Select(assignment => assignment.Note).Should().BeEquivalentTo(["ending", "open"]);
+        result.Select(assignment => assignment.Note).Should().BeEquivalentTo(["ending", "open", "upcoming"]);
         result.Should().OnlyContain(assignment => assignment.Template.Fields.Count == 2);
+    }
+
+    [Test]
+    public async Task ListDue_IncludesEndedAssignmentsOnlyWhenCurrentRequestIsPending()
+    {
+        await using var db = CreateDbContext();
+        var now = DateTimeOffset.UtcNow;
+        var trainer = CreateUser("trainer@example.com");
+        var trainee = CreateUser("trainee@example.com");
+        var template = CreateTemplate(trainer.Id);
+        var pending = CreateRequest(trainer.Id, trainee.Id, template);
+        var completed = CreateRequest(trainer.Id, trainee.Id, template);
+        completed.Status = ReportRequestStatus.Completed;
+        var pendingAssignment = CreateAssignment(trainer.Id, trainee.Id, template, pending, now.AddDays(-3), now.AddHours(-1));
+        var completedAssignment = CreateAssignment(trainer.Id, trainee.Id, template, completed, now.AddDays(-3), now.AddHours(-1));
+        db.AddRange(trainer, trainee, template, pending, completed, pendingAssignment, completedAssignment);
+        await db.SaveChangesAsync();
+
+        var result = await new RecurringReportAssignmentPersistenceRepository(db).ListDueAsync(now);
+
+        result.Select(assignment => assignment.Id).Should().Equal(pendingAssignment.Id);
     }
 
     private static AppDbContext CreateDbContext()

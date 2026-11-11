@@ -21,7 +21,7 @@ namespace LgymApi.IntegrationTests;
 public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestBase
 {
     [Test]
-    public async Task UnlinkTrainee_RemovesOwnedLinkWithoutQueuingRelationshipEndedCommand()
+    public async Task UnlinkTrainee_RemovesOwnedLinkAndQueuesRelationshipEndedCommand()
     {
         var trainer = await SeedUserAsync("slice-unlink-trainer", "slice-unlink-trainer@example.test");
         var trainee = await SeedUserAsync("slice-unlink-trainee", "slice-unlink-trainee@example.test");
@@ -50,7 +50,7 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         (await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().BeFalse();
         (await verificationDatabase.CommandEnvelopes.CountAsync(envelope =>
-            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))).Should().Be(0);
+            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))).Should().Be(1);
     }
 
     [Test]
