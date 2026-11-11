@@ -31,6 +31,8 @@ namespace LgymApi.IntegrationTests;
 [Category("PostgreSql")]
 public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringReportHttpTestBase
 {
+    private const string FeedbackAddedCommandId =
+        "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackAddedInAppNotificationCommand";
     private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(10);
 
     [Test]
@@ -102,6 +104,44 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
             TimeSpan.FromMicroseconds(1));
         (await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == scenario.Trainee.Id, cancellationToken))
             .Should().BeFalse();
+    }
+
+    [Test]
+    public async Task FeedbackWrite_NonemptyConcurrentWithUnlink_ReturnsNotFoundWithoutWritesOrEnvelope()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cancellationToken = timeout.Token;
+        var scenario = await SeedFeedbackScenarioAsync("feedback-added-unlink-race");
+        var originalEnvelopeCount = await CountFeedbackAddedEnvelopesAsync(cancellationToken);
+
+        await using var feedbackScope = Factory.Services.CreateAsyncScope();
+        var serviceProvider = feedbackScope.ServiceProvider;
+        var gatedRelationshipAccess = new GatedRelationshipAccessPersistence(
+            serviceProvider.GetRequiredService<IReportingRelationshipAccessPersistence>());
+        var service = CreateReportingService(
+            serviceProvider,
+            serviceProvider.GetRequiredService<IUnitOfWork>(),
+            gatedRelationshipAccess);
+        var feedbackTask = service.UpdateTrainerFeedbackAsync(
+            TrainerAccount(scenario.SourceTrainer.Id),
+            scenario.Trainee.Id.Rebind<AccountReference>(),
+            scenario.SubmissionId,
+            new UpdateReportSubmissionFeedbackCommand
+            {
+                TrainerOverallComment = "New feedback",
+                FieldComments = new Dictionary<string, string?> { ["note"] = "Must roll back" }
+            },
+            cancellationToken);
+
+        await gatedRelationshipAccess.RevisionCheckStaged.Task.WaitAsync(GateTimeout, cancellationToken);
+        await UnlinkAsync(scenario.Trainee.Id, cancellationToken);
+        gatedRelationshipAccess.Release.TrySetResult(true).Should().BeTrue();
+        var result = await feedbackTask.WaitAsync(GateTimeout, cancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await AssertFeedbackUnchangedAsync(scenario);
+        (await CountFeedbackAddedEnvelopesAsync(cancellationToken)).Should().Be(originalEnvelopeCount);
     }
 
     [Test]
@@ -286,15 +326,26 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
             TimeSpan.FromMicroseconds(1));
     }
 
+    private async Task<int> CountFeedbackAddedEnvelopesAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await database.CommandEnvelopes.CountAsync(
+            envelope => envelope.CommandTypeFullName == FeedbackAddedCommandId,
+            cancellationToken);
+    }
+
     private static ReportingService CreateReportingService(
         IServiceProvider serviceProvider,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IReportingRelationshipAccessPersistence? relationshipAccessPersistence = null)
         => new(
             serviceProvider.GetRequiredService<IReportTemplatePersistence>(),
             serviceProvider.GetRequiredService<IReportRequestSubmissionPersistence>(),
             serviceProvider.GetRequiredService<IRecurringReportAssignmentPersistence>(),
             serviceProvider.GetRequiredService<IReportPhotoPersistence>(),
-            serviceProvider.GetRequiredService<IReportingRelationshipAccessPersistence>(),
+            relationshipAccessPersistence
+                ?? serviceProvider.GetRequiredService<IReportingRelationshipAccessPersistence>(),
             serviceProvider.GetRequiredService<IReportingAuthorizationCoordinator>(),
             serviceProvider.GetRequiredService<IAccountLookupService>(),
             serviceProvider.GetRequiredService<IReportSubmissionAcceptedProgressCommandFactory>(),
@@ -407,5 +458,33 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
             await ReleaseSave.Task.WaitAsync(GateTimeout, cancellationToken);
             return await inner.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private sealed class GatedRelationshipAccessPersistence(
+        IReportingRelationshipAccessPersistence inner) : IReportingRelationshipAccessPersistence
+    {
+        public TaskCompletionSource<bool> RevisionCheckStaged { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ReportingRelationshipAccessFact> GetAccessAsync(
+            Id<AccountReference> trainerId,
+            Id<AccountReference> traineeId,
+            CancellationToken cancellationToken = default)
+            => inner.GetAccessAsync(trainerId, traineeId, cancellationToken);
+
+        public async Task<bool> StageActiveEpisodeRevisionCheckAsync(
+            ReportingActiveRelationshipFact activeEpisode,
+            CancellationToken cancellationToken = default)
+        {
+            var staged = await inner.StageActiveEpisodeRevisionCheckAsync(activeEpisode, cancellationToken);
+            RevisionCheckStaged.TrySetResult(true);
+            await Release.Task.WaitAsync(GateTimeout, cancellationToken);
+            return staged;
+        }
+
+        public bool IsActiveEpisodeRevisionConflict(Exception exception)
+            => inner.IsActiveEpisodeRevisionConflict(exception);
     }
 }

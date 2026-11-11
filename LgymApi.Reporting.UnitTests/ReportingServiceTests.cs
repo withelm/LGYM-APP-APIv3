@@ -805,11 +805,11 @@ public sealed class ReportingServiceTests
             NextEligibleAt = DateTimeOffset.UtcNow.AddDays(2),
             SourceCoachingEpisodeId = DefaultCoachingEpisodeId
         };
-        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var outboxWriter = Substitute.For<ICommandOutboxWriter>();
         var service = CreateReportingService(
             findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
             recurringAssignmentByRequestId: (_, _) => Task.FromResult<RecurringReportAssignment?>(assignment),
-            commandDispatcher: commandDispatcher,
+            commandOutboxWriter: outboxWriter,
             userHasTrainerRole: true,
             hasActiveTrainerLink: true);
 
@@ -823,7 +823,9 @@ public sealed class ReportingServiceTests
         submission.TrainerOverallComment.Should().BeNull();
         submission.TrainerFieldCommentsJson.Should().BeNull();
         assignment.NextEligibleAt.Should().BeNull();
-        await commandDispatcher.DidNotReceive().EnqueueAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>());
+        await outboxWriter.DidNotReceive().StageAsync(
+            Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -1060,10 +1062,10 @@ public sealed class ReportingServiceTests
         submission.TrainerOverallComment = "Original feedback";
         submission.TrainerFeedbackAddedAt = DateTimeOffset.UtcNow.AddHours(-2);
         submission.TrainerFeedbackReadAt = DateTimeOffset.UtcNow.AddHours(-1);
-        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var outboxWriter = Substitute.For<ICommandOutboxWriter>();
         var service = CreateReportingService(
             findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
-            commandDispatcher: commandDispatcher,
+            commandOutboxWriter: outboxWriter,
             userHasTrainerRole: true,
             hasActiveTrainerLink: true);
 
@@ -1076,7 +1078,9 @@ public sealed class ReportingServiceTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<ReportingConflictError>();
         submission.TrainerOverallComment.Should().Be("Original feedback");
-        await commandDispatcher.DidNotReceive().EnqueueAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>());
+        await outboxWriter.DidNotReceive().StageAsync(
+            Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -1282,7 +1286,7 @@ public sealed class ReportingServiceTests
     }
 
     [Test]
-    public async Task UpdateTrainerFeedbackAsync_WhenFeedbackAdded_EnqueuesNotification()
+    public async Task UpdateTrainerFeedbackAsync_WhenFeedbackAdded_StagesNotification()
     {
         var trainerId = Id<User>.New();
         var traineeId = Id<User>.New();
@@ -1290,10 +1294,14 @@ public sealed class ReportingServiceTests
         var templateId = Id<ReportTemplate>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
         var submission = CreateSubmission(submissionId, traineeId, request);
-        var commandDispatcher = Substitute.For<ICommandDispatcher>();
+        var outboxWriter = Substitute.For<ICommandOutboxWriter>();
+        outboxWriter.StageAsync(
+                Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new CommandEnvelopeStageResult("feedback-added", false));
         var service = CreateReportingService(
             findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
-            commandDispatcher: commandDispatcher,
+            commandOutboxWriter: outboxWriter,
             userHasTrainerRole: true,
             hasActiveTrainerLink: true);
 
@@ -1303,7 +1311,13 @@ public sealed class ReportingServiceTests
         });
 
         result.IsSuccess.Should().BeTrue();
-        await commandDispatcher.Received(1).EnqueueAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>());
+        await outboxWriter.Received(1).StageAsync(
+            Arg.Is<ReportFeedbackAddedInAppNotificationCommand>(notification =>
+                notification.SubmissionId == submissionId
+                && notification.TraineeId == traineeId.Rebind<LgymApi.Identity.Contracts.AccountReference>()
+                && notification.TrainerId == trainerId.Rebind<LgymApi.Identity.Contracts.AccountReference>()
+                && notification.TemplateName == request.Template.Name),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -1784,6 +1798,8 @@ public sealed class ReportingServiceTests
             .Returns(0);
         commandOutboxWriter ??= Substitute.For<ICommandOutboxWriter>();
         commandOutboxWriter.StageAsync(Arg.Any<ReportSubmissionAcceptedProgressCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
+        commandOutboxWriter.StageAsync(Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));
         commandOutboxWriter.StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommandEnvelopeStageResult(null, false)));

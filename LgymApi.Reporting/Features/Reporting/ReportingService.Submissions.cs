@@ -243,14 +243,14 @@ public sealed partial class ReportingService : IReportingService
 
         if (feedbackChanged && hasFeedback)
         {
-            await _commandDispatcher.EnqueueAsync(new ReportFeedbackAddedInAppNotificationCommand
+            await _commandOutboxWriter.StageAsync(new ReportFeedbackAddedInAppNotificationCommand
             {
                 SubmissionId = submission.Id,
                 TraineeId = traineeId,
                 TrainerId = currentTrainer.Id,
                 TemplateName = effectiveTemplate.Name,
                 TriggeredAt = DateTimeOffset.UtcNow
-            });
+            }, cancellationToken);
         }
 
         try
