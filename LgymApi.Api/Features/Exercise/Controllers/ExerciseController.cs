@@ -107,7 +107,6 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/{id}/deleteExercise")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
@@ -132,7 +131,6 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/updateExercise")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
@@ -145,7 +143,7 @@ public sealed partial class ExerciseController : ControllerBase
         }
 
         var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
-        var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image);
+        var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image, form.UpdateImage);
         var result = await _exerciseService.UpdateExerciseAsync(currentAccount, input, cancellationToken);
         if (result.IsFailure)
         {
@@ -156,7 +154,6 @@ public sealed partial class ExerciseController : ControllerBase
     }
 
     [HttpPost("exercise/updateExerciseWithFormula")]
-    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     [Authorize(Policy = AuthConstants.Policies.ManageGlobalExercises)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]

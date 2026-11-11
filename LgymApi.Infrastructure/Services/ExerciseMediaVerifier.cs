@@ -20,11 +20,10 @@ public sealed class ExerciseMediaVerifier : IExerciseMediaVerifier
         ResourceLimits.MaxProfileSize = 1024 * 1024;
     }
 
-    public async Task<VerifiedExerciseMedia> VerifyAsync(byte[] bytes, string contentType, string sourceSha256, CancellationToken cancellationToken)
+    public async Task<VerifiedExerciseMedia> VerifyAsync(byte[] bytes, CancellationToken cancellationToken)
     {
-        if (bytes.Length is <= 0 or > ExerciseMediaLimits.MaxBytes || Convert.ToHexStringLower(SHA256.HashData(bytes)) != sourceSha256) throw new ExerciseMediaRejectedException();
+        if (bytes.Length is <= 0 or > ExerciseMediaLimits.MaxBytes) throw new ExerciseMediaRejectedException();
         var (format, mime, extension) = Detect(bytes);
-        if (mime != contentType) throw new ExerciseMediaRejectedException();
         await DecodeGate.WaitAsync(cancellationToken);
         try
         {
@@ -51,7 +50,7 @@ public sealed class ExerciseMediaVerifier : IExerciseMediaVerifier
             if (check.Count != images.Count || check.Any(x => x.ProfileNames.Any())) throw new ExerciseMediaRejectedException();
             for (var i = 0; i < check.Count; i++)
                 if (check[i].Width != images[i].Width || check[i].Height != images[i].Height || (mime == "image/gif" && (check[i].AnimationDelay != images[i].AnimationDelay || check[i].AnimationIterations != images[i].AnimationIterations))) throw new ExerciseMediaRejectedException();
-            return new(published, mime, extension, sourceSha256, Convert.ToHexStringLower(SHA256.HashData(published)), (int)images[0].Width, (int)images[0].Height, images.Count);
+            return new(published, mime, extension, Convert.ToHexStringLower(SHA256.HashData(published)), (int)images[0].Width, (int)images[0].Height, images.Count);
         }
         catch (MagickException) { throw new ExerciseMediaRejectedException(); }
         finally { DecodeGate.Release(); }

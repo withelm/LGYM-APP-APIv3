@@ -37,33 +37,6 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
         return _options.PublicBaseUrl.TrimEnd('/') + "/" + key;
     }
 
-    public async Task<byte[]?> ReadAsync(string key, CancellationToken cancellationToken)
-    {
-        ValidateKey(key);
-        try
-        {
-            using var response = await Client.GetObjectAsync(_options.Bucket, key, cancellationToken);
-            return await ReadBoundedAsync(response, cancellationToken);
-        }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound) { return null; }
-    }
-
-    private static async Task<byte[]> ReadBoundedAsync(GetObjectResponse response, CancellationToken cancellationToken)
-    {
-        if (response.ContentLength is <= 0 or > ExerciseMediaLimits.MaxBytes) throw new ExerciseMediaRejectedException();
-        using var output = new MemoryStream();
-        var buffer = new byte[64 * 1024];
-        while (true)
-        {
-            var read = await response.ResponseStream.ReadAsync(buffer, cancellationToken);
-            if (read == 0) break;
-            if (output.Length + read > ExerciseMediaLimits.MaxBytes) throw new ExerciseMediaRejectedException();
-            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-        }
-        if (output.Length != response.ContentLength) throw new ExerciseMediaRejectedException();
-        return output.ToArray();
-    }
-
     private static void ValidateKey(string key)
     {
         if (!Regex.IsMatch(key, @"\Aexercises/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/[0-9a-f]{64}/(?:animation\.gif|image\.(?:png|jpg|webp))\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100))) throw new ExerciseMediaRejectedException();
@@ -79,36 +52,22 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
     private async Task PutImmutableAsync(string bucket, string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
     {
         using var stream = new MemoryStream(bytes, false);
-        try
+        var response = await Client.PutObjectAsync(new PutObjectRequest
         {
-            await Client.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = bucket,
-                Key = key,
-                InputStream = stream,
-                ContentType = contentType,
-                IfNoneMatch = "*",
-                // R2 does not implement AWSSDK's streaming SigV4 uploads. Integrity is checked below.
-                DisablePayloadSigning = true,
-                DisableDefaultChecksumValidation = true,
-                UseChunkEncoding = false,
-                Headers = { CacheControl = "public,max-age=31536000,immutable" }
-            }, cancellationToken);
-        }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.PreconditionFailed)
-        {
-            // A duplicate immutable write is confirmed by the same read-back check as a new write.
-        }
-        using var existing = await Client.GetObjectAsync(bucket, key, cancellationToken);
-        if (existing.ContentLength != bytes.Length) throw new ExerciseMediaRejectedException();
-        var storedBytes = await ReadBoundedAsync(existing, cancellationToken);
-        if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(System.Security.Cryptography.SHA256.HashData(storedBytes), System.Security.Cryptography.SHA256.HashData(bytes))) throw new ExerciseMediaRejectedException();
+            BucketName = bucket,
+            Key = key,
+            InputStream = stream,
+            ContentType = contentType,
+            IfNoneMatch = "*",
+            // R2 does not implement streaming SigV4 uploads or optional AWS checksums.
+            DisablePayloadSigning = true,
+            DisableDefaultChecksumValidation = true,
+            UseChunkEncoding = false,
+            Headers = { CacheControl = "public,max-age=31536000,immutable" }
+        }, cancellationToken);
+        if (response.HttpStatusCode != HttpStatusCode.OK)
+            throw new IOException("Exercise media storage did not confirm the write.");
     }
 
-    public async Task DeleteAsync(string key, CancellationToken cancellationToken)
-    {
-        ValidateKey(key);
-        await Client.DeleteObjectAsync(_options.Bucket, key, cancellationToken);
-    }
     public void Dispose() => _client?.Dispose();
 }

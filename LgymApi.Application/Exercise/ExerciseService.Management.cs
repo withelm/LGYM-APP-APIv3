@@ -78,7 +78,7 @@ public sealed partial class ExerciseService : IExerciseService
         bool verifyTargetAccount,
         CancellationToken cancellationToken)
     {
-        if ((!userId.HasValue && !string.IsNullOrEmpty(image)) || string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
+        if (string.IsNullOrWhiteSpace(name) || bodyPart == BodyParts.Unknown)
         {
             return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.FieldRequired));
         }
@@ -94,11 +94,6 @@ public sealed partial class ExerciseService : IExerciseService
             {
                 return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
             }
-        }
-
-        if (userId.HasValue && !string.IsNullOrEmpty(image) && await _exerciseRepository.IsUnboundManagedImageAsync(image, cancellationToken))
-        {
-            return Result<Unit, AppError>.Failure(new InvalidExerciseError(Messages.ExerciseMediaInvalid));
         }
 
         var exercise = new WorkoutExerciseWriteModel(Id<Domain.Entities.Exercise>.New(), userId, name, bodyPart, eloFormula, description, image, false);
@@ -127,27 +122,20 @@ public sealed partial class ExerciseService : IExerciseService
         }
 
         await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, true), cancellationToken);
-        try
-        {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception exception) when (_exerciseRepository.IsConcurrencyFailure(exception))
-        {
-            return Result<Unit, AppError>.Failure(new ConflictError(Messages.ExerciseMediaConflict));
-        }
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
     public async Task<Result<Unit, AppError>> UpdateExerciseAsync(AuthenticatedAccountContext? currentUser, UpdateExerciseInput input, CancellationToken cancellationToken = default)
     {
-        var (exerciseId, name, bodyPart, description, image) = input;
-        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, null, description, image), cancellationToken);
+        var (exerciseId, name, bodyPart, description, image, updateImage) = input;
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, null, description, image, updateImage), cancellationToken);
     }
 
     public async Task<Result<Unit, AppError>> UpdateExerciseWithFormulaAsync(AuthenticatedAccountContext? currentUser, UpdateExerciseWithFormulaInput input, CancellationToken cancellationToken = default)
     {
-        var (exerciseId, name, bodyPart, eloFormula, description, image) = input;
-        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, eloFormula, description, image), cancellationToken);
+        var (exerciseId, name, bodyPart, eloFormula, description, image, updateImage) = input;
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, eloFormula, description, image, updateImage), cancellationToken);
     }
 
     private async Task<Result<Unit, AppError>> UpdateExerciseCoreAsync(
@@ -183,17 +171,10 @@ public sealed partial class ExerciseService : IExerciseService
             exercise = exercise with { EloFormula = request.EloFormula.Value };
         }
 
-        exercise = exercise with { Description = request.Description };
+        exercise = exercise with { Description = request.Description, Image = request.Image };
 
-        await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted), cancellationToken);
-        try
-        {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception exception) when (_exerciseRepository.IsConcurrencyFailure(exception))
-        {
-            return Result<Unit, AppError>.Failure(new ConflictError(Messages.ExerciseMediaConflict));
-        }
+        await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted, exercise.OwnerId.HasValue || request.UpdateImage), cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 
@@ -204,7 +185,8 @@ public sealed partial class ExerciseService : IExerciseService
         BodyParts BodyPart,
         ExerciseEloFormula? EloFormula,
         string? Description,
-        string? Image);
+        string? Image,
+        bool UpdateImage);
 
     private async Task<WorkoutExercisePersistenceModel?> FindEditableExerciseAsync(
         AuthenticatedAccountContext account,

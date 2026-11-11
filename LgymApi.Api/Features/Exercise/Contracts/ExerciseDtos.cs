@@ -25,6 +25,9 @@ public sealed class ExerciseFormDto : IDto
 
     [JsonPropertyName("image")]
     public string? Image { get; set; }
+
+    [JsonPropertyName("updateImage")]
+    public bool UpdateImage { get; set; }
 }
 
 public sealed class ExerciseExtendedFormDto : IDto
@@ -50,6 +53,9 @@ public sealed class ExerciseExtendedFormDto : IDto
 
     [JsonPropertyName("image")]
     public string? Image { get; set; }
+
+    [JsonPropertyName("updateImage")]
+    public bool UpdateImage { get; set; }
 }
 
 public sealed class ExerciseResponseDto : IResultDto

@@ -4,57 +4,12 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories.WorkoutProgress;
 
-public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext, ExerciseMediaStorageOptions mediaOptions) : IWorkoutExercisePersistence
+public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext) : IWorkoutExercisePersistence
 {
-    public bool IsConcurrencyFailure(Exception exception) => exception is DbUpdateConcurrencyException;
-    public async Task<bool> IsUnboundManagedImageAsync(string image, CancellationToken cancellationToken = default)
-    {
-        var candidate = InspectHttpImage(image);
-        if (candidate is null) return false;
-        var configured = InspectHttpImage(mediaOptions.PublicBaseUrl);
-        var managed = SameImageHost(candidate, configured) && candidate.AbsolutePath.StartsWith("/exercises/", StringComparison.OrdinalIgnoreCase);
-        if (!managed)
-        {
-            var key = candidate.AbsolutePath.TrimStart('/');
-            var recordedUrl = await dbContext.ExerciseMediaObjectFences.IgnoreQueryFilters().AsNoTracking()
-                .Where(x => x.ObjectKey == key).Select(x => x.PublicUrl).SingleOrDefaultAsync(cancellationToken);
-            managed = SameImageHost(candidate, InspectHttpImage(recordedUrl));
-        }
-        if (!managed) return false;
-        // Bound history is immutable and permanently protects these bytes from cleanup.
-        return !await dbContext.ExerciseMediaUploads.IgnoreQueryFilters().AsNoTracking().AnyAsync(x => x.Status == "bound" && (x.PreviousImage == image || x.ResultImage == image), cancellationToken);
-    }
-
-    private static bool SameImageHost(Uri candidate, Uri? other) => other is not null
-        && string.Equals(candidate.IdnHost.TrimEnd('.'), other.IdnHost.TrimEnd('.'), StringComparison.OrdinalIgnoreCase);
-
-    private static Uri? InspectHttpImage(string? image)
-    {
-        if (image is null) return null;
-        // WHATWG special URLs accept backslashes and missing/excess authority slashes,
-        // strip embedded ASCII tabs/newlines and trim surrounding C0/space characters.
-        // Normalize for conservative recognition only; never rewrite the persisted legacy value.
-        var text = image.Replace((char)0x5C, '/').Replace("\t", string.Empty, StringComparison.Ordinal)
-            .Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
-        var start = 0; var end = text.Length;
-        while (start < end && text[start] <= 0x20) start++;
-        while (end > start && text[end - 1] <= 0x20) end--;
-        text = text[start..end];
-        if (text.StartsWith("//", StringComparison.Ordinal)) text = "https:" + text;
-        var colon = text.IndexOf(':');
-        if (colon < 0 || !text[..colon].Equals("http", StringComparison.OrdinalIgnoreCase) && !text[..colon].Equals("https", StringComparison.OrdinalIgnoreCase)) return null;
-        var rest = text[(colon + 1)..].TrimStart('/');
-        var boundary = rest.IndexOfAny(['/', '?', '#']);
-        var authority = boundary < 0 ? rest : rest[..boundary];
-        var suffix = boundary < 0 ? string.Empty : rest[boundary..];
-        var normalized = text[..colon] + "://" + Uri.UnescapeDataString(authority) + suffix;
-        return Uri.TryCreate(normalized, UriKind.Absolute, out var uri) ? uri : null;
-    }
     public Task<WorkoutExercisePersistenceModel?> FindByIdAsync(Id<Exercise> id, CancellationToken cancellationToken = default)
         => FindUnrestrictedByIdAsync(id, cancellationToken);
 
@@ -134,7 +89,7 @@ public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext,
         entity.BodyPart = exercise.BodyPart;
         entity.EloFormula = exercise.EloFormula;
         entity.Description = exercise.Description;
-        // Media is changed only by the verified, conditional media workflow.
+        if (exercise.UpdateImage) entity.Image = exercise.Image;
         entity.IsDeleted = exercise.IsDeleted;
     }
 

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using LgymApi.Api;
-using LgymApi.Api.Features.Exercise.Controllers;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -13,7 +12,7 @@ namespace LgymApi.UnitTests;
 public sealed class EndpointResponseTypeTests
 {
     [Test]
-    public void Endpoints_UseLegacyVerbsOrTheExactReviewedExerciseMediaMutations()
+    public void AllEndpoints_ShouldUseOnlyHttpGetOrHttpPost()
     {
         var assembly = typeof(Program).Assembly;
         var controllerTypes = assembly
@@ -38,8 +37,7 @@ public sealed class EndpointResponseTypeTests
                 var httpMethodAttributes = method.GetCustomAttributes<HttpMethodAttribute>(inherit: true).ToList();
                 var hasInvalidMethod = httpMethodAttributes.Any(attribute =>
                     attribute is not HttpGetAttribute &&
-                    attribute is not HttpPostAttribute &&
-                    !IsApprovedExerciseMediaVerb(controller, method.Name, attribute));
+                    attribute is not HttpPostAttribute);
 
                 if (hasInvalidMethod)
                 {
@@ -48,23 +46,7 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        invalid.Should().BeEmpty("Endpoints require GET/POST or the exact reviewed exercise-media PATCH: " + string.Join(", ", invalid));
-    }
-
-    private static bool IsApprovedExerciseMediaVerb(Type controller, string action, HttpMethodAttribute attribute) =>
-        controller == typeof(ExerciseMediaController) &&
-        action == nameof(ExerciseMediaController.ChangeExerciseMedia) && attribute is HttpPatchAttribute { Template: "{id}/media" };
-
-    [Test]
-    public void ExerciseMediaVerbApproval_RejectsOtherActionsRoutesAndControllers()
-    {
-        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.CreateExerciseWithMedia), new HttpPatchAttribute("{id}/media")).Should().BeFalse();
-        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpPatchAttribute("other/{id}")).Should().BeFalse();
-        IsApprovedExerciseMediaVerb(typeof(EndpointResponseTypeTests), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpPatchAttribute("{id}/media")).Should().BeFalse();
-        IsApprovedExerciseMediaVerb(typeof(ExerciseMediaController), nameof(ExerciseMediaController.ChangeExerciseMedia), new HttpDeleteAttribute("{id}/media")).Should().BeFalse();
-        typeof(ExerciseMediaController).GetMethod("CancelExerciseMedia").Should().BeNull();
-        typeof(ExerciseMediaController).GetMethod(nameof(ExerciseMediaController.ChangeExerciseMedia))!
-            .GetCustomAttributes<HttpMethodAttribute>().Should().ContainSingle().Which.Should().BeOfType<HttpPatchAttribute>();
+        invalid.Should().BeEmpty("Endpoints must use only HttpGet or HttpPost: " + string.Join(", ", invalid));
     }
 
     [Test]

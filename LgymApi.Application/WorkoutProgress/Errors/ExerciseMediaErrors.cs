@@ -3,19 +3,14 @@ using LgymApi.Resources;
 
 namespace LgymApi.Application.WorkoutProgress.Errors;
 
-public sealed class ExerciseMediaOperationError(string disposition, int statusCode) : AppError
+public sealed class InvalidExerciseMediaError : AppError
 {
-    public const string Rejected = "rejected";
-    public const string Unresolved = "unresolved";
-    public const string Conflict = "conflict";
-    public const string SourceRequired = "sourceRequired";
-    public string Disposition { get; } = disposition;
-    public override string Message => statusCode == 409 ? Messages.ExerciseMediaConflict : statusCode == 503 ? Messages.ExerciseMediaRetry : Messages.ExerciseMediaInvalid;
-    public override int HttpStatusCode => statusCode;
+    public override string Message => Messages.ExerciseMediaInvalid;
+    public override int HttpStatusCode => 422;
 }
 
-public sealed class ExerciseMediaRetryError : AppError
+public sealed class ExerciseMediaUnavailableError : AppError
 {
-    public override string Message => Messages.ExerciseMediaRetry;
+    public override string Message => Messages.ExerciseMediaUnavailable;
     public override int HttpStatusCode => 503;
 }

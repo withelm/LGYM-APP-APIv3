@@ -27,9 +27,9 @@ public sealed class ExerciseMediaVerifierTests
     public async Task AnimatedGif_RetainsDistinctFramePixelsTimingAndLoop()
     {
         var original = AnimatedGif();
-        var result = await new ExerciseMediaVerifier().VerifyAsync(original, "image/gif", Hash(original), default);
+        var result = await new ExerciseMediaVerifier().VerifyAsync(original, default);
         result.Frames.Should().Be(2);
-        result.SourceSha256.Should().Be(Hash(original)); result.PublishedSha256.Should().Be(Hash(result.Bytes));
+        result.PublishedSha256.Should().Be(Hash(result.Bytes));
         using var source = new MagickImageCollection(original); using var published = new MagickImageCollection(result.Bytes);
         source.Coalesce(); published.Coalesce();
         published.Count.Should().Be(source.Count);
@@ -55,8 +55,8 @@ public sealed class ExerciseMediaVerifierTests
         var original = image.ToByteArray(format);
         using var encodedSource = new MagickImage(original);
         encodedSource.Orientation.Should().Be(Orientation.RightTop, "the fixture must actually carry the orientation being tested");
-        var result = await new ExerciseMediaVerifier().VerifyAsync(original, mime, Hash(original), default);
-        result.SourceSha256.Should().Be(Hash(original)); result.PublishedSha256.Should().Be(Hash(result.Bytes));
+        var result = await new ExerciseMediaVerifier().VerifyAsync(original, default);
+        result.PublishedSha256.Should().Be(Hash(result.Bytes));
         using var output = new MagickImage(result.Bytes);
         output.ProfileNames.Should().BeEmpty();
         output.Width.Should().Be(3); output.Height.Should().Be(7);
@@ -64,19 +64,17 @@ public sealed class ExerciseMediaVerifierTests
     }
 
     [Test]
-    public async Task ActualMimeMalformedAndChecksumMismatch_AreRejected()
+    public async Task MalformedEmptyOversizedAndUnsupportedBytes_AreRejected()
     {
-        var bytes = AnimatedGif(); var verifier = new ExerciseMediaVerifier();
-        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await verifier.VerifyAsync(bytes, "image/jpeg", Hash(bytes), default));
-        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await verifier.VerifyAsync(bytes, "image/gif", new string('0', 64), default));
-        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await verifier.VerifyAsync("GIF89a"u8.ToArray(), "image/gif", Hash("GIF89a"u8.ToArray()), default));
+        foreach (var bytes in new[] { Array.Empty<byte>(), new byte[ExerciseMediaLimits.MaxBytes + 1], "GIF89a"u8.ToArray(), "not an image"u8.ToArray() })
+            await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(bytes, default));
     }
 
     [Test]
     public async Task FrameDimensionAndAggregateBudgets_AreEnforcedBeforeDecode()
     {
         foreach (var bytes in new[] { ExcessiveFrames(), OversizedHeader(), AnimatedGif(65, 500) })
-            await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(bytes, "image/gif", Hash(bytes), default));
+            await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(bytes, default));
     }
 
     private static byte[] OversizedHeader()
@@ -96,11 +94,11 @@ public sealed class ExerciseMediaVerifierTests
     {
         using var frames = new MagickImageCollection(AnimatedGif());
         var webp = frames.ToByteArray(MagickFormat.WebP);
-        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(webp, "image/webp", Hash(webp), default));
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(webp, default));
         // A valid PNG plus its APNG animation declaration must be rejected even by a static PNG decoder.
         var png = frames[0].ToByteArray(MagickFormat.Png);
         var acTL = Convert.FromHexString("000000086163544c0000000200000000f38d9370");
         var apng = png[..33].Concat(acTL).Concat(png[33..]).ToArray();
-        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(apng, "image/png", Hash(apng), default));
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(async () => await new ExerciseMediaVerifier().VerifyAsync(apng, default));
     }
 }

@@ -390,8 +390,7 @@
   <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
     <value>Page must be positive and page size must be between 1 and 100.</value>
   </data>
-  <data name="ExerciseMediaRetry" xml:space="preserve"><value>The media save could not be confirmed. Retry with the same operation identifier to recover its outcome.</value></data>
   <data name="ExerciseMediaInvalid" xml:space="preserve"><value>The file or upload reference is invalid. Use a GIF, PNG, JPEG or still WebP up to 5 MiB; HEIC and animated PNG/WebP are not supported.</value></data>
-  <data name="ExerciseMediaConflict" xml:space="preserve"><value>The exercise media changed or this operation is already in progress. Reload before retrying; keep the same operation identifier for an interrupted save.</value></data>
   <data name="ExerciseMediaExpired" xml:space="preserve"><value>The upload expired. Select the file again and retry.</value></data>
+  <data name="ExerciseMediaUnavailable" xml:space="preserve"><value>Exercise media storage is unavailable. Please try again.</value></data>
 </root>

@@ -12,5 +12,3 @@
 - `--prepare-hangfire` and ordinary seed mode require `LGYM_MIGRATION_POSTGRES`. `--migrate-only` is disabled because non-Testing API startup applies EF migrations through `lgym_runtime`, which owns the application schema. The API runtime never consumes that environment variable.
 - Reporting migration apply additionally requires the exact external-writer fence acknowledgement and the SHA-256 fingerprint from a reviewed dry-run. Unbound pending legacy uploads and unapproved retained deleted/anonymized owners block writes.
 - The tutorial RLS pilot requires offline Hangfire bootstrap when needed, while API startup owns EF migration. Its staging-only activation, diagnostics, and rollback procedure is [`tutorial-rls-pilot.md`](../docs/security/tutorial-rls-pilot.md).
-
-- ExerciseMediaUploadSeeder and ExerciseMediaObjectFenceSeeder deliberately seed no operation receipts, object fences or retirement authority; authenticated runtime workflows exclusively create these states.

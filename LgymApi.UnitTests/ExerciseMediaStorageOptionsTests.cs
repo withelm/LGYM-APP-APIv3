@@ -117,9 +117,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         const string key = "exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/animation.gif";
         Action url = () => storage.GetPublicUrl(key);
         url.Should().Throw<InvalidOperationException>();
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await storage.ReadAsync(key, default));
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await storage.PublishAsync(key, [1], "image/gif", default));
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await storage.DeleteAsync(key, default));
     }
 
     [TestCase("bucket")]

@@ -1,51 +1,41 @@
-using LgymApi.Api.Features.Exercise.Contracts;
-using LgymApi.Api.Middleware;
+using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
-using LgymApi.Application.WorkoutProgress.Errors;
-using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace LgymApi.Api.Features.Exercise.Filters;
 
-internal sealed class ExerciseMediaRequestFilter(IExerciseMediaService service, IMapper mapper) : IAsyncResourceFilter, IAsyncAlwaysRunResultFilter, IAsyncExceptionFilter
+internal sealed class ExerciseMediaRequestFilter(IMapper mapper) : IAsyncResourceFilter
 {
-    internal const string OperationHeader = "X-Exercise-Media-Operation-Id";
     private static readonly SemaphoreSlim Intake = new(2);
-    private static readonly HashSet<string> CreateFields = new(StringComparer.OrdinalIgnoreCase) { "operationId", "name", "bodyPart", "eloFormulaId", "description", "sourceSha256", "contentType", "sizeBytes" };
-    private static readonly HashSet<string> ChangeFields = new(StringComparer.OrdinalIgnoreCase) { "operationId", "expectedImage", "remove", "restoreImage", "sourceSha256", "contentType", "sizeBytes" };
 
     public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
     {
         var http = context.HttpContext;
-        if (http.Request.Path.Value?.EndsWith("/media/cleanup", StringComparison.Ordinal) == true) { await next(); return; }
-        var operationHeader = http.Request.Headers[OperationHeader].ToString();
-        if (!Id<ExerciseMediaOperationReference>.TryParse(operationHeader, out var operationId) || operationId.IsEmpty)
-        {
-            context.Result = Failure(operationHeader, 400, ExerciseMediaOperationError.Unresolved);
-            return;
-        }
-        if (!await Intake.WaitAsync(0, http.RequestAborted))
-        {
-            context.Result = Failure(operationId.ToString(), 503, ExerciseMediaOperationError.Unresolved);
-            return;
-        }
+        if (!await Intake.WaitAsync(0, http.RequestAborted)) { context.Result = Failure(503); return; }
         var originalCancellation = http.RequestAborted;
         var originalBody = http.Request.Body;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(originalCancellation);
         deadline.CancelAfter(TimeSpan.FromSeconds(60));
         http.RequestAborted = deadline.Token;
         http.Request.Body = new BoundedReadStream(originalBody);
-        try { await ExecuteBoundedAsync(context, next, operationId); }
-        catch (BadHttpRequestException exception) when (exception.StatusCode is 400 or 413)
-        { context.Result = await RejectionAsync(http, operationId, exception.StatusCode); }
-        catch (InvalidDataException) { context.Result = await RejectionAsync(http, operationId, 400); }
-        catch (IOException) when (!http.Response.HasStarted && !originalCancellation.IsCancellationRequested)
-        { context.Result = await RejectionAsync(http, operationId, 400); }
-        catch (OperationCanceledException) when (!originalCancellation.IsCancellationRequested)
-        { context.Result = Failure(operationId.ToString(), 503, ExerciseMediaOperationError.Unresolved); }
+        try
+        {
+            var request = http.Request;
+            if (request.ContentLength > ExerciseMediaLimits.MaxRequestBytes) throw new BadHttpRequestException(Messages.ExerciseMediaInvalid, 413);
+            if (!request.HasFormContentType || !request.ContentType!.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase)) { context.Result = Failure(400); return; }
+            var form = await request.ReadFormAsync(deadline.Token);
+            if (form.Count != 0 || form.Files.Count != 1 || form.Files[0].Name != "file" || form.Files[0].Length == 0) { context.Result = Failure(422); return; }
+            if (form.Files[0].Length > ExerciseMediaLimits.MaxBytes) throw new BadHttpRequestException(Messages.ExerciseMediaInvalid, 413);
+            var executed = await next();
+            if (executed.Exception is OperationCanceledException cancelled) throw cancelled;
+        }
+        catch (BadHttpRequestException exception) when (exception.StatusCode is 400 or 413) { context.Result = Failure(exception.StatusCode); }
+        catch (InvalidDataException) { context.Result = Failure(400); }
+        catch (IOException) when (!http.Response.HasStarted && !originalCancellation.IsCancellationRequested) { context.Result = Failure(400); }
+        catch (OperationCanceledException) when (!originalCancellation.IsCancellationRequested) { context.Result = Failure(503); }
         finally
         {
             http.RequestAborted = originalCancellation;
@@ -54,73 +44,10 @@ internal sealed class ExerciseMediaRequestFilter(IExerciseMediaService service, 
         }
     }
 
-    private async Task ExecuteBoundedAsync(ResourceExecutingContext context, ResourceExecutionDelegate next, Id<ExerciseMediaOperationReference> operationId)
-    {
-        var request = context.HttpContext.Request;
-        if (request.ContentLength > ExerciseMediaLimits.MaxRequestBytes) throw new BadHttpRequestException(Messages.ExerciseMediaInvalid, 413);
-        if (!request.HasFormContentType)
-        {
-            context.Result = await RejectionAsync(context.HttpContext, operationId, 400);
-            return;
-        }
-        var form = await request.ReadFormAsync(request.HttpContext.RequestAborted);
-        var change = HttpMethods.IsPatch(request.Method);
-        var allowedFields = change ? ChangeFields : CreateFields;
-        if (form.Any(field => !allowedFields.Contains(field.Key) || field.Value.Count != 1)
-            || !Id<ExerciseMediaOperationReference>.TryParse(form["operationId"].ToString(), out var bodyId) || bodyId != operationId || change && !form.ContainsKey("expectedImage"))
-        {
-            context.Result = await RejectionAsync(context.HttpContext, operationId, 400);
-            return;
-        }
-        var declaresSource = form.ContainsKey("sourceSha256") || form.ContainsKey("contentType") || form.ContainsKey("sizeBytes");
-        if (declaresSource && (string.IsNullOrEmpty(form["sourceSha256"]) || string.IsNullOrEmpty(form["contentType"]) || string.IsNullOrEmpty(form["sizeBytes"])))
-        {
-            context.Result = await RejectionAsync(context.HttpContext, operationId, 400);
-            return;
-        }
-        if (form.Files.Count > 1 || form.Files.Any(file => file.Name != "file"))
-        {
-            context.Result = await RejectionAsync(context.HttpContext, operationId, 422);
-            return;
-        }
-        if (form.Files.Any(file => file.Length > ExerciseMediaLimits.MaxBytes)) throw new BadHttpRequestException(Messages.ExerciseMediaInvalid, 413);
-        var executed = await next();
-        if (executed.Exception is OperationCanceledException cancelled) throw cancelled;
-    }
+    private IActionResult Failure(int status) => new ObjectResult(mapper.Map<string, ResponseMessageDto>(status == 503 ? Messages.ExerciseMediaUnavailable : Messages.ExerciseMediaInvalid)) { StatusCode = status };
 
-    public async Task OnExceptionAsync(ExceptionContext context)
+    internal static async Task<byte[]> ReadSourceAsync(IFormFile file, CancellationToken cancellationToken)
     {
-        if (context.Exception is BadHttpRequestException { StatusCode: 400 or 413 } failure
-            && Id<ExerciseMediaOperationReference>.TryParse(context.HttpContext.Request.Headers[OperationHeader].ToString(), out var operationId)
-            && !operationId.IsEmpty)
-        {
-            context.Result = await RejectionAsync(context.HttpContext, operationId, failure.StatusCode);
-            context.ExceptionHandled = true;
-        }
-    }
-
-    public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
-    {
-        if (context.Result is ObjectResult { StatusCode: 400 or 413 or 422 } rejection
-            && !context.HttpContext.Response.HasStarted
-            && Id<ExerciseMediaOperationReference>.TryParse(context.HttpContext.Request.Headers[OperationHeader].ToString(), out var operationId)
-            && !operationId.IsEmpty)
-            context.Result = await RejectionAsync(context.HttpContext, operationId, rejection.StatusCode.Value);
-        await next();
-    }
-
-    private async Task<IActionResult> RejectionAsync(HttpContext http, Id<ExerciseMediaOperationReference> operationId, int statusCode)
-    {
-        var rejected = await service.RejectAsync(http.GetAuthenticatedAccountContext(), operationId, statusCode, http.RequestAborted);
-        return Failure(operationId.ToString(), rejected ? statusCode : 503, rejected ? ExerciseMediaOperationError.Rejected : ExerciseMediaOperationError.Unresolved);
-    }
-
-    private IActionResult Failure(string operationId, int statusCode, string disposition) => new ObjectResult(
-        mapper.Map<ExerciseMediaFailureResult, ExerciseMediaErrorDto>(new(operationId, statusCode == 503 ? Messages.ExerciseMediaRetry : Messages.ExerciseMediaInvalid, disposition))) { StatusCode = statusCode };
-
-    internal static async Task<byte[]?> ReadSourceAsync(IFormFile? file, CancellationToken cancellationToken)
-    {
-        if (file is null) return null;
         if (file.Length is <= 0 or > ExerciseMediaLimits.MaxBytes) throw new BadHttpRequestException(Messages.ExerciseMediaInvalid, 413);
         await using var input = file.OpenReadStream();
         using var output = new MemoryStream();

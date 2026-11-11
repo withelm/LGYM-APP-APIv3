@@ -570,11 +570,9 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasDefaultValue("Standard");
 
                     b.Property<string>("Image")
-                        .IsConcurrencyToken()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
-                        .IsConcurrencyToken()
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -585,7 +583,6 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("UserId")
-                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -593,138 +590,6 @@ namespace LgymApi.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Exercises", (string)null);
-                });
-
-            modelBuilder.Entity("LgymApi.Domain.Entities.ExerciseMediaObjectFence", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("ExerciseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRetired")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("LastCleanupAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("LastDeleteSucceeded")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("ObjectKey")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("PublicUrl")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<long>("Revision")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LastCleanupAt");
-
-                    b.HasIndex("ObjectKey")
-                        .IsUnique();
-
-                    b.ToTable("ExerciseMediaObjectFences", (string)null);
-                });
-
-            modelBuilder.Entity("LgymApi.Domain.Entities.ExerciseMediaUpload", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ActorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Extension")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("ObjectKey")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("OperationHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<Guid>("OperationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PreviousImage")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PublishedSha256")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<int?>("RejectionStatusCode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ResultImage")
-                        .HasColumnType("text");
-
-                    b.Property<long>("Revision")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("SourceSha256")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<Guid?>("TargetExerciseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ActorId", "OperationId")
-                        .IsUnique();
-
-                    b.HasIndex("ObjectKey", "ExpiresAt");
-
-                    b.HasIndex("Status", "ExpiresAt");
-
-                    b.ToTable("ExerciseMediaUploads", (string)null);
                 });
 
             modelBuilder.Entity("LgymApi.Domain.Entities.ExerciseScore", b =>

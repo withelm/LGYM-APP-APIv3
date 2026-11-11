@@ -6,7 +6,6 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Repositories.WorkoutProgress;
 using Microsoft.EntityFrameworkCore;
@@ -60,7 +59,7 @@ public sealed class ExerciseRepositoryTests
         var foreignExercise = Exercise(Id<Exercise>.New(), foreignOwnerId.Rebind<User>(), "Foreign");
         dbContext.Exercises.AddRange(globalExercise, ownedExercise, foreignExercise);
         await dbContext.SaveChangesAsync();
-        var repository = new WorkoutExercisePersistenceRepository(dbContext, new ExerciseMediaStorageOptions());
+        var repository = new WorkoutExercisePersistenceRepository(dbContext);
 
         var visibleGlobal = await repository.FindVisibleToAccountAsync(globalExercise.Id, actorId);
         var visibleOwned = await repository.FindVisibleToAccountAsync(ownedExercise.Id, actorId);
@@ -89,23 +88,31 @@ public sealed class ExerciseRepositoryTests
         }
     }
 
-    [TestCase(@"https:\\exercise.test\exercises\new-key\animation.gif")]
-    [TestCase("https://exer\tcise.test/exercises/new-key/animation.gif")]
-    [TestCase("https:////exercise.test/exercises/new-key/animation.gif")]
-    [TestCase("https://%65xercise.test/exercises/new-key/animation.gif")]
-    [TestCase(" \u0001https://exercise.test/exercises/new-key/animation.gif\u001F ")]
-    [TestCase("//exercise.test/exercises/new-key/animation.gif")]
-    [TestCase("https://EXERCISE.test:443/old/../exercises/new-key/animation.gif?cache=1#frame")]
-    [TestCase("http://exercise.test/exercises/new-key/animation.gif")]
-    [TestCase("https://exercise.test./exercises/new-key/animation.gif")]
-    public async Task PersonalImageGuard_RejectsUnreservedManagedAliasesAndPreservesUnrelatedLegacyUrls(string image)
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("https://old.test/stale.gif")]
+    public async Task MetadataReadBeforeExplicitImageChange_DoesNotWriteOrRevertImage(string? staleImage)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Id<ExerciseRepositoryTests>.New().ToString()).Options;
-        await using var db = new AppDbContext(options);
-        var repository = new WorkoutExercisePersistenceRepository(db, new ExerciseMediaStorageOptions { PublicBaseUrl = "https://exercise.test" });
-        (await repository.IsUnboundManagedImageAsync(image)).Should().BeTrue();
-        (await repository.IsUnboundManagedImageAsync("https://legacy.example/exercises/new-key/animation.gif")).Should().BeFalse();
-        (await repository.IsUnboundManagedImageAsync("legacy-image-value")).Should().BeFalse();
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        await using var metadata = new AppDbContext(options);
+        await metadata.Database.EnsureCreatedAsync();
+        var exercise = Exercise(Id<Exercise>.New(), null, "Before"); exercise.Image = "https://old.test/stale.gif";
+        metadata.Exercises.Add(exercise); await metadata.SaveChangesAsync();
+        var stale = await new WorkoutExercisePersistenceRepository(metadata).FindGlobalByIdAsync(exercise.Id);
+        await using (var imageContext = new AppDbContext(options))
+        {
+            await new WorkoutExercisePersistenceRepository(imageContext).UpdateAsync(new(stale!.Id, null, stale.Name, stale.BodyPart, stale.EloFormula, stale.Description, "https://new.test/current.gif", false, true));
+            await imageContext.SaveChangesAsync();
+        }
+        await new WorkoutExercisePersistenceRepository(metadata).UpdateAsync(new(stale!.Id, null, "Metadata saved later", stale.BodyPart, stale.EloFormula, stale.Description, staleImage, false));
+        metadata.ChangeTracker.DetectChanges();
+        metadata.Entry(exercise).Property(x => x.Image).IsModified.Should().BeFalse();
+        await metadata.SaveChangesAsync();
+        await using var read = new AppDbContext(options);
+        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Image.Should().Be("https://new.test/current.gif");
+        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Name.Should().Be("Metadata saved later");
     }
 
     private static Exercise Exercise(Id<Exercise> id, Id<User>? ownerId, string name) => new()

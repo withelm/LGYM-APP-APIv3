@@ -26,7 +26,8 @@ public sealed record WorkoutExerciseWriteModel(
     ExerciseEloFormula EloFormula,
     string? Description,
     string? Image,
-    bool IsDeleted);
+    bool IsDeleted,
+    bool UpdateImage = false);
 
 public sealed record WorkoutGymPersistenceModel(
     Id<LgymApi.Domain.Entities.Gym> Id,
