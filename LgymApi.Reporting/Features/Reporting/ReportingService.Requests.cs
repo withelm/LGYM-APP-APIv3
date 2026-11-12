@@ -105,7 +105,7 @@ public sealed partial class ReportingService : IReportingService
         var requests = await _requestSubmissionPersistence.ListPendingOrExpiredByTraineeAsync(currentTrainee.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var expiredIds = requests
-            .Where(request => IsRequestExpired(request.DueAt, now))
+            .Where(request => request.Status == ReportRequestStatus.Pending && IsRequestExpired(request.DueAt, now))
             .Select(request => request.Id)
             .ToList();
 

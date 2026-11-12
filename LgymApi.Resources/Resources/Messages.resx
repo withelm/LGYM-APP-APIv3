@@ -297,6 +297,12 @@
   <data name="TrainerReportRequestReceived" xml:space="preserve">
     <value>{0} sent you a report request: {1}.</value>
   </data>
+  <data name="TraineeRecurringReportRequestUpcoming" xml:space="preserve">
+    <value>Your next recurring report request is scheduled for {0}.</value>
+  </data>
+  <data name="TraineeRecurringReportRequestUnanswered" xml:space="preserve">
+    <value>Your recurring report request is still awaiting your response.</value>
+  </data>
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} added feedback to your report: {1}.</value>
   </data>

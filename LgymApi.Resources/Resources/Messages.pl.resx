@@ -288,6 +288,12 @@
   <data name="TrainerReportRequestReceived" xml:space="preserve">
     <value>{0} wysłał Ci prośbę o raport: {1}.</value>
   </data>
+  <data name="TraineeRecurringReportRequestUpcoming" xml:space="preserve">
+    <value>Twoja następna cykliczna prośba o raport jest zaplanowana na {0}.</value>
+  </data>
+  <data name="TraineeRecurringReportRequestUnanswered" xml:space="preserve">
+    <value>Twoja cykliczna prośba o raport nadal oczekuje na odpowiedź.</value>
+  </data>
   <data name="TrainerReportFeedbackReceived" xml:space="preserve">
     <value>{0} dodał komentarz do Twojego raportu: {1}.</value>
   </data>

@@ -614,8 +614,8 @@ public sealed class CompositionRootConvergenceTests
             typeof(FcmPushSender));
 
         var registry = CommandContractRegistry.CreateDefault();
-        registry.Contracts.Should().HaveCount(16);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(17);
+        registry.Contracts.Should().HaveCount(18);
+        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(19);
         BackgroundActionRegistrationValidator.Validate(services, registry);
     }
 

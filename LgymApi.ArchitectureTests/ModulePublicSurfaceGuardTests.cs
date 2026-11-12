@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 854;
+    private const int ManifestEntryCount = 858;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -82,6 +82,10 @@ public sealed class ModulePublicSurfaceGuardTests
         "LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.ScheduleChanges.cs\tLgymApi.Application.Features.Reporting.RecurringReportAssignmentService",
         "LgymApi.Reporting/Reporting/ApiAdapters/ReportingApiAdapterContracts.cs\tLgymApi.Application.Reporting.ApiAdapters.ITraineeRecurringReportAssignmentApiPort",
         "LgymApi.Reporting/Reporting/Contracts/BackgroundCommands/ReportFeedbackReadInAppNotificationCommand.cs\tLgymApi.Application.Reporting.Contracts.BackgroundCommands.ReportFeedbackReadInAppNotificationCommand",
+        "LgymApi.Reporting/Reporting/Contracts/BackgroundCommands/RecurringReportReminderInAppNotificationCommand.cs\tLgymApi.Application.Reporting.Contracts.BackgroundCommands.RecurringReportReminderInAppNotificationCommand",
+        "LgymApi.Reporting/Reporting/Contracts/BackgroundCommands/IRelationshipEndedReportCancellationActionExecutionPort.cs\tLgymApi.Application.Reporting.Contracts.BackgroundCommands.IRelationshipEndedReportCancellationActionExecutionPort",
+        "LgymApi.Notifications/InApp/RecurringReportReminderActionExecutionPort.cs\tLgymApi.Application.Notifications.Contracts.InApp.IRecurringReportReminderActionExecutionPort",
+        "LgymApi.Application/Coaching/Contracts/BackgroundCommands/RelationshipEndedReportCancellationCommand.cs\tLgymApi.Application.Coaching.Contracts.BackgroundCommands.RelationshipEndedReportCancellationCommand",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.NewRecurringReportScheduleChangePersistenceModel",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.RecurringReportScheduleChangePersistenceModel",
         "LgymApi.Reporting/Reporting/Persistence/ReportingPersistenceModels.cs\tLgymApi.Application.Reporting.Persistence.RecurringReportScheduleChangeResolutionPersistenceModel",

@@ -20,6 +20,26 @@ public sealed class NotificationSourceEligibilityPolicyTests
         NotificationSourceEligibilityPolicy.CanDisclose(source, Facts(state: state)).Should().Be(expected);
     }
 
+    [TestCase(true, true, true)]
+    [TestCase(true, false, false)]
+    [TestCase(false, true, true)]
+    [TestCase(false, false, true)]
+    public void CanDisclose_ReportRequestRequiresActiveEpisodeOnlyWhenSpecified(
+        bool requiresActiveSourceEpisode,
+        bool hasActiveMatchingSourceEpisode,
+        bool expected)
+    {
+        var source = Reference(NotificationSourceKind.ReportRequest, NotificationSourceState.Pending) with
+        {
+            RequiresActiveSourceEpisode = requiresActiveSourceEpisode
+        };
+
+        NotificationSourceEligibilityPolicy.CanDisclose(
+            source,
+            Facts(NotificationSourceState.Pending, hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode))
+            .Should().Be(expected);
+    }
+
     [TestCase((int)NotificationSourceState.Pending, false)]
     [TestCase((int)NotificationSourceState.Submitted, true)]
     [TestCase((int)NotificationSourceState.Completed, true)]

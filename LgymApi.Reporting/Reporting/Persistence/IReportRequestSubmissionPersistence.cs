@@ -12,6 +12,8 @@ public interface IReportRequestSubmissionPersistence
     Task SetRequestExpiredAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
     Task SetRequestSubmittedAsync(Id<ReportRequest> requestId, DateTimeOffset submittedAt, CancellationToken cancellationToken = default);
     Task SetRequestCompletedAsync(Id<ReportRequest> requestId, CancellationToken cancellationToken = default);
+    Task CancelPendingForSourceEpisodeAsync(Id<CoachingEpisode> episodeId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
     Task AddSubmissionAsync(NewReportSubmissionPersistenceModel submission, CancellationToken cancellationToken = default);
     Task<ReportSubmissionPersistenceModel?> FindSubmissionForTrainerAsync(Id<ReportSubmission> submissionId, Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task<ReportSubmissionPersistenceModel?> FindSubmissionForTraineeAsync(Id<ReportSubmission> submissionId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);

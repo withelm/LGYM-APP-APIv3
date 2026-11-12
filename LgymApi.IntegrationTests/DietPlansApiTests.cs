@@ -145,11 +145,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         await LinkTrainerAndTraineeAsync(trainer.Id, trainee.Id);
 
         SetAuthorizationHeader(trainer.Id);
-        var beforeCreate = await GetDietPersistenceCountsAsync();
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }
+        var beforeCreate = await GetDietPersistenceCountsAsync();
 
         await AssertExactMessageAsync(
             await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans", ValidDietRequest("Former trainee plan")),
@@ -219,11 +219,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Former trainer list plan", true);
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        var beforeRead = await GetDietPersistenceCountsAsync();
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }
+        var beforeRead = await GetDietPersistenceCountsAsync();
 
         await AssertExactMessageAsync(
             await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans"),
@@ -430,11 +430,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Former trainer read plan", true);
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        var beforeRead = await GetDietPersistenceCountsAsync();
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }
+        var beforeRead = await GetDietPersistenceCountsAsync();
 
         await AssertExactMessageAsync(
             await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}"),
@@ -621,11 +621,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Former trainer plan", true);
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }
+        var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
         using var response = await Client.PostAsJsonAsync(
             $"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update",
@@ -701,11 +701,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Former trainer activate plan", false);
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }
+        var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
         await AssertExactMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/activate", null),

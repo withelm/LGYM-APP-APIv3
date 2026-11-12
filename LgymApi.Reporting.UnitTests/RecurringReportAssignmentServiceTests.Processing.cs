@@ -33,6 +33,127 @@ public sealed partial class RecurringReportAssignmentServiceTests
     }
 
     [Test]
+    public async Task UpcomingRequestWithinTwentyFourHours_StagesReminder()
+    {
+        var assignment = CreateProcessingAssignment() with
+        {
+            NextEligibleAt = DateTimeOffset.UtcNow.AddHours(12)
+        };
+        var harness = CreateProcessingHarness(assignment);
+
+        await harness.Service.ProcessDueAssignmentsAsync();
+
+        await harness.OutboxWriter.Received(1).StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command =>
+                command.AssignmentId == assignment.Id
+                && command.IsUpcomingRequestReminder
+                && command.ReportRequestId == null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task FirstRequestWithFutureStart_StagesUpcomingReminder()
+    {
+        var start = DateTimeOffset.UtcNow.AddHours(12);
+        var assignment = CreateProcessingAssignment() with
+        {
+            StartsAt = start,
+            NextEligibleAt = null,
+            CurrentReportRequestId = null,
+            CurrentReportRequest = null
+        };
+        var harness = CreateProcessingHarness(assignment);
+
+        await harness.Service.ProcessDueAssignmentsAsync();
+
+        await harness.OutboxWriter.Received(1).StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command =>
+                command.IsUpcomingRequestReminder && command.ScheduledFor == start),
+            Arg.Any<CancellationToken>());
+        await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
+            Arg.Any<ReportRequestCreatedInAppNotificationCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestCase("pending")]
+    [TestCase("cancelled")]
+    [TestCase("missing")]
+    [TestCase("unread")]
+    [TestCase("deleted-template")]
+    [TestCase("ended")]
+    public async Task ImpossibleUpcomingIssuance_DoesNotStageUpcomingReminder(string scenario)
+    {
+        var scheduled = DateTimeOffset.UtcNow.AddHours(12);
+        var assignment = CreateProcessingAssignment() with { NextEligibleAt = scheduled };
+        assignment = scenario switch
+        {
+            "pending" => assignment with { CurrentReportRequest = assignment.CurrentReportRequest! with { Status = ReportRequestStatus.Pending } },
+            "cancelled" => assignment with { CurrentReportRequest = assignment.CurrentReportRequest! with { Status = ReportRequestStatus.Cancelled } },
+            "missing" => assignment with { CurrentReportRequest = null },
+            "unread" => assignment with { CurrentReportRequest = assignment.CurrentReportRequest! with { Submission = assignment.CurrentReportRequest!.Submission! with { TrainerFeedbackReadAt = null } } },
+            "deleted-template" => assignment with { Template = assignment.Template with { IsDeleted = true } },
+            "ended" => assignment with { EndsAt = scheduled.AddTicks(-1) },
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+        var harness = CreateProcessingHarness(assignment);
+
+        await harness.Service.ProcessDueAssignmentsAsync();
+
+        await harness.OutboxWriter.DidNotReceive().StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command => command.IsUpcomingRequestReminder),
+            Arg.Any<CancellationToken>());
+    }
+
+    [TestCase("archived")]
+    [TestCase("missing")]
+    [TestCase("active")]
+    public async Task UpcomingReminder_ValidatesCurrentPhotoTypes(string scenario)
+    {
+        var photoTypeId = Id<TrainerPhotoType>.New();
+        var assignment = CreateProcessingAssignment() with { NextEligibleAt = DateTimeOffset.UtcNow.AddHours(12) };
+        var field = new ReportTemplateFieldPersistenceModel(
+            Id<ReportTemplateField>.New(), "photos", "Photos", ReportFieldType.Photos, true, 1,
+            $"{{\"requiredPhotoTypeIds\":[\"{photoTypeId}\"]}}", DateTimeOffset.UtcNow);
+        assignment = assignment with { Template = assignment.Template with { Fields = [field] } };
+        var harness = CreateProcessingHarness(assignment);
+        TrainerPhotoTypePersistenceModel[] photoTypes = scenario == "missing" ? [] :
+        [new(photoTypeId, assignment.TrainerId, null, "Custom", PhotoTypeNameMode.TrainerProvided,
+            scenario == "archived", DateTimeOffset.UtcNow)];
+        harness.TemplatePersistence.ListPhotoTypesAsync(assignment.TrainerId, Arg.Any<CancellationToken>())
+            .Returns(photoTypes);
+
+        await harness.Service.ProcessDueAssignmentsAsync();
+
+        await harness.OutboxWriter.Received(scenario == "active" ? 1 : 0).StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command => command.IsUpcomingRequestReminder),
+            Arg.Any<CancellationToken>());
+        await harness.TemplatePersistence.DidNotReceiveWithAnyArgs().AddPhotoTypeAsync(default!, default);
+        harness.Transaction.CommitCalls.Should().Be(scenario == "active" ? 1 : 0);
+    }
+
+    [Test]
+    public async Task PendingRequestUnansweredForFortyEightHours_StagesReminder()
+    {
+        var assignment = CreateProcessingAssignment(ReportRequestStatus.Pending);
+        assignment = assignment with
+        {
+            CurrentReportRequest = assignment.CurrentReportRequest! with
+            {
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-49)
+            }
+        };
+        var harness = CreateProcessingHarness(assignment);
+
+        await harness.Service.ProcessDueAssignmentsAsync();
+
+        await harness.OutboxWriter.Received(1).StageAsync(
+            Arg.Is<RecurringReportReminderInAppNotificationCommand>(command =>
+                command.AssignmentId == assignment.Id
+                && !command.IsUpcomingRequestReminder
+                && command.ReportRequestId == assignment.CurrentReportRequest!.Id),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task NullEnvelope_RollsBackWithoutSaving()
     {
         var harness = CreateProcessingHarness(CreateProcessingAssignment());
@@ -350,6 +471,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
             logger);
         return new ProcessingHarness(
             service,
+            templatePersistence,
             assignmentPersistence,
             outboxWriter,
             unitOfWork,
@@ -415,6 +537,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
     private sealed record ProcessingHarness(
         RecurringReportAssignmentService Service,
+        IReportTemplatePersistence TemplatePersistence,
         IRecurringReportAssignmentPersistence AssignmentPersistence,
         ICommandOutboxWriter OutboxWriter,
         ProcessingUnitOfWork UnitOfWork,

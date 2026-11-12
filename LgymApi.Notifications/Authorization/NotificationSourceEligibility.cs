@@ -14,7 +14,8 @@ internal enum NotificationSourceKind
     ReportSubmission,
     DietPlan,
     TraineeNote,
-    Relationship
+    Relationship,
+    RecurringReportAssignment
 }
 
 internal enum NotificationSourceState
@@ -44,7 +45,8 @@ internal sealed record NotificationSourceReference(
     NotificationSourceRecipientRole RecipientRole,
     NotificationSourceState RequiredState,
     bool RequiresVisibleContent,
-    bool RequiresActiveSourceEpisode = false);
+    bool RequiresActiveSourceEpisode = false,
+    int? ExpectedScheduleRevision = null);
 
 internal sealed record NotificationSourceFacts(
     bool SourceExists,
@@ -56,7 +58,8 @@ internal sealed record NotificationSourceFacts(
     bool VisibleToRecipient,
     bool HasExpectedContent,
     bool RelationshipCurrentlyActive,
-    bool HasActiveMatchingSourceEpisode = false)
+    bool HasActiveMatchingSourceEpisode = false,
+    bool ScheduleRevisionMatches = true)
 {
     public static NotificationSourceFacts Missing { get; } = new(
         false,
@@ -93,7 +96,8 @@ internal static class NotificationSourceEligibilityPolicy
         return source.Kind switch
         {
             NotificationSourceKind.Invitation => facts.State == source.RequiredState,
-            NotificationSourceKind.ReportRequest => facts.State == source.RequiredState,
+            NotificationSourceKind.ReportRequest => facts.State == source.RequiredState
+                && (!source.RequiresActiveSourceEpisode || facts.HasActiveMatchingSourceEpisode),
             NotificationSourceKind.ReportSubmission => (facts.State == source.RequiredState
                     || (source.RequiredState == NotificationSourceState.Submitted && facts.State == NotificationSourceState.Completed))
                 && (!source.RequiresVisibleContent || facts.HasExpectedContent)
@@ -101,6 +105,8 @@ internal static class NotificationSourceEligibilityPolicy
             NotificationSourceKind.DietPlan => true,
             NotificationSourceKind.TraineeNote => facts.VisibleToRecipient,
             NotificationSourceKind.Relationship => !facts.RelationshipCurrentlyActive,
+            NotificationSourceKind.RecurringReportAssignment => facts.HasActiveMatchingSourceEpisode
+                && facts.ScheduleRevisionMatches,
             _ => false
         };
     }
@@ -137,8 +143,13 @@ internal static class NotificationSourceReferenceParser
 
         if (type == InAppNotificationTypes.ReportRequestReceived)
         {
-            return TryCreate(notification, "report-request:", ":created", NotificationSourceKind.ReportRequest,
-                NotificationSourceRecipientRole.Trainee, NotificationSourceState.Pending, false, out source);
+            if (TryCreate(notification, "report-request:", ":created", NotificationSourceKind.ReportRequest,
+                    NotificationSourceRecipientRole.Trainee, NotificationSourceState.Pending, false, out source))
+            {
+                return true;
+            }
+
+            return TryCreateRecurringReminder(notification, out source);
         }
 
         if (type == InAppNotificationTypes.ReportSubmissionReceived)
@@ -193,6 +204,55 @@ internal static class NotificationSourceReferenceParser
                 NotificationSourceRecipientRole.Trainer,
                 NotificationSourceState.None,
                 false);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryCreateRecurringReminder(InAppNotification notification, out NotificationSourceReference source)
+    {
+        source = null!;
+        const string prefix = "report-recurring-reminder:";
+        var deliveryKey = notification.DeliveryKey!;
+        if (!deliveryKey.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parts = deliveryKey[prefix.Length..].Split(':');
+        if (parts is ["upcoming", var assignmentId, var revision]
+            && Id<NotificationSourceResource>.TryParse(assignmentId, out var assignment)
+            && int.TryParse(revision, CultureInfo.InvariantCulture, out var expectedRevision)
+            && expectedRevision >= 0)
+        {
+            source = new NotificationSourceReference(
+                notification.Id,
+                NotificationSourceKind.RecurringReportAssignment,
+                assignment,
+                notification.RecipientId,
+                notification.SenderUserId,
+                NotificationSourceRecipientRole.Trainee,
+                NotificationSourceState.None,
+                false,
+                RequiresActiveSourceEpisode: true,
+                ExpectedScheduleRevision: expectedRevision);
+            return true;
+        }
+
+        if (parts is ["unanswered", var requestId]
+            && Id<NotificationSourceResource>.TryParse(requestId, out var request))
+        {
+            source = new NotificationSourceReference(
+                notification.Id,
+                NotificationSourceKind.ReportRequest,
+                request,
+                notification.RecipientId,
+                notification.SenderUserId,
+                NotificationSourceRecipientRole.Trainee,
+                NotificationSourceState.Pending,
+                false,
+                RequiresActiveSourceEpisode: true);
             return true;
         }
 

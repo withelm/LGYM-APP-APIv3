@@ -19,9 +19,10 @@ internal static class ReportTemplateSnapshotFactory
 {
     public const string Provenance = "Issued";
 
-    // Callers hold the trainer definition lock and commit these staged defaults with their operation.
+    // Callers hold the trainer definition lock; preview-only defaults must not be persisted.
     public static async Task<IReadOnlyList<TrainerPhotoTypePersistenceModel>> EnsureDefaultsAsync(
-        IReportTemplatePersistence persistence, Id<AccountReference> trainerId, CancellationToken cancellationToken)
+        IReportTemplatePersistence persistence, Id<AccountReference> trainerId, CancellationToken cancellationToken,
+        bool stageDefaults = true)
     {
         var types = (await persistence.ListPhotoTypesAsync(trainerId, cancellationToken)).ToList();
         foreach (var key in Enum.GetNames<PhotoViewType>())
@@ -29,7 +30,8 @@ internal static class ReportTemplateSnapshotFactory
             if (types.Any(type => type.SystemKey == key)) continue;
             var item = new NewTrainerPhotoTypePersistenceModel(Id<TrainerPhotoType>.New(), trainerId, key, key,
                 PhotoTypeNameMode.SystemLocalized, false, DateTimeOffset.UtcNow);
-            await persistence.AddPhotoTypeAsync(item, cancellationToken);
+            if (stageDefaults)
+                await persistence.AddPhotoTypeAsync(item, cancellationToken);
             types.Add(new TrainerPhotoTypePersistenceModel(item.Id, trainerId, key, key, item.NameMode, false, item.CreatedAt));
         }
         return types;

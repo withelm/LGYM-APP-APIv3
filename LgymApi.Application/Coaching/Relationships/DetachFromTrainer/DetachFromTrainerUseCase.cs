@@ -15,17 +15,20 @@ internal sealed class DetachFromTrainerUseCase : IDetachFromTrainerUseCase
     private readonly ICoachingEpisodeAuthorizationService _authorization;
     private readonly ICoachingActiveLinkPersistence _activeLinks;
     private readonly ICommandDispatcher _commands;
+    private readonly ICommandOutboxWriter _outbox;
     private readonly IUnitOfWork _unitOfWork;
 
     public DetachFromTrainerUseCase(
         ICoachingEpisodeAuthorizationService authorization,
         ICoachingActiveLinkPersistence activeLinks,
         ICommandDispatcher commands,
+        ICommandOutboxWriter outbox,
         IUnitOfWork unitOfWork)
     {
         _authorization = authorization;
         _activeLinks = activeLinks;
         _commands = commands;
+        _outbox = outbox;
         _unitOfWork = unitOfWork;
     }
 
@@ -40,13 +43,21 @@ internal sealed class DetachFromTrainerUseCase : IDetachFromTrainerUseCase
         }
 
         await _activeLinks.RemoveAsync(grant, cancellationToken);
+        var staged = await _outbox.StageAsync(new RelationshipEndedReportCancellationCommand
+        {
+            EpisodeId = grant.EpisodeId
+        }, cancellationToken);
+        if (staged.EnvelopeId is null)
+        {
+            throw new InvalidOperationException("Relationship cancellation command was not staged.");
+        }
         try
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (Exception commitFailure)
         {
-            if (!await _activeLinks.TryRecoverCompletedUnlinkAsync(grant, commitFailure, cancellationToken))
+            if (!await _activeLinks.TryRecoverCompletedUnlinkAsync(grant, staged.EnvelopeId, commitFailure, cancellationToken))
             {
                 throw;
             }
@@ -56,7 +67,6 @@ internal sealed class DetachFromTrainerUseCase : IDetachFromTrainerUseCase
             TrainerId = grant.TrainerId,
             TraineeId = command.TraineeId
         });
-
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 }

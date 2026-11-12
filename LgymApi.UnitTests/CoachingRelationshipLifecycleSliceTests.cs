@@ -26,7 +26,7 @@ namespace LgymApi.UnitTests;
 public sealed class CoachingRelationshipLifecycleSliceTests
 {
     [Test]
-    public async Task Unlink_RemovesOwnedLinkCommitsOnceAndDoesNotEnqueueNotification()
+    public async Task Unlink_RemovesOwnedLinkCommitsOnceAndEnqueuesRelationshipCleanup()
     {
         var trainerId = Id<User>.New();
         var traineeId = Id<User>.New();
@@ -43,7 +43,10 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             Arg.Is<CoachingEpisodeAuthorizationGrant>(grant => grant.LinkId == link.Id),
             Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
+        await commands.Received(1).EnqueueAsync(Arg.Is<TrainerRelationshipEndedInAppNotificationCommand>(command =>
+            command.TrainerId == trainerId && command.TraineeId == traineeId));
+        await Outbox(services).Received(1).StageAsync(Arg.Is<RelationshipEndedReportCancellationCommand>(command =>
+            command.EpisodeId == link.EpisodeId), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -119,6 +122,9 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         links.RemoveAsync(Arg.Is<CoachingEpisodeAuthorizationGrant>(grant => grant.LinkId == link.Id), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(_ => operations.Add("remove"));
+        Outbox(services).StageAsync(Arg.Any<RelationshipEndedReportCancellationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new CommandEnvelopeStageResult(Id<CoachingEpisode>.New().ToString(), false))
+            .AndDoes(_ => operations.Add("stage"));
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(1))
             .AndDoes(_ => operations.Add("commit"));
@@ -130,11 +136,46 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             new DetachFromTrainerCommand(traineeId));
 
         result.IsSuccess.Should().BeTrue();
-        operations.Should().Equal("remove", "commit", "enqueue");
+        operations.Should().Equal("remove", "stage", "commit", "enqueue");
+        await Outbox(services).Received(1).StageAsync(
+            Arg.Is<RelationshipEndedReportCancellationCommand>(command => command.EpisodeId == link.EpisodeId),
+            Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.Received(1).EnqueueAsync(
             Arg.Is<TrainerRelationshipEndedInAppNotificationCommand>(command =>
                 command.TrainerId == trainerId && command.TraineeId == traineeId));
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task RelationshipRemoval_StagesCancellationBeforeFailedSaveAndDoesNotNotify(bool trainerInitiated)
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var link = Link(trainerId, traineeId);
+        var services = CreateServices(out var access, out _, out var links, out var commands, out var unitOfWork);
+        access.IsTrainerAsync(trainerId, Arg.Any<CancellationToken>()).Returns(true);
+        links.FindByTrainerAndTraineeAsync(trainerId, traineeId, Arg.Any<CancellationToken>()).Returns(link);
+        links.FindByTraineeAsync(traineeId, Arg.Any<CancellationToken>()).Returns(link);
+        var staged = false;
+        Outbox(services).StageAsync(Arg.Any<RelationshipEndedReportCancellationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new CommandEnvelopeStageResult(Id<CoachingEpisode>.New().ToString(), false))
+            .AndDoes(_ => staged = true);
+        unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            staged.Should().BeTrue();
+            return Task.FromException<int>(new InvalidOperationException("commit failed"));
+        });
+
+        Func<Task> act = trainerInitiated
+            ? () => Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(new UnlinkTraineeCommand(trainerId, traineeId))
+            : () => Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(new DetachFromTrainerCommand(traineeId));
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
+        await Outbox(services).Received(1).StageAsync(
+            Arg.Is<RelationshipEndedReportCancellationCommand>(command => command.EpisodeId == link.EpisodeId),
+            Arg.Any<CancellationToken>());
+        await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
 
     [Test]
@@ -265,6 +306,10 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var commandDispatcher = commands;
         var workUnit = unitOfWork;
         var services = new ServiceCollection();
+        var outbox = Substitute.For<ICommandOutboxWriter>();
+        outbox.StageAsync(Arg.Any<RelationshipEndedReportCancellationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new CommandEnvelopeStageResult(Id<CoachingEpisode>.New().ToString(), false));
+        services.AddSingleton(outbox);
         services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         services.AddScoped(_ => userAccessService);
         services.AddScoped(_ => accountReadService);
@@ -275,6 +320,9 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         services.AddCoachingModule();
         return services;
     }
+
+    private static ICommandOutboxWriter Outbox(ServiceCollection services) =>
+        (ICommandOutboxWriter)services.Single(descriptor => descriptor.ServiceType == typeof(ICommandOutboxWriter)).ImplementationInstance!;
 
     private static TContract Resolve<TContract>(ServiceCollection services) where TContract : notnull
     {

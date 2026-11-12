@@ -1,5 +1,6 @@
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
@@ -147,11 +148,25 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
             .ToListAsync(cancellationToken);
         return entities
             .Select(ReportingPersistenceProjection.Assignment)
-            .Where(assignment => assignment.StartsAt <= now)
-            .Where(assignment => !assignment.EndsAt.HasValue || assignment.EndsAt.Value >= now)
+            .Where(assignment => assignment.StartsAt <= now.AddHours(24))
+            .Where(assignment => !assignment.EndsAt.HasValue || assignment.EndsAt.Value >= now
+                || assignment.CurrentReportRequest?.Status == ReportRequestStatus.Pending)
             .OrderBy(assignment => assignment.NextEligibleAt ?? assignment.StartsAt)
             .ThenBy(assignment => assignment.CreatedAt)
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListActiveBySourceEpisodeAsync(
+        Id<CoachingEpisode> episodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await BaseQuery()
+            .AsNoTracking()
+            .Where(assignment => !assignment.IsDeleted
+                && assignment.IsActive
+                && assignment.SourceCoachingEpisodeId == episodeId)
+            .ToListAsync(cancellationToken);
+        return entities.Select(ReportingPersistenceProjection.Assignment).ToList();
     }
 
     public async Task UpdateAsync(

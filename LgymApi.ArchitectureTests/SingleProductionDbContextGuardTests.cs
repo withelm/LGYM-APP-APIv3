@@ -60,7 +60,7 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.Designer.cs"] = "afc02d9a47b8039af77f64e47fa23c1b699c8e81105b01f2ff6d915c49897b6e",
         [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.cs"] = "5e65b89311aa8c4892345b3bd9984c8dd0989039fff52446108ede7c2540e527",
         [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.Designer.cs"] = "f2c4aad620c31c016df128c20f2ff9d8cfa24f426c90f3aa84b33fa4ff07feaf",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "9a902c10ffa1169075a26ae0987c1bfe1b116ff247d94ae5792436123ceb852c"
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "d65f8e0df169452ee263d818d535df17ae40d6a26c6d8a090d809f3bdbb1003a"
     };
 
     [Test]

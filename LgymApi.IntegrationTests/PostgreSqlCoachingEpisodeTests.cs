@@ -2,6 +2,11 @@ using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.Application.Coaching.Persistence;
+using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
+using LgymApi.Application.Coaching.Relationships.DetachFromTrainer;
+using LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
+using LgymApi.Application.Repositories;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -61,6 +66,52 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         episode.AuthorizationRevision.Should().Be(1);
     }
 
+    [TestCase(true, true)]
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    [TestCase(false, false)]
+    public async Task RelationshipRemoval_CancellationSharesTransaction(bool trainerInitiated, bool commit)
+    {
+        var (trainer, _, trainee) = await SeedRelationshipUsersAsync("cancellation-atomicity");
+        var episodeId = await AddActiveRelationshipAsync(trainer.Id, trainee.Id);
+        await using (var seedScope = Factory.Services.CreateAsyncScope())
+        {
+            var database = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(database, trainer.Id));
+            await database.SaveChangesAsync();
+        }
+
+        await using (var scope = Factory.Services.CreateAsyncScope())
+        {
+            var work = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            await using var transaction = await work.BeginTransactionAsync();
+            var result = trainerInitiated
+                ? await scope.ServiceProvider.GetRequiredService<IUnlinkTraineeUseCase>()
+                    .ExecuteAsync(new UnlinkTraineeCommand(trainer.Id, trainee.Id))
+                : await scope.ServiceProvider.GetRequiredService<IDetachFromTrainerUseCase>()
+                    .ExecuteAsync(new DetachFromTrainerCommand(trainee.Id));
+            result.IsSuccess.Should().BeTrue();
+            if (commit)
+            {
+                await transaction.CommitAsync();
+            }
+            else
+            {
+                await transaction.RollbackAsync();
+            }
+        }
+
+        await using var verification = Factory.Services.CreateAsyncScope();
+        var db = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().Be(!commit);
+        var episode = await db.CoachingEpisodes.SingleAsync(item => item.Id == episodeId);
+        (episode.EndedAt is not null).Should().Be(commit);
+        var envelopes = await db.CommandEnvelopes.Where(envelope =>
+            envelope.CommandTypeFullName.EndsWith("RelationshipEndedReportCancellationCommand") &&
+            envelope.PayloadJson.Contains(episodeId.ToString())).ToListAsync();
+        envelopes.Should().HaveCount(commit ? 1 : 0);
+    }
+
     [Test]
     public async Task DuplicateUnlink_TwoStagedScopes_CommitOrRecoverOneClosureAndRevisionIncrement()
     {
@@ -81,6 +132,9 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         var episode = await database.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
         episode.EndedAt.Should().NotBeNull();
         episode.AuthorizationRevision.Should().Be(1);
+        (await database.CommandEnvelopes.CountAsync(envelope =>
+            envelope.CommandTypeFullName.EndsWith("RelationshipEndedReportCancellationCommand") &&
+            envelope.PayloadJson.Contains(episodeId.ToString()))).Should().Be(1);
     }
 
     [Test]
@@ -424,6 +478,8 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             CoachingEpisodeAuthorizationAction.TrainerUnlink);
         grant.Should().NotBeNull();
         await activeLinks.RemoveAsync(grant!);
+        var staged = await scope.ServiceProvider.GetRequiredService<ICommandOutboxWriter>().StageAsync(
+            new RelationshipEndedReportCancellationCommand { EpisodeId = grant!.EpisodeId });
         await barrier.SignalAndWaitAsync();
 
         try
@@ -433,7 +489,11 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         }
         catch (Exception commitFailure)
         {
-            var recovered = await activeLinks.TryRecoverCompletedUnlinkAsync(grant!, commitFailure);
+            var recovered = await activeLinks.TryRecoverCompletedUnlinkAsync(grant!, staged.EnvelopeId!, commitFailure);
+            if (recovered)
+            {
+                await database.SaveChangesAsync();
+            }
             return new UnlinkRaceOutcome(false, recovered);
         }
     }

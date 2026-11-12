@@ -86,11 +86,21 @@ public sealed class CoachingActiveLinkPersistenceRepository : ICoachingActiveLin
 
     public async Task<bool> TryRecoverCompletedUnlinkAsync(
         CoachingEpisodeAuthorizationGrant grant,
+        string envelopeId,
         Exception commitFailure,
         CancellationToken cancellationToken = default)
     {
-        if (commitFailure is not DbUpdateConcurrencyException concurrencyFailure
-            || !concurrencyFailure.Entries.Any(entry => entry.Entity is CoachingEpisode))
+        var concurrencyConflict = commitFailure is DbUpdateConcurrencyException concurrencyFailure
+            && concurrencyFailure.Entries.Any(entry => entry.Entity is CoachingEpisode);
+        var envelopeConflict = commitFailure is DbUpdateException
+        {
+            InnerException: PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_CommandEnvelopes_CorrelationId"
+            }
+        };
+        if (!concurrencyConflict && !envelopeConflict)
         {
             return false;
         }
@@ -103,7 +113,24 @@ public sealed class CoachingActiveLinkPersistenceRepository : ICoachingActiveLin
                 && episode.EndedAt != null
                 && episode.AuthorizationRevision > grant.AuthorizationRevision,
             cancellationToken);
-        return !linkStillActive && closedEpisode;
+        var stagedEnvelope = _dbContext.ChangeTracker.Entries<CommandEnvelope>()
+            .FirstOrDefault(entry => entry.Entity.Id.ToString() == envelopeId)?.Entity;
+        var cancellationCommitted = stagedEnvelope is not null && await _dbContext.CommandEnvelopes.AsNoTracking()
+            .AnyAsync(envelope => envelope.CorrelationId == stagedEnvelope.CorrelationId, cancellationToken);
+        if (linkStillActive || !closedEpisode || !cancellationCommitted)
+        {
+            return false;
+        }
+
+        foreach (var entry in _dbContext.ChangeTracker.Entries().Where(entry =>
+            entry.Entity is CoachingEpisode episode && episode.Id == grant.EpisodeId
+            || entry.Entity is TrainerTraineeLink link && link.Id == grant.LinkId
+            || entry.Entity is CommandEnvelope envelope && envelope.Id.ToString() == envelopeId).ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        return true;
     }
 
     public async Task<bool> TryRecoverDuplicateLinkAsync(

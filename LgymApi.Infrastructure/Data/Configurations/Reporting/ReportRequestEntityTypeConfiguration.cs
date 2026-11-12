@@ -10,7 +10,7 @@ internal sealed class ReportRequestEntityTypeConfiguration : IEntityTypeConfigur
     {
         builder.ToTable("ReportRequests");
 
-        builder.Property(e => e.Status).HasConversion<string>();
+        builder.Property(e => e.Status).HasConversion<string>().IsConcurrencyToken();
         builder.Property(e => e.Note).HasMaxLength(1000);
         builder.Property(e => e.SourceCoachingEpisodeId).HasColumnType("uuid");
 

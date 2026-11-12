@@ -416,9 +416,9 @@ public sealed class Issue395MigrationLedgerTests
             ["LgymApi.Platform"] = 70,
             ["LgymApi.Identity"] = 84,
             ["LgymApi.TrainingPlanning"] = 69,
-            ["LgymApi.Notifications"] = 83,
-            ["LgymApi.Application"] = 433,
-            ["LgymApi.Reporting"] = 93
+            ["LgymApi.Notifications"] = 84,
+            ["LgymApi.Application"] = 434,
+            ["LgymApi.Reporting"] = 95
         };
 
         var inventory = expectedCounts.ToDictionary(
