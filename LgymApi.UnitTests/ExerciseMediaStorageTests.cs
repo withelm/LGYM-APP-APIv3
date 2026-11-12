@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using Amazon.S3;
 using Amazon.S3.Model;
 using FluentAssertions;
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Services;
 using NSubstitute;
@@ -79,6 +80,58 @@ public sealed class ExerciseMediaStorageTests
         using var storage = Create(client);
         Func<Task> act = async () => await storage.PublishAsync(Key([1]), [1], "image/gif", cancellation.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [TestCase(HttpStatusCode.NoContent)]
+    [TestCase(HttpStatusCode.NotFound)]
+    public async Task Delete_UsesOnlyConfiguredBucketAndExactOwnedImmutableKey(HttpStatusCode status)
+    {
+        var client = Substitute.For<IAmazonS3>();
+        client.DeleteObjectAsync(Arg.Any<DeleteObjectRequest>(), Arg.Any<CancellationToken>()).Returns(new DeleteObjectResponse { HttpStatusCode = status });
+        using var storage = Create(client);
+        var key = Key([1]);
+        var image = "https://exercises-dev.owner.test/" + key;
+        storage.OwnsPublicImage(image).Should().BeTrue();
+        await storage.DeleteAsync(image, default);
+        await client.Received(1).DeleteObjectAsync(Arg.Is<DeleteObjectRequest>(request => request.BucketName == Bucket && request.Key == key), Arg.Any<CancellationToken>());
+    }
+
+    [TestCase("https://other-dev.owner.test/")]
+    [TestCase("http://exercises-dev.owner.test/")]
+    [TestCase("https://reports.owner.test/")]
+    [TestCase("https://exercises-dev.owner.test:8443/")]
+    [TestCase("https://exercises-dev.owner.test@other.test/")]
+    public async Task ForeignOrigins_CannotBecomeDeleteTargets(string origin)
+    {
+        var client = Substitute.For<IAmazonS3>();
+        using var storage = Create(client);
+        var image = origin + Key([1]);
+        storage.OwnsPublicImage(image).Should().BeFalse();
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => storage.DeleteAsync(image, default));
+        client.ReceivedCalls().Should().BeEmpty();
+    }
+
+    [TestCase("?cache=old")]
+    [TestCase("#fragment")]
+    [TestCase("/../image.jpg")]
+    [TestCase("/%2e%2e/image.jpg")]
+    public async Task QueryFragmentAndTraversalKeys_AreNeverDeleted(string suffix)
+    {
+        var client = Substitute.For<IAmazonS3>();
+        using var storage = Create(client);
+        var image = "https://exercises-dev.owner.test/" + Key([1]) + suffix;
+        storage.OwnsPublicImage(image).Should().BeFalse();
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => storage.DeleteAsync(image, default));
+        client.ReceivedCalls().Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task DeleteFailure_PropagatesWithoutClaimingSuccess()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        client.DeleteObjectAsync(Arg.Any<DeleteObjectRequest>(), Arg.Any<CancellationToken>()).Returns(new DeleteObjectResponse { HttpStatusCode = HttpStatusCode.ServiceUnavailable });
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<IOException>(() => storage.DeleteAsync("https://exercises-dev.owner.test/" + Key([1]), default));
     }
 
     private static ExerciseMediaStorage Create(IAmazonS3 client)

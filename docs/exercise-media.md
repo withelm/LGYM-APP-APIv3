@@ -82,3 +82,27 @@ bucket/read route, intended API and authorized account: upload/read GIF and stil
 create without media, replace/remove, metadata preservation, animation, revoked
 capability, account/API change and cancellation in Page and compatible Mobile.
 Mocked storage and local browser tests do not establish Cloudflare or native-device acceptance.
+
+## Explicit replacement and post-save reference safety (12 November 2026)
+
+Page and Mobile disable file selection while a global exercise has a persisted image,
+including pending removal. Remove only marks draft intent; Undo cancels it. Save writes
+updateImage=true/image=null, confirms the known record is empty and refreshes it before
+new upload is allowed. The exercise intentionally has no image between the two Saves.
+Existing/direct clients may still replace the URL in one JSON update.
+
+ExerciseService captures the old Image from server-side persisted state and performs
+its safety check only after a successful UoW commit and only for intentional global
+image changes. The reference query ignores query filters and includes personal and
+soft-deleted exercises. Foreign/legacy/malformed URLs cannot be deletion targets.
+The storage port has strict configured-origin/key ownership and an idempotent SDK
+DeleteAsync capability; it has no HTTP delete endpoint and never touches PhotoStorage.
+
+**Automatic physical deletion is conservatively skipped in this architecture.** All
+existing JSON writers can reuse a returned URL after an empty reference query. No
+atomic reference fence exists across those writers and R2 DELETE. An empty snapshot
+therefore never authorizes destructive work. Shared, unknown, canceled and potentially
+raced references retain the object, with sanitized post-save logs. A failed reference
+check cannot change a successful save into an error. No rollback, retry queue, lock
+subsystem, new schema, background job or orphan scanner is introduced. Adapter DELETE
+tests use mocks only; they are not evidence of live R2 deletion. Unused uploads remain.

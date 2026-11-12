@@ -78,6 +78,9 @@ public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext)
         translation.Name = name.Trim();
     }
 
+    public Task<bool> IsImageReferencedIncludingDeletedAsync(string image, CancellationToken cancellationToken = default)
+        => dbContext.Exercises.IgnoreQueryFilters().AsNoTracking().AnyAsync(exercise => exercise.Image == image, cancellationToken);
+
     public Task AddAsync(WorkoutExerciseWriteModel exercise, CancellationToken cancellationToken = default)
         => dbContext.Exercises.AddAsync(ToEntity(exercise), cancellationToken).AsTask();
 

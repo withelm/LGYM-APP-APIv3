@@ -176,6 +176,8 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
     private sealed class MemoryExerciseMediaStorage : IExerciseMediaStorage
     {
         public bool IsConfigured { get; set; } = true;
+        public bool OwnsPublicImage(string image) => image.StartsWith("https://media.test/exercises/", StringComparison.Ordinal);
+        public Task DeleteAsync(string image, CancellationToken cancellationToken) => throw new InvalidOperationException("No reference fence authorizes deletion.");
         public bool Fail { get; set; }
         public List<(string Key, byte[] Bytes, string Mime)> Published { get; } = [];
         public Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken)

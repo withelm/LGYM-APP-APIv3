@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -156,6 +157,10 @@ public sealed partial class ExerciseService : IExerciseService
             return Result<Unit, AppError>.Failure(new ExerciseNotFoundError(Messages.DidntFind));
         }
 
+        var oldImage = exercise.Image;
+        var intentionalGlobalImageChange = exercise.OwnerId is null && request.UpdateImage && CanManageGlobalExercises(currentUser)
+            && !string.Equals(oldImage, request.Image, StringComparison.Ordinal);
+
         if (!string.IsNullOrWhiteSpace(request.Name))
         {
             exercise = exercise with { Name = request.Name };
@@ -175,7 +180,32 @@ public sealed partial class ExerciseService : IExerciseService
 
         await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted, exercise.OwnerId.HasValue || request.UpdateImage), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (intentionalGlobalImageChange && !string.IsNullOrEmpty(oldImage))
+            await RetainPreviousImageSafelyAsync(oldImage, cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
+    }
+
+    private async Task RetainPreviousImageSafelyAsync(string oldImage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!_mediaStorage.IsConfigured || !_mediaStorage.OwnsPublicImage(oldImage)) return;
+            var referenced = await _exerciseRepository.IsImageReferencedIncludingDeletedAsync(oldImage, cancellationToken);
+            if (referenced)
+            {
+                _logger.LogInformation("Exercise media retained after image save: another exercise reference exists.");
+                return;
+            }
+            // Existing JSON creates and personal/global updates accept previously returned URLs.
+            // No atomic reference fence exists across those writers and R2. An empty snapshot
+            // cannot authorize DELETE: a concurrent writer could attach this URL after the query.
+            _logger.LogWarning("Exercise media retained after image save: concurrent URL reuse cannot be excluded. Storage cleanup requires manual review.");
+        }
+        catch (Exception exception)
+        {
+            // The database save already succeeded. Provider details may contain secrets/URLs.
+            _logger.LogWarning("Exercise media retained after image save ({FailureType}); storage cleanup requires manual review.", exception.GetType().Name);
+        }
     }
 
     private sealed record UpdateExerciseRequest(
