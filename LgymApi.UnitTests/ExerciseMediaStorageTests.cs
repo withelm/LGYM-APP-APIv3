@@ -14,10 +14,13 @@ namespace LgymApi.UnitTests;
 public sealed class ExerciseMediaStorageTests
 {
     private const string Bucket = "tenant-one-assets";
-    private static string Key(byte[] bytes) => "exercises/00000000-0000-0000-0000-000000000001/" + Convert.ToHexStringLower(SHA256.HashData(bytes)) + "/animation.gif";
+    private static string Key(byte[] bytes, string filename = "animation.gif") => "exercises/00000000-0000-0000-0000-000000000001/" + Convert.ToHexStringLower(SHA256.HashData(bytes)) + "/" + filename;
 
-    [Test]
-    public async Task Publish_UsesConfiguredBucketVerifiedMimeAndR2CompatibleImmutablePut()
+    [TestCase("animation.gif", "image/gif")]
+    [TestCase("image.png", "image/png")]
+    [TestCase("image.jpg", "image/jpeg")]
+    [TestCase("image.webp", "image/webp")]
+    public async Task Publish_UsesConfiguredBucketVerifiedMimeAndR2CompatibleImmutablePut(string filename, string contentType)
     {
         var bytes = new byte[] { 1, 2, 3, 4 };
         var client = Substitute.For<IAmazonS3>();
@@ -32,12 +35,12 @@ public sealed class ExerciseMediaStorageTests
             uploaded = copy.ToArray();
         }), cancellation.Token).Returns(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
         using var storage = Create(client);
-        var url = await storage.PublishAsync(Key(bytes), bytes, "image/gif", cancellation.Token);
-        url.Should().Be("https://exercises-dev.owner.test/" + Key(bytes));
+        var url = await storage.PublishAsync(Key(bytes, filename), bytes, contentType, cancellation.Token);
+        url.Should().Be("https://exercises-dev.owner.test/" + Key(bytes, filename));
         uploaded.Should().Equal(bytes);
         captured!.BucketName.Should().Be(Bucket);
-        captured.Key.Should().Be(Key(bytes));
-        captured.ContentType.Should().Be("image/gif");
+        captured.Key.Should().Be(Key(bytes, filename));
+        captured.ContentType.Should().Be(contentType);
         captured.IfNoneMatch.Should().Be("*");
         captured.DisablePayloadSigning.Should().BeTrue();
         captured.DisableDefaultChecksumValidation.Should().BeTrue();

@@ -33,11 +33,24 @@ Use your own ignored `LgymApi.Api/appsettings.Development.json`. The tracked
 Enabled configuration validates syntax and requires a bucket and credentials separate
 from private Reporting photos. Keep existing database/report configuration.
 
-The owner supplies an existing private R2 bucket and working public GET/HEAD route.
-Upload never provisions resources. The minimal [read Worker](../deployment/exercise-media/README.md)
-remains in the API's existing deployment directory because this is its maintained
-runtime source; OFFICIAL owns system decisions and links here. No new infrastructure
-repository or deployment system is introduced.
+The owner configures one dedicated **public-read exercise-only R2 bucket** per
+running backend and attaches a custom domain. PublicBaseUrl is that direct HTTPS
+origin; Cloudflare serves final images with native caching/ETags, without a Worker.
+All stored objects are publicly readable by URL. Only validated/sanitized final
+bytes belong here; no originals, private drafts, report photos or diagnostics.
+Bucket names are operator-chosen, not environment markers. Never enable public
+access or attach a domain to the separate report-photo bucket.
+
+For temporary DEV acceptance only, set AllowDevelopmentR2Dev=true and a bucket's
+r2.dev URL in an actual Development host. It is rejected in Production/Testing
+and without explicit opt-in, is rate limited and lacks custom-domain CDN/WAF
+features. The API passes its actual host environment into Infrastructure;
+configuration cannot infer it from bucket names. The default uses a custom domain.
+Anonymous GET/HEAD is public; S3 PUT/DELETE still require API-only bucket-scoped
+credentials. No direct client PUT/CORS, staging/verified prefixes or approval queue.
+Upload never provisions resources. Production requires separate bucket/domain and
+later authorization; live DEV acceptance remains owner work. See the
+[Polish owner checklist](https://github.com/KLesiu/LGYM-APP-OFFICIAL/blob/docs/lgym-242-exercise-media-contract/docs/exercise-media/DEV-TEST-CLOUDFLARE-SETUP-PL.md).
 
 ## Client behavior and limits
 
@@ -48,7 +61,8 @@ restore a discarded URL. Upload failure prevents JSON save. A lost create respon
 is uncertain: do not automatically POST again or infer an ID from the name. Offer list
 refresh. An uncertain update can read its known ID. Cancellation does not undo server work.
 
-Upload and database save are independent. Abandoned/old objects remain in R2.
+Upload and database save are independent. Abandoned/old objects remain publicly readable in R2. This small orphan-object
+tradeoff is accepted without a cleanup job.
 Remove clears the reference only; it does not remove storage bytes or public cache.
 Historical/private URLs remain accepted. Explicit image edits use normal last-write wins.
 
@@ -57,7 +71,6 @@ Historical/private URLs remain accepted. Explicit image edits use normal last-wr
 Run Release build and the existing UnitTests, IntegrationTests and ArchitectureTests;
 `dotnet ef migrations has-pending-model-changes --project LgymApi.Infrastructure
 --startup-project LgymApi.Api --configuration Release --no-build` must report no change.
-Run `node --test deployment/exercise-media/worker.test.mjs`.
 
 Set `LGYM_OPENAPI_OUTPUT` to a temporary absolute JSON path, then run the existing
 `ExerciseMediaOpenApiTests` against the real Testing host. Set `ORVAL_SWAGGER_URL`

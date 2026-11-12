@@ -38,12 +38,6 @@ jobs:
         with:
           dotnet-version: 10.0.102
 
-      - name: Verify exercise-media Worker configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --test deployment/exercise-media/worker.test.mjs
-
       - name: Restore, Release build, and create same-SHA discovery evidence
         shell: pwsh
         run: |

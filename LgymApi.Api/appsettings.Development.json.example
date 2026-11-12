@@ -33,6 +33,7 @@
     "Bucket": "YOUR_EXERCISE_MEDIA_BUCKET",
     "AccessKeyId": "YOUR_ACCESS_KEY_ID",
     "SecretAccessKey": "YOUR_SECRET_ACCESS_KEY",
-    "PublicBaseUrl": "https://media.example.invalid"
+    "PublicBaseUrl": "https://media.example.invalid",
+    "AllowDevelopmentR2Dev": false
   }
 }

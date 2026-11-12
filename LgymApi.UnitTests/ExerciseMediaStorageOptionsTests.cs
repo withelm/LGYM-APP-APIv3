@@ -43,7 +43,7 @@ public sealed class ExerciseMediaStorageOptionsTests
     {
         var options = Options();
         options.Bucket = bucket;
-        Action validate = options.Validate;
+        Action validate = () => options.Validate();
         validate.Should().Throw<InvalidOperationException>();
     }
 
@@ -60,7 +60,7 @@ public sealed class ExerciseMediaStorageOptionsTests
     {
         var options = Options();
         options.Endpoint = endpoint;
-        Action validate = options.Validate;
+        Action validate = () => options.Validate();
         validate.Should().Throw<InvalidOperationException>();
     }
 
@@ -82,18 +82,49 @@ public sealed class ExerciseMediaStorageOptionsTests
     {
         var options = Options();
         options.PublicBaseUrl = origin;
-        Action validate = options.Validate;
+        Action validate = () => options.Validate();
         validate.Should().Throw<InvalidOperationException>();
     }
 
     [TestCase("tenant-one-assets")]
     [TestCase("tenant-two-images")]
-    public void WorkerOriginPolicy_DoesNotDependOnBucketSpelling(string bucket)
+    public void PublicBucketOrigin_DoesNotDependOnBucketSpelling(string bucket)
     {
         var options = Options();
         options.Bucket = bucket;
-        options.PublicBaseUrl = "https://exercise-media.operator.workers.dev";
+        options.PublicBaseUrl = "https://exercise-media.owner.test";
         options.Validate();
+    }
+
+    [TestCase("Development", false, false)]
+    [TestCase("Development", true, true)]
+    [TestCase("Production", true, false)]
+    [TestCase("Testing", true, false)]
+    [TestCase("Staging", true, false)]
+    public void R2Dev_RequiresExplicitOptInAndDevelopmentHost(string environmentName, bool optIn, bool accepted)
+    {
+        var options = Options();
+        options.AllowDevelopmentR2Dev = optIn;
+        options.PublicBaseUrl = "https://pub-example.r2.dev";
+        Action validate = () => options.Validate(environmentName);
+        if (accepted) validate.Should().NotThrow();
+        else validate.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void DevelopmentRegistration_AndStorageShareTheValidatedPublicOrigin()
+    {
+        var values = DedicatedConfiguration();
+        values["ExerciseMediaStorage:PublicBaseUrl"] = "https://pub-example.r2.dev";
+        values["ExerciseMediaStorage:AllowDevelopmentR2Dev"] = "true";
+        var services = new ServiceCollection();
+        services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true, environmentName: "Development");
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        const string key = "exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/image.png";
+        ((ExerciseMediaStorage)scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>()).GetPublicUrl(key).Should().Be("https://pub-example.r2.dev/" + key);
+        Action production = () => new ServiceCollection().AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false);
+        production.Should().Throw<InvalidOperationException>();
     }
 
     [TestCase("AccessKeyId")]
@@ -103,7 +134,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         var options = Options();
         if (setting == "AccessKeyId") options.AccessKeyId = " ";
         else options.SecretAccessKey = " ";
-        Action validate = options.Validate;
+        Action validate = () => options.Validate();
         validate.Should().Throw<InvalidOperationException>();
     }
 

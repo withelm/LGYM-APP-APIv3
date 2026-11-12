@@ -12,13 +12,14 @@ public static partial class ServiceCollectionExtensions
         IConfiguration configuration,
         bool enableSensitiveLogging,
         bool isTesting = false,
-        bool hostBackgroundServer = false)
+        bool hostBackgroundServer = false,
+        string environmentName = "Production")
     {
         services.AddPlatformServices(configuration, enableSensitiveLogging, isTesting, hostBackgroundServer);
         services.AddRowSecurity();
         services.AddTrainingPlanningInfrastructure();
         services.AddWorkoutProgressInfrastructure();
-        services.AddExerciseMediaInfrastructure(configuration);
+        services.AddExerciseMediaInfrastructure(configuration, environmentName);
         services.AddCoachingInfrastructure();
         services.AddNutritionInfrastructure();
         services.AddReportingInfrastructure(configuration, enableSensitiveLogging, isTesting);

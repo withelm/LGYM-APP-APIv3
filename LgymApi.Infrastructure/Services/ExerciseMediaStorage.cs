@@ -14,9 +14,9 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
     private readonly IAmazonS3? _client;
     public bool IsConfigured => _options.Enabled;
 
-    public ExerciseMediaStorage(ExerciseMediaStorageOptions options)
+    public ExerciseMediaStorage(ExerciseMediaStorageOptions options, string environmentName = "Production")
     {
-        options.Validate();
+        options.Validate(environmentName);
         _options = options;
         if (options.Enabled) _client = new AmazonS3Client(new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey), new AmazonS3Config
         {

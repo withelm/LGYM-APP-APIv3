@@ -87,7 +87,8 @@ builder.Services
         builder.Configuration,
         builder.Environment.IsDevelopment(),
         isTesting,
-        hostBackgroundServer: false)
+        hostBackgroundServer: false,
+        environmentName: builder.Environment.EnvironmentName)
     .AddReportingApiAdapters()
     .AddApplicationApiAdapters();
 builder.Services.AddNotificationsApiAdapters();
