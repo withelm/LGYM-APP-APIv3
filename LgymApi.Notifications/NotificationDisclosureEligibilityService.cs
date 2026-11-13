@@ -9,12 +9,42 @@ internal interface INotificationDisclosureEligibilityService
     Task<bool> CanDiscloseAsync(
         Id<InAppNotification> notificationId,
         CancellationToken cancellationToken = default);
+
+    Task<(bool Available, NotificationSourceReference? Reminder)> GetReminderReferenceAsync(Id<InAppNotification> notificationId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Reminder source lookup is not supported by this eligibility service.");
+    Task<bool> LockReminderDeliveryAsync(NotificationSourceReference reference, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Reminder delivery locking is not supported by this eligibility service.");
 }
 
 internal sealed class NotificationDisclosureEligibilityService(
     IInAppNotificationRepository notifications,
     INotificationSourceFactPort sourceFacts) : INotificationDisclosureEligibilityService
 {
+    public async Task<(bool Available, NotificationSourceReference? Reminder)> GetReminderReferenceAsync(Id<InAppNotification> notificationId, CancellationToken cancellationToken = default)
+    {
+        var notification = await notifications.GetByIdAsync(notificationId, cancellationToken);
+        if (notification == null) return (false, null);
+        if (notification.DeliveryKey?.StartsWith("report-recurring-reminder:", StringComparison.Ordinal) != true)
+            return (true, null);
+        return NotificationSourceReferenceParser.TryParse(notification, out var source)
+            ? (true, source) : (false, null);
+    }
+
+    public Task<bool> LockReminderDeliveryAsync(NotificationSourceReference reference, CancellationToken cancellationToken = default)
+        => sourceFacts.LockReminderDeliveryAsync(reference, cancellationToken);
+
+    internal async Task<bool> StageReminderFenceAsync(InAppNotification notification, CancellationToken cancellationToken)
+    {
+        if (!NotificationSourceReferenceParser.TryParse(notification, out var source)
+            || !source.RequiresActiveSourceEpisode
+            || source.Kind is not (NotificationSourceKind.ReportRequest or NotificationSourceKind.RecurringReportAssignment))
+        {
+            return false;
+        }
+
+        return await sourceFacts.StageReminderFenceAsync(source, cancellationToken);
+    }
+
     public async Task<bool> CanDiscloseAsync(
         Id<InAppNotification> notificationId,
         CancellationToken cancellationToken = default)

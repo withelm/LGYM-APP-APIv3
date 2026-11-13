@@ -1,4 +1,5 @@
 using LgymApi.Application.Notifications.Models;
+using LgymApi.Application.Notifications.Errors;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
@@ -25,7 +26,7 @@ internal sealed class InAppNotificationWireWriter(IInAppNotificationService noti
         }
 
         var result = await notificationService.CreateAsync(new CreateInAppNotificationInput(recipient, actor, deliveryKey, false, message, redirectUrl, type), cancellationToken);
-        if (result.IsFailure)
+        if (result.IsFailure && result.Error is not ReminderNoLongerEligibleError)
         {
             throw new InvalidOperationException(result.Error.ToString());
         }

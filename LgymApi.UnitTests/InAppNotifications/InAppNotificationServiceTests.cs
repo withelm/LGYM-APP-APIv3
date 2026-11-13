@@ -560,6 +560,9 @@ public sealed class InAppNotificationServiceTests
 
     private sealed class FakeNotificationSourceFactPort : INotificationSourceFactPort
     {
+        public Task<bool> StageReminderFenceAsync(NotificationSourceReference reference, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
         public Task<IReadOnlyDictionary<Id<InAppNotification>, NotificationSourceFacts>> GetFactsAsync(
             IReadOnlyCollection<NotificationSourceReference> references,
             CancellationToken cancellationToken = default)
