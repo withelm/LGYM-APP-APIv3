@@ -332,6 +332,9 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
         public Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
             => inner.FindByCurrentRequestAsync(reportRequestId, cancellationToken);
 
+        public Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByCurrentRequestsAsync(IReadOnlyCollection<Id<ReportRequest>> reportRequestIds, CancellationToken cancellationToken = default)
+            => inner.ListByCurrentRequestsAsync(reportRequestIds, cancellationToken);
+
         public Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestForUpdateAsync(Id<ReportRequest> reportRequestId, CancellationToken cancellationToken = default)
             => inner.FindByCurrentRequestForUpdateAsync(reportRequestId, cancellationToken);
 

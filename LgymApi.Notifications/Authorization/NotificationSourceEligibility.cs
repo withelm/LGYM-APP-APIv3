@@ -75,6 +75,11 @@ internal sealed record NotificationSourceFacts(
 
 internal interface INotificationSourceFactPort
 {
+    Task<bool> StageReminderFenceAsync(NotificationSourceReference reference, CancellationToken cancellationToken = default);
+
+    Task<bool> LockReminderDeliveryAsync(NotificationSourceReference reference, CancellationToken cancellationToken = default)
+        => StageReminderFenceAsync(reference, cancellationToken);
+
     Task<IReadOnlyDictionary<Id<InAppNotification>, NotificationSourceFacts>> GetFactsAsync(
         IReadOnlyCollection<NotificationSourceReference> references,
         CancellationToken cancellationToken = default);

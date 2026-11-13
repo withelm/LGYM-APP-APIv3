@@ -59,8 +59,9 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         await AssertPersistedOutcomeAsync(traineeId, 3);
     }
 
-    [Test]
-    public async Task AcceptedReportProgress_DeliveredAfterUnlink_RemainsVisibleOnlyWithinEpisodeScope()
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task AcceptedReportProgress_DeliveredAfterUnlink_RemainsVisibleOnlyWithinEpisodeScope(bool trainerInitiated)
     {
         var (originalTrainerId, traineeId, requestIds) = await SeedMeasurementRequestsAsync();
         var requestId = requestIds[0];
@@ -82,8 +83,11 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        SetAuthorizationHeader(originalTrainerId);
-        using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{traineeId}/unlink", null))
+        SetAuthorizationHeader(trainerInitiated ? originalTrainerId : traineeId);
+        var unlinkUrl = trainerInitiated
+            ? $"/api/trainer/trainees/{traineeId}/unlink"
+            : "/api/trainee/trainer/detach";
+        using (var unlinkResponse = await Client.PostAsync(unlinkUrl, null))
         {
             unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         }

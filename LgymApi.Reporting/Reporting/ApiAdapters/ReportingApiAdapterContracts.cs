@@ -36,6 +36,7 @@ public interface ITraineeReportRequestApiPort
 {
     Task<Result<List<ReportRequestResult>, AppError>> GetPendingAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default);
     Task<Result<ReportSubmissionResult, AppError>> SubmitAsync(AuthenticatedAccountContext trainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default);
+    Task<Result<ReportSubmissionResult, AppError>> EditAnswersAsync(AuthenticatedAccountContext trainee, Id<ReportSubmission> submissionId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<ReportSubmissionResult>, AppError>> GetOwnSubmissionsAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default);
     Task<Result<ReportSubmissionResult, AppError>> MarkFeedbackReadAsync(AuthenticatedAccountContext trainee, Id<ReportSubmission> submissionId, CancellationToken cancellationToken = default);
 }

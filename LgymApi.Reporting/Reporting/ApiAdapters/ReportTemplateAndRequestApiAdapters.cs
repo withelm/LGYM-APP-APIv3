@@ -66,6 +66,9 @@ internal sealed class TraineeReportRequestApiAdapter : ITraineeReportRequestApiP
     public Task<Result<ReportSubmissionResult, AppError>> SubmitAsync(AuthenticatedAccountContext trainee, Id<ReportRequest> requestId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
         => _reportingService.SubmitReportRequestAsync(trainee, requestId, command, cancellationToken);
 
+    public Task<Result<ReportSubmissionResult, AppError>> EditAnswersAsync(AuthenticatedAccountContext trainee, Id<ReportSubmission> submissionId, SubmitReportRequestCommand command, CancellationToken cancellationToken = default)
+        => _reportingService.EditSubmissionAnswersAsync(trainee, submissionId, command, cancellationToken);
+
     public Task<Result<List<ReportSubmissionResult>, AppError>> GetOwnSubmissionsAsync(AuthenticatedAccountContext trainee, CancellationToken cancellationToken = default)
         => _reportingService.GetOwnSubmissionsAsync(trainee, cancellationToken);
 

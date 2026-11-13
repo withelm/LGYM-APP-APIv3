@@ -155,6 +155,14 @@ public sealed class SubmitReportRequestRequest : IDto
     public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
+public sealed class EditReportAnswersRequest : IDto
+{
+    [JsonPropertyName("answers")]
+    [JsonRequired]
+    [JsonConverter(typeof(UniqueReportAnswersConverter))]
+    public Dictionary<string, JsonElement> Answers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
 public sealed class UpdateReportSubmissionFeedbackRequest : IDto
 {
     [JsonPropertyName("trainerOverallComment")]
@@ -195,6 +203,15 @@ public sealed class ReportSubmissionDto : IResultDto
 
     [JsonPropertyName("nextRecurringRequest")]
     public NextRecurringReportRequestDto? NextRecurringRequest { get; set; }
+
+    [JsonPropertyName("canEditFeedback")]
+    public bool CanEditFeedback { get; set; }
+
+    [JsonPropertyName("canEditAnswers")]
+    public bool CanEditAnswers { get; set; }
+
+    [JsonPropertyName("canMarkFeedbackRead")]
+    public bool CanMarkFeedbackRead { get; set; }
 
     [JsonPropertyName("request")]
     public ReportRequestDto Request { get; set; } = new();

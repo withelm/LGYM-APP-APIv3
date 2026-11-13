@@ -2,6 +2,7 @@ using System.Text.Json;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
@@ -38,10 +39,29 @@ public sealed partial class ReportingService : IReportingService
             return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportRequestNotPending));
         }
 
+        var initialAccess = await _relationshipAccessPersistence.GetAccessAsync(request.TrainerId, request.TraineeId, cancellationToken);
+        var initialEpisode = initialAccess.ActiveEpisode;
+        if (!initialAccess.HasActiveRelationship || initialEpisode is null
+            || request.SourceCoachingEpisodeId is null || request.SourceCoachingEpisodeId != initialEpisode.EpisodeId)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
         if (request.Status == ReportRequestStatus.Pending && IsRequestExpired(request.DueAt, DateTimeOffset.UtcNow))
         {
+            if (!await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(initialEpisode, cancellationToken))
+            {
+                return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+            }
             await _requestSubmissionPersistence.SetRequestExpiredAsync(request.Id, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+            {
+                return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+            }
             request = request with { Status = ReportRequestStatus.Expired };
         }
 
@@ -135,6 +155,106 @@ public sealed partial class ReportingService : IReportingService
         return Result<ReportSubmissionResult, AppError>.Success(result);
     }
 
+    public async Task<Result<ReportSubmissionResult, AppError>> EditSubmissionAnswersAsync(
+        AuthenticatedAccountContext currentTrainee,
+        Id<ReportSubmission> submissionId,
+        SubmitReportRequestCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        if (submissionId.IsEmpty || command.Answers == null)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var submission = await _requestSubmissionPersistence.FindSubmissionForTraineeForUpdateAsync(submissionId, currentTrainee.Id, cancellationToken);
+        if (submission == null)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestForUpdateAsync(submission.ReportRequestId, cancellationToken);
+        var access = await _relationshipAccessPersistence.GetAccessAsync(submission.ReportRequest.TrainerId, currentTrainee.Id, cancellationToken);
+        var facts = new ReportFeedbackFacts(submission, access, assignment);
+        if (!ReportFeedbackLifecyclePolicy.Allows(currentTrainee, facts, ReportFeedbackAction.EditAnswers)
+            || access.ActiveEpisode is null
+            || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(access.ActiveEpisode, cancellationToken))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+
+        var template = ReportTemplateSnapshotFactory.EffectiveTemplate(submission.ReportRequest);
+        var answers = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var answer in command.Answers)
+        {
+            if (!answers.TryAdd(answer.Key, answer.Value))
+            {
+                return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+        }
+
+        var stored = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            using var document = JsonDocument.Parse(submission.PayloadJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!stored.TryAdd(property.Name, property.Value.Clone()))
+                {
+                    return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+        }
+        foreach (var field in template.Fields.Where(field => field.Type == ReportFieldType.Measurements))
+        {
+            var hadValue = stored.TryGetValue(field.Key, out var original);
+            var hasValue = answers.TryGetValue(field.Key, out var proposed);
+            if (hadValue != hasValue || (hadValue && (!HasUniqueJsonKeys(original)
+                || !HasUniqueJsonKeys(proposed) || !JsonElement.DeepEquals(original, proposed))))
+            {
+                return Result<ReportSubmissionResult, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+            if (hadValue)
+            {
+                answers[field.Key] = original;
+            }
+        }
+
+        var validation = ValidateAnswersAgainstTemplate(template, answers, preserveMeasurements: true);
+        if (validation.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(validation.Error);
+        }
+        var photos = await ValidateRequiredPhotosAsync(submission.ReportRequest, cancellationToken);
+        if (photos.IsFailure)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(photos.Error);
+        }
+
+        var payloadJson = JsonSerializer.Serialize(answers);
+        await _requestSubmissionPersistence.UpdateAnswersAsync(submission.Id, payloadJson, cancellationToken);
+        var result = await MapAndHydrateSubmissionAsync(currentTrainee, submission with { PayloadJson = payloadJson }, cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+        }
+        await transaction.CommitAsync(cancellationToken);
+        return Result<ReportSubmissionResult, AppError>.Success(result);
+    }
+
     public async Task<Result<ReportSubmissionResult, AppError>> UpdateTrainerFeedbackAsync(
         AuthenticatedAccountContext currentTrainer,
         Id<AccountReference> traineeId,
@@ -172,15 +292,9 @@ public sealed partial class ReportingService : IReportingService
             traineeId,
             cancellationToken);
         var activeEpisode = relationshipAccess.ActiveEpisode;
-        if (!relationshipAccess.HasActiveRelationship
+        var feedbackFacts = new ReportFeedbackFacts(submission, relationshipAccess, assignment);
+        if (!ReportFeedbackLifecyclePolicy.HasCurrentEpisode(feedbackFacts)
             || activeEpisode is null
-            || submission.SourceCoachingEpisodeId is null
-            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
-            || submission.ReportRequest.SourceCoachingEpisodeId is null
-            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
-            || (assignment is not null
-                && (assignment.SourceCoachingEpisodeId is null
-                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
             || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
                 activeEpisode,
                 cancellationToken))
@@ -205,6 +319,10 @@ public sealed partial class ReportingService : IReportingService
         var feedbackChanged = !string.Equals(submission.TrainerOverallComment, overallComment, StringComparison.Ordinal)
             || !string.Equals(submission.TrainerFieldCommentsJson, fieldCommentsJson, StringComparison.Ordinal);
         if (feedbackChanged && submission.TrainerFeedbackReadAt.HasValue)
+        {
+            return Result<ReportSubmissionResult, AppError>.Failure(new ReportingConflictError(Messages.ReportFeedbackAlreadyRead));
+        }
+        if (feedbackChanged && !ReportFeedbackLifecyclePolicy.Allows(currentTrainer, feedbackFacts, ReportFeedbackAction.Edit))
         {
             return Result<ReportSubmissionResult, AppError>.Failure(new ReportingConflictError(Messages.ReportFeedbackAlreadyRead));
         }
@@ -312,15 +430,8 @@ public sealed partial class ReportingService : IReportingService
             submission.ReportRequestId,
             cancellationToken);
         var activeEpisode = relationshipAccess.ActiveEpisode;
-        if (!relationshipAccess.HasActiveRelationship
+        if (!ReportFeedbackLifecyclePolicy.Allows(currentTrainee, new ReportFeedbackFacts(submission, relationshipAccess, assignment), ReportFeedbackAction.MarkRead)
             || activeEpisode is null
-            || submission.SourceCoachingEpisodeId is null
-            || submission.SourceCoachingEpisodeId != activeEpisode.EpisodeId
-            || submission.ReportRequest.SourceCoachingEpisodeId is null
-            || submission.ReportRequest.SourceCoachingEpisodeId != activeEpisode.EpisodeId
-            || (assignment is not null
-                && (assignment.SourceCoachingEpisodeId is null
-                    || assignment.SourceCoachingEpisodeId != activeEpisode.EpisodeId))
             || !await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
                 activeEpisode,
                 cancellationToken))

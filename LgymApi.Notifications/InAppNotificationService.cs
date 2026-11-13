@@ -59,25 +59,53 @@ internal sealed class InAppNotificationService : IInAppNotificationService
             Type = input.Type,
         };
 
-        await _inAppNotificationRepository.AddAsync(notification, cancellationToken);
-
         InAppNotificationResult result;
-        try
+        if (input.DeliveryKey?.StartsWith("report-recurring-reminder:", StringComparison.Ordinal) == true)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            result = MapToResult(notification);
-        }
-        catch (Exception ex)
-        {
-            var existingResult = await TryResolveDuplicateDeliveryAsync(input, notification, ex, cancellationToken);
-            if (existingResult != null)
+            try
             {
+                await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+                if (!await _disclosureEligibility.StageReminderFenceAsync(notification, cancellationToken))
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return Result<InAppNotificationResult, AppError>.Failure(new ReminderNoLongerEligibleError());
+                }
+
+                await _inAppNotificationRepository.AddAsync(notification, cancellationToken);
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    throw;
+                }
+                await transaction.CommitAsync(cancellationToken);
+                result = MapToResult(notification);
+            }
+            catch (Exception ex)
+            {
+                var existingResult = await TryResolveDuplicateDeliveryAsync(input, notification, ex, cancellationToken);
+                if (existingResult == null) throw;
                 result = existingResult;
                 isNewNotification = false;
             }
-            else
+        }
+        else
+        {
+            await _inAppNotificationRepository.AddAsync(notification, cancellationToken);
+            try
             {
-                throw;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                result = MapToResult(notification);
+            }
+            catch (Exception ex)
+            {
+                var existingResult = await TryResolveDuplicateDeliveryAsync(input, notification, ex, cancellationToken);
+                if (existingResult == null) throw;
+                result = existingResult;
+                isNewNotification = false;
             }
         }
 
@@ -89,13 +117,21 @@ internal sealed class InAppNotificationService : IInAppNotificationService
 
         if (isNewNotification)
         {
-            try
+            if (input.DeliveryKey?.StartsWith("report-recurring-reminder:", StringComparison.Ordinal) == true)
             {
-                await _pushPublisher.PushAsync(result, cancellationToken);
+                var (_, source) = await _disclosureEligibility.GetReminderReferenceAsync(result.Id, cancellationToken);
+                if (source == null) return Result<InAppNotificationResult, AppError>.Success(result);
+                await using var deliveryTransaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+                if (!await _disclosureEligibility.LockReminderDeliveryAsync(source, cancellationToken))
+                    return Result<InAppNotificationResult, AppError>.Success(result);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                if (!await _disclosureEligibility.CanDiscloseAsync(result.Id, cancellationToken))
+                    return Result<InAppNotificationResult, AppError>.Success(result);
+                await PublishAsync(result, cancellationToken);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning(ex, "Failed to push notification for recipient {RecipientId}", input.RecipientId);
+                await PublishAsync(result, cancellationToken);
             }
         }
 
@@ -111,6 +147,18 @@ internal sealed class InAppNotificationService : IInAppNotificationService
             cancellationToken);
 
         return Result<InAppNotificationResult, AppError>.Success(result);
+    }
+
+    private async Task PublishAsync(InAppNotificationResult result, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _pushPublisher.PushAsync(result, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to push notification for recipient {RecipientId}", result.RecipientId);
+        }
     }
 
     public async Task<Result<PagedResult<InAppNotificationResult>, AppError>> GetForUserAsync(Id<User> userId, CursorPaginationQuery query, CancellationToken cancellationToken = default)

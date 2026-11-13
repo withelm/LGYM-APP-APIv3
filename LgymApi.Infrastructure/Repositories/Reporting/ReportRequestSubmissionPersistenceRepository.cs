@@ -110,7 +110,8 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
             PayloadJson = submission.PayloadJson,
             CreatedAt = submission.CreatedAt,
             SourceCoachingEpisodeId = submission.SourceCoachingEpisodeId,
-            AcceptedAt = submission.AcceptedAt
+            AcceptedAt = submission.AcceptedAt,
+            HasEverHadFeedback = false
         }, cancellationToken).AsTask();
 
     public Task<ReportSubmissionPersistenceModel?> FindSubmissionForTrainerAsync(
@@ -193,6 +194,16 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
         entity.TrainerFieldCommentsJson = update.TrainerFieldCommentsJson;
         entity.TrainerFeedbackAddedAt = update.TrainerFeedbackAddedAt;
         entity.TrainerFeedbackReadAt = update.TrainerFeedbackReadAt;
+        if (update.TrainerFeedbackAddedAt.HasValue)
+        {
+            entity.HasEverHadFeedback = true;
+        }
+    }
+
+    public async Task UpdateAnswersAsync(Id<ReportSubmission> submissionId, string payloadJson, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.ReportSubmissions.FirstAsync(submission => submission.Id == submissionId, cancellationToken);
+        entity.PayloadJson = payloadJson;
     }
 
     private IQueryable<ReportRequest> RequestQuery()

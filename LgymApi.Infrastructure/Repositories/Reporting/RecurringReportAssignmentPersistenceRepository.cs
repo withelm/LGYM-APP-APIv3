@@ -94,6 +94,21 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
         return entity is null ? null : ReportingPersistenceProjection.Assignment(entity);
     }
 
+    public async Task<IReadOnlyList<RecurringReportAssignmentPersistenceModel>> ListByCurrentRequestsAsync(
+        IReadOnlyCollection<Id<ReportRequest>> reportRequestIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (reportRequestIds.Count == 0)
+        {
+            return [];
+        }
+
+        var entities = await BaseQuery().AsNoTracking()
+            .Where(assignment => assignment.CurrentReportRequestId != null && reportRequestIds.Contains(assignment.CurrentReportRequestId.Value))
+            .ToListAsync(cancellationToken);
+        return entities.Select(ReportingPersistenceProjection.Assignment).ToList();
+    }
+
     public async Task<RecurringReportAssignmentPersistenceModel?> FindByCurrentRequestForUpdateAsync(
         Id<ReportRequest> reportRequestId,
         CancellationToken cancellationToken = default)
