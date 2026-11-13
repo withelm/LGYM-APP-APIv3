@@ -1596,8 +1596,8 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Status")
-                        .IsRequired()
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("SubmittedAt")
@@ -1677,6 +1677,9 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("HasEverHadFeedback")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

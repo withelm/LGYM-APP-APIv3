@@ -1,6 +1,7 @@
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting.Models;
+using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.ValueObjects;
@@ -35,6 +36,7 @@ public sealed partial class ReportingService
             .Where(submission => _authorization.CanReadSubmission(currentTrainer, submission, access))
             .ToList();
         var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(authorizedSubmissions);
+        await PopulateFeedbackCapabilitiesForListAsync(currentTrainer, authorizedSubmissions, results, cancellationToken);
         await HydrateSubmissionPhotosAsync(currentTrainer, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }
@@ -44,11 +46,13 @@ public sealed partial class ReportingService
         CancellationToken cancellationToken = default)
     {
         var submissions = await _requestSubmissionPersistence.ListSubmissionsByTraineeAsync(currentTrainee.Id, cancellationToken);
-        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(submissions
+        var authorizedSubmissions = submissions
             .Where(submission => _authorization.CanReadSubmission(
                 currentTrainee,
                 submission,
-                new ReportingRelationshipAccessFact(false))));
+                new ReportingRelationshipAccessFact(false))).ToList();
+        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(authorizedSubmissions);
+        await PopulateFeedbackCapabilitiesForListAsync(currentTrainee, authorizedSubmissions, results, cancellationToken);
         await HydrateSubmissionPhotosAsync(currentTrainee, results, cancellationToken);
         return Result<List<ReportSubmissionResult>, AppError>.Success(results);
     }
@@ -62,8 +66,60 @@ public sealed partial class ReportingService
         CancellationToken cancellationToken)
     {
         var result = MapSubmission(submission);
+        await PopulateFeedbackCapabilitiesAsync(currentUser, submission, result, cancellationToken);
         await HydrateSubmissionPhotosAsync(currentUser, [result], cancellationToken);
         return result;
+    }
+
+    private async Task PopulateFeedbackCapabilitiesForListAsync(
+        AuthenticatedAccountContext actor,
+        IReadOnlyList<ReportSubmissionPersistenceModel> submissions,
+        IReadOnlyList<ReportSubmissionResult> results,
+        CancellationToken cancellationToken)
+    {
+        if (submissions.Count == 0)
+        {
+            return;
+        }
+
+        var pairs = submissions.Select(submission => (submission.ReportRequest.TrainerId, submission.ReportRequest.TraineeId)).Distinct().ToArray();
+        var requestIds = submissions.Select(submission => submission.ReportRequest.Id).Distinct().ToArray();
+        var accessByPair = await _relationshipAccessPersistence.GetActiveAccessForPairsAsync(pairs, cancellationToken);
+        var assignments = await _recurringAssignmentPersistence.ListByCurrentRequestsAsync(requestIds, cancellationToken);
+        var assignmentsByRequest = assignments.ToDictionary(assignment => assignment.CurrentReportRequestId!.Value);
+        for (var i = 0; i < submissions.Count; i++)
+        {
+            var submission = submissions[i];
+            var request = submission.ReportRequest;
+            accessByPair.TryGetValue((request.TrainerId, request.TraineeId), out var access);
+            assignmentsByRequest.TryGetValue(request.Id, out var assignment);
+            PopulateFeedbackCapabilities(actor, submission, results[i], access ?? new ReportingRelationshipAccessFact(false), assignment);
+        }
+    }
+
+    private async Task PopulateFeedbackCapabilitiesAsync(
+        AuthenticatedAccountContext actor,
+        ReportSubmissionPersistenceModel submission,
+        ReportSubmissionResult result,
+        CancellationToken cancellationToken)
+    {
+        var request = submission.ReportRequest;
+        var access = await _relationshipAccessPersistence.GetAccessAsync(request.TrainerId, request.TraineeId, cancellationToken);
+        var assignment = await _recurringAssignmentPersistence.FindByCurrentRequestAsync(request.Id, cancellationToken);
+        PopulateFeedbackCapabilities(actor, submission, result, access, assignment);
+    }
+
+    private static void PopulateFeedbackCapabilities(
+        AuthenticatedAccountContext actor,
+        ReportSubmissionPersistenceModel submission,
+        ReportSubmissionResult result,
+        ReportingRelationshipAccessFact access,
+        RecurringReportAssignmentPersistenceModel? assignment)
+    {
+        var facts = new ReportFeedbackFacts(submission, access, assignment);
+        result.CanEditFeedback = ReportFeedbackLifecyclePolicy.Allows(actor, facts, ReportFeedbackAction.Edit);
+        result.CanEditAnswers = ReportFeedbackLifecyclePolicy.Allows(actor, facts, ReportFeedbackAction.EditAnswers);
+        result.CanMarkFeedbackRead = ReportFeedbackLifecyclePolicy.Allows(actor, facts, ReportFeedbackAction.MarkRead);
     }
 
     private static ReportSubmissionPersistenceModel ToPersistenceModel(
@@ -81,7 +137,8 @@ public sealed partial class ReportingService
             submission.CreatedAt,
             request,
             submission.SourceCoachingEpisodeId,
-            submission.AcceptedAt);
+            submission.AcceptedAt,
+            false);
 
     private static RecurringReportAssignmentUpdatePersistenceModel ToUpdateModel(
         RecurringReportAssignmentPersistenceModel assignment)

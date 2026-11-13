@@ -13,12 +13,16 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
-    private static Result<Unit, AppError> ValidateAnswersAgainstTemplate(ReportTemplatePersistenceModel template, Dictionary<string, JsonElement> answers)
+    private static Result<Unit, AppError> ValidateAnswersAgainstTemplate(ReportTemplatePersistenceModel template, Dictionary<string, JsonElement> answers, bool preserveMeasurements = false)
     {
         var expected = template.Fields.ToDictionary(x => x.Key, x => x, StringComparer.OrdinalIgnoreCase);
 
         foreach (var field in template.Fields)
         {
+            if (preserveMeasurements && field.Type == ReportFieldType.Measurements)
+            {
+                continue;
+            }
             if (field.IsRequired && !answers.ContainsKey(field.Key))
             {
                 return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
@@ -30,6 +34,11 @@ public sealed partial class ReportingService
             if (!expected.TryGetValue(answer.Key, out var field))
             {
                 return Result<Unit, AppError>.Failure(new InvalidReportingError(Messages.ReportFieldValidationFailed));
+            }
+
+            if (preserveMeasurements && field.Type == ReportFieldType.Measurements)
+            {
+                continue;
             }
 
             if (answer.Value.ValueKind == JsonValueKind.Null)
@@ -110,6 +119,21 @@ public sealed partial class ReportingService
         }
 
         return normalizedAnswers;
+    }
+
+    private static bool HasUniqueJsonKeys(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            return value.EnumerateArray().All(HasUniqueJsonKeys);
+        }
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            return true;
+        }
+
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return value.EnumerateObject().All(property => keys.Add(property.Name) && HasUniqueJsonKeys(property.Value));
     }
 
     private static Dictionary<string, string> NormalizeTrainerFieldComments(IReadOnlyDictionary<string, string?> comments)

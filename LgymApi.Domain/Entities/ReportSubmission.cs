@@ -11,6 +11,7 @@ public sealed class ReportSubmission : EntityBase<ReportSubmission>
     public string? TrainerFieldCommentsJson { get; set; }
     public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
     public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
+    public bool? HasEverHadFeedback { get; set; }
     public Id<CoachingEpisode>? SourceCoachingEpisodeId { get; set; }
     public DateTimeOffset? AcceptedAt { get; set; }
 

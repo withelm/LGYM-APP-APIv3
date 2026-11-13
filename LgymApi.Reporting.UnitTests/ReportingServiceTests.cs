@@ -27,7 +27,7 @@ using NUnit.Framework;
 namespace LgymApi.UnitTests;
 
 [TestFixture]
-public sealed class ReportingServiceTests
+public sealed partial class ReportingServiceTests
 {
     #if UNIT_TESTS_API
     private readonly UpsertReportTemplateRequestValidator _validator = new();
@@ -790,6 +790,7 @@ public sealed class ReportingServiceTests
         var submissionId = Id<ReportSubmission>.New();
         var templateId = Id<ReportTemplate>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.TrainerId = trainerId;
         request.Status = ReportRequestStatus.Submitted;
         var submission = CreateSubmission(submissionId, traineeId, request);
         submission.TrainerOverallComment = "old";
@@ -1293,6 +1294,7 @@ public sealed class ReportingServiceTests
         var submissionId = Id<ReportSubmission>.New();
         var templateId = Id<ReportTemplate>.New();
         var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        request.TrainerId = trainerId;
         var submission = CreateSubmission(submissionId, traineeId, request);
         var outboxWriter = Substitute.For<ICommandOutboxWriter>();
         outboxWriter.StageAsync(
@@ -1311,6 +1313,8 @@ public sealed class ReportingServiceTests
         });
 
         result.IsSuccess.Should().BeTrue();
+        result.Value.CanEditFeedback.Should().BeTrue();
+        result.Value.CanMarkFeedbackRead.Should().BeFalse();
         await outboxWriter.Received(1).StageAsync(
             Arg.Is<ReportFeedbackAddedInAppNotificationCommand>(notification =>
                 notification.SubmissionId == submissionId
@@ -1492,6 +1496,87 @@ public sealed class ReportingServiceTests
         result.Value.Should().ContainSingle();
     }
 
+    [Test]
+    public async Task FeedbackReadCapability_TracksFirstReadAndCompletion()
+    {
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+        var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
+        submission.TrainerFeedbackAddedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var service = CreateReportingService(
+            getSubmissionsByTrainee: (_, _) => Task.FromResult(new List<ReportSubmission> { submission }),
+            findSubmissionByIdForTrainee: (_, _, _) => Task.FromResult<ReportSubmission?>(submission),
+            hasActiveTrainerLink: true);
+        var actor = CreateUser(traineeId);
+
+        var before = await service.GetOwnSubmissionsAsync(actor);
+        before.Value.Single().CanMarkFeedbackRead.Should().BeTrue();
+        var marked = await service.MarkTrainerFeedbackAsReadAsync(actor, submission.Id);
+        marked.IsSuccess.Should().BeTrue();
+        marked.Value.CanMarkFeedbackRead.Should().BeFalse();
+        var after = await service.GetOwnSubmissionsAsync(actor);
+        after.Value.Single().CanMarkFeedbackRead.Should().BeFalse();
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task SubmissionLists_BatchFeedbackFactsAndPreserveEpisodeDecisions(bool trainerView)
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        var templateId = Id<ReportTemplate>.New();
+        var submissions = Enumerable.Range(0, 5).Select(_ =>
+        {
+            var request = CreateReportRequest(Id<ReportRequest>.New(), traineeId, templateId, CreateTemplateWithoutPhotos(templateId));
+            request.TrainerId = trainerId;
+            var submission = CreateSubmission(Id<ReportSubmission>.New(), traineeId, request);
+            submission.TrainerFeedbackAddedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            return submission;
+        }).ToList();
+        submissions[1].SourceCoachingEpisodeId = Id<CoachingEpisode>.New();
+        submissions[2].ReportRequest.SourceCoachingEpisodeId = Id<CoachingEpisode>.New();
+        submissions[3].TrainerFeedbackReadAt = new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero);
+        var assignmentRequest = submissions[4].ReportRequest;
+        var staleAssignment = new RecurringReportAssignment
+        {
+            Id = Id<RecurringReportAssignment>.New(),
+            TrainerId = trainerId,
+            TraineeId = traineeId,
+            TemplateId = templateId,
+            Template = assignmentRequest.Template,
+            IntervalValue = 1,
+            IntervalUnit = RecurringReportIntervalUnit.Week,
+            CurrentReportRequestId = assignmentRequest.Id,
+            SourceCoachingEpisodeId = Id<CoachingEpisode>.New()
+        };
+        var relationships = Substitute.For<IReportingRelationshipAccessPersistence>();
+        var assignments = Substitute.For<IRecurringReportAssignmentPersistence>();
+        var service = CreateReportingService(
+            getSubmissionsByTrainerAndTrainee: (_, _, _) => Task.FromResult(submissions),
+            getSubmissionsByTrainee: (_, _) => Task.FromResult(submissions),
+            recurringAssignmentByRequestId: (id, _) => Task.FromResult<RecurringReportAssignment?>(id == assignmentRequest.Id ? staleAssignment : null),
+            userHasTrainerRole: true,
+            relationshipPersistence: relationships,
+            assignmentPersistence: assignments);
+
+        var result = trainerView
+            ? await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId)
+            : await service.GetOwnSubmissionsAsync(CreateUser(traineeId));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Select(item => trainerView ? item.CanEditFeedback : item.CanMarkFeedbackRead)
+            .Should().Equal(true, false, false, false, false);
+        await relationships.Received(1).GetActiveAccessForPairsAsync(
+            Arg.Is<IReadOnlyCollection<(Id<LgymApi.Identity.Contracts.AccountReference>, Id<LgymApi.Identity.Contracts.AccountReference>)>>(pairs => pairs.Count == 1),
+            Arg.Any<CancellationToken>());
+        await assignments.Received(1).ListByCurrentRequestsAsync(
+            Arg.Is<IReadOnlyCollection<Id<ReportRequest>>>(ids => ids.Count == 5), Arg.Any<CancellationToken>());
+        await assignments.DidNotReceive().FindByCurrentRequestAsync(Arg.Any<Id<ReportRequest>>(), Arg.Any<CancellationToken>());
+        await relationships.Received(trainerView ? 1 : 0).GetAccessAsync(
+            Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(), Arg.Any<Id<LgymApi.Identity.Contracts.AccountReference>>(), Arg.Any<CancellationToken>());
+    }
+
     #endregion
 
     #region Helper Methods
@@ -1656,13 +1741,15 @@ public sealed class ReportingServiceTests
         bool userHasTrainerRole = false,
         bool hasActiveTrainerLink = true,
         IReadOnlyList<ReportingRelationshipPeriodFact>? relationshipPeriods = null,
-        Id<CoachingEpisode>? activeEpisodeId = null)
+        Id<CoachingEpisode>? activeEpisodeId = null,
+        IReportingRelationshipAccessPersistence? relationshipPersistence = null,
+        IRecurringReportAssignmentPersistence? assignmentPersistence = null)
     {
         var templatePersistence = Substitute.For<IReportTemplatePersistence>();
         var requestSubmissionPersistence = Substitute.For<IReportRequestSubmissionPersistence>();
-        var recurringAssignmentPersistence = Substitute.For<IRecurringReportAssignmentPersistence>();
+        var recurringAssignmentPersistence = assignmentPersistence ?? Substitute.For<IRecurringReportAssignmentPersistence>();
         var photoPersistence = Substitute.For<IReportPhotoPersistence>();
-        var relationshipAccessPersistence = Substitute.For<IReportingRelationshipAccessPersistence>();
+        var relationshipAccessPersistence = relationshipPersistence ?? Substitute.For<IReportingRelationshipAccessPersistence>();
         ReportRequest? loadedRequest = null;
         ReportSubmission? loadedSubmission = null;
         RecurringReportAssignment? loadedAssignment = null;
@@ -1813,6 +1900,12 @@ public sealed class ReportingServiceTests
             .Returns(relationshipPeriods is null
                 ? new ReportingRelationshipAccessFact(hasActiveTrainerLink, [], activeEpisode)
                 : new ReportingRelationshipAccessFact(hasActiveTrainerLink, relationshipPeriods, activeEpisode));
+        relationshipAccessPersistence.GetActiveAccessForPairsAsync(
+                Arg.Any<IReadOnlyCollection<(Id<LgymApi.Identity.Contracts.AccountReference> TrainerId, Id<LgymApi.Identity.Contracts.AccountReference> TraineeId)>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(args => ((IReadOnlyCollection<(Id<LgymApi.Identity.Contracts.AccountReference> TrainerId, Id<LgymApi.Identity.Contracts.AccountReference> TraineeId)>)args[0])
+                .Where(_ => hasActiveTrainerLink)
+                .ToDictionary(pair => pair, _ => new ReportingRelationshipAccessFact(true, [], activeEpisode)));
         relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(
                 Arg.Any<ReportingActiveRelationshipFact>(),
                 Arg.Any<CancellationToken>())
@@ -1820,6 +1913,20 @@ public sealed class ReportingServiceTests
 
         if (recurringAssignmentByRequestId != null)
         {
+            recurringAssignmentPersistence.ListByCurrentRequestsAsync(Arg.Any<IReadOnlyCollection<Id<ReportRequest>>>(), Arg.Any<CancellationToken>())
+                .Returns(async args =>
+                {
+                    var assignments = new List<RecurringReportAssignmentPersistenceModel>();
+                    foreach (var id in (IReadOnlyCollection<Id<ReportRequest>>)args[0])
+                    {
+                        var assignment = await recurringAssignmentByRequestId(id, (CancellationToken)args[1]);
+                        if (assignment is not null)
+                        {
+                            assignments.Add(ReportingTestData.Assignment(assignment));
+                        }
+                    }
+                    return (IReadOnlyList<RecurringReportAssignmentPersistenceModel>)assignments;
+                });
             recurringAssignmentPersistence.FindByCurrentRequestAsync(Arg.Any<Id<ReportRequest>>(), Arg.Any<CancellationToken>())
                 .Returns(async args =>
                 {

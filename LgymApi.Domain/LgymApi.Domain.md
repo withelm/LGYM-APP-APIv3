@@ -22,3 +22,4 @@
 
 - `TraineeNoteHistory` records immutable previous/new trainee-visibility snapshots with each content version. Existing rows default to both hidden so legacy history is fail-closed until a new visibility-aware write creates a version.
 - `ReportRequestStatus.Completed` is the durable internal state after trainee feedback acknowledgement. API compatibility maps that state back to legacy `Submitted` for existing request-status consumers.
+- `ReportSubmission.HasEverHadFeedback` records first-feedback history; null means the history is unknown and cannot authorize an answer edit.

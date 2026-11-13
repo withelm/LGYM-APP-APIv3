@@ -11,3 +11,8 @@ public sealed class InAppNotificationForbiddenError : ForbiddenError
 {
     public InAppNotificationForbiddenError() : base("Notification forbidden") { }
 }
+
+internal sealed class ReminderNoLongerEligibleError : NotFoundError
+{
+    public ReminderNoLongerEligibleError() : base("Reminder no longer eligible") { }
+}

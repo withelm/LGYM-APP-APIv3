@@ -41,6 +41,30 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
         return new ReportingRelationshipAccessFact(activeEpisode is not null, relationshipPeriods, activeEpisode);
     }
 
+    public async Task<IReadOnlyDictionary<(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId), ReportingRelationshipAccessFact>> GetActiveAccessForPairsAsync(
+        IReadOnlyCollection<(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId)> pairs,
+        CancellationToken cancellationToken = default)
+    {
+        if (pairs.Count == 0)
+        {
+            return new Dictionary<(Id<AccountReference>, Id<AccountReference>), ReportingRelationshipAccessFact>();
+        }
+
+        var trainers = pairs.Select(pair => ReportingPersistenceAccountIds.ToPersisted(pair.TrainerId)).Distinct().ToArray();
+        var trainees = pairs.Select(pair => ReportingPersistenceAccountIds.ToPersisted(pair.TraineeId)).Distinct().ToArray();
+        var requested = pairs.ToHashSet();
+        var rows = await _dbContext.TrainerTraineeLinks.AsNoTracking()
+            .Where(link => trainers.Contains(link.TrainerId) && trainees.Contains(link.TraineeId) && link.EpisodeId != null)
+            .Join(_dbContext.CoachingEpisodes.AsNoTracking(), link => link.EpisodeId,
+                episode => (Id<CoachingEpisode>?)episode.Id,
+                (link, episode) => new { link.TrainerId, link.TraineeId, episode.Id, episode.AuthorizationRevision })
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => (Pair: (ReportingPersistenceAccountIds.ToReference(row.TrainerId), ReportingPersistenceAccountIds.ToReference(row.TraineeId)),
+                Episode: new ReportingActiveRelationshipFact(row.Id, row.AuthorizationRevision)))
+            .Where(row => requested.Contains(row.Pair))
+            .ToDictionary(row => row.Pair, row => new ReportingRelationshipAccessFact(true, [], row.Episode));
+    }
+
     public async Task<bool> StageActiveEpisodeRevisionCheckAsync(
         ReportingActiveRelationshipFact activeEpisode,
         CancellationToken cancellationToken = default)

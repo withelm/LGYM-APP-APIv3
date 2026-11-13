@@ -60,7 +60,9 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261109193431_AddMeasurementTrustedProvenance.Designer.cs"] = "afc02d9a47b8039af77f64e47fa23c1b699c8e81105b01f2ff6d915c49897b6e",
         [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.cs"] = "5e65b89311aa8c4892345b3bd9984c8dd0989039fff52446108ede7c2540e527",
         [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.Designer.cs"] = "f2c4aad620c31c016df128c20f2ff9d8cfa24f426c90f3aa84b33fa4ff07feaf",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "d65f8e0df169452ee263d818d535df17ae40d6a26c6d8a090d809f3bdbb1003a"
+        [MigrationRoot + "/20261112192912_AddReportFirstFeedbackMarker.cs"] = "5b42e893c06803d19e21f2d811c783752160b87b6501a975d59974b5c65ddd49",
+        [MigrationRoot + "/20261112192912_AddReportFirstFeedbackMarker.Designer.cs"] = "d8da13227b33a1f72137d978137625f035c2a1312bef4ca340f94671fe5a7c08",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "6fa3ab660221d13618d7cfd3016d4fcd1d4f89afa57f9ffe7af8ee167712bdd8"
     };
 
     [Test]

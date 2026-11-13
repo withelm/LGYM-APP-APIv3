@@ -67,7 +67,8 @@ internal static class ReportingPersistenceProjection
             entity.CreatedAt,
             Request(entity.ReportRequest),
             entity.SourceCoachingEpisodeId,
-            entity.AcceptedAt);
+            entity.AcceptedAt,
+            entity.HasEverHadFeedback);
 
     public static RecurringReportAssignmentPersistenceModel Assignment(RecurringReportAssignment entity)
         => new(

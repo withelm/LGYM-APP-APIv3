@@ -170,12 +170,59 @@ internal sealed class PushNotificationDeliveryService : IPushNotificationDeliver
                 return;
             }
 
-            deliveryAttemptStarted = true;
-            message.Attempts += 1;
             var payload = JsonSerializer.Deserialize<PushEventPayload>(message.PayloadJson, SharedSerializationOptions.Current)
                 ?? throw new InvalidOperationException($"Failed to deserialize push payload for notification {notificationId}.");
 
-            var result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
+            var (sourceAvailable, reminder) = message.InAppNotificationId is { } sourceId
+                ? await _disclosureEligibility.GetReminderReferenceAsync(sourceId, cancellationToken)
+                : (true, null);
+            if (!sourceAvailable)
+            {
+                message.Status = PushNotificationStatus.Skipped;
+                message.FailureKind = PushNotificationFailureKind.Preference;
+                message.ProviderStatus = "SourceNotificationUnavailable";
+                message.LastError = "The source in-app notification is no longer available.";
+                message.NextAttemptAt = null;
+                message.SchedulerJobId = null;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            PushSendAttemptResult? result;
+            if (reminder != null)
+            {
+                await using var deliveryTransaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+                if (await _disclosureEligibility.LockReminderDeliveryAsync(reminder, cancellationToken))
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    if (await _disclosureEligibility.CanDiscloseAsync(reminder.NotificationId, cancellationToken))
+                    {
+                        deliveryAttemptStarted = true;
+                        message.Attempts += 1;
+                        result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
+                    }
+                    else result = null;
+                }
+                else result = null;
+            }
+            else
+            {
+                deliveryAttemptStarted = true;
+                message.Attempts += 1;
+                result = await _pushProviderSender.SendAsync(target, payload, cancellationToken);
+            }
+
+            if (result == null)
+            {
+                message.Status = PushNotificationStatus.Skipped;
+                message.FailureKind = PushNotificationFailureKind.Preference;
+                message.ProviderStatus = "SourceNotificationUnavailable";
+                message.LastError = "The source in-app notification is no longer available.";
+                message.NextAttemptAt = null;
+                message.SchedulerJobId = null;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             retryDelay = result.Outcome == PushSendOutcome.TransientFailure
                 ? ResolveRetryDelay(message.Attempts)
                 : null;

@@ -104,6 +104,9 @@ public sealed class ReportSubmissionResult
     public DateTimeOffset? TrainerFeedbackAddedAt { get; set; }
     public DateTimeOffset? TrainerFeedbackReadAt { get; set; }
     public NextRecurringReportRequestResult? NextRecurringRequest { get; set; }
+    public bool CanEditFeedback { get; set; }
+    public bool CanEditAnswers { get; set; }
+    public bool CanMarkFeedbackRead { get; set; }
     public ReportRequestResult Request { get; set; } = new();
 }
 

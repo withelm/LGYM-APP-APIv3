@@ -18,6 +18,184 @@ namespace LgymApi.IntegrationTests;
 public sealed class ReportingEngineTests : IntegrationTestBase
 {
     [Test]
+    public async Task AnswerEdit_RequiresAnswersPropertyButAllowsValidEmptyReplacement()
+    {
+        var trainer = await SeedTrainerAsync("edit-optional-trainer", "edit-optional-trainer@example.test");
+        var trainee = await SeedUserAsync("edit-optional-trainee", "edit-optional-trainee@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        using var templateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
+        {
+            name = "Optional report",
+            fields = new[] { new { key = "note", label = "Note", type = "Text", isRequired = false, order = 0 } }
+        });
+        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var template = (await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>())!;
+        using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template.Id });
+        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = (await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>())!;
+
+        SetAuthorizationHeader(trainee.Id);
+        using var submit = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new { answers = new { note = "before" } });
+        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+        var submission = (await submit.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
+        Id<ReportSubmission>.TryParse(submission.Id, out var submissionId).Should().BeTrue();
+        var route = $"/api/trainee/report-submissions/{submission.Id}/answers";
+
+        foreach (var body in new[] { "{}", "{\"answers\":null}" })
+        {
+            using var response = await Client.PostAsync(route, new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "request body {0} must not replace answers", body);
+            using var scope = Factory.Services.CreateScope();
+            var persisted = await scope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
+            using var payload = JsonDocument.Parse(persisted.PayloadJson);
+            payload.RootElement.GetProperty("note").GetString().Should().Be("before");
+        }
+
+        using var empty = await Client.PostAsJsonAsync(route, new { answers = new { } });
+        empty.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var assertionScope = Factory.Services.CreateScope();
+        var saved = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
+        using var savedPayload = JsonDocument.Parse(saved.PayloadJson);
+        savedPayload.RootElement.EnumerateObject().Should().BeEmpty();
+    }
+
+    [Test]
+    [AuthorizationEvidence("POST", "/api/trainee/report-submissions/{submissionId}/answers", "own", "owner-allow")]
+    [AuthorizationEvidence("POST", "/api/trainee/report-submissions/{submissionId}/answers", "own", "foreign-object-denial-no-mutation")]
+    [AuthorizationEvidence("POST", "/api/trainee/report-submissions/{submissionId}/answers", "own", "anonymous-denial")]
+    public async Task AnswerEdit_ProtectsMeasurementsAndStopsPermanentlyAfterFeedback()
+    {
+        var trainer = await SeedTrainerAsync("edit-trainer", "edit-trainer@example.test");
+        var trainee = await SeedUserAsync("edit-trainee", "edit-trainee@example.test");
+        var other = await SeedUserAsync("edit-other", "edit-other@example.test");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id });
+            await database.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(trainer.Id);
+        using var templateResponse = await Client.PostAsJsonAsync("/api/trainer/report-templates", new
+        {
+            name = "Edit report",
+            fields = new object[]
+            {
+                new { key = "note", label = "Note", type = "Text", isRequired = true, order = 0 },
+                new { key = "measurements", label = "Measurements", type = "Measurements", isRequired = false, order = 1, moduleConfig = new { measurementTypes = new[] { "weight" } } }
+            }
+        });
+        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var template = (await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>())!;
+        using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template.Id });
+        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = (await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>())!;
+
+        SetAuthorizationHeader(trainee.Id);
+        var original = new { note = "before", measurements = new { weight = new { value = 80, unit = "kg" } } };
+        using var submit = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new { answers = original });
+        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+        var submission = (await submit.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")).Should().Be(1);
+        }
+        var route = $"/api/trainee/report-submissions/{submission.Id}/answers";
+        using var omitted = await Client.PostAsJsonAsync(route, new { answers = new { note = "lost" } });
+        omitted.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var altered = await Client.PostAsJsonAsync(route, new { answers = new { note = "lost", measurements = new { weight = new { value = 90, unit = "kg" } } } });
+        altered.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var duplicate = await Client.PostAsync(route, new StringContent("{\"answers\":{\"note\":\"lost\",\"measurements\":{},\"MEASUREMENTS\":{\"weight\":{\"value\":80,\"unit\":\"kg\"}}}}", System.Text.Encoding.UTF8, "application/json"));
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var exactDuplicate = await Client.PostAsync(route, new StringContent("{\"answers\":{\"note\":\"lost\",\"measurements\":{},\"measurements\":{\"weight\":{\"value\":80,\"unit\":\"kg\"}}}}", System.Text.Encoding.UTF8, "application/json"));
+        exactDuplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var edited = await Client.PostAsJsonAsync(route, new { answers = new { note = "after", original.measurements } });
+        edited.StatusCode.Should().Be(HttpStatusCode.OK);
+        var editedBody = (await edited.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
+        editedBody.Answers["note"].GetString().Should().Be("after");
+        editedBody.Answers["measurements"].GetProperty("weight").GetProperty("value").GetInt32().Should().Be(80);
+
+        Id<ReportSubmission>.TryParse(submission.Id, out var submissionId).Should().BeTrue();
+        foreach (var (storedPayload, replacement, expectedStatus) in new[]
+        {
+            ("{\"note\":\"before\"}", "{\"note\":\"after\"}", HttpStatusCode.OK),
+            ("{\"note\":\"before\",\"measurements\":null}", "{\"note\":\"after\",\"MEASUREMENTS\":null}", HttpStatusCode.OK),
+            ("{\"note\":\"before\",\"measurements\":\"invalid\"}", "{\"note\":\"after\",\"measurements\":\"invalid\"}", HttpStatusCode.OK),
+            ("{\"note\":\"before\",\"measurements\":null}", "{\"note\":\"after\"}", HttpStatusCode.BadRequest),
+            ("{\"note\":\"before\",\"measurements\":null,\"MEASUREMENTS\":{}}", "{\"note\":\"after\",\"measurements\":null}", HttpStatusCode.BadRequest),
+            ("{\"note\":\"before\",\"measurements\":{\"weight\":{},\"WEIGHT\":{}}}", "{\"note\":\"after\",\"measurements\":{\"weight\":{},\"WEIGHT\":{}}}", HttpStatusCode.BadRequest),
+            ("not-json", "{\"note\":\"after\"}", HttpStatusCode.BadRequest)
+        })
+        {
+            using (var scope = Factory.Services.CreateScope())
+            {
+                var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var row = await database.ReportSubmissions.SingleAsync(item => item.Id == submissionId);
+                row.PayloadJson = storedPayload;
+                await database.SaveChangesAsync();
+            }
+            using var response = await Client.PostAsync(route, new StringContent($"{{\"answers\":{replacement}}}", System.Text.Encoding.UTF8, "application/json"));
+            response.StatusCode.Should().Be(expectedStatus, "stored payload {0}", storedPayload);
+            using var assertionScope = Factory.Services.CreateScope();
+            var persisted = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
+            if (expectedStatus == HttpStatusCode.BadRequest)
+            {
+                persisted.PayloadJson.Should().Be(storedPayload);
+            }
+            else
+            {
+                using var originalJson = JsonDocument.Parse(storedPayload);
+                using var savedJson = JsonDocument.Parse(persisted.PayloadJson);
+                var originalHasMeasurement = originalJson.RootElement.TryGetProperty("measurements", out var originalMeasurement);
+                var savedHasMeasurement = savedJson.RootElement.EnumerateObject().Any(item => item.Name.Equals("measurements", StringComparison.OrdinalIgnoreCase));
+                savedHasMeasurement.Should().Be(originalHasMeasurement);
+                if (originalHasMeasurement)
+                {
+                    var savedMeasurement = savedJson.RootElement.EnumerateObject().Single(item => item.Name.Equals("measurements", StringComparison.OrdinalIgnoreCase)).Value;
+                    JsonElement.DeepEquals(originalMeasurement, savedMeasurement).Should().BeTrue();
+                }
+            }
+        }
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var row = await database.ReportSubmissions.SingleAsync(item => item.Id == submissionId);
+            row.PayloadJson = JsonSerializer.Serialize(new { note = "after", original.measurements });
+            await database.SaveChangesAsync();
+            (await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")).Should().Be(1);
+        }
+
+        SetAuthorizationHeader(other.Id);
+        using var foreign = await Client.PostAsJsonAsync(route, new { answers = original });
+        foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ClearAuthorizationHeader();
+        using var anonymous = await Client.PostAsJsonAsync(route, new { answers = original });
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        SetAuthorizationHeader(trainer.Id);
+        var feedbackRoute = $"/api/trainer/trainees/{trainee.Id}/report-submissions/{submission.Id}/feedback";
+        using var feedback = await Client.PostAsJsonAsync(feedbackRoute, new { trainerOverallComment = "feedback", trainerFieldComments = new { } });
+        feedback.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var cleared = await Client.PostAsJsonAsync(feedbackRoute, new { trainerOverallComment = (string?)null, trainerFieldComments = new { } });
+        cleared.StatusCode.Should().Be(HttpStatusCode.OK);
+        SetAuthorizationHeader(trainee.Id);
+        using var blocked = await Client.PostAsJsonAsync(route, new { answers = original });
+        blocked.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var list = await Client.GetAsync("/api/trainee/report-submissions");
+        using var listJson = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        listJson.RootElement[0].GetProperty("canEditAnswers").GetBoolean().Should().BeFalse();
+        listJson.RootElement[0].GetProperty("answers").GetProperty("note").GetString().Should().Be("after");
+    }
+
+    [Test]
     public async Task ReportFlow_TrainerCreatesRequest_TraineeSubmits_TrainerCanReadSubmission()
     {
         var trainer = await SeedTrainerAsync("trainer-reports", "trainer-reports@example.com");
