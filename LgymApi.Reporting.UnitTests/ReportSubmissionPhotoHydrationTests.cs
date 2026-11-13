@@ -410,12 +410,15 @@ public sealed class ReportSubmissionPhotoHydrationTests
             Storage.GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
                 .Returns(call => $"fresh:{call.ArgAt<string>(0)}");
             var accountLookup = accountLookupService ?? CreateActiveAccountLookup();
+            var relationship = Substitute.For<IReportingRelationshipAccessPersistence>();
+            relationship.GetAccessAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+                .Returns(new ReportingRelationshipAccessFact(false));
             Service = new ReportingService(
                 Substitute.For<IReportTemplatePersistence>(),
                 _submissions,
                 Substitute.For<IRecurringReportAssignmentPersistence>(),
                 _photos,
-                Substitute.For<IReportingRelationshipAccessPersistence>(),
+                relationship,
                 ReportingAuthorizationTestFactory.Create(),
                 accountLookup,
                 new ReportSubmissionAcceptedProgressCommandFactory(),

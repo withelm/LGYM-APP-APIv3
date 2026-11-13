@@ -91,7 +91,8 @@ public sealed record ReportSubmissionPersistenceModel(
     DateTimeOffset CreatedAt,
     ReportRequestPersistenceModel ReportRequest,
     Id<CoachingEpisode>? SourceCoachingEpisodeId = null,
-    DateTimeOffset? AcceptedAt = null);
+    DateTimeOffset? AcceptedAt = null,
+    bool? HasEverHadFeedback = null);
 
 public sealed record NewReportSubmissionPersistenceModel(
     Id<ReportSubmission> Id,

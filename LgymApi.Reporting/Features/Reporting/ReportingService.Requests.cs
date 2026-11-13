@@ -102,26 +102,56 @@ public sealed partial class ReportingService : IReportingService
         AuthenticatedAccountContext currentTrainee,
         CancellationToken cancellationToken = default)
     {
-        var requests = await _requestSubmissionPersistence.ListPendingOrExpiredByTraineeAsync(currentTrainee.Id, cancellationToken);
+        var candidates = await _requestSubmissionPersistence.ListPendingOrExpiredByTraineeAsync(currentTrainee.Id, cancellationToken);
+        var requests = new List<ReportRequestPersistenceModel>();
         var now = DateTimeOffset.UtcNow;
-        var expiredIds = requests
-            .Where(request => request.Status == ReportRequestStatus.Pending && IsRequestExpired(request.DueAt, now))
-            .Select(request => request.Id)
-            .ToList();
-
-        foreach (var requestId in expiredIds)
+        var hasExpiredRequests = false;
+        foreach (var group in candidates.GroupBy(request => request.TrainerId))
         {
-            await _requestSubmissionPersistence.SetRequestExpiredAsync(requestId, cancellationToken);
+            var access = await _relationshipAccessPersistence.GetAccessAsync(group.Key, currentTrainee.Id, cancellationToken);
+            var episode = access.ActiveEpisode;
+            if (!access.HasActiveRelationship || episode is null)
+            {
+                continue;
+            }
+
+            var current = group.Where(request => request.SourceCoachingEpisodeId is not null
+                && request.SourceCoachingEpisodeId == episode.EpisodeId).ToList();
+            var expired = current.Where(request => request.Status == ReportRequestStatus.Pending
+                && IsRequestExpired(request.DueAt, now)).ToList();
+            if (expired.Count > 0)
+            {
+                if (!await _relationshipAccessPersistence.StageActiveEpisodeRevisionCheckAsync(episode, cancellationToken))
+                {
+                    return Result<List<ReportRequestResult>, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+                }
+
+                foreach (var request in expired)
+                {
+                    await _requestSubmissionPersistence.SetRequestExpiredAsync(request.Id, cancellationToken);
+                }
+                hasExpiredRequests = true;
+            }
+
+            requests.AddRange(current.Select(request => expired.Contains(request)
+                ? request with { Status = ReportRequestStatus.Expired }
+                : request));
         }
 
-        if (expiredIds.Count > 0)
+        if (hasExpiredRequests)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            requests = await _requestSubmissionPersistence.ListPendingOrExpiredByTraineeAsync(currentTrainee.Id, cancellationToken);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception exception) when (_relationshipAccessPersistence.IsActiveEpisodeRevisionConflict(exception))
+            {
+                return Result<List<ReportRequestResult>, AppError>.Failure(new ReportingNotFoundError(Messages.DidntFind));
+            }
         }
 
         return Result<List<ReportRequestResult>, AppError>.Success(
-            _mapper.MapList<ReportRequestPersistenceModel, ReportRequestResult>(requests));
+            _mapper.MapList<ReportRequestPersistenceModel, ReportRequestResult>(requests.OrderByDescending(request => request.CreatedAt).ToList()));
     }
 
     private static ReportRequestPersistenceModel ToPersistenceModel(

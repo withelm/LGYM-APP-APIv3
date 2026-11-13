@@ -115,6 +115,23 @@ public sealed class TraineeReportingController : ControllerBase
         return Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
     }
 
+    [HttpPost("report-submissions/{submissionId}/answers")]
+    [ProducesResponseType(typeof(ReportSubmissionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> EditAnswers([FromRoute] string submissionId, [FromBody] EditReportAnswersRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Id<ReportSubmission>.TryParse(submissionId, out var parsedSubmissionId))
+        {
+            return BadRequest(_mapper.Map<string, ResponseMessageDto>(Messages.FieldRequired));
+        }
+
+        var result = await _requests.EditAnswersAsync(HttpContext.GetAuthenticatedAccountContext()!, parsedSubmissionId, new SubmitReportRequestCommand
+        {
+            Answers = request.Answers
+        }, cancellationToken);
+        return result.IsFailure ? result.ToActionResult() : Ok(_mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(result.Value));
+    }
+
     [HttpGet("report-submissions")]
     [ProducesResponseType(typeof(List<ReportSubmissionDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetOwnSubmissions(CancellationToken cancellationToken = default)

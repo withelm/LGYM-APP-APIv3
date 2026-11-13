@@ -22,4 +22,5 @@ public interface IReportRequestSubmissionPersistence
     Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSubmissionsByTraineeAsync(Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSubmissionsByTrainerAndTraineeAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task UpdateFeedbackAsync(Id<ReportSubmission> submissionId, ReportSubmissionFeedbackUpdatePersistenceModel update, CancellationToken cancellationToken = default);
+    Task UpdateAnswersAsync(Id<ReportSubmission> submissionId, string payloadJson, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
@@ -29,11 +30,38 @@ namespace LgymApi.IntegrationTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostgreSql")]
-public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringReportHttpTestBase
+public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringReportHttpTestBase
 {
     private const string FeedbackAddedCommandId =
         "LgymApi.BackgroundWorker.Common.Commands.ReportFeedbackAddedInAppNotificationCommand";
     private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(10);
+
+    [Test]
+    public async Task AnswerEdit_ConcurrentWithUnlink_RollsBackPayload()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var cancellationToken = timeout.Token;
+        var scenario = await SeedFeedbackScenarioAsync("answers-unlink-race");
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var gatedAccess = new GatedRelationshipAccessPersistence(services.GetRequiredService<IReportingRelationshipAccessPersistence>());
+        var service = CreateReportingService(services, services.GetRequiredService<IUnitOfWork>(), gatedAccess);
+        var actor = new AuthenticatedAccountContext(scenario.Trainee.Id.Rebind<AccountReference>(), null, [], [], false, false);
+        var editTask = service.EditSubmissionAnswersAsync(actor, scenario.SubmissionId,
+            new SubmitReportRequestCommand { Answers = new Dictionary<string, JsonElement> { ["note"] = JsonSerializer.SerializeToElement("Changed") } }, cancellationToken);
+
+        await gatedAccess.RevisionCheckStaged.Task.WaitAsync(GateTimeout, cancellationToken);
+        await UnlinkAsync(scenario.Trainee.Id, cancellationToken);
+        gatedAccess.Release.TrySetResult(true).Should().BeTrue();
+        var result = await editTask.WaitAsync(GateTimeout, cancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        await using var assertionScope = Factory.Services.CreateAsyncScope();
+        var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var submission = await database.ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == scenario.SubmissionId, cancellationToken);
+        submission.PayloadJson.Should().Be("{\"note\":\"Submitted\"}");
+    }
 
     [Test]
     public async Task FeedbackWrite_AfterTrainerReplacementAndSameTrainerRelink_DeniesWithoutMutation()
@@ -211,6 +239,7 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
             PayloadJson = "{\"note\":\"Submitted\"}",
             SourceCoachingEpisodeId = episode.Id,
             AcceptedAt = now.AddDays(-1),
+            HasEverHadFeedback = withExistingFeedback,
             TrainerOverallComment = withExistingFeedback ? "Original feedback" : null,
             TrainerFeedbackAddedAt = withExistingFeedback ? now.AddHours(-1) : null
         };
@@ -338,10 +367,11 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
     private static ReportingService CreateReportingService(
         IServiceProvider serviceProvider,
         IUnitOfWork unitOfWork,
-        IReportingRelationshipAccessPersistence? relationshipAccessPersistence = null)
+        IReportingRelationshipAccessPersistence? relationshipAccessPersistence = null,
+        IReportRequestSubmissionPersistence? submissionPersistence = null)
         => new(
             serviceProvider.GetRequiredService<IReportTemplatePersistence>(),
-            serviceProvider.GetRequiredService<IReportRequestSubmissionPersistence>(),
+            submissionPersistence ?? serviceProvider.GetRequiredService<IReportRequestSubmissionPersistence>(),
             serviceProvider.GetRequiredService<IRecurringReportAssignmentPersistence>(),
             serviceProvider.GetRequiredService<IReportPhotoPersistence>(),
             relationshipAccessPersistence
@@ -473,6 +503,11 @@ public sealed class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRecurringRe
             Id<AccountReference> traineeId,
             CancellationToken cancellationToken = default)
             => inner.GetAccessAsync(trainerId, traineeId, cancellationToken);
+
+        public Task<IReadOnlyDictionary<(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId), ReportingRelationshipAccessFact>> GetActiveAccessForPairsAsync(
+            IReadOnlyCollection<(Id<AccountReference> TrainerId, Id<AccountReference> TraineeId)> pairs,
+            CancellationToken cancellationToken = default)
+            => inner.GetActiveAccessForPairsAsync(pairs, cancellationToken);
 
         public async Task<bool> StageActiveEpisodeRevisionCheckAsync(
             ReportingActiveRelationshipFact activeEpisode,

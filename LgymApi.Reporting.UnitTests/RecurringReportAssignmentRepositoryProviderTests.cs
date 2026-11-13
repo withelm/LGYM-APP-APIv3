@@ -1,18 +1,84 @@
 using FluentAssertions;
+using System.Data.Common;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories.Reporting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace LgymApi.UnitTests;
 
 [TestFixture]
 public sealed class RecurringReportAssignmentRepositoryProviderTests
 {
+    [Test]
+    public async Task BulkFeedbackFacts_MatchSingleReadsWithConstantSqlCommandCount()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var counter = new CommandCounter();
+        await using var database = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection).AddInterceptors(counter).Options);
+        await database.Database.EnsureCreatedAsync();
+        for (var i = 0; i < 4; i++)
+        {
+            await SeedAssignmentAsync(database);
+        }
+        var rows = await database.RecurringReportAssignments.AsNoTracking().ToListAsync();
+        foreach (var row in rows)
+        {
+            var episode = new CoachingEpisode { Id = Id<CoachingEpisode>.New(), TrainerId = row.TrainerId, TraineeId = row.TraineeId, AuthorizationRevision = 7 };
+            database.Add(episode);
+            database.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = row.TrainerId, TraineeId = row.TraineeId, EpisodeId = episode.Id });
+        }
+        await database.SaveChangesAsync();
+        database.ChangeTracker.Clear();
+        var relationships = new ReportingRelationshipAccessPersistenceRepository(database);
+        var assignments = new RecurringReportAssignmentPersistenceRepository(database);
+        var pairs = rows.Select(row => (row.TrainerId.Rebind<AccountReference>(), row.TraineeId.Rebind<AccountReference>())).ToArray();
+        var requestIds = rows.Select(row => row.CurrentReportRequestId!.Value).ToArray();
+        var expectedAccess = new List<ReportingRelationshipAccessFact>();
+        var expectedAssignments = new List<RecurringReportAssignmentPersistenceModel?>();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            expectedAccess.Add(await relationships.GetAccessAsync(pairs[i].Item1, pairs[i].Item2));
+            expectedAssignments.Add(await assignments.FindByCurrentRequestAsync(requestIds[i]));
+        }
+
+        counter.Count = 0;
+        await relationships.GetActiveAccessForPairsAsync(pairs.Take(1).ToArray());
+        await assignments.ListByCurrentRequestsAsync(requestIds.Take(1).ToArray());
+        var singleCount = counter.Count;
+        counter.Count = 0;
+        var bulkAccess = await relationships.GetActiveAccessForPairsAsync(pairs);
+        var bulkAssignments = await assignments.ListByCurrentRequestsAsync(requestIds);
+
+        counter.Count.Should().Be(singleCount);
+        singleCount.Should().BeGreaterThan(0);
+        for (var i = 0; i < rows.Count; i++)
+        {
+            bulkAccess[pairs[i]].ActiveEpisode.Should().Be(expectedAccess[i].ActiveEpisode);
+            bulkAssignments.Single(item => item.CurrentReportRequestId == requestIds[i]).Should().BeEquivalentTo(expectedAssignments[i]);
+        }
+    }
+
+    private sealed class CommandCounter : DbCommandInterceptor
+    {
+        public int Count { get; set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            Count++;
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
     [Test]
     public async Task SqliteWithoutTransaction_RequiresAnActiveTransaction()
     {
@@ -70,14 +136,14 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
         var trainer = new User
         {
             Id = Id<User>.New(),
-            Name = "Trainer",
+            Name = $"Trainer-{Id<User>.New():N}",
             Email = $"trainer-{Id<User>.New():N}@example.com",
             ProfileRank = "Rookie"
         };
         var trainee = new User
         {
             Id = Id<User>.New(),
-            Name = "Trainee",
+            Name = $"Trainee-{Id<User>.New():N}",
             Email = $"trainee-{Id<User>.New():N}@example.com",
             ProfileRank = "Rookie"
         };

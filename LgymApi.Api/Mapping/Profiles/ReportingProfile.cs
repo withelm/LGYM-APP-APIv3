@@ -54,6 +54,9 @@ public sealed class ReportingProfile : IMappingProfile
             TrainerFieldComments = source?.TrainerFieldComments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             TrainerFeedbackAddedAt = source?.TrainerFeedbackAddedAt,
             TrainerFeedbackReadAt = source?.TrainerFeedbackReadAt,
+            CanEditFeedback = source?.CanEditFeedback ?? false,
+            CanEditAnswers = source?.CanEditAnswers ?? false,
+            CanMarkFeedbackRead = source?.CanMarkFeedbackRead ?? false,
             NextRecurringRequest = source?.NextRecurringRequest is null
                 ? null
                 : mapper.Map<NextRecurringReportRequestResult, NextRecurringReportRequestDto>(source.NextRecurringRequest),

@@ -205,7 +205,7 @@ public sealed class ReportingServiceSubmissionHelpersTests
     private static object InvokeValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)
     {
         var method = typeof(ReportingService).GetMethod("ValidateAnswersAgainstTemplate", BindingFlags.Static | BindingFlags.NonPublic)!;
-        return method.Invoke(null, [ReportingTestData.Template(template), answers])!;
+        return method.Invoke(null, [ReportingTestData.Template(template), answers, false])!;
     }
 
     private static object InvokeResult(MethodInfo method, ReportTemplate template, Dictionary<string, string> comments)

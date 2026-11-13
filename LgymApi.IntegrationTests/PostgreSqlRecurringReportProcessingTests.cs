@@ -635,6 +635,9 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         public Task UpdateFeedbackAsync(Id<ReportSubmission> submissionId, ReportSubmissionFeedbackUpdatePersistenceModel update, CancellationToken cancellationToken = default)
             => inner.UpdateFeedbackAsync(submissionId, update, cancellationToken);
 
+        public Task UpdateAnswersAsync(Id<ReportSubmission> submissionId, string payloadJson, CancellationToken cancellationToken = default)
+            => inner.UpdateAnswersAsync(submissionId, payloadJson, cancellationToken);
+
         public Task<ReportSubmissionPersistenceModel?> FindSubmissionForTraineeForUpdateAsync(Id<ReportSubmission> submissionId, Id<LgymApi.Identity.Contracts.AccountReference> traineeId, CancellationToken cancellationToken = default)
             => inner.FindSubmissionForTraineeForUpdateAsync(submissionId, traineeId, cancellationToken);
 
