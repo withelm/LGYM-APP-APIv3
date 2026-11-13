@@ -304,6 +304,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         var registered = typeof(IActionMessageJob).Assembly.GetExportedTypes()
             .Where(type => type.IsInterface && type.Namespace == "LgymApi.BackgroundWorker.Common.Jobs" && type.GetMethods().Length > 0)
+            .Concat(typeof(LgymApi.BackgroundWorker.Jobs.ActionMessageJob).Assembly.GetExportedTypes()
+                .Where(type => type.IsClass && !type.IsAbstract && type.Namespace == "LgymApi.BackgroundWorker.Jobs"
+                    && type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Any(method => method.Name == "ExecuteAsync")
+                    && !type.GetInterfaces().Any(contract => contract.Namespace == "LgymApi.BackgroundWorker.Common.Jobs")))
             .OrderBy(type => type.Name, StringComparer.Ordinal)
             .ToArray();
 
@@ -355,10 +359,13 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
     private static string GetPublicJobSignature(Type type)
     {
-        var methods = type.GetMethods();
+        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         methods.Should().ContainSingle($"{type.Name} must expose one persisted entrypoint");
         var method = methods[0];
-        return $"{method.ReturnType.Name} {method.Name}({string.Join(',', method.GetParameters().Select(parameter => parameter.ParameterType.Name))})";
+        var returnType = method.ReturnType.IsGenericType
+            ? $"{method.ReturnType.Name.Split('`')[0]}<{string.Join(',', method.ReturnType.GetGenericArguments().Select(argument => argument.Name))}>"
+            : method.ReturnType.Name;
+        return $"{returnType} {method.Name}({string.Join(',', method.GetParameters().Select(parameter => parameter.ParameterType.Name))})";
     }
 
     [Test]

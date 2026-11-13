@@ -12,7 +12,7 @@ namespace LgymApi.Application.WorkoutProgress.ExerciseMedia;
 
 internal sealed class ExerciseMediaService(
     IExerciseMediaStorage storage,
-    IExerciseMediaVerifier verifier,
+    IExerciseMediaProcessingScheduler scheduler,
     IAuthenticatedAccountAuthorizationService authorization,
     ILogger<ExerciseMediaService> logger) : IExerciseMediaService
 {
@@ -24,10 +24,9 @@ internal sealed class ExerciseMediaService(
             return Result<ExerciseMediaUploadResult, AppError>.Failure(new ExerciseMediaUnavailableError());
         try
         {
-            var verified = await verifier.VerifyAsync(bytes, cancellationToken);
-            var filename = verified.Extension == "gif" ? "animation.gif" : "image." + verified.Extension;
-            var key = $"exercises/{Id<ExerciseMediaService>.New()}/{verified.PublishedSha256}/{filename}";
-            var image = await storage.PublishAsync(key, verified.Bytes, verified.ContentType, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (bytes.Length is <= 0 or > ExerciseMediaLimits.MaxBytes) throw new ExerciseMediaRejectedException();
+            var image = await scheduler.ProcessAsync(Id<CorrelationScope>.New().ToString(), bytes, cancellationToken);
             return Result<ExerciseMediaUploadResult, AppError>.Success(new(image));
         }
         catch (ExerciseMediaRejectedException)

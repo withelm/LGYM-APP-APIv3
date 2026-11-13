@@ -1,4 +1,7 @@
 using FluentAssertions;
+using System.Collections.Concurrent;
+using System.Text.Json;
+using ImageMagick;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.PostgreSql.Factories;
@@ -11,6 +14,7 @@ using LgymApi.Application.Notifications.Models;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Reporting;
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Runtime;
@@ -19,7 +23,6 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Infrastructure.Services;
 using LgymApi.Platform;
 using LgymApi.Identity;
 using LgymApi.TestUtils;
@@ -140,6 +143,100 @@ public sealed class PostgreSqlHangfireDurabilityTests
             "password123");
         await database.SaveChangesAsync();
         return user.Id;
+    }
+
+    [Test]
+    public async Task PostgreSqlExerciseMedia_ResumesPersistedSourceAfterCallerAndWorkerRestart()
+    {
+        await using var lease = await PostgreSqlDatabaseLease.CreateAsync();
+        var storage = new RestartExerciseStorage();
+        var operation = Id<CorrelationScope>.New().ToString();
+        var gif = Convert.FromHexString("47494638396101000100800000000000ffffff21ff0b4e45545343415045322e30030100000021f904000a0000002c000000000100010000020244010021f90400140000002c00000000010001000002024c01003b");
+        string jobId;
+        var first = await HangfireDurabilityHost.CreateAsync(lease.ConnectionString, false, new(), new(), storage);
+        try
+        {
+            await using var scope = first.Services.CreateAsyncScope();
+            using var caller = new CancellationTokenSource();
+            var waiting = scope.ServiceProvider.GetRequiredService<IExerciseMediaProcessingScheduler>().ProcessAsync(operation, gif, caller.Token);
+            using var connection = first.Storage.GetConnection();
+            var queued = first.Storage.GetMonitoringApi().EnqueuedJobs("default", 0, 10);
+            queued.Should().ContainSingle();
+            jobId = queued.Single().Key;
+            var saved = connection.GetJobData(jobId).Job;
+            saved.Type.Should().Be(typeof(LgymApi.BackgroundWorker.Jobs.ExerciseMediaProcessingJob));
+            saved.Args[0].Should().Be(operation);
+            ((byte[])saved.Args[1]).Should().Equal(gif);
+            caller.Cancel();
+            await Assert.CatchAsync<OperationCanceledException>(async () => await waiting);
+            ReadTimeline(first.Storage, jobId).Should().Equal("Enqueued");
+            storage.Attempts.Should().Be(0);
+        }
+        finally { await first.DisposeAsync(); }
+
+        // A fresh provider has no caller task, callback or in-memory upload queue.
+        var interrupted = await HangfireDurabilityHost.CreateAsync(lease.ConnectionString, true, new(), new(), storage);
+        try
+        {
+            await interrupted.StartAsync();
+            await storage.FirstPublication.Task.WaitAsync(TimeSpan.FromSeconds(45));
+            storage.Objects.Should().ContainSingle();
+        }
+        finally
+        {
+            // Interrupt after external PUT, before the worker commits Succeeded.
+            await interrupted.DisposeAsync();
+        }
+
+        await using var recovered = await HangfireDurabilityHost.CreateAsync(lease.ConnectionString, true, new(), new(), storage);
+        await recovered.StartAsync();
+        await WaitForStateAsync(recovered.Storage, jobId, "Succeeded", TimeSpan.FromSeconds(60));
+        string? image;
+        using (var connection = recovered.Storage.GetConnection())
+            image = JsonSerializer.Deserialize<string>(connection.GetStateData(jobId).Data["Result"]);
+        var publication = storage.Objects.Single();
+        image.Should().Be("https://exercise-media.test/" + publication.Key);
+        publication.Key.Should().StartWith($"exercises/{operation}/").And.EndWith("/animation.gif");
+        storage.Attempts.Should().Be(2);
+        using (var frames = new MagickImageCollection(publication.Value.Bytes))
+            frames.Count.Should().Be(2);
+
+        var client = recovered.Services.GetRequiredService<IBackgroundJobClient>();
+        client.Requeue(jobId).Should().BeTrue();
+        await WaitForStateAsync(recovered.Storage, jobId, "Succeeded");
+        storage.Attempts.Should().Be(3);
+        storage.Objects.Should().ContainSingle();
+        await using (var scope = recovered.Services.CreateAsyncScope())
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => scope.ServiceProvider.GetRequiredService<IExerciseMediaProcessingScheduler>()
+                .ProcessAsync(Id<CorrelationScope>.New().ToString(), "GIF89a"u8.ToArray(), deadline.Token));
+            storage.Attempts.Should().Be(3, "rejected bytes never reach publication");
+        }
+        TestContext.Progress.WriteLine("Exercise media durability evidence: input-persisted=true; caller-cancelled=true; provider-restarted=true; interrupted-after-publication=true; replay-same-operation=true; immutable-objects=1; gif-frames=2.");
+    }
+
+    private sealed class RestartExerciseStorage : IExerciseMediaStorage
+    {
+        private int _attempts;
+        public bool IsConfigured => true;
+        public int Attempts => Volatile.Read(ref _attempts);
+        public ConcurrentDictionary<string, (byte[] Bytes, string Mime)> Objects { get; } = new();
+        public TaskCompletionSource FirstPublication { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
+        {
+            var attempt = Interlocked.Increment(ref _attempts);
+            var published = Objects.GetOrAdd(key, _ => (bytes.ToArray(), contentType));
+            published.Bytes.Should().Equal(bytes);
+            published.Mime.Should().Be(contentType);
+            if (attempt == 1)
+            {
+                FirstPublication.TrySetResult();
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            return "https://exercise-media.test/" + key;
+        }
     }
 
     private static async Task<string> StageAndDispatchUserRegisteredCommandAsync(IServiceProvider services, Id<User> userId)
@@ -288,7 +385,8 @@ public sealed class PostgreSqlHangfireDurabilityTests
             string connectionString,
             bool hostBackgroundServer,
             TestEmailSender emailSender,
-            TestPushProviderSender pushSender)
+            TestPushProviderSender pushSender,
+            IExerciseMediaStorage? exerciseStorage = null)
         {
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
@@ -320,6 +418,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
             services.AddBackgroundWorkerServices(isTesting: false, hostBackgroundServer);
             services.AddScoped<IInAppNotificationPushPublisher, NoOpInAppNotificationPushPublisher>();
             IntegrationHostServiceOverrides.ReplaceExternalEffects(services, emailSender, pushSender);
+            if (exerciseStorage is not null) services.AddSingleton(exerciseStorage);
 
             var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
             try
@@ -342,9 +441,8 @@ public sealed class PostgreSqlHangfireDurabilityTests
                 }
 
                 var hostedServices = provider.GetServices<IHostedService>().ToArray();
-                hostedServices.OfType<ExerciseMediaVerificationQueue>().Should().ContainSingle();
                 hostedServices.OfType<BackgroundJobServerHostedService>().Should().HaveCount(hostBackgroundServer ? 1 : 0);
-                hostedServices.Should().HaveCount(hostBackgroundServer ? 2 : 1);
+                hostedServices.Should().HaveCount(hostBackgroundServer ? 1 : 0);
                 return new HangfireDurabilityHost(provider, hostedServices);
             }
             catch

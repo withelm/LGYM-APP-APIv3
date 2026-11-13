@@ -546,11 +546,7 @@ public sealed class CompositionRootConvergenceTests
             .Should()
             .ContainSingle(descriptor => descriptor.ImplementationType == typeof(PlanApiAdapterMappingProfile));
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IHostedService)
-            && descriptor.ImplementationFactory != null
-            && descriptor.ImplementationFactory.Method.ReturnType == typeof(LgymApi.Infrastructure.Services.ExerciseMediaVerificationQueue));
-        var hangfireServerDescriptors = services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService)
-            && descriptor.ImplementationFactory?.Method.ReturnType != typeof(LgymApi.Infrastructure.Services.ExerciseMediaVerificationQueue)).ToArray();
+        var hangfireServerDescriptors = services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService)).ToArray();
         hangfireServerDescriptors.Should().HaveCount(isTesting ? 0 : 1);
         if (isTesting)
         {
@@ -563,7 +559,7 @@ public sealed class CompositionRootConvergenceTests
         else
         {
             ValidateFactoryDescriptor(services, typeof(JobStorage), ServiceLifetime.Singleton);
-            hangfireServerDescriptors.Single().Lifetime.Should().Be(ServiceLifetime.Transient);
+            ValidateFactoryDescriptor(services, typeof(IHostedService), ServiceLifetime.Transient);
         }
     }
 

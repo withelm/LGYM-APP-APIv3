@@ -32,4 +32,14 @@ public interface IExerciseMediaVerifier
     Task<VerifiedExerciseMedia> VerifyAsync(byte[] bytes, CancellationToken cancellationToken);
 }
 
+public interface IExerciseMediaProcessor
+{
+    Task<string> ProcessAsync(string operationKey, byte[] bytes, CancellationToken cancellationToken);
+}
+
+public interface IExerciseMediaProcessingScheduler
+{
+    Task<string> ProcessAsync(string operationKey, byte[] bytes, CancellationToken cancellationToken);
+}
+
 public sealed class ExerciseMediaRejectedException : Exception;

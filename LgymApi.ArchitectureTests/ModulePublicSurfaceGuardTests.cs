@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 858;
+    private const int ManifestEntryCount = 860;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,8 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaProcessingScheduler",
+        "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaProcessor",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaLimits",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaUploadResult",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.VerifiedExerciseMedia",

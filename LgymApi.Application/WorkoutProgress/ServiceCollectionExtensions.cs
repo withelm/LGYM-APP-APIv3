@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITrainingMainRecordsUpdatePort, TrainingMainRecordsUpdateService>();
         services.AddScoped<IExerciseService, ExerciseService>();
         services.AddScoped<IExerciseMediaService, ExerciseMediaService>();
+        services.AddScoped<IExerciseMediaProcessor, ExerciseMediaProcessor>();
         services.AddScoped<IExerciseScoresService, ExerciseScoresService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IGymService, GymService>();

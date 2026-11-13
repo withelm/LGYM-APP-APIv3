@@ -17,25 +17,37 @@ The existing verifier fully decodes and sanitizes GIF, PNG, JPEG and static WebP
 GIF frame pixels, delays and looping remain. Limits: 5 MiB input/output, 5 MiB +
 64 KiB complete multipart request, 2048 px per side, 100 GIF frames and 16 million
 pixel-frames. Intake concurrency/deadline, decoder resource limits and cancellation
-remain bounded. The host owns a single background verification consumer with at most
-one file waiting; it processes tasks sequentially without a static semaphore. Intake
-uses a host-owned framework concurrency limiter (two requests, no waiting) before
-multipart buffering. Saturation returns the existing localized 503 response.
-Extension and Content-Type come from verified bytes.
+remain bounded. Non-Testing uploads are persisted as Hangfire jobs in the existing
+private PostgreSQL job storage before decoding or publishing. The job stores only a
+server-generated operation UUID, bounded original bytes and the worker cancellation
+placeholder; credentials and caller tokens are resolved outside the payload.
+Original metadata stays private under the existing Hangfire retention policy, including retained failed jobs;
+only sanitized final bytes enter the public exercise bucket.
 
-Request cancellation skips queued work and cancels active work cooperatively;
-shutdown closes admission, cancels the active task and completes queued callers.
-Native decoding finishes within its decoder resource limits before the consumer can
-exit. The queue contains only bounded file bytes and cancellation/completion state,
-never HttpContext, scoped services, credentials or database entities. Each host has
-fresh queue/admission state. This is request-bound in-memory work: restart does not
-persist or replay unfinished uploads, and no success is acknowledged before verified
-bytes have been PUT to R2. There is no fire-and-forget upload or accepted-job API.
+The existing Hangfire server executes ExerciseMediaProcessingJob. Its distributed
+DisableConcurrentExecution filter serializes healthy worker executions; conditional
+immutable publication and byte verification make at-least-once replay safe even if a
+connection or process dies after PUT. No process-local work queue or completion map
+is used. Worker shutdown requeues interrupted work through Hangfire. Cancelling or
+timing out the HTTP caller ends only its wait; it never deletes the durable job.
+After restart the job can finish independently; a lost HTTP connection still requires
+a client retry and may leave an unused upload under the existing manual-cleanup policy.
+
+The request waits by reading persisted Hangfire state and returns the existing
+200 {image} only after a successful publication result. Invalid images complete as
+rejected and retain 422; enqueue/provider failures retain 503. Testing uses an inline
+adapter because its host intentionally has no Hangfire; real restart evidence uses
+PostgreSQL and fresh worker providers. The HTTP intake limiter still bounds two
+multipart requests with no waiting before buffering, and retains the 60-second deadline.
+Extension and Content-Type come from verified bytes.
 
 One immutable key uses `exercises/<server UUID>/<sanitized SHA-256>/<filename>`.
 R2 PUT must confirm success before returning its URL. SDK path-style/region,
 non-streaming payload-signing and optional checksum settings retain R2 compatibility.
-There is no object readback, delete, recovery, CAS, history, receipt, cleanup or media schema.
+A repeated conditional PUT returning 412 reads only that final object back, with
+bounded length, MIME and SHA-256 checks before reusing its URL. Mismatched bytes are
+never overwritten or accepted. Ordinary successful uploads still use only PUT.
+There is no object delete, media receipt/schema, staging bucket or cleanup subsystem.
 
 ## Local configuration
 

@@ -5,6 +5,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using FluentAssertions;
 using LgymApi.Infrastructure.Options;
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Infrastructure.Services;
 using NSubstitute;
 
@@ -49,7 +50,6 @@ public sealed class ExerciseMediaStorageTests
         client.ReceivedCalls().Should().OnlyContain(call => call.GetMethodInfo().Name == "PutObjectAsync");
     }
 
-    [TestCase(HttpStatusCode.PreconditionFailed)]
     [TestCase(HttpStatusCode.Forbidden)]
     [TestCase(HttpStatusCode.ServiceUnavailable)]
     public async Task Publish_PropagatesStorageFailureWithoutReadbackOrSuccess(HttpStatusCode status)
@@ -79,6 +79,64 @@ public sealed class ExerciseMediaStorageTests
         using var storage = Create(client);
         Func<Task> act = async () => await storage.PublishAsync(Key([1]), [1], "image/gif", cancellation.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task ReplayAfterConfirmedPut_VerifiesExistingBytes_AndReturnsSameImmutableUrl()
+    {
+        byte[] bytes = [1, 2, 3, 4];
+        var client = Substitute.For<IAmazonS3>();
+        client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<PutObjectResponse>(new AmazonS3Exception("already exists") { StatusCode = HttpStatusCode.PreconditionFailed }));
+        client.GetObjectAsync(Arg.Any<GetObjectRequest>(), Arg.Any<CancellationToken>()).Returns(new GetObjectResponse
+        {
+            HttpStatusCode = HttpStatusCode.OK,
+            ContentLength = bytes.Length,
+            Headers = { ContentType = "image/gif" },
+            ResponseStream = new MemoryStream(bytes)
+        });
+        using var storage = Create(client);
+        (await storage.PublishAsync(Key(bytes), bytes, "image/gif", default)).Should().Be("https://exercises-dev.owner.test/" + Key(bytes));
+        await client.Received(1).GetObjectAsync(Arg.Is<GetObjectRequest>(request => request.Key == Key(bytes) && request.BucketName == Bucket), Arg.Any<CancellationToken>());
+        client.ReceivedCalls().Should().OnlyContain(call => call.GetMethodInfo().Name == "PutObjectAsync" || call.GetMethodInfo().Name == "GetObjectAsync");
+    }
+
+    [TestCase("bytes")]
+    [TestCase("length")]
+    [TestCase("mime")]
+    [TestCase("truncated")]
+    [TestCase("extra")]
+    public async Task Replay_NeverAcknowledgesOrOverwritesMismatchedStoredContent(string mismatch)
+    {
+        byte[] bytes = [1, 2, 3, 4];
+        var client = Substitute.For<IAmazonS3>();
+        client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<PutObjectResponse>(new AmazonS3Exception("already exists") { StatusCode = HttpStatusCode.PreconditionFailed }));
+        client.GetObjectAsync(Arg.Any<GetObjectRequest>(), Arg.Any<CancellationToken>()).Returns(new GetObjectResponse
+        {
+            HttpStatusCode = HttpStatusCode.OK,
+            ContentLength = mismatch == "length" ? 9 : bytes.Length,
+            Headers = { ContentType = mismatch == "mime" ? "image/jpeg" : "image/gif" },
+            ResponseStream = new MemoryStream(mismatch switch
+            {
+                "bytes" => [9, 8, 7, 6],
+                "truncated" => [1, 2],
+                "extra" => [1, 2, 3, 4, 5],
+                _ => bytes
+            })
+        });
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<IOException>(() => storage.PublishAsync(Key(bytes), bytes, "image/gif", default));
+        await client.Received(1).PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task KeyHashMustMatchPublishedBytes_BeforeAnyProviderCall()
+    {
+        var client = Substitute.For<IAmazonS3>();
+        using var storage = Create(client);
+        await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => storage.PublishAsync(Key([1]), [2], "image/gif", default));
+        client.ReceivedCalls().Should().BeEmpty();
     }
 
     private static ExerciseMediaStorage Create(IAmazonS3 client)

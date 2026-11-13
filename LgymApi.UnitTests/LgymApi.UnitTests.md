@@ -19,4 +19,5 @@
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.
 
-- Exercise-media queue coverage verifies serial/FIFO decoding, bounded admission, cancellation, failure isolation, host shutdown and fresh-host state; intake coverage preserves two concurrent requests and released leases without sharing state across hosts.
+
+- Exercise-media durable job tests verify persisted argument/operation identity, actual concrete-target Hangfire filters, cancellation of the caller without job deletion, rejected input/results, sanitized failures and worker cancellation. Storage tests prove conditional replay accepts only identical final bytes and never overwrites mismatches.
