@@ -18,5 +18,3 @@
 - Reporting API/controller, middleware, validator, Worker, Workout & Progress accepted-progress consumer, and cross-cutting composition coverage remains here; Reporting-owned behavior lives in `LgymApi.Reporting.UnitTests`.
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.
-
-- Explicit media-removal/replacement checks cover post-commit ordering, a competing attach after an empty snapshot, failed save/check/cancellation retention, shared/personal/deleted references and strict owned-origin/key deletion adapter behavior. Automatic physical deletion remains skipped without a reference fence; SDK DELETE tests are mocked.

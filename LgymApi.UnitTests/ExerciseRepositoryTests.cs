@@ -115,24 +115,6 @@ public sealed class ExerciseRepositoryTests
         (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Name.Should().Be("Metadata saved later");
     }
 
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(true, true)]
-    public async Task ImageReferences_IncludePersonalAndSoftDeletedRecords(bool personal, bool deleted)
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase($"image-references-{Id<ExerciseRepositoryTests>.New():N}").Options;
-        await using var db = new AppDbContext(options);
-        var record = Exercise(Id<Exercise>.New(), personal ? Id<User>.New() : null, "Referenced");
-        record.Image = "https://media.test/shared.gif";
-        record.IsDeleted = deleted;
-        db.Exercises.Add(record);
-        await db.SaveChangesAsync();
-        var repository = new WorkoutExercisePersistenceRepository(db);
-        (await repository.IsImageReferencedIncludingDeletedAsync(record.Image)).Should().BeTrue();
-        (await repository.IsImageReferencedIncludingDeletedAsync("https://media.test/unused.gif")).Should().BeFalse();
-    }
-
     private static Exercise Exercise(Id<Exercise> id, Id<User>? ownerId, string name) => new()
     {
         Id = id,

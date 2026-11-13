@@ -83,26 +83,21 @@ create without media, replace/remove, metadata preservation, animation, revoked
 capability, account/API change and cancellation in Page and compatible Mobile.
 Mocked storage and local browser tests do not establish Cloudflare or native-device acceptance.
 
-## Explicit replacement and post-save reference safety (12 November 2026)
+## Direct replacement and manual R2 maintenance
 
-Page and Mobile disable file selection while a global exercise has a persisted image,
-including pending removal. Remove only marks draft intent; Undo cancels it. Save writes
-updateImage=true/image=null, confirms the known record is empty and refreshes it before
-new upload is allowed. The exercise intentionally has no image between the two Saves.
-Existing/direct clients may still replace the URL in one JSON update.
+Page and Mobile allow selecting a replacement while the saved image is present.
+One Save uploads the selected file, then sends its URL through existing JSON CRUD
+with updateImage=true. Explicit Remove only marks draft intent; confirmation, Undo
+and Save remain separate. Save with image=null clears the reference. Metadata-only
+updates omit updateImage and preserve Image, including WithFormula and old clients.
 
-ExerciseService captures the old Image from server-side persisted state and performs
-its safety check only after a successful UoW commit and only for intentional global
-image changes. The reference query ignores query filters and includes personal and
-soft-deleted exercises. Foreign/legacy/malformed URLs cannot be deletion targets.
-The storage port has strict configured-origin/key ownership and an idempotent SDK
-DeleteAsync capability; it has no HTTP delete endpoint and never touches PhotoStorage.
+LGYM never automatically deletes old exercise objects. Replacing X with Y leaves
+both files in R2; clearing Image leaves X; a failed JSON save can leave an unused
+upload. CRUD has no storage dependency, post-save reference query or retention log.
 
-**Automatic physical deletion is conservatively skipped in this architecture.** All
-existing JSON writers can reuse a returned URL after an empty reference query. No
-atomic reference fence exists across those writers and R2 DELETE. An empty snapshot
-therefore never authorizes destructive work. Shared, unknown, canceled and potentially
-raced references retain the object, with sanitized post-save logs. A failed reference
-check cannot change a successful save into an error. No rollback, retry queue, lock
-subsystem, new schema, background job or orphan scanner is introduced. Adapter DELETE
-tests use mocks only; they are not evidence of live R2 deletion. Unused uploads remain.
+Manual cleanup happens outside LGYM, in the dedicated exercise bucket only. Identify
+the exact object/public URL, verify Exercises.Image across global, private and
+soft-deleted rows, consider legacy URL aliases/external consumers, then recheck
+immediately before deletion. A manual check is not atomic with concurrent writes:
+retain the object when uncertain. Never infer non-use from one exercise's removal.
+No application delete endpoint, tool, job, schema or automatic cleanup is provided.

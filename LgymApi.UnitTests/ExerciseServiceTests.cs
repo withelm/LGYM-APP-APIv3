@@ -1,6 +1,4 @@
 using FluentAssertions;
-using LgymApi.Application.WorkoutProgress.ExerciseMedia;
-using Microsoft.Extensions.Logging.Abstractions;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Repositories;
@@ -30,7 +28,6 @@ public sealed class ExerciseServiceTests
     private IUnitOfWork _unitOfWork = null!;
     private IAuthenticatedAccountAuthorizationService _accountAuthorization = null!;
     private IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization = null!;
-    private IExerciseMediaStorage _mediaStorage = null!;
     private ExerciseService _service = null!;
 
     [SetUp]
@@ -51,8 +48,7 @@ public sealed class ExerciseServiceTests
                 var actor = call.ArgAt<AuthenticatedAccountContext?>(0);
                 return actor is not null && actor.Id == call.ArgAt<Id<AccountReference>>(1);
             });
-        _mediaStorage = Substitute.For<IExerciseMediaStorage>();
-        _service = new ExerciseService(_accounts, _exercises, _scores, _planDays, _unitOfWork, _accountAuthorization, _ownershipAuthorization, _mediaStorage, NullLogger<ExerciseService>.Instance);
+        _service = new ExerciseService(_accounts, _exercises, _scores, _planDays, _unitOfWork, _accountAuthorization, _ownershipAuthorization);
     }
 
     [Test]
@@ -364,111 +360,6 @@ public sealed class ExerciseServiceTests
         result.Value[0].GymName.Should().Be("History Gym");
         result.Value[0].SeriesScores.Should().ContainSingle();
         result.Value[0].SeriesScores[0].Score!.Weight.Should().Be(100);
-    }
-
-    [TestCase(false, false, null)]
-    [TestCase(true, false, null)]
-    [TestCase(false, true, null)]
-    [TestCase(true, true, null)]
-    [TestCase(false, false, "https://media.test/new.gif")]
-    [TestCase(true, false, "https://media.test/new.gif")]
-    [TestCase(false, true, "https://media.test/new.gif")]
-    [TestCase(true, true, "https://media.test/new.gif")]
-    public async Task ExplicitGlobalImageChange_CommitsBeforeCompleteReferenceCheckAndRetainsWithoutReferenceFence(bool formula, bool referenced, string? nextImage)
-    {
-        var manager = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var id = Id<Exercise>.New();
-        const string previous = "https://media.test/exercises/previous.gif";
-        _exercises.FindGlobalByIdAsync(id, Arg.Any<CancellationToken>()).Returns(Model(id, null) with { Image = previous });
-        _mediaStorage.IsConfigured.Returns(true);
-        _mediaStorage.OwnsPublicImage(previous).Returns(true);
-        var committed = false;
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => { committed = true; return 1; });
-        _exercises.IsImageReferencedIncludingDeletedAsync(previous, Arg.Any<CancellationToken>()).Returns(_ => { committed.Should().BeTrue(); return referenced; });
-
-        var result = formula
-            ? await _service.UpdateExerciseWithFormulaAsync(manager, new(id, "Changed", BodyParts.Chest, ExerciseEloFormula.Standard, null, nextImage, true))
-            : await _service.UpdateExerciseAsync(manager, new(id, "Changed", BodyParts.Chest, null, nextImage, true));
-
-        result.IsSuccess.Should().BeTrue();
-        await _exercises.Received(1).IsImageReferencedIncludingDeletedAsync(previous, Arg.Any<CancellationToken>());
-        await _mediaStorage.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [Test]
-    public async Task ConcurrentReferenceAttach_AfterEmptySnapshot_NeverDeletesReusedImage()
-    {
-        var actor = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var id = Id<Exercise>.New();
-        const string previous = "https://media.test/exercises/previous.gif";
-        _exercises.FindGlobalByIdAsync(id, Arg.Any<CancellationToken>()).Returns(Model(id, null) with { Image = previous });
-        _mediaStorage.IsConfigured.Returns(true);
-        _mediaStorage.OwnsPublicImage(previous).Returns(true);
-        var snapshotTaken = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var releaseSnapshot = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _exercises.IsImageReferencedIncludingDeletedAsync(previous, Arg.Any<CancellationToken>()).Returns(_ =>
-        {
-            snapshotTaken.SetResult();
-            return releaseSnapshot.Task;
-        });
-
-        var save = _service.UpdateExerciseAsync(actor, new(id, "Changed", BodyParts.Chest, null, null, true));
-        await snapshotTaken.Task;
-        // Another allowed writer attaches the URL after the query took its empty snapshot.
-        var competingExercise = Model(Id<Exercise>.New(), null) with { Image = previous };
-        await _exercises.UpdateAsync(new(competingExercise.Id, null, competingExercise.Name, competingExercise.BodyPart,
-            competingExercise.EloFormula, competingExercise.Description, competingExercise.Image, false, true), CancellationToken.None);
-        releaseSnapshot.SetResult(false);
-
-        (await save).IsSuccess.Should().BeTrue();
-        await _mediaStorage.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [TestCase(false, false)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    public async Task MetadataIdenticalAndPersonalImageUpdates_NeverAttemptCleanup(bool updateImage, bool personal)
-    {
-        var actor = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var id = Id<Exercise>.New();
-        const string previous = "https://media.test/exercises/previous.gif";
-        if (personal) _exercises.FindOwnedByAccountAsync(id, actor.Id, Arg.Any<CancellationToken>()).Returns(Model(id, actor.Id) with { Image = previous });
-        else _exercises.FindGlobalByIdAsync(id, Arg.Any<CancellationToken>()).Returns(Model(id, null) with { Image = previous });
-        _mediaStorage.IsConfigured.Returns(true);
-        _mediaStorage.OwnsPublicImage(previous).Returns(true);
-        var result = await _service.UpdateExerciseAsync(actor, new(id, "Changed", BodyParts.Chest, null, updateImage ? previous : null, updateImage));
-        result.IsSuccess.Should().BeTrue();
-        await _exercises.DidNotReceive().IsImageReferencedIncludingDeletedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _mediaStorage.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [TestCase(false)]
-    [TestCase(true)]
-    public async Task CleanupUncertainty_DoesNotTurnConfirmedSaveIntoFailure(bool cancelled)
-    {
-        var actor = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var id = Id<Exercise>.New();
-        const string previous = "https://media.test/exercises/previous.gif";
-        _exercises.FindGlobalByIdAsync(id, Arg.Any<CancellationToken>()).Returns(Model(id, null) with { Image = previous });
-        _mediaStorage.IsConfigured.Returns(true);
-        _mediaStorage.OwnsPublicImage(previous).Returns(true);
-        _exercises.IsImageReferencedIncludingDeletedAsync(previous, Arg.Any<CancellationToken>()).Returns(Task.FromException<bool>(cancelled ? new OperationCanceledException() : new InvalidOperationException("Reference check unavailable")));
-        var result = await _service.UpdateExerciseAsync(actor, new(id, "Changed", BodyParts.Chest, null, "https://media.test/new.gif", true));
-        result.IsSuccess.Should().BeTrue();
-        await _mediaStorage.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [Test]
-    public async Task FailedDatabaseSave_NeverChecksReferencesOrDeletes()
-    {
-        var actor = Context(Id<AccountReference>.New(), [AuthConstants.Permissions.ManageGlobalExercises]);
-        var id = Id<Exercise>.New();
-        _exercises.FindGlobalByIdAsync(id, Arg.Any<CancellationToken>()).Returns(Model(id, null) with { Image = "https://media.test/old.gif" });
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException<int>(new InvalidOperationException("Save failed")));
-        Func<Task> save = async () => await _service.UpdateExerciseAsync(actor, new(id, "Changed", BodyParts.Chest, null, null, true));
-        await save.Should().ThrowAsync<InvalidOperationException>();
-        await _exercises.DidNotReceive().IsImageReferencedIncludingDeletedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _mediaStorage.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     private static WorkoutExercisePersistenceModel Model(Id<Exercise> id, Id<AccountReference>? ownerId)

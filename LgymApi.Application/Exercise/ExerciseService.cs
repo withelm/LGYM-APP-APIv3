@@ -1,6 +1,4 @@
 using LgymApi.Application.Repositories;
-using LgymApi.Application.WorkoutProgress.ExerciseMedia;
-using Microsoft.Extensions.Logging;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -20,8 +18,6 @@ public sealed partial class ExerciseService : IExerciseService
     private readonly IWorkoutExerciseScorePersistence _exerciseScoreRepository;
     private readonly IPlanDayReferenceReadService _planDayReferences;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IExerciseMediaStorage _mediaStorage;
-    private readonly ILogger<ExerciseService> _logger;
     private readonly IAuthenticatedAccountAuthorizationService _accountAuthorization;
     private readonly IWorkoutProgressOwnershipAuthorizationService _ownershipAuthorization;
 
@@ -32,9 +28,7 @@ public sealed partial class ExerciseService : IExerciseService
         IPlanDayReferenceReadService planDayReferences,
         IUnitOfWork unitOfWork,
         IAuthenticatedAccountAuthorizationService accountAuthorization,
-        IWorkoutProgressOwnershipAuthorizationService ownershipAuthorization,
-        IExerciseMediaStorage mediaStorage,
-        ILogger<ExerciseService> logger)
+        IWorkoutProgressOwnershipAuthorizationService ownershipAuthorization)
     {
         _accountAccess = accountAccess;
         _exerciseRepository = exerciseRepository;
@@ -43,8 +37,6 @@ public sealed partial class ExerciseService : IExerciseService
         _unitOfWork = unitOfWork;
         _accountAuthorization = accountAuthorization;
         _ownershipAuthorization = ownershipAuthorization;
-        _mediaStorage = mediaStorage;
-        _logger = logger;
     }
 
     private async Task<Dictionary<Id<Domain.Entities.Exercise>, string>> GetTranslationsForExercisesAsync(IEnumerable<WorkoutExercisePersistenceModel> exercises, IReadOnlyList<string> cultures, CancellationToken cancellationToken)

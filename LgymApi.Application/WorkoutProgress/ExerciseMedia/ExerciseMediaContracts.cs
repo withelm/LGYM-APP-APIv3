@@ -24,8 +24,6 @@ public interface IExerciseMediaService
 public interface IExerciseMediaStorage
 {
     bool IsConfigured { get; }
-    bool OwnsPublicImage(string image);
-    Task DeleteAsync(string image, CancellationToken cancellationToken);
     Task<string> PublishAsync(string key, byte[] bytes, string contentType, CancellationToken cancellationToken);
 }
 

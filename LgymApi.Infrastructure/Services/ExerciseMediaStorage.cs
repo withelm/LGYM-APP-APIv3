@@ -49,35 +49,6 @@ public sealed class ExerciseMediaStorage : IExerciseMediaStorage, IDisposable
         return url;
     }
 
-    public bool OwnsPublicImage(string image) => TryGetOwnedKey(image, out _);
-
-    private bool TryGetOwnedKey(string image, out string key)
-    {
-        key = string.Empty;
-        if (!IsConfigured || string.IsNullOrEmpty(image)) return false;
-        var prefix = _options.PublicBaseUrl.TrimEnd('/') + "/";
-        // Match the raw URL: Uri normalization must not make encoded/traversal keys eligible.
-        if (!image.StartsWith(prefix, StringComparison.Ordinal)) return false;
-        key = image[prefix.Length..];
-        try { ValidateKey(key); return true; }
-        catch (ExerciseMediaRejectedException) { key = string.Empty; return false; }
-    }
-
-    public async Task DeleteAsync(string image, CancellationToken cancellationToken)
-    {
-        if (!TryGetOwnedKey(image, out var key)) throw new ExerciseMediaRejectedException();
-        try
-        {
-            var response = await Client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _options.Bucket, Key = key }, cancellationToken);
-            if (response.HttpStatusCode is not (HttpStatusCode.NoContent or HttpStatusCode.OK or HttpStatusCode.NotFound))
-                throw new IOException("Exercise media storage did not confirm deletion.");
-        }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound)
-        {
-            // Deletion is idempotent for an already absent owned object.
-        }
-    }
-
     private async Task PutImmutableAsync(string bucket, string key, byte[] bytes, string contentType, CancellationToken cancellationToken)
     {
         using var stream = new MemoryStream(bytes, false);
