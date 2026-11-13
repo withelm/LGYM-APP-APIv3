@@ -19,6 +19,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Data;
+using LgymApi.Infrastructure.Services;
 using LgymApi.Platform;
 using LgymApi.Identity;
 using LgymApi.TestUtils;
@@ -269,13 +270,13 @@ public sealed class PostgreSqlHangfireDurabilityTests
     private sealed class HangfireDurabilityHost : IAsyncDisposable
     {
         private readonly DependencyInjectionServiceProvider _provider;
-        private readonly IHostedService? _server;
-        private bool _started;
+        private readonly IHostedService[] _hostedServices;
+        private int _startedServiceCount;
 
-        private HangfireDurabilityHost(DependencyInjectionServiceProvider provider, IHostedService? server)
+        private HangfireDurabilityHost(DependencyInjectionServiceProvider provider, IHostedService[] hostedServices)
         {
             _provider = provider;
-            _server = server;
+            _hostedServices = hostedServices;
             Storage = provider.GetRequiredService<JobStorage>();
         }
 
@@ -340,9 +341,11 @@ public sealed class PostgreSqlHangfireDurabilityTests
                     await database.SaveChangesAsync();
                 }
 
-                var servers = provider.GetServices<IHostedService>().ToArray();
-                servers.Should().HaveCount(hostBackgroundServer ? 1 : 0);
-                return new HangfireDurabilityHost(provider, servers.SingleOrDefault());
+                var hostedServices = provider.GetServices<IHostedService>().ToArray();
+                hostedServices.OfType<ExerciseMediaVerificationQueue>().Should().ContainSingle();
+                hostedServices.OfType<BackgroundJobServerHostedService>().Should().HaveCount(hostBackgroundServer ? 1 : 0);
+                hostedServices.Should().HaveCount(hostBackgroundServer ? 2 : 1);
+                return new HangfireDurabilityHost(provider, hostedServices);
             }
             catch
             {
@@ -353,19 +356,22 @@ public sealed class PostgreSqlHangfireDurabilityTests
 
         public async Task StartAsync()
         {
-            _server.Should().NotBeNull();
-            await _server!.StartAsync(CancellationToken.None);
-            _started = true;
+            _hostedServices.OfType<BackgroundJobServerHostedService>().Should().ContainSingle();
+            foreach (var hostedService in _hostedServices)
+            {
+                await hostedService.StartAsync(CancellationToken.None);
+                _startedServiceCount++;
+            }
         }
 
         public async ValueTask DisposeAsync()
         {
-            if (_started)
+            try
             {
-                await _server!.StopAsync(CancellationToken.None);
+                for (var index = _startedServiceCount - 1; index >= 0; index--)
+                    await _hostedServices[index].StopAsync(CancellationToken.None);
             }
-
-            await _provider.DisposeAsync();
+            finally { await _provider.DisposeAsync(); }
         }
     }
 
