@@ -203,7 +203,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
 
         var client = recovered.Services.GetRequiredService<IBackgroundJobClient>();
         client.Requeue(jobId).Should().BeTrue();
-        await WaitForStateAsync(recovered.Storage, jobId, "Succeeded");
+        await WaitForStateAsync(recovered.Storage, jobId, "Succeeded", minimumOccurrences: 2);
         storage.Attempts.Should().Be(3);
         storage.Objects.Should().ContainSingle();
         await using (var scope = recovered.Services.CreateAsyncScope())
@@ -334,12 +334,13 @@ public sealed class PostgreSqlHangfireDurabilityTests
         JobStorage storage,
         string jobId,
         string expectedState,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        int minimumOccurrences = 1)
     {
         var deadline = DateTimeOffset.UtcNow.Add(timeout ?? TimeSpan.FromSeconds(30));
         while (DateTimeOffset.UtcNow < deadline)
         {
-            if (ReadTimeline(storage, jobId).Contains(expectedState, StringComparer.Ordinal))
+            if (ReadTimeline(storage, jobId).Count(state => string.Equals(state, expectedState, StringComparison.Ordinal)) >= minimumOccurrences)
             {
                 return;
             }
@@ -347,7 +348,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
             await Task.Delay(TimeSpan.FromMilliseconds(250));
         }
 
-        Assert.Fail($"Hangfire job {jobId} did not reach {expectedState}. Timeline: {string.Join('>', ReadTimeline(storage, jobId))}.");
+        Assert.Fail($"Hangfire job {jobId} did not record {minimumOccurrences} occurrences of {expectedState}. Timeline: {string.Join('>', ReadTimeline(storage, jobId))}.");
     }
 
     private static void AssertStateSubsequence(IReadOnlyList<string> timeline, params string[] expectedStates)
