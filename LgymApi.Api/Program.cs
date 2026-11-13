@@ -27,6 +27,7 @@ using Serilog;
 using Serilog.Debugging;
 using LgymApi.Api.Features.Trainer;
 using Microsoft.AspNetCore.Mvc;
+using LgymApi.Api.Features.Exercise.Filters;
 
 const string TestingEnvironment = "Testing";
 
@@ -72,6 +73,7 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ExerciseMediaRequestAdmission>();
 var localizationOptions = builder.Services.AddApiLocalization();
 builder.Services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 var isTesting = builder.Environment.IsEnvironment(TestingEnvironment);

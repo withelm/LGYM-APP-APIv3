@@ -18,3 +18,5 @@
 - Reporting API/controller, middleware, validator, Worker, Workout & Progress accepted-progress consumer, and cross-cutting composition coverage remains here; Reporting-owned behavior lives in `LgymApi.Reporting.UnitTests`.
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.
+
+- Exercise-media queue coverage verifies serial/FIFO decoding, bounded admission, cancellation, failure isolation, host shutdown and fresh-host state; intake coverage preserves two concurrent requests and released leases without sharing state across hosts.

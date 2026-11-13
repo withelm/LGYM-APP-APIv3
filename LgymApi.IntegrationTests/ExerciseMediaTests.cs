@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using ImageMagick;
 using LgymApi.Api.Features.Exercise.Contracts;
+using LgymApi.Api.Features.Exercise.Filters;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -115,6 +116,28 @@ public sealed class ExerciseMediaTests : IntegrationTestBase
         using var response = await UploadAsync(Gif); response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await response.Content.ReadAsStringAsync()).Should().NotContain("synthetic-secret");
         _storage.Published.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task SaturatedIntake_Returns503_AndReleasedCapacityAllowsVerifiedUpload()
+    {
+        await ManagerAsync();
+        _ = MediaClient();
+        var admission = _mediaFactory!.Services.GetRequiredService<ExerciseMediaRequestAdmission>();
+        using var first = admission.TryAcquire();
+        using var second = admission.TryAcquire();
+        first.IsAcquired.Should().BeTrue();
+        second.IsAcquired.Should().BeTrue();
+        using (var rejected = await UploadAsync(Gif))
+        {
+            rejected.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+            (await rejected.Content.ReadAsStringAsync()).Should().Contain("msg");
+            _storage.Published.Should().BeEmpty();
+        }
+        first.Dispose();
+        using var accepted = await UploadAsync(Gif);
+        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        _storage.Published.Should().ContainSingle();
     }
 
     [TestCase(false)]

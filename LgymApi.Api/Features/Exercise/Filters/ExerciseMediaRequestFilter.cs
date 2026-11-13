@@ -7,14 +7,14 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace LgymApi.Api.Features.Exercise.Filters;
 
-internal sealed class ExerciseMediaRequestFilter(IMapper mapper) : IAsyncResourceFilter
+internal sealed class ExerciseMediaRequestFilter(IMapper mapper, ExerciseMediaRequestAdmission admission) : IAsyncResourceFilter
 {
-    private static readonly SemaphoreSlim Intake = new(2);
-
     public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
     {
         var http = context.HttpContext;
-        if (!await Intake.WaitAsync(0, http.RequestAborted)) { context.Result = Failure(503); return; }
+        http.RequestAborted.ThrowIfCancellationRequested();
+        using var lease = admission.TryAcquire();
+        if (!lease.IsAcquired) { context.Result = Failure(503); return; }
         var originalCancellation = http.RequestAborted;
         var originalBody = http.Request.Body;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(originalCancellation);
@@ -40,11 +40,10 @@ internal sealed class ExerciseMediaRequestFilter(IMapper mapper) : IAsyncResourc
         {
             http.RequestAborted = originalCancellation;
             http.Request.Body = originalBody;
-            Intake.Release();
         }
     }
 
-    private IActionResult Failure(int status) => new ObjectResult(mapper.Map<string, ResponseMessageDto>(status == 503 ? Messages.ExerciseMediaUnavailable : Messages.ExerciseMediaInvalid)) { StatusCode = status };
+    private ObjectResult Failure(int status) => new(mapper.Map<string, ResponseMessageDto>(status == 503 ? Messages.ExerciseMediaUnavailable : Messages.ExerciseMediaInvalid)) { StatusCode = status };
 
     internal static async Task<byte[]> ReadSourceAsync(IFormFile file, CancellationToken cancellationToken)
     {

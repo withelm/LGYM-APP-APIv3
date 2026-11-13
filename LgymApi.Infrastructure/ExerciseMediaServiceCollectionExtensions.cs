@@ -16,7 +16,9 @@ public static partial class ServiceCollectionExtensions
         if (options.Enabled && (options.Bucket == reportsBucket || options.AccessKeyId == configuration["PhotoStorage:AccessKeyId"])) throw new InvalidOperationException("Exercise media and private report storage must use separate buckets and credentials.");
         services.AddSingleton(options);
         services.AddScoped<IExerciseMediaStorage>(_ => new ExerciseMediaStorage(options, environmentName));
-        services.AddScoped<IExerciseMediaVerifier, ExerciseMediaVerifier>();
+        services.AddSingleton<ExerciseMediaVerificationQueue>(_ => new(new ExerciseMediaVerifier()));
+        services.AddSingleton<IExerciseMediaVerifier>(provider => provider.GetRequiredService<ExerciseMediaVerificationQueue>());
+        services.AddHostedService(provider => provider.GetRequiredService<ExerciseMediaVerificationQueue>());
         return services;
     }
 }

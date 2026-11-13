@@ -17,7 +17,20 @@ The existing verifier fully decodes and sanitizes GIF, PNG, JPEG and static WebP
 GIF frame pixels, delays and looping remain. Limits: 5 MiB input/output, 5 MiB +
 64 KiB complete multipart request, 2048 px per side, 100 GIF frames and 16 million
 pixel-frames. Intake concurrency/deadline, decoder resource limits and cancellation
-remain bounded. Extension and Content-Type come from verified bytes.
+remain bounded. The host owns a single background verification consumer with at most
+one file waiting; it processes tasks sequentially without a static semaphore. Intake
+uses a host-owned framework concurrency limiter (two requests, no waiting) before
+multipart buffering. Saturation returns the existing localized 503 response.
+Extension and Content-Type come from verified bytes.
+
+Request cancellation skips queued work and cancels active work cooperatively;
+shutdown closes admission, cancels the active task and completes queued callers.
+Native decoding finishes within its decoder resource limits before the consumer can
+exit. The queue contains only bounded file bytes and cancellation/completion state,
+never HttpContext, scoped services, credentials or database entities. Each host has
+fresh queue/admission state. This is request-bound in-memory work: restart does not
+persist or replay unfinished uploads, and no success is acknowledged before verified
+bytes have been PUT to R2. There is no fire-and-forget upload or accepted-job API.
 
 One immutable key uses `exercises/<server UUID>/<sanitized SHA-256>/<filename>`.
 R2 PUT must confirm success before returning its URL. SDK path-style/region,

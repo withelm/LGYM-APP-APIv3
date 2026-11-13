@@ -39,3 +39,4 @@
 - Trainer approval coverage verifies registration, trainer authorization, review history, resubmission, typed OpenAPI, selective backfill, concurrent decisions, and rollback. Historical migration fixtures use `PostgreSqlHistoricalUserSeed` for schema-version-compatible user inserts.
 
 - ExerciseMediaTests covers current capability/401/403, bounded file-only upload, storage failures, unchanged create responses, ordinary and WithFormula image replacement/removal, metadata omission/null/empty/stale URL protection and private ownership. ExerciseMediaOpenApiTests exports the real Testing host schema with LGYM_OPENAPI_OUTPUT; the export is temporary and is shared by both Orval clients.
+`ExerciseMediaTests` exercises the real host-managed verification queue and confirms intake overload returns localized 503 without a PUT, then a released admission lease permits a verified upload.
