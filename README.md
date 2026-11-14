@@ -94,7 +94,7 @@ LGYM retention applies to data in the LGYM database. It does not set or guarante
 - Disabled push installations are physically purged 30 days after their non-null `DisabledAt` timestamp. Active installations and installations that are only disassociated by logout are not retention candidates. The stale cleanup flow first marks inactive installations disabled after the configured 45-day inactivity period.
 - In-app notifications are physically purged after 90 days, based on `CreatedAt` and a strict earlier-than cutoff.
 - Retention uses bounded batches of 500 rows by default. Each invocation drains consecutive batches until no eligible rows remain, commits each non-empty batch separately, and stops on a failed batch so a rerun can safely continue after an operator resolves the failure.
-- Account deletion keeps Identity's anonymization behavior and immediately removes all LGYM push installations linked to the account and their dependent LGYM push message history in the same unit-of-work commit. It does not hard-delete the account.
+- Account deletion immediately revokes ordinary sessions and starts a recoverable 30-day pending period. Identity, relationships and LGYM push/history data remain retained and inaccessible until finalization; cancellation restores the same account. See [account deletion and recovery](docs/account-deletion.md) for endpoints, worker cleanup and verified limitations.
 - Logout disassociates the installation from the ended session. It does not physically delete the installation.
 
 The retention settings are under `PushNotifications` and can be overridden by configuration binding:
@@ -125,7 +125,7 @@ If the first run is not healthy, stop or disable the worker's retention executio
 
 ### Firebase boundary
 
-LGYM's immediate account-deletion guarantee covers LGYM database delivery targets and LGYM push history only. The backend does not delete Firebase registration tokens or Firebase Installation IDs, does not control Firebase's retention behavior, and does not claim that Firebase follows the LGYM 30/30/90 periods. Mobile clients own local token and Firebase Installation lifecycle actions, including logout and account deletion cleanup, auto-init handling, and later re-registration. Firebase may retain provider-side data independently of LGYM database retention.
+LGYM denies delivery to pending-deletion accounts immediately; its database cleanup follows the recoverable 30-day lifecycle. The backend does not delete Firebase registration tokens or Firebase Installation IDs, control Firebase retention, or claim that Firebase follows LGYM's 30/30/90 periods. Mobile clients own local token and Firebase Installation actions, including logout/deletion cleanup, auto-init handling and intentional re-registration. Firebase may retain data independently of LGYM database retention.
 
 - Required mobile follow-up: [issue #469](https://github.com/withelm/LGYM-APP-APIv3/issues/469) owns client-side deletion of FCM registration tokens and Firebase Installation IDs (FIDs), auto-init gating, and later re-registration on logout or account deletion. LGYM backend ownership remains limited to its own delivery targets and push history.
 
@@ -459,6 +459,22 @@ The runner needs Docker, or an admin connection supplied through `-ConnectionStr
 ```powershell
 pwsh -File scripts/run-postgresql-integration-tests.ps1
 ```
+
+### Docker S3 storage smoke (development)
+
+Run the production R2 storage adapter against an isolated SeaweedFS S3 server:
+
+```powershell
+pwsh -NoProfile -File scripts/run-s3-storage-smoke.ps1
+```
+
+Requirements: PowerShell 7.4+, .NET 10 SDK (or a compatible newer SDK), and Docker with Linux containers and a Compose plugin supporting `up --wait`. No API host, PostgreSQL database, R2 account or production credentials are needed.
+
+The runner builds `scripts/smoke/S3StorageSmoke.cs` in a temporary console project referencing the existing Infrastructure project. It starts the pinned SeaweedFS image on a random localhost HTTPS port, generates disposable credentials and a pinned one-hour TLS certificate, and waits for Docker's TLS-listener healthcheck. It checks bucket creation, signed PUT, signed GET with exact bytes, prefix inventory, physical DELETE with HTTP 404 from the old signed URL, repeated DELETE, absent metadata and empty-bucket deletion.
+
+Containers, networks, anonymous volumes and temporary TLS/build files are removed in `finally`, including after startup or test failure. Process AWS credential variables are restored. Exit code `0` requires all checks and cleanup to succeed; failures return `1`.
+
+Each invocation writes `TestResults/S3Smoke/<run-id>/result.json` and redacted `run.log`; `smoke.json` contains individual checks when the smoke executable ran. Options: `-ResultsDirectory` changes the artifact root, `-StartupTimeoutSeconds` changes the default 60-second readiness deadline, and `-Image` selects another compatible SeaweedFS image. The storage checks have a separate 60-second operation deadline. This is an opt-in developer smoke, not an automatic unit-test or production Cloudflare/CDN acceptance suite.
 
 ## Notes
 
