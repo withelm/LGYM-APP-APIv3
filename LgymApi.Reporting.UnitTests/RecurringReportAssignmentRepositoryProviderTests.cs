@@ -16,6 +16,48 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class RecurringReportAssignmentRepositoryProviderTests
 {
+    [TestCase(1)]
+    [TestCase(4)]
+    public async Task PostgreSqlBulkFeedbackFacts_CompileNullableRequestIdsBeforeDatabaseExecution(int requestCount)
+    {
+        var capture = new QueryCompilationCapture();
+        await using var database = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=127.0.0.1;Database=not-opened;Username=not-used")
+            .AddInterceptors(new SuppressConnectionOpening(), capture).Options);
+        var requestIds = Enumerable.Range(0, requestCount).Select(_ => Id<ReportRequest>.New()).ToArray();
+        var repository = new RecurringReportAssignmentPersistenceRepository(database);
+
+        var action = () => repository.ListByCurrentRequestsAsync(requestIds);
+
+        await action.Should().ThrowAsync<QueryCompiledException>();
+        capture.CommandCount.Should().Be(1);
+        database.ChangeTracker.Entries().Should().BeEmpty();
+    }
+
+    private sealed class QueryCompiledException : Exception { }
+
+    private sealed class SuppressConnectionOpening : DbConnectionInterceptor
+    {
+        public override ValueTask<InterceptionResult> ConnectionOpeningAsync(
+            DbConnection connection, ConnectionEventData eventData, InterceptionResult result,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(InterceptionResult.Suppress());
+    }
+
+    private sealed class QueryCompilationCapture : DbCommandInterceptor
+    {
+        public int CommandCount { get; private set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            CommandCount++;
+            // Compile the actual repository query with Npgsql, then stop before any SQL runs.
+            throw new QueryCompiledException();
+        }
+    }
+
     [Test]
     public async Task BulkFeedbackFacts_MatchSingleReadsWithConstantSqlCommandCount()
     {

@@ -103,8 +103,9 @@ public sealed class RecurringReportAssignmentPersistenceRepository : IRecurringR
             return [];
         }
 
+        var nullableRequestIds = reportRequestIds.Select(id => (Id<ReportRequest>?)id).ToArray();
         var entities = await BaseQuery().AsNoTracking()
-            .Where(assignment => assignment.CurrentReportRequestId != null && reportRequestIds.Contains(assignment.CurrentReportRequestId.Value))
+            .Where(assignment => assignment.CurrentReportRequestId != null && nullableRequestIds.Contains(assignment.CurrentReportRequestId))
             .ToListAsync(cancellationToken);
         return entities.Select(ReportingPersistenceProjection.Assignment).ToList();
     }
