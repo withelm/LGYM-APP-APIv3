@@ -146,6 +146,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<RelationshipEndedReportCancellationCommand, RelationshipEndedReportCancellationCommandHandler>();
+        services.AddBackgroundAction<LgymApi.Identity.Contracts.AccountDeletion.AccountDeletionScheduledCommand, AccountDeletionScheduledCommandHandler>();
 
         BackgroundActionRegistrationValidator.Validate(services, commandContractRegistry);
         return services;

@@ -277,7 +277,7 @@ public sealed class BackgroundActionRegistrationTests
         var action = () => ValidateClosedWorldBackgroundActionRegistrations(services);
 
         action.Should().NotThrow();
-        GetClosedBackgroundActionRegistrations(services).Should().HaveCount(19);
+        GetClosedBackgroundActionRegistrations(services).Should().HaveCount(20);
     }
 
     [Test]

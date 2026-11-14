@@ -29,6 +29,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             {
                 account.DeletionState = AccountDeletionState.PendingDeletion;
                 account.DeletionGeneration = Id<CorrelationScope>.New();
+                account.DeletionScheduledGeneration = account.DeletionGeneration;
                 account.DeletionEffectiveAt = DateTimeOffset.UtcNow.AddDays(account.Id == first.Id ? -2 : -1);
             }
             await db.SaveChangesAsync();
@@ -66,6 +67,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             var account = await db.Users.SingleAsync(x => x.Id == user.Id);
             account.DeletionState = AccountDeletionState.PendingDeletion;
             account.DeletionGeneration = Id<CorrelationScope>.New();
+            account.DeletionScheduledGeneration = account.DeletionGeneration;
             account.DeletionEffectiveAt = DateTimeOffset.UtcNow.AddDays(-1);
             db.Measurements.Add(new Measurement { Id = measurementId, UserId = user.Id, Value = 42, Unit = "cm" });
             await db.SaveChangesAsync();
@@ -106,6 +108,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             var account = await db.Users.SingleAsync(x => x.Id == user.Id);
             account.DeletionState = AccountDeletionState.PendingDeletion;
             account.DeletionGeneration = generation;
+            account.DeletionScheduledGeneration = generation;
             account.DeletionRequestedAt = DateTimeOffset.UtcNow.AddDays(-31);
             account.DeletionEffectiveAt = DateTimeOffset.UtcNow.AddDays(-1);
             var template = new ReportTemplate { Id = Id<ReportTemplate>.New(), TrainerId = trainer.Id, Name = "Report" };
@@ -183,6 +186,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             account.DeletionState = AccountDeletionState.PendingDeletion;
             account.DeletionEffectiveAt = now;
             account.DeletionGeneration = Id<CorrelationScope>.New();
+            account.DeletionScheduledGeneration = account.DeletionGeneration;
             await db.SaveChangesAsync();
         }
 
@@ -196,6 +200,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             var account = await db.Users.SingleAsync(x => x.Id == user.Id);
             account.DeletionState = AccountDeletionState.Active;
             account.DeletionGeneration = null;
+            account.DeletionScheduledGeneration = null;
             account.LifecycleRevision = Id<CorrelationScope>.New();
             await db.SaveChangesAsync();
         }
@@ -216,6 +221,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             account.DeletionState = AccountDeletionState.PendingDeletion;
             account.DeletionEffectiveAt = DateTimeOffset.UtcNow.AddDays(-1);
             account.DeletionGeneration = generation;
+            account.DeletionScheduledGeneration = generation;
             await db.SaveChangesAsync();
         }
 
@@ -248,6 +254,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             account.DeletionState = AccountDeletionState.PendingDeletion;
             account.DeletionEffectiveAt = DateTimeOffset.UtcNow.AddDays(1);
             account.DeletionGeneration = Id<CorrelationScope>.New();
+            account.DeletionScheduledGeneration = account.DeletionGeneration;
             await db.SaveChangesAsync();
             var service = new AccountFinalizationService(new AccountFinalizationStore(db),
                 Substitute.For<IAccountFinalizationPhotoManifest>(), new AccountFinalizationCleanup(db),

@@ -48,6 +48,7 @@ public static class IdentityModule
         services.AddScoped<IAccountDeletionService, AccountDeletionService>();
         services.AddScoped<IAccountFinalizationService, AccountFinalizationService>();
         services.AddScoped<IAccountDeletionRetention, AccountDeletionRetention>();
+        services.AddScoped<IAccountDeletionScheduleConfirmation, AccountDeletionScheduleConfirmation>();
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();

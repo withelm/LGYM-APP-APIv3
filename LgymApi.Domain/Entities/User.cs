@@ -18,6 +18,7 @@ public sealed class User : EntityBase<User>
     public DateTimeOffset? DeletionRequestedAt { get; set; }
     public DateTimeOffset? DeletionEffectiveAt { get; set; }
     public Id<CorrelationScope>? DeletionGeneration { get; set; }
+    public Id<CorrelationScope>? DeletionScheduledGeneration { get; set; }
     public Id<CorrelationScope> LifecycleRevision { get; set; } = Id<CorrelationScope>.New();
 
     public string? LegacyHash { get; set; }

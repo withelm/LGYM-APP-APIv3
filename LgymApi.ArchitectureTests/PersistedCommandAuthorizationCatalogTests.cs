@@ -10,7 +10,7 @@ public sealed class PersistedCommandAuthorizationCatalogTests
     {
         var entries = PersistedCommandAuthorizationCatalog.Entries;
 
-        entries.Should().HaveCount(15);
+        entries.Should().HaveCount(19);
         entries.Select(entry => entry.CanonicalId).Should().OnlyHaveUniqueItems();
         entries.Select(entry => entry.RuntimeCommandType).Should().OnlyHaveUniqueItems();
         PersistedCommandAuthorizationCatalog.AuthorizationClass.Should().Be(PersistedCommandAuthorizationClass.CommittedSystemIntent);

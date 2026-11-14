@@ -73,7 +73,8 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
                 serviceScope.ServiceProvider.GetRequiredService<ILegacyPasswordService>(),
                 TimeProvider.System,
                 serviceScope.ServiceProvider.GetRequiredService<IAccountDeletionSynchronization>(),
-                serviceScope.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>());
+                serviceScope.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>(),
+                serviceScope.ServiceProvider.GetRequiredService<LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandOutboxWriter>());
 
             await deletionService.RequestAsync(scopedUser.Id.Rebind<AccountReference>());
 

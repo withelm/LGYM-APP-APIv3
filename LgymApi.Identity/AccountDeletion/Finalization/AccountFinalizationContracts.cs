@@ -8,6 +8,7 @@ public sealed record AccountFinalizationCandidate(Id<AccountReference> AccountId
 public interface IAccountFinalizationStore
 {
     Task<IReadOnlyList<AccountFinalizationCandidate>> FindDueAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AccountFinalizationCandidate>> FindDueAfterAsync(DateTimeOffset now, int limit, Id<AccountReference> after, CancellationToken cancellationToken = default);
     Task<bool> LockAndBeginAsync(AccountFinalizationCandidate candidate, DateTimeOffset now, CancellationToken cancellationToken = default);
     Task StageCompletedAsync(AccountFinalizationCandidate candidate, CancellationToken cancellationToken = default);
     void DiscardUncommittedChanges();

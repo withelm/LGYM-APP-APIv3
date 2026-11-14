@@ -1,6 +1,8 @@
 using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Runtime;
+using LgymApi.BackgroundWorker.Actions;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using NUnit.Framework;
 using System.Text.Json;
 
@@ -9,6 +11,29 @@ namespace LgymApi.UnitTests;
 [TestFixture]
 public sealed class CommandEnvelopeCompatibilityTests
 {
+    [Test]
+    public void AccountDeletionScheduled_RegistryWritesCanonicalIdAndReadsBothIdsWithGoldenPayload()
+    {
+        const string canonicalId = "LgymApi.BackgroundWorker.Common.Commands.AccountDeletionScheduledCommand";
+        const string payload = "{\"accountId\":\"00000000-0000-0000-0000-000000000001\",\"deletionGeneration\":\"00000000-0000-0000-0000-000000000002\"}";
+        var registry = CommandContractRegistry.CreateDefault();
+        var type = typeof(AccountDeletionScheduledCommand);
+        var descriptor = registry.DescribeForWrite(type);
+        var contract = registry.Contracts.Single(row => row.RuntimeType == type);
+
+        descriptor.CanonicalId.Should().Be(canonicalId);
+        contract.ReadAlias.Should().Be(type.FullName);
+        contract.ExpectedHandlerTypes.Should().Equal(typeof(AccountDeletionScheduledCommandHandler));
+        foreach (var id in new[] { canonicalId, type.FullName! })
+        {
+            var resolved = registry.Resolve(id);
+            var command = JsonSerializer.Deserialize(payload, resolved.RuntimeType, SharedSerializationOptions.Current);
+            resolved.RuntimeType.Should().Be(type);
+            command.Should().BeOfType<AccountDeletionScheduledCommand>();
+            JsonSerializer.Serialize(command, resolved.RuntimeType, SharedSerializationOptions.Current).Should().Be(payload);
+        }
+    }
+
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
     public void OldFixture_ToNewReader_ResolvesAllFifteenCanonicalIds(LegacyCommandContract contract)
     {

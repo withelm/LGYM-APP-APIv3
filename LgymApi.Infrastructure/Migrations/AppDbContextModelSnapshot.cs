@@ -2564,6 +2564,9 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("DeletionRequestedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("DeletionScheduledGeneration")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("DeletionState")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

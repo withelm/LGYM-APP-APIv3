@@ -10,6 +10,7 @@ using LgymApi.Identity.Contracts.AccountDeletion;
 using LgymApi.Identity.Persistence;
 using Microsoft.EntityFrameworkCore;
 using LgymApi.Resources;
+using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 
 namespace LgymApi.Identity.AccountDeletion;
 
@@ -19,7 +20,8 @@ internal sealed class AccountDeletionService(
     ILegacyPasswordService passwords,
     TimeProvider clock,
     IAccountDeletionSynchronization synchronization,
-    IAccountRecoveryEmailOutbox recoveryEmails) : IAccountDeletionService
+    IAccountRecoveryEmailOutbox recoveryEmails,
+    ICommandOutboxWriter outbox) : IAccountDeletionService
 {
     public async Task RequestAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
     {
@@ -41,6 +43,7 @@ internal sealed class AccountDeletionService(
         user.DeletionRequestedAt = now;
         user.DeletionEffectiveAt = now.AddDays(30);
         user.DeletionGeneration = Id<CorrelationScope>.New();
+        user.DeletionScheduledGeneration = null;
         user.LifecycleRevision = Id<CorrelationScope>.New();
         var sessions = await context.UserSessions.Where(x => x.UserId == user.Id && x.RevokedAtUtc == null)
             .ToListAsync(cancellationToken);
@@ -48,6 +51,10 @@ internal sealed class AccountDeletionService(
         {
             session.RevokedAtUtc = now;
         }
+        var intent = await outbox.StageAsync(
+            new AccountDeletionScheduledCommand(accountId, user.DeletionGeneration.Value), cancellationToken);
+        if (intent.EnvelopeId is null)
+            throw new InvalidOperationException("Account deletion scheduling intent could not be staged.");
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
@@ -125,6 +132,7 @@ internal sealed class AccountDeletionService(
         user.DeletionRequestedAt = null;
         user.DeletionEffectiveAt = null;
         user.DeletionGeneration = null;
+        user.DeletionScheduledGeneration = null;
         user.LifecycleRevision = Id<CorrelationScope>.New();
         var sessions = await context.UserSessions.Where(session => session.UserId == user.Id && session.RecoveryTokenHash != null
             && session.RevokedAtUtc == null).ToListAsync(cancellationToken);

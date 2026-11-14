@@ -33,9 +33,11 @@ internal sealed class PostgreSqlAccountDeletionRaceTests : PostgreSqlIntegration
             account.DeletionRequestedAt = deadline.AddDays(-30);
             account.DeletionEffectiveAt = deadline;
             account.DeletionGeneration = Id<CorrelationScope>.New();
+            account.DeletionScheduledGeneration = account.DeletionGeneration;
             await db.SaveChangesAsync();
             var service = new AccountDeletionService(db, new EfUnitOfWork(db), setup.ServiceProvider.GetRequiredService<ILegacyPasswordService>(),
-                clock, new AccountDeletionSynchronization(db), setup.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>());
+                clock, new AccountDeletionSynchronization(db), setup.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>(),
+                setup.ServiceProvider.GetRequiredService<LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandOutboxWriter>());
             recoveryToken = await service.SignInWithPasswordAsync(user.Name, "password123");
         }
         var cancellationReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -49,7 +51,8 @@ internal sealed class PostgreSqlAccountDeletionRaceTests : PostgreSqlIntegration
             await releaseCancellation.Task.WaitAsync(TimeSpan.FromSeconds(15));
         });
         var cancellation = new AccountDeletionService(cancelDb, observed, cancelScope.ServiceProvider.GetRequiredService<ILegacyPasswordService>(),
-            clock, new AccountDeletionSynchronization(cancelDb), cancelScope.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>());
+            clock, new AccountDeletionSynchronization(cancelDb), cancelScope.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>(),
+            cancelScope.ServiceProvider.GetRequiredService<LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandOutboxWriter>());
         var cancelTask = cancellation.CancelAsync(recoveryToken);
         try
         {
