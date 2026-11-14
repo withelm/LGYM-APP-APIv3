@@ -77,7 +77,7 @@ internal sealed class CompleteTrainingUseCase : ICompleteTrainingUseCase
         }
 
         var planDay = await _planDayReferences.GetByIdAsync(planDayId, cancellationToken);
-        if (!planDay.Exists || planDay.IsDeleted)
+        if (!planDay.Exists || planDay.IsDeleted || planDay.OwnerId != userId)
         {
             return Result<TrainingSummaryResult, AppError>.Failure(new TrainingNotFoundError(Messages.DidntFind));
         }

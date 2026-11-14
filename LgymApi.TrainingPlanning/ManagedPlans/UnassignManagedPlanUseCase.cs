@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -6,6 +7,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.TrainingPlanning.ManagedPlans;
@@ -38,14 +40,24 @@ internal sealed class UnassignManagedPlanUseCase : IUnassignManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.UserIdRequired));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         if (await _accountReadService.GetByIdAsync(command.TraineeId, cancellationToken) is null)
         {
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        var activePlans = await _planRepository.GetActiveForUpdateAsync(command.TraineeId, cancellationToken);
+        if (activePlans.Any(activePlan => activePlan.Purpose != PlanPurpose.Personal))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
+        }
+
         try
         {
+            foreach (var activePlan in activePlans)
+            {
+                await _planRepository.UpdateAsync(activePlan, cancellationToken);
+            }
             await _planRepository.ClearActivePlansAsync(command.TraineeId, cancellationToken);
             await _activePlanPointerStore.StageActivePlanIdAsync(command.TraineeId, null, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

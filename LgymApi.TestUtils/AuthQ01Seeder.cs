@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -53,6 +54,12 @@ public static class AuthQ01Seeder
                     : throw new InvalidOperationException($"Invalid plan ID '{planDefinition.Id}'."),
                 UserId = actors[planDefinition.Owner].Id,
                 Name = planDefinition.Name,
+                Purpose = planDefinition.Owner switch
+                {
+                    "U" or "C" => PlanPurpose.Personal,
+                    "T1" or "B" => PlanPurpose.Professional,
+                    _ => PlanPurpose.Unclassified
+                },
                 IsActive = planDefinition.Owner is "U" or "B" or "C",
                 IsDeleted = false
             };

@@ -237,6 +237,7 @@ try {
         [pscustomobject]@{ name = "IdentityUnit"; project = "LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"; filters = @(); usesPostgreSqlRunner = $false },
         [pscustomobject]@{ name = "NotificationsUnit"; project = "LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"; filters = @(); usesPostgreSqlRunner = $false },
         [pscustomobject]@{ name = "ReportingUnit"; project = "LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"; filters = @(); usesPostgreSqlRunner = $false },
+        [pscustomobject]@{ name = "TrainingPlanningUnit"; project = "LgymApi.TrainingPlanning.UnitTests/LgymApi.TrainingPlanning.UnitTests.csproj"; filters = @(); usesPostgreSqlRunner = $false },
         [pscustomobject]@{ name = "Architecture"; project = "LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"; filters = @(); usesPostgreSqlRunner = $false },
         [pscustomobject]@{ name = "InMemoryIntegration"; project = $integrationProject; filters = @("TestCategory!=PostgreSql"); usesPostgreSqlRunner = $false },
         [pscustomobject]@{ name = "PostgreSqlIntegration"; project = $integrationProject; filters = @(); usesPostgreSqlRunner = $true },

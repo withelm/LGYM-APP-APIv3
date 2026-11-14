@@ -30,6 +30,16 @@ internal sealed class GetPlansListUseCase : IGetPlansListUseCase
         }
 
         var plans = await _planRepository.GetReadModelsByUserIdAsync(input.CurrentUserId, cancellationToken);
+        if (input.Purpose.HasValue)
+        {
+            if (!Enum.IsDefined(input.Purpose.Value))
+            {
+                return Result<List<PlanReadModel>, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
+            }
+
+            plans = plans.Where(plan => plan.Purpose == input.Purpose.Value).ToList();
+            return Result<List<PlanReadModel>, AppError>.Success(plans);
+        }
         return plans.Count == 0
             ? Result<List<PlanReadModel>, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind))
             : Result<List<PlanReadModel>, AppError>.Success(plans);

@@ -10,6 +10,7 @@ using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning;
@@ -511,6 +512,7 @@ public sealed class ManagedPlanContractRegistrationTests
             Id = Id<Plan>.New(),
             UserId = userId,
             Name = name,
+            Purpose = PlanPurpose.Personal,
             IsActive = isActive,
             CreatedAt = createdAt ?? DateTimeOffset.UtcNow
         };

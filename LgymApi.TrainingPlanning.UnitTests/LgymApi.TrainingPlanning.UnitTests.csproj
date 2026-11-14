@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="coverlet.msbuild" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit.Analyzers" />
+    <PackageReference Include="NUnit3TestAdapter" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <ProjectReference Include="..\LgymApi.Domain\LgymApi.Domain.csproj" />
+    <ProjectReference Include="..\LgymApi.Identity\LgymApi.Identity.csproj" />
+    <ProjectReference Include="..\LgymApi.Platform\LgymApi.Platform.csproj" />
+    <ProjectReference Include="..\LgymApi.TrainingPlanning\LgymApi.TrainingPlanning.csproj" />
+  </ItemGroup>
+</Project>

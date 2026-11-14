@@ -34,6 +34,13 @@ internal sealed class PlanDayPersistence : IPlanDayPersistence
             ? _mapper.Map<Plan, PlanDayPlanPersistenceModel>(plan)
             : null;
 
+    public async Task StagePlanRevisionAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default)
+    {
+        var plan = await _plans.FindByIdAsync(planId, cancellationToken)
+            ?? throw new InvalidOperationException("Plan disappeared during a plan-day write.");
+        await _plans.UpdateAsync(plan, cancellationToken);
+    }
+
     public async Task<PlanDayPlanPersistenceModel?> FindActivePlanAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
         => (await _plans.FindActiveByUserIdAsync(accountId, cancellationToken)) is { } plan
             ? _mapper.Map<Plan, PlanDayPlanPersistenceModel>(plan)

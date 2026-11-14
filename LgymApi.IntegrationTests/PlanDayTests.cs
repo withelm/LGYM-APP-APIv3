@@ -821,6 +821,13 @@ public sealed class PlanDayTests : IntegrationTestBase
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
         var exerciseId = await CreateExerciseViaEndpointAsync(ownerId, "Linked Trainer Exercise", BodyParts.Back);
         var planId = await CreatePlanViaEndpointAsync(ownerId, "Linked Trainer Plan");
+        var classify = await PostAsJsonWithApiOptionsAsync($"/api/{ownerId}/updatePlan", new
+        {
+            _id = planId.ToString(),
+            name = "Linked Trainer Plan",
+            purpose = "Personal"
+        });
+        classify.StatusCode.Should().Be(HttpStatusCode.OK);
         await CreatePlanDayViaEndpointAsync(ownerId, planId, "Linked Trainer Day",
         [
             new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -834,6 +841,29 @@ public sealed class PlanDayTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayResult>>();
         body.Should().ContainSingle(day => day.Name == "Linked Trainer Day");
+    }
+
+    [TestCase("Unclassified")]
+    [TestCase("Professional")]
+    public async Task GetPlanDays_AsLinkedTrainer_DeniesNonPersonalPlan(string purpose)
+    {
+        var (trainerId, trainerToken) = await RegisterUserViaEndpointAsync(
+            name: "purposetrainer", email: "purposetrainer@example.com", password: "password123");
+        var (ownerId, ownerToken) = await RegisterUserViaEndpointAsync(
+            name: "purposeowner", email: "purposeowner@example.com", password: "password123");
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ownerToken);
+        var planId = await CreatePlanViaEndpointAsync(ownerId, "Private plan");
+        var classify = await PostAsJsonWithApiOptionsAsync($"/api/{ownerId}/updatePlan", new
+        {
+            _id = planId.ToString(), name = "Private plan", purpose
+        });
+        classify.StatusCode.Should().Be(HttpStatusCode.OK);
+        await SeedTrainerRelationshipAsync(trainerId, ownerId);
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
+
+        var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Test]

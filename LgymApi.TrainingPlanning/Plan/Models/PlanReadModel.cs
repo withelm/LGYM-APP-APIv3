@@ -1,4 +1,5 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
@@ -11,10 +12,11 @@ public sealed record PlanReadModel(
     Id<AccountReference> UserId,
     string Name,
     bool IsActive,
-    string? ShareCode)
+    string? ShareCode,
+    PlanPurpose Purpose = PlanPurpose.Unclassified)
 {
-    internal PlanReadModel(Id<PlanEntity> id, Id<UserEntity> userId, string name, bool isActive, string? shareCode)
-        : this(id.Rebind<PlanReference>(), userId.Rebind<AccountReference>(), name, isActive, shareCode)
+    internal PlanReadModel(Id<PlanEntity> id, Id<UserEntity> userId, string name, bool isActive, string? shareCode, PlanPurpose purpose = PlanPurpose.Unclassified)
+        : this(id.Rebind<PlanReference>(), userId.Rebind<AccountReference>(), name, isActive, shareCode, purpose)
     {
     }
 }

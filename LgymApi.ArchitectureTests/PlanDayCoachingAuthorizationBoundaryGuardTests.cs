@@ -32,19 +32,22 @@ public sealed class PlanDayCoachingAuthorizationBoundaryGuardTests
     public void PlanDayRelationshipAccessPort_ShouldBeTrainingPlanningOwnedAndIdOnly()
     {
         var contract = typeof(IPlanDayRelationshipAccessPort);
-        var method = contract.GetMethods().Single();
-        var parameters = method.GetParameters();
+        var methods = contract.GetMethods();
 
         Assert.Multiple(() =>
         {
             Assert.That(contract.Namespace, Is.EqualTo("LgymApi.Application.TrainingPlanning.Contracts.PlanDay"));
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(Task<bool>)));
-            Assert.That(parameters.Select(parameter => parameter.ParameterType), Is.EqualTo(new[]
+            Assert.That(methods.Select(method => method.Name), Is.EquivalentTo(new[] { "HasActiveRelationshipAsync", "AuthorizeWriteAsync" }));
+            foreach (var method in methods)
             {
-                typeof(Id<AccountReference>),
-                typeof(Id<AccountReference>),
-                typeof(CancellationToken)
-            }));
+                Assert.That(method.ReturnType, Is.EqualTo(typeof(Task<bool>)));
+                Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[]
+                {
+                    typeof(Id<AccountReference>),
+                    typeof(Id<AccountReference>),
+                    typeof(CancellationToken)
+                }));
+            }
         });
     }
 

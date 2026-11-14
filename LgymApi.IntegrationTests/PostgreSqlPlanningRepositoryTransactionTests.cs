@@ -6,6 +6,7 @@ using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning.Plan.CopyPlan;
 using LgymApi.Application.TrainingPlanning.Plan.DeletePlan;
 using LgymApi.Application.TrainingPlanning.Plan.UpdatePlan;
+using LgymApi.Application.TrainingPlanning.PlanDay.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -22,6 +23,44 @@ namespace LgymApi.IntegrationTests;
 [Category("PostgreSql")]
 internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlIntegrationTestBase
 {
+    [Test]
+    public async Task StalePlanDayWriteAfterOwnerReclassification_RollsBackTheNewDay()
+    {
+        var user = await SeedUserAsync($"plan-purpose-{Id<User>.New():N}", $"plan-purpose-{Id<User>.New():N}@example.com");
+        var plan = await SeedPlanAsync(user.Id, "Personal", isActive: true);
+        await using (var setup = Factory.Services.CreateAsyncScope())
+        {
+            var database = setup.ServiceProvider.GetRequiredService<AppDbContext>();
+            var persisted = await database.Plans.SingleAsync(item => item.Id == plan.Id);
+            persisted.Purpose = PlanPurpose.Personal;
+            await database.SaveChangesAsync();
+        }
+
+        await using var staleScope = Factory.Services.CreateAsyncScope();
+        var staleDatabase = staleScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistence = staleScope.ServiceProvider.GetRequiredService<IPlanDayPersistence>();
+        var planId = plan.Id.Rebind<PlanReference>();
+        var observed = await persistence.FindPlanAsync(planId);
+        observed!.Purpose.Should().Be(PlanPurpose.Personal);
+        await persistence.StagePlanRevisionAsync(planId);
+        await persistence.CreatePlanDayAsync(planId, new PlanDayWriteModel("Stale day", []));
+
+        await using (var ownerScope = Factory.Services.CreateAsyncScope())
+        {
+            var ownerDatabase = ownerScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var ownerPlan = await ownerDatabase.Plans.SingleAsync(item => item.Id == plan.Id);
+            ownerPlan.Purpose = PlanPurpose.Professional;
+            await ownerDatabase.SaveChangesAsync();
+        }
+
+        Func<Task> save = () => staleDatabase.SaveChangesAsync();
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await using var verify = Factory.Services.CreateAsyncScope();
+        var verification = verify.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await verification.Plans.AsNoTracking().SingleAsync(item => item.Id == plan.Id)).Purpose.Should().Be(PlanPurpose.Professional);
+        (await verification.PlanDays.AnyAsync(day => day.PlanId == plan.Id && day.Name == "Stale day")).Should().BeFalse();
+    }
+
     [Test]
     public async Task UpdatePlanAsync_StagesTheRepositoryWriteUntilOneCommit()
     {

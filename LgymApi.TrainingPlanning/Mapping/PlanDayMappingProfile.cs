@@ -15,11 +15,14 @@ public sealed class PlanDayMappingProfile : IMappingProfile
     public void Configure(MappingConfiguration configuration)
     {
         configuration.CreateMap<PlanEntity, PlanDayPlanPersistenceModel>((source, _) =>
-            new PlanDayPlanPersistenceModel(source.Id.Rebind<PlanReference>(), source.UserId.Rebind<AccountReference>()));
+            new PlanDayPlanPersistenceModel(source.Id.Rebind<PlanReference>(), source.UserId.Rebind<AccountReference>(), source.Purpose));
         configuration.CreateMap<PlanDayEntity, PlanDayPersistenceModel>((source, _) =>
             new PlanDayPersistenceModel(source.Id.Rebind<PlanDayReference>(), source.PlanId.Rebind<PlanReference>(), source.Name, source.IsDeleted));
         configuration.CreateMap<PlanDayPersistenceModel, PlanDayReferenceReadModel>((source, _) =>
             new PlanDayReferenceReadModel(source.Id, source.PlanId, source.Name, true, source.IsDeleted));
+        configuration.CreateMap<PlanDayReferenceSource, PlanDayReferenceReadModel>((source, _) =>
+            new PlanDayReferenceReadModel(source.Day.Id, source.Day.PlanId, source.Day.Name, true, source.Day.IsDeleted,
+                source.Plan?.OwnerId ?? Id<AccountReference>.Empty, source.Plan?.Purpose ?? LgymApi.Domain.Enums.PlanPurpose.Unclassified));
         configuration.CreateMap<PlanDayExercise, PlanDayExercisePersistenceModel>((source, _) =>
             new PlanDayExercisePersistenceModel(
                 source.PlanDayId.Rebind<PlanDayReference>(),

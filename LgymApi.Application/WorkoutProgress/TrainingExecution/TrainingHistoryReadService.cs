@@ -51,7 +51,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
         }
 
         var planDay = await _planDayReferences.GetByIdAsync(training.TypePlanDayId, cancellationToken);
-        return Result<WorkoutTrainingReadModel, AppError>.Success(MapTraining(training, planDay));
+        return Result<WorkoutTrainingReadModel, AppError>.Success(MapTraining(training, planDay?.OwnerId == userId ? planDay : null));
     }
 
     public async Task<Result<List<TrainingByDateDetails>, AppError>> GetTrainingByDateAsync(Id<AccountReference> userId, UtcTimeRange dateRange, CancellationToken cancellationToken = default)
@@ -116,7 +116,7 @@ internal sealed class TrainingHistoryReadService : ITrainingHistoryReadService
                 Id = training.Id,
                 TypePlanDayId = training.TypePlanDayId,
                 CreatedAt = training.CreatedAt.UtcDateTime,
-                PlanDay = planDaysById.TryGetValue(training.TypePlanDayId, out var planDay) && planDay.Exists && !planDay.IsDeleted
+                PlanDay = planDaysById.TryGetValue(training.TypePlanDayId, out var planDay) && planDay.Exists && !planDay.IsDeleted && planDay.OwnerId == userId
                     ? planDay
                     : null,
                 Gym = IsOwnedByAccount(training.Gym, userId) ? training.Gym!.Name : null,

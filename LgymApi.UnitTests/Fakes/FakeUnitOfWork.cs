@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.Repositories;
 
 namespace LgymApi.TestUtils.Fakes;
@@ -15,6 +16,7 @@ public sealed class FakeUnitOfWork : IUnitOfWork
 
     public int SaveChangesCalls { get; private set; }
     public int BeginTransactionCalls { get; private set; }
+    public IsolationLevel? RequestedIsolationLevel { get; private set; }
     public int SaveChangesResult { get; set; } = 1;
     public Exception? BeginTransactionException { get; set; }
     public Exception? SaveChangesException { get; set; }
@@ -48,6 +50,12 @@ public sealed class FakeUnitOfWork : IUnitOfWork
         }
 
         return Task.FromResult<IUnitOfWorkTransaction>(Transaction);
+    }
+
+    public Task<IUnitOfWorkTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+    {
+        RequestedIsolationLevel = isolationLevel;
+        return BeginTransactionAsync(cancellationToken);
     }
 
     public void DetachEntity<TEntity>(TEntity entity) where TEntity : class

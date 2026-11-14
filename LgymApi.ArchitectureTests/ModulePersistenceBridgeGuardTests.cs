@@ -108,6 +108,7 @@ public sealed class ModulePersistenceBridgeGuardTests
             {
                 "LgymApi.Identity" => ApprovedFriends.Append("LgymApi.Identity.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray(),
                 "LgymApi.Notifications" => ApprovedFriends.Append("LgymApi.Notifications.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray(),
+                "LgymApi.TrainingPlanning" => ApprovedFriends.Append("LgymApi.TrainingPlanning.UnitTests").OrderBy(friend => friend, StringComparer.Ordinal).ToArray(),
                 _ => ApprovedFriends
             };
             Assert.That(ReadFriends(File.ReadAllText(assemblyInfo)), Is.EqualTo(expectedFriends), modulePath);

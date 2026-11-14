@@ -35,7 +35,7 @@ public sealed class WorkoutProgressDashboardReadServiceTests
             Id = Id<Training>.New(),
             TypePlanDayId = planDayId,
             CreatedAt = createdAt,
-            PlanDay = new PlanDayReferenceReadModel(planDayId, Id<PlanReference>.New(), "Push", true, false),
+            PlanDay = new PlanDayReferenceReadModel(planDayId, Id<PlanReference>.New(), "Push", true, false, traineeId, PlanPurpose.Personal),
             Gym = "Gym",
             Exercises =
             [

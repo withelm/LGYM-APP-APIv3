@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -5,6 +6,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
+using LgymApi.Domain.Enums;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 
 namespace LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
@@ -37,18 +39,29 @@ internal sealed class CreatePlanUseCase : ICreatePlanUseCase
             return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
+        if (!Enum.IsDefined(input.Purpose))
+        {
+            return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
+        }
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
             UserId = input.CurrentUserId.Rebind<LgymApi.Domain.Entities.User>(),
             Name = input.Name,
-            IsActive = true,
+            Purpose = input.Purpose,
+            IsActive = input.Purpose != PlanPurpose.Professional,
             IsDeleted = false
         };
 
         await _planRepository.AddAsync(plan, cancellationToken);
-        await _activePlanPointerStore.StageActivePlanIdAsync(input.CurrentUserId, plan.Id, cancellationToken);
+        if (plan.IsActive)
+        {
+            await _activePlanPointerStore.StageActivePlanIdAsync(input.CurrentUserId, plan.Id, cancellationToken);
+        }
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }
