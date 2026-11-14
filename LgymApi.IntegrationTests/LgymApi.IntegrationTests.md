@@ -3,6 +3,7 @@
 - Account deletion coverage includes password/email recovery, OAuth-only accounts, old-session revocation, exact deadline rejection, duplicate intent stability, current/former-trainer cutoff and retained uploads selected before deletion. PostgreSQL cases verify atomic pending/session-revocation/schedule-outbox commit, deterministic envelope reuse, generation-aware confirmation, dead-letter blocking and replay, shared-participant recovery deferral, finalization replay, failed-manifest and post-cleanup rollback, and rejection of protected writes authorized before the pending transition. Live S3/R2 verification remains separate; see [account deletion](../docs/account-deletion.md) and [LGYM-82 validation evidence](../docs/evidence/lgym-82-validation.md).
 
 - Purpose: end-to-end API tests.
+- Deletion authorization regression coverage includes ordinary and administrator old-token/capability denial, current/former Admin+Trainer note access cutoff, and invitation replay across active/pending/restored subject states with exactly one persisted invitation.
 - Contains: `WebApplicationFactory`, middleware/auth/serialization/localization coverage, and test persistence.
 - API host characterization resolves the real `Program` options and exercises authentication/localization pipeline behavior without changing production composition.
 - Authentication integration coverage verifies a current persisted permission decision for stale-token demotion, account block and session revoke, mismatched account/session pairs, and legitimate multi-role actors.
