@@ -17,11 +17,13 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
     private readonly IPlanRepository _planRepository;
     private readonly IPlanExerciseClonePort _exerciseClone;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _clock;
 
     public CopyPlanUseCase(
         IPlanRepository planRepository,
         IPlanExerciseClonePort exerciseClone,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(planRepository);
         ArgumentNullException.ThrowIfNull(exerciseClone);
@@ -29,6 +31,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
         _planRepository = planRepository;
         _exerciseClone = exerciseClone;
         _unitOfWork = unitOfWork;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<Result<PlanReadModel, AppError>> ExecuteAsync(CopyPlanCommand input, CancellationToken cancellationToken = default)
@@ -42,7 +45,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
         try
         {
             var sourcePlan = await _planRepository.FindByShareCodeAsync(input.ShareCode, cancellationToken);
-            if (sourcePlan is null)
+            if (sourcePlan is null || sourcePlan.ShareCodeExpiresAt is null || _clock.GetUtcNow() >= sourcePlan.ShareCodeExpiresAt)
             {
                 await transaction.RollbackAsync(CancellationToken.None);
                 return Result<PlanReadModel, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));

@@ -33,6 +33,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreatePlanDay([FromRoute] string id, [FromBody] PlanDayFormDto form, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()!.Id;
@@ -57,6 +58,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdatePlanDay([FromBody] PlanDayFormDto form, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()!.Id;
@@ -148,6 +150,7 @@ public sealed class PlanDayController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DeletePlanDay([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()!.Id;

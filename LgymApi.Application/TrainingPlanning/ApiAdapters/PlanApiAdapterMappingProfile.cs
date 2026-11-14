@@ -14,7 +14,7 @@ public sealed class PlanApiAdapterMappingProfile : IMappingProfile
         configuration.CreateMap<PlanGetListAccountQuery, LgymApi.Application.TrainingPlanning.Plan.GetPlansList.GetPlansListQuery>((source, _) => new(source.CurrentAccountId, source.RouteAccountId, source.Purpose));
         configuration.CreateMap<PlanSetActiveAccountCommand, LgymApi.Application.TrainingPlanning.Plan.SetActivePlan.SetActivePlanCommand>((source, _) => new(source.CurrentAccountId, source.RouteAccountId, source.PlanId.Rebind<LgymApi.TrainingPlanning.Contracts.PlanReference>()));
         configuration.CreateMap<PlanCopyAccountCommand, LgymApi.Application.TrainingPlanning.Plan.CopyPlan.CopyPlanCommand>((source, _) => new(source.CurrentAccountId, source.ShareCode));
-        configuration.CreateMap<PlanGenerateShareCodeAccountCommand, LgymApi.Application.TrainingPlanning.Plan.GenerateShareCode.GenerateShareCodeCommand>((source, _) => new(source.CurrentAccountId, source.PlanId.Rebind<LgymApi.TrainingPlanning.Contracts.PlanReference>()));
+        configuration.CreateMap<PlanGenerateShareCodeAccountCommand, LgymApi.Application.TrainingPlanning.Plan.GenerateShareCode.GenerateShareCodeCommand>((source, _) => new(source.CurrentAccountId, source.PlanId.Rebind<LgymApi.TrainingPlanning.Contracts.PlanReference>(), source.DurationDays));
         configuration.CreateMap<PlanDeleteAccountCommand, LgymApi.Application.TrainingPlanning.Plan.DeletePlan.DeletePlanCommand>((source, _) => new(source.CurrentAccountId, source.PlanId.Rebind<LgymApi.TrainingPlanning.Contracts.PlanReference>()));
     }
 }

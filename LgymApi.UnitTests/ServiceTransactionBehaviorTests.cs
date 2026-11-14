@@ -638,6 +638,7 @@ public sealed class ServiceTransactionBehaviorTests
         }
 
         public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class ActivePlanPointerStoreStub : IActivePlanPointerStore

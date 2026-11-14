@@ -150,6 +150,9 @@
   <data name="InvalidRoleSelection" xml:space="preserve">
     <value>Jedna lub więcej wybranych ról jest nieprawidłowa.</value>
   </data>
+  <data name="InvalidShareDuration" xml:space="preserve">
+    <value>Okres udostępniania musi wynosić 1, 7 lub 30 dni.</value>
+  </data>
   <data name="InvalidPermissionClaims" xml:space="preserve">
     <value>Jedno lub więcej wybranych uprawnień jest nieprawidłowe.</value>
   </data>

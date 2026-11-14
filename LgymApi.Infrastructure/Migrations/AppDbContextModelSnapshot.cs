@@ -1144,14 +1144,24 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Purpose")
-                        .IsRequired()
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("Unclassified");
 
                     b.Property<string>("ShareCode")
                         .HasColumnType("text");
+
+                    b.Property<int?>("ShareCodeDurationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ShareCodeExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ShareCodeRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

@@ -15,6 +15,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LgymApi.TrainingPlanning;
 
@@ -22,6 +23,7 @@ public static class TrainingPlanningModule
 {
     public static IServiceCollection AddTrainingPlanningModule(this IServiceCollection services)
     {
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IPlanDayRepository, PlanDayRepository>();
         services.AddScoped<IPlanDayExerciseRepository, PlanDayExerciseRepository>();

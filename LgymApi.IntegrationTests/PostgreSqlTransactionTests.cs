@@ -56,7 +56,7 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
         await using (var serviceScope = Factory.Services.CreateAsyncScope())
         {
             var database = serviceScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var sourcePlan = new Plan { Id = Id<Plan>.New(), UserId = currentUser.Id, Name = "source" };
+            var sourcePlan = new Plan { Id = Id<Plan>.New(), UserId = currentUser.Id, Name = "source", ShareCodeExpiresAt = DateTimeOffset.MaxValue, ShareCodeDurationDays = 7 };
             var planRepository = new PlanRepositoryFake { PlanByShareCode = sourcePlan };
             var exerciseClone = new FlushThenThrowExerciseClonePort(database, idempotencyKey);
 
@@ -127,6 +127,7 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
         public Task<IReadOnlyCollection<Id<PlanExerciseReference>>> GetPlanExerciseIdsAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyCollection<Id<PlanExerciseReference>>>([]);
         public Task<Plan> ClonePlanAsync(Id<Plan> sourcePlanId, Id<User> userId, IReadOnlyDictionary<Id<PlanExerciseReference>, Id<PlanExerciseReference>> exerciseIdMap, bool isActive = true, CancellationToken cancellationToken = default) => Task.FromException<Plan>(new NotSupportedException());
         public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(string.Empty);
+        public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class ActivePlanPointerStoreFake : IActivePlanPointerStore

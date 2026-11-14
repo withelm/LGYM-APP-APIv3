@@ -254,7 +254,9 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
             UserId = sourceUser.Id,
             Name = "Source plan",
             IsActive = false,
-            ShareCode = shareCode
+            ShareCode = shareCode,
+            ShareCodeDurationDays = 7,
+            ShareCodeExpiresAt = DateTimeOffset.MaxValue
         };
         var planDay = new PlanDay { Id = Id<PlanDay>.New(), PlanId = plan.Id, Name = "Source day" };
         var planDayExercise = new PlanDayExercise
