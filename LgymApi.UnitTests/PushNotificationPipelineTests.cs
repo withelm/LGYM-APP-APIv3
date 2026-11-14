@@ -696,7 +696,8 @@ public sealed class PushNotificationPipelineTests
                 InactivityDays = 30,
                 BatchSize = 10
             },
-            NullLogger<StalePushInstallationCleanupService>.Instance);
+            NullLogger<StalePushInstallationCleanupService>.Instance,
+            NSubstitute.Substitute.For<LgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionRetention>());
 
         var cleaned = await service.CleanupAsync();
 
@@ -1318,7 +1319,7 @@ public sealed class PushNotificationPipelineTests
         public Task<List<PushInstallation>> GetBySessionIdAsync(Id<UserSession> sessionId, CancellationToken cancellationToken = default)
             => Task.FromResult(_installations.Where(x => x.SessionId == sessionId).ToList());
 
-        public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, CancellationToken cancellationToken = default)
+        public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, IReadOnlyList<Id<LgymApi.Identity.Contracts.AccountReference>> protectedAccounts, CancellationToken cancellationToken = default)
             => Task.FromResult(_installations.Where(x => x.DisabledAt == null && x.LastSeenAt < lastSeenBefore).OrderBy(x => x.LastSeenAt).Take(limit).ToList());
 
         public Task AddAsync(PushInstallation installation, CancellationToken cancellationToken = default) => Task.CompletedTask;

@@ -7,6 +7,7 @@ using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 
@@ -49,7 +50,7 @@ internal sealed class PasswordResetService : IPasswordResetService
         var emailValueObject = new Email(email);
         var user = await _userRepository.FindByEmailAsync(emailValueObject, cancellationToken);
 
-        if (user == null || user.IsDeleted)
+        if (user == null || user.IsDeleted || user.DeletionState != AccountDeletionState.Active)
         {
             return Result.Success(Unit.Value);
         }
@@ -99,7 +100,7 @@ internal sealed class PasswordResetService : IPasswordResetService
         }
 
         var user = await _userRepository.FindByIdAsync(resetToken.UserId, cancellationToken);
-        if (user == null || user.IsDeleted)
+        if (user == null || user.IsDeleted || user.DeletionState != AccountDeletionState.Active)
         {
             return Result.Failure(new InvalidUserError(Messages.InvalidToken));
         }

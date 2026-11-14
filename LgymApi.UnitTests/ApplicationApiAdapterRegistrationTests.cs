@@ -249,8 +249,10 @@ public sealed class ApplicationApiAdapterRegistrationTests
     private static void AssertKnownMultiRegistrations(IServiceCollection services)
     {
         Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName == "LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator"), Is.EqualTo(4));
-        Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName == "LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer"), Is.EqualTo(6));
-        Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName == "LgymApi.Application.Mapping.Core.IMappingProfile"), Is.EqualTo(48));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName == "LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer"), Is.EqualTo(7));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName == "LgymApi.Application.Mapping.Core.IMappingProfile"), Is.EqualTo(49));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IMappingProfile)
+            && descriptor.ImplementationType?.FullName == "LgymApi.Application.Notifications.Email.AccountRecoveryEmailMappingProfile"), Is.EqualTo(1));
         Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IMappingProfile)
             && descriptor.ImplementationType?.FullName == "LgymApi.Application.Coaching.ApiAdapters.CoachingApiAdapterMappingProfile"), Is.EqualTo(1));
         Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IMappingProfile)

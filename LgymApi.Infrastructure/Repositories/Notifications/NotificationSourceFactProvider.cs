@@ -26,7 +26,7 @@ internal sealed partial class NotificationSourceFactProvider(AppDbContext databa
             .ToArray();
         var accounts = await database.Users
             .IgnoreQueryFilters()
-            .Where(user => accountIds.Contains(user.Id))
+            .Where(user => accountIds.Contains(user.Id) && user.DeletionState == AccountDeletionState.Active)
             .Select(user => new AccountAvailabilityRow(user.Id, user.IsDeleted, user.IsBlocked))
             .ToDictionaryAsync(user => user.Id, cancellationToken);
 

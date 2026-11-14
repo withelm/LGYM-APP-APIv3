@@ -86,9 +86,9 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
     [Test]
     public async Task ShareMigrations_PreserveLegacyGraphAndCode_OnEachUpgradeAndRerun()
     {
-        var graph = await SeedGraphAsync();
-        await using var scope = Factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false, targetMigration: ShareRevisionMigration);
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(environment.RuntimeConnectionString).Options);
+        var graph = await SeedHistoricalGraphAsync(db);
         var plan = await db.Plans.SingleAsync(p => p.Id == graph.PlanId);
         plan.ShareCode = "legacy-graph-code";
         await db.SaveChangesAsync();
@@ -140,24 +140,15 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
     [Test]
     public async Task PurposeMigration_PreservesExistingPlanDayAndWorkoutGraph_OnUpgradeAndRerun()
     {
-        var graph = await SeedGraphAsync();
-        await using (var scope = Factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var migrations = db.Database.GetMigrations().ToList();
-            migrations.IndexOf(PreviousMigration).Should().Be(migrations.IndexOf(PurposeMigration) - 1);
-            await db.Database.GetService<IMigrator>().MigrateAsync(PreviousMigration);
-        }
-
-        await using (var scope = Factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
-            await db.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
-        }
-
-        await using var verification = Factory.Services.CreateAsyncScope();
-        var database = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var environment = await PostgreSqlTutorialRowSecurityTestEnvironment.CreateAsync(activate: false, targetMigration: ShareRevisionMigration);
+        await using var database = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(environment.RuntimeConnectionString).Options);
+        var graph = await SeedHistoricalGraphAsync(database);
+        database.ChangeTracker.Clear();
+        var migrations = database.Database.GetMigrations().ToList();
+        migrations.IndexOf(PreviousMigration).Should().Be(migrations.IndexOf(PurposeMigration) - 1);
+        await database.Database.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+        await database.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
+        await database.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
         var plan = await database.Plans.AsNoTracking().Where(p => p.Id == graph.PlanId)
             .Select(p => new { p.Purpose, p.Name, p.UserId }).SingleAsync();
         var day = await database.PlanDays.IgnoreQueryFilters().AsNoTracking().SingleAsync(d => d.Id == graph.DayId);
@@ -245,14 +236,27 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var owner = await TestDataFactory.SeedUserAsync(db, "purpose-owner", "purpose-owner@example.test");
         var coach = await TestDataFactory.SeedUserAsync(db, "purpose-coach", "purpose-coach@example.test");
-        var plan = new Plan { Id = Id<Plan>.New(), UserId = owner.Id, Name = "Original plan", Purpose = PlanPurpose.Personal };
-        var day = new PlanDay { Id = Id<PlanDay>.New(), PlanId = plan.Id, Name = "Original day" };
-        var exercise = new Exercise { Id = Id<Exercise>.New(), UserId = owner.Id, Name = "Original exercise" };
-        var gym = new Gym { Id = Id<Gym>.New(), UserId = owner.Id, Name = "Original gym" };
-        var training = new Training { Id = Id<Training>.New(), UserId = owner.Id, TypePlanDayId = day.Id, GymId = gym.Id };
-        var score = new ExerciseScore { Id = Id<ExerciseScore>.New(), UserId = owner.Id, ExerciseId = exercise.Id, TrainingId = training.Id, Reps = 8, Series = 3 };
         db.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(db, coach.Id));
         db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = coach.Id, TraineeId = owner.Id });
+        return await SeedPlanGraphAsync(db, owner.Id, coach.Id);
+    }
+
+    private static async Task<Graph> SeedHistoricalGraphAsync(AppDbContext db)
+    {
+        var owner = new User { Id = Id<User>.New(), Name = "historical-owner", Email = "historical-owner@example.test" };
+        var coach = new User { Id = Id<User>.New(), Name = "historical-coach", Email = "historical-coach@example.test" };
+        await PostgreSqlHistoricalUserSeed.AddAsync(db, owner, coach);
+        return await SeedPlanGraphAsync(db, owner.Id, coach.Id);
+    }
+
+    private static async Task<Graph> SeedPlanGraphAsync(AppDbContext db, Id<User> ownerId, Id<User> coachId)
+    {
+        var plan = new Plan { Id = Id<Plan>.New(), UserId = ownerId, Name = "Original plan", Purpose = PlanPurpose.Personal };
+        var day = new PlanDay { Id = Id<PlanDay>.New(), PlanId = plan.Id, Name = "Original day" };
+        var exercise = new Exercise { Id = Id<Exercise>.New(), UserId = ownerId, Name = "Original exercise" };
+        var gym = new Gym { Id = Id<Gym>.New(), UserId = ownerId, Name = "Original gym" };
+        var training = new Training { Id = Id<Training>.New(), UserId = ownerId, TypePlanDayId = day.Id, GymId = gym.Id };
+        var score = new ExerciseScore { Id = Id<ExerciseScore>.New(), UserId = ownerId, ExerciseId = exercise.Id, TrainingId = training.Id, Reps = 8, Series = 3 };
         db.Plans.Add(plan);
         db.PlanDays.Add(day);
         db.Exercises.Add(exercise);
@@ -262,7 +266,7 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
         db.ExerciseScores.Add(score);
         db.TrainingExerciseScores.Add(new TrainingExerciseScore { Id = Id<TrainingExerciseScore>.New(), TrainingId = training.Id, ExerciseScoreId = score.Id });
         await db.SaveChangesAsync();
-        return new Graph(owner.Id, coach.Id, plan.Id, day.Id, exercise.Id, training.Id, score.Id);
+        return new Graph(ownerId, coachId, plan.Id, day.Id, exercise.Id, training.Id, score.Id);
     }
 
     private sealed record Graph(Id<User> OwnerId, Id<User> CoachId, Id<Plan> PlanId, Id<PlanDay> DayId,

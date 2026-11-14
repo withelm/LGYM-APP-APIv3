@@ -6,6 +6,8 @@ using LgymApi.Application.Notifications.Providers.Fcm;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
 using LgymApi.TestUtils;
 
 namespace LgymApi.UnitTests;
@@ -25,6 +27,7 @@ public sealed class PushNotificationRetentionContractTests
         method.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
             typeof(DateTimeOffset),
             typeof(int),
+            typeof(IReadOnlyList<Id<AccountReference>>),
             typeof(CancellationToken));
     }
 
@@ -162,6 +165,7 @@ public sealed class PushNotificationRetentionContractTests
         selection.GetParameters().Select(parameter => (parameter.Name, parameter.ParameterType)).Should().Equal(
             ("cutoff", typeof(DateTimeOffset)),
             ("candidateLimit", typeof(int)),
+            ("protectedAccounts", typeof(IReadOnlyList<Id<AccountReference>>)),
             ("cancellationToken", typeof(CancellationToken)));
 
         deletion.Should().NotBeNull();

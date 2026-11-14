@@ -17,6 +17,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
@@ -306,6 +307,10 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var commandDispatcher = commands;
         var workUnit = unitOfWork;
         var services = new ServiceCollection();
+        var accountLookup = Substitute.For<IAccountLookupService>();
+        accountLookup.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns(call => new AccountLookup(call.Arg<Id<AccountReference>>(), "name", "email", null, "en", "UTC", DateTimeOffset.UnixEpoch));
+        services.AddScoped(_ => accountLookup);
         var outbox = Substitute.For<ICommandOutboxWriter>();
         outbox.StageAsync(Arg.Any<RelationshipEndedReportCancellationCommand>(), Arg.Any<CancellationToken>())
             .Returns(new CommandEnvelopeStageResult(Id<CoachingEpisode>.New().ToString(), false));

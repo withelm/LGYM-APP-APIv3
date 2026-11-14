@@ -8,4 +8,6 @@ public sealed class UserSession : EntityBase<UserSession>
     public string Jti { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAtUtc { get; set; }
     public DateTimeOffset? RevokedAtUtc { get; set; }
+    public string? RecoveryTokenHash { get; set; }
+    public Id<CorrelationScope>? RecoveryDeletionGeneration { get; set; }
 }

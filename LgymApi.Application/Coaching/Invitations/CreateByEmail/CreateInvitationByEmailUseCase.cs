@@ -50,6 +50,10 @@ internal sealed class CreateInvitationByEmailUseCase : ICreateInvitationByEmailU
         }
 
         var inviteeEmail = new Email(command.InviteeEmail).Value;
+        if (await _accounts.IsUnavailableByEmailAsync(inviteeEmail, cancellationToken))
+        {
+            return Result<InvitationReadModel, AppError>.Failure(new TrainerRelationshipNotFoundError(Messages.DidntFind));
+        }
         if (string.Equals(trainer.Email, inviteeEmail, StringComparison.OrdinalIgnoreCase))
         {
             return Result<InvitationReadModel, AppError>.Failure(new InvalidTrainerRelationshipError(Messages.CannotInviteYourself));

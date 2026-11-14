@@ -35,7 +35,7 @@ public sealed class PushRetentionRepositoryTests
             await database.SaveChangesAsync();
 
             var repository = new PushNotificationMessageRepository(database);
-            var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2);
+            var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2, []);
 
             candidates.Select(message => message.Id).Should().Equal(softDeletedId, firstId);
             repository.RemoveRange(candidates);
@@ -80,7 +80,7 @@ public sealed class PushRetentionRepositoryTests
             await database.SaveChangesAsync();
 
             var repository = new PushInstallationRepository(database);
-            var candidates = await repository.GetRetentionCandidatesDisabledBeforeAsync(cutoff, 2);
+            var candidates = await repository.GetRetentionCandidatesDisabledBeforeAsync(cutoff, 2, []);
 
             candidates.Select(installation => installation.Id).Should().Equal(softDeletedId, firstId);
             repository.RemoveRange(candidates);

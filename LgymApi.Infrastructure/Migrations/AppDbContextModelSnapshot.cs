@@ -1042,6 +1042,51 @@ namespace LgymApi.Infrastructure.Migrations
                     b.ToTable("Photos", (string)null);
                 });
 
+            modelBuilder.Entity("LgymApi.Domain.Entities.PhotoDeletionWorkItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContinuationToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeletionGeneration")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrefix")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("NotBeforeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAtUtc", "NotBeforeUtc");
+
+                    b.HasIndex("DeletionGeneration", "StorageKey", "IsPrefix")
+                        .IsUnique();
+
+                    b.ToTable("PhotoDeletionWorkItems", (string)null);
+                });
+
             modelBuilder.Entity("LgymApi.Domain.Entities.PhotoUploadSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2510,6 +2555,21 @@ namespace LgymApi.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("DeletionEffectiveAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletionGeneration")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DeletionRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletionState")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Active");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
@@ -2537,6 +2597,10 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<string>("LegacySalt")
                         .HasColumnType("text");
+
+                    b.Property<Guid>("LifecycleRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2571,6 +2635,8 @@ namespace LgymApi.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.HasIndex("PlanId");
+
+                    b.HasIndex("DeletionState", "DeletionEffectiveAt");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -2650,6 +2716,12 @@ namespace LgymApi.Infrastructure.Migrations
 
                     b.Property<string>("Jti")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RecoveryDeletionGeneration")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecoveryTokenHash")
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("RevokedAtUtc")

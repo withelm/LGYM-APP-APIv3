@@ -5,6 +5,7 @@ using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Identity.Contracts.Access;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 {
     private IUserAccessReadService _userAccess = null!;
     private ICoachingActiveLinkPersistence _activeLinks = null!;
+    private IAccountLookupService _accounts = null!;
     private CoachingRelationshipAccessService _service = null!;
 
     [SetUp]
@@ -24,7 +26,36 @@ public sealed class CoachingRelationshipAccessServiceTests
     {
         _userAccess = Substitute.For<IUserAccessReadService>();
         _activeLinks = Substitute.For<ICoachingActiveLinkPersistence>();
-        _service = new CoachingRelationshipAccessService(_userAccess, _activeLinks, Substitute.For<IAccountAccessReader>());
+        _accounts = Substitute.For<IAccountLookupService>();
+        _accounts.GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>())
+            .Returns(call => new AccountLookup(call.Arg<Id<AccountReference>>(), "name", "email", null, "en", "UTC", DateTimeOffset.UnixEpoch));
+        _service = new CoachingRelationshipAccessService(_userAccess, _activeLinks, Substitute.For<IAccountAccessReader>(), _accounts);
+    }
+
+    [Test]
+    public async Task GetAccessDecisionAsync_WhenTraineeUnavailable_DoesNotUseRetainedLink()
+    {
+        var trainerId = Id<User>.New();
+        var traineeId = Id<User>.New();
+        _userAccess.IsTrainerAsync(trainerId, CancellationToken.None).Returns(true);
+        _accounts.GetByIdAsync(traineeId.Rebind<AccountReference>(), CancellationToken.None).Returns((AccountLookup?)null);
+
+        var result = await _service.GetAccessDecisionAsync(trainerId, traineeId);
+
+        result.Should().Be(new CoachingRelationshipAccessDecision(true, false, false));
+        await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GetAccessDecisionAsync_WhenTrainerUnavailable_DoesNotUseRetainedLink()
+    {
+        var trainerId = Id<User>.New();
+        _accounts.GetByIdAsync(trainerId.Rebind<AccountReference>(), CancellationToken.None).Returns((AccountLookup?)null);
+
+        var result = await _service.GetAccessDecisionAsync(trainerId, Id<User>.New());
+
+        result.Should().Be(new CoachingRelationshipAccessDecision(false, false));
+        await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -128,6 +159,7 @@ public sealed class CoachingRelationshipAccessServiceTests
         services.AddScoped(_ => Substitute.For<IUserAccessReadService>());
         services.AddScoped(_ => Substitute.For<ICoachingActiveLinkPersistence>());
         services.AddScoped(_ => Substitute.For<IAccountAccessReader>());
+        services.AddScoped(_ => Substitute.For<IAccountLookupService>());
         services.AddCoachingModule();
 
         services.Count(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService))

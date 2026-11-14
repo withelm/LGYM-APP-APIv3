@@ -414,11 +414,11 @@ public sealed class Issue395MigrationLedgerTests
         var expectedCounts = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["LgymApi.Platform"] = 70,
-            ["LgymApi.Identity"] = 84,
+            ["LgymApi.Identity"] = 94,
             ["LgymApi.TrainingPlanning"] = 69,
             ["LgymApi.Notifications"] = 84,
             ["LgymApi.Application"] = 436,
-            ["LgymApi.Reporting"] = 95
+            ["LgymApi.Reporting"] = 100
         };
 
         var inventory = expectedCounts.ToDictionary(

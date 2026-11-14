@@ -5,6 +5,7 @@ using LgymApi.Application.Features.User.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.ExternalAuth;
@@ -52,7 +53,7 @@ internal sealed class ExternalAuthService : IExternalAuthService
         if (existingExternalLogin != null)
         {
             var existingUser = existingExternalLogin.User;
-            if (existingUser == null || existingUser.IsDeleted)
+            if (existingUser == null || existingUser.IsDeleted || existingUser.DeletionState != AccountDeletionState.Active)
             {
                 return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
             }

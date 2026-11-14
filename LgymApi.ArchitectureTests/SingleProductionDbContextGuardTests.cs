@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class SingleProductionDbContextGuardTests
 {
-    private const int PersistedEntityCount = 54;
+    private const int PersistedEntityCount = 55;
     private const string MigrationRoot = PersistenceIdentityContract.MigrationRoot;
     private const string ReportReceiptMigration = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.cs";
     private const string ReportReceiptMigrationDesigner = MigrationRoot + "/20261026222317_AddReportSubmissionProgressReceipts.Designer.cs";
@@ -69,7 +69,9 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261114114258_AddPlanShareExpiry.Designer.cs"] = "1a1f06716fd776fa436c0a51da6a3ee0c539eeac5ebffe162e2de695a56ea695",
         [MigrationRoot + "/20261114115941_AddPlanShareRevision.cs"] = "a4a19bef517ed3fbc7a84caef587e2e3f003a94eb9c29a88dd74ef02de42ecc0",
         [MigrationRoot + "/20261114115941_AddPlanShareRevision.Designer.cs"] = "e97bd5e19a43b1821013daa05fe48b3782677415d54288493bde778c1923f5b0",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "021e27b938489e9525090182545f5cf0f8071dad1fdefde431cf1b012296a685"
+        [MigrationRoot + "/20261114184523_AddRecoverableAccountDeletion.cs"] = "8ab685aa812450855b5cedf974854294cb5f43e08d67f6755c25be63c419a9f5",
+        [MigrationRoot + "/20261114184523_AddRecoverableAccountDeletion.Designer.cs"] = "5c778b34fd248d30df7fa5e32e7f3ad4a56ead166b7f398d2f1ca529b485d9c7",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "f93aac120862c9e86f678f845d47c5d149661652212b3d598c79162ac8f986f7"
     };
 
     [Test]

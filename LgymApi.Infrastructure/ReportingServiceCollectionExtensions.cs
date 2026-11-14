@@ -10,6 +10,7 @@ using LgymApi.Infrastructure.Options;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Repositories.Reporting;
 using LgymApi.Infrastructure.Services;
+using LgymApi.Reporting.AccountDeletion;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -34,6 +35,7 @@ public static partial class ServiceCollectionExtensions
         services.AddScoped<IReportRequestSubmissionPersistence, ReportRequestSubmissionPersistenceRepository>();
         services.AddScoped<IRecurringReportAssignmentPersistence, RecurringReportAssignmentPersistenceRepository>();
         services.AddScoped<IReportPhotoPersistence, ReportPhotoPersistenceRepository>();
+        services.AddScoped<IPhotoDeletionPersistence, PhotoDeletionPersistence>();
         services.AddScoped<IReportingRelationshipAccessPersistence, ReportingRelationshipAccessPersistenceRepository>();
         services.AddScoped<IReportSubmissionAcceptedProgressPersistence, ReportSubmissionAcceptedProgressPersistenceRepository>();
 
@@ -51,6 +53,7 @@ public static partial class ServiceCollectionExtensions
             ValidateCloudflareR2Options(options);
             RegisterLocalPhotoDevelopmentUrlSigner(services, signingKey: null);
             services.AddScoped<IPhotoStorageProvider, CloudflareR2PhotoStorageProvider>();
+            services.AddScoped<IPhotoStorageInventory, CloudflareR2PhotoStorageProvider>();
             return;
         }
 
@@ -64,6 +67,7 @@ public static partial class ServiceCollectionExtensions
             var signingKey = ResolveLocalDevelopmentSigningKey(options, isDevelopment, isTesting);
             RegisterLocalPhotoDevelopmentUrlSigner(services, signingKey);
             services.AddScoped<IPhotoStorageProvider, LocalPhotoStorageProvider>();
+            services.AddScoped<IPhotoStorageInventory, LocalPhotoStorageProvider>();
             return;
         }
 

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.StaticFiles;
+using LgymApi.Reporting.AccountDeletion;
 
 namespace LgymApi.Infrastructure.Services;
 
@@ -155,5 +156,17 @@ public sealed class LocalPhotoDevelopmentStore
         return _contentTypeProvider.TryGetContentType(path, out var contentType)
             ? contentType
             : "application/octet-stream";
+    }
+
+    public PhotoStoragePage List(string prefix, string? continuationToken, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var path = ResolvePath(prefix);
+        if (!Directory.Exists(path)) return new PhotoStoragePage([], null);
+        var keys = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(_rootPath, file).Replace('\\', '/'))
+            .Where(key => continuationToken is null || string.CompareOrdinal(key, continuationToken) > 0)
+            .Order(StringComparer.Ordinal).Take(501).ToArray();
+        return new PhotoStoragePage(keys.Take(500).ToArray(), keys.Length > 500 ? keys[499] : null);
     }
 }

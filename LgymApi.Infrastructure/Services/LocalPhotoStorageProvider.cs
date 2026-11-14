@@ -1,4 +1,5 @@
 using LgymApi.Application.Abstractions.Storage;
+using LgymApi.Reporting.AccountDeletion;
 using Microsoft.AspNetCore.Http;
 
 namespace LgymApi.Infrastructure.Services;
@@ -8,7 +9,7 @@ namespace LgymApi.Infrastructure.Services;
 /// Returns expiring bearer-capability URLs for dev/test environments.
 /// NOT FOR PRODUCTION USE - implement CloudflareR2PhotoStorageProvider or SupabasePhotoStorageProvider for production.
 /// </summary>
-public sealed class LocalPhotoStorageProvider : IPhotoStorageProvider
+public sealed class LocalPhotoStorageProvider : IPhotoStorageProvider, IPhotoStorageInventory
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LocalPhotoDevelopmentStore _store;
@@ -57,6 +58,9 @@ public sealed class LocalPhotoStorageProvider : IPhotoStorageProvider
     {
         return _store.DeleteAsync(storageKey, cancellationToken);
     }
+
+    public Task<PhotoStoragePage> ListAsync(string prefix, string? continuationToken, CancellationToken cancellationToken)
+        => Task.FromResult(_store.List(prefix, continuationToken, cancellationToken));
 
     public Task<PhotoMetadata?> GetMetadataAsync(
         string storageKey,

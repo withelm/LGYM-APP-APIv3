@@ -13,6 +13,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Resources;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Identity.Profile;
@@ -23,7 +24,7 @@ internal sealed class UserProfileService : IUserProfileService
     private readonly IRoleRepository _roleRepository;
     private readonly IRankService _rankService;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IAccountPushInstallationCleanupPort _accountPushInstallationCleanupPort;
+    private readonly IAccountDeletionService _accountDeletionService;
     private readonly AppDefaultsOptions _appDefaultsOptions;
     private readonly ITutorialService _tutorialService;
     private readonly IMapper _mapper;
@@ -34,7 +35,7 @@ internal sealed class UserProfileService : IUserProfileService
         IRoleRepository roleRepository,
         IRankService rankService,
         IUnitOfWork unitOfWork,
-        IAccountPushInstallationCleanupPort accountPushInstallationCleanupPort,
+        IAccountDeletionService accountDeletionService,
         AppDefaultsOptions appDefaultsOptions,
         ITutorialService tutorialService,
         IMapper mapper,
@@ -44,7 +45,7 @@ internal sealed class UserProfileService : IUserProfileService
         _roleRepository = roleRepository;
         _rankService = rankService;
         _unitOfWork = unitOfWork;
-        _accountPushInstallationCleanupPort = accountPushInstallationCleanupPort;
+        _accountDeletionService = accountDeletionService;
         _appDefaultsOptions = appDefaultsOptions;
         _tutorialService = tutorialService;
         _mapper = mapper;
@@ -89,15 +90,7 @@ internal sealed class UserProfileService : IUserProfileService
             return Result<Unit, AppError>.Failure(new UserNotFoundError(Messages.DidntFind));
         }
 
-        await _accountPushInstallationCleanupPort.StageRemoveForAccountAsync(
-            currentUser.Id.Rebind<AccountReference>(),
-            cancellationToken);
-        currentUser.Email = $"anonymized_{currentUser.Id}@example.com";
-        currentUser.Name = $"anonymized_user_{currentUser.Id}";
-        currentUser.IsDeleted = true;
-
-        await _userRepository.UpdateAsync(currentUser, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _accountDeletionService.RequestAsync(currentUser.Id.Rebind<AccountReference>(), cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
 

@@ -58,8 +58,9 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         entity.FailureReason.Should().BeNull();
     }
 
-    [Test]
-    public async Task CleanupCandidates_ReturnsExpiredPendingAndFailedInExpirationOrder()
+    [TestCase(AccountDeletionState.Active)]
+    [TestCase(AccountDeletionState.PendingDeletion)]
+    public async Task CleanupCandidates_PreservesPendingAccountsAndOrdersActiveExpiredUploads(AccountDeletionState accountState)
     {
         await using var db = CreateDbContext("cleanup");
         var persistence = new ReportPhotoPersistenceRepository(db);
@@ -68,11 +69,19 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         await persistence.RecordUploadInitAsync(CreatePendingUpload("photos/failed.jpg", now.AddMinutes(-10)) with { Status = PhotoUploadSessionStatus.Failed });
         await persistence.RecordUploadInitAsync(CreatePendingUpload("photos/completed.jpg", now.AddMinutes(-20)) with { Status = PhotoUploadSessionStatus.Completed });
         await persistence.RecordUploadInitAsync(CreatePendingUpload("photos/future.jpg", now.AddMinutes(5)));
+        var accounts = db.ChangeTracker.Entries<PhotoUploadSession>()
+            .SelectMany(entry => new[] { entry.Entity.OwnerUserId, entry.Entity.InitiatedByUserId }).Distinct().ToArray();
+        foreach (var id in accounts)
+        {
+            db.Users.Add(new User { Id = id, Name = id.ToString(), Email = $"{id}@example.test", DeletionState = accountState });
+        }
         await db.SaveChangesAsync();
 
         var candidates = await persistence.ListCleanupCandidatesAsync(now);
 
-        candidates.Select(candidate => candidate.StorageKey).Should().Equal("photos/pending.jpg", "photos/failed.jpg");
+        var expected = accountState == AccountDeletionState.Active
+            ? new[] { "photos/pending.jpg", "photos/failed.jpg" } : [];
+        candidates.Select(candidate => candidate.StorageKey).Should().Equal(expected);
     }
 
     [Test]

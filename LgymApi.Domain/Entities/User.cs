@@ -1,3 +1,4 @@
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Domain.Entities;
@@ -13,6 +14,11 @@ public sealed class User : EntityBase<User>
     public string? Avatar { get; set; }
     public bool IsVisibleInRanking { get; set; } = true;
     public bool IsBlocked { get; set; }
+    public AccountDeletionState DeletionState { get; set; }
+    public DateTimeOffset? DeletionRequestedAt { get; set; }
+    public DateTimeOffset? DeletionEffectiveAt { get; set; }
+    public Id<CorrelationScope>? DeletionGeneration { get; set; }
+    public Id<CorrelationScope> LifecycleRevision { get; set; } = Id<CorrelationScope>.New();
 
     public string? LegacyHash { get; set; }
     public string? LegacySalt { get; set; }

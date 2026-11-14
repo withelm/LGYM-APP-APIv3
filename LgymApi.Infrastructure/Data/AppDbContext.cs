@@ -71,6 +71,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
     public DbSet<PushNotificationMessage> PushNotificationMessages => Set<PushNotificationMessage>();
     public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<PhotoDeletionWorkItem> PhotoDeletionWorkItems => Set<PhotoDeletionWorkItem>();
     public DbSet<PhotoUploadSession> PhotoUploadSessions => Set<PhotoUploadSession>();
     public DbSet<TrainerPhotoType> TrainerPhotoTypes => Set<TrainerPhotoType>();
     public DbSet<ReportRequestDefinitionSnapshot> ReportRequestDefinitionSnapshots => Set<ReportRequestDefinitionSnapshot>();
@@ -143,6 +144,7 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
 
     public override int SaveChanges()
     {
+        StageAccountRevisionChecks();
         EnsureActiveLinksHaveEpisodes();
         SetTimestamps();
         return base.SaveChanges();
@@ -150,9 +152,23 @@ public sealed class AppDbContext : DbContext, IPlatformPersistenceContext, IIden
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        StageAccountRevisionChecks();
         EnsureActiveLinksHaveEpisodes();
         SetTimestamps();
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void StageAccountRevisionChecks()
+    {
+        if (!ChangeTracker.HasChanges()) return;
+        // Identity's tracked authorization reads participate in the protected write's atomic save.
+        foreach (var entry in ChangeTracker.Entries<User>().ToArray())
+        {
+            if (entry.State == EntityState.Unchanged && entry.Entity.DeletionState == AccountDeletionState.Active)
+            {
+                entry.Property(user => user.LifecycleRevision).IsModified = true;
+            }
+        }
     }
 
     private void EnsureActiveLinksHaveEpisodes()

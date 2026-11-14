@@ -19,7 +19,7 @@ internal interface IPushInstallationRepository
     Task<PushInstallation?> FindBoundToUserAndSessionAsync(string installationId, Id<User> userId, Id<UserSession> sessionId, CancellationToken cancellationToken = default);
     Task<List<PushInstallation>> GetActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);
     Task<List<PushInstallation>> GetBySessionIdAsync(Id<UserSession> sessionId, CancellationToken cancellationToken = default);
-    Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, CancellationToken cancellationToken = default);
+    Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, IReadOnlyList<Id<AccountReference>> protectedAccounts, CancellationToken cancellationToken = default);
     Task AddAsync(PushInstallation installation, CancellationToken cancellationToken = default);
     Task UpdateAsync(PushInstallation installation, CancellationToken cancellationToken = default);
     Task<PushInstallation?> UpsertForUserSessionAsync(PushInstallationRegistration registration, CancellationToken cancellationToken = default);
@@ -36,6 +36,7 @@ internal interface IPushInstallationRepository
     Task<IReadOnlyList<PushInstallation>> GetRetentionCandidatesDisabledBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 

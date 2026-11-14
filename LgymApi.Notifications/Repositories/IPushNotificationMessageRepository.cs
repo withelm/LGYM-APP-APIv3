@@ -1,6 +1,7 @@
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Application.Repositories;
 
@@ -22,6 +23,7 @@ internal interface IPushNotificationMessageRepository
     Task<IReadOnlyList<PushNotificationMessage>> GetRetentionCandidatesCreatedBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 

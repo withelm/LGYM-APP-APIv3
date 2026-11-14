@@ -3,6 +3,7 @@ using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data.SeedData;
 using LgymApi.Infrastructure.Pagination;
@@ -34,7 +35,7 @@ internal sealed class UserRepository : IUserRepository
 
     public Task<User?> FindByIdAsync(Id<User> id, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        return _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && u.DeletionState == AccountDeletionState.Active, cancellationToken);
     }
 
     public Task<List<User>> GetByIdsAsync(IReadOnlyCollection<Id<User>> ids, CancellationToken cancellationToken = default)
@@ -46,7 +47,7 @@ internal sealed class UserRepository : IUserRepository
 
         return _dbContext.Users
             .AsNoTracking()
-            .Where(user => ids.Contains(user.Id))
+            .Where(user => ids.Contains(user.Id) && user.DeletionState == AccountDeletionState.Active)
             .ToListAsync(cancellationToken);
     }
 
@@ -63,7 +64,7 @@ internal sealed class UserRepository : IUserRepository
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .ThenInclude(r => r.RoleClaims)
-            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == id && u.DeletionState == AccountDeletionState.Active, cancellationToken);
     }
 
     public Task<User?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
@@ -85,7 +86,7 @@ internal sealed class UserRepository : IUserRepository
     {
         var profiles = await _dbContext.Users
             .AsNoTracking()
-            .Where(user => !user.IsDeleted && user.IsVisibleInRanking)
+            .Where(user => !user.IsDeleted && user.IsVisibleInRanking && user.DeletionState == AccountDeletionState.Active)
             .Where(user => !user.UserRoles.Any(role => role.RoleId == RoleSeedDataConfiguration.TesterRoleSeedId))
             .Select(user => new
             {
@@ -147,7 +148,8 @@ internal sealed class UserRepository : IUserRepository
 
     private IQueryable<AdminUserProjection> BuildAdminUserBaseQuery(bool includeDeleted)
     {
-        var query = _dbContext.Users.AsNoTracking();
+        var query = _dbContext.Users.AsNoTracking()
+            .Where(user => user.DeletionState != AccountDeletionState.PendingDeletion && user.DeletionState != AccountDeletionState.Finalizing);
         if (!includeDeleted)
         {
             query = query.Where(u => !u.IsDeleted);

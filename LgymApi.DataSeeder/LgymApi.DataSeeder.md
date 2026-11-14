@@ -1,5 +1,7 @@
 # LgymApi.DataSeeder.csproj
 
+- `PhotoDeletionWorkItemSeeder` contributes one deterministic, already-completed demonstration record. It never schedules deletion of a real storage object; repeated seeding preserves the same item.
+
 - Purpose: deterministic bootstrap and data seeding executable.
 - Contains: deterministic seeders, Infrastructure EF tooling, and bootstrap orchestration.
 - Offline maintenance: `reporting-photo-types --dry-run|--apply` performs the explicit, fingerprint-guarded, resumable legacy reporting snapshot/photo-association migration documented in [`reporting-photo-types-migration.md`](../docs/reporting-photo-types-migration.md). It bypasses ordinary seeding and never runs automatically.

@@ -1,5 +1,6 @@
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using LgymApi.Infrastructure.Data;
@@ -22,7 +23,8 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
         var persistedTraineeId = ReportingPersistenceAccountIds.ToPersisted(traineeId);
         var activeEpisode = await _dbContext.TrainerTraineeLinks
             .AsNoTracking()
-            .Where(link => link.TrainerId == persistedTrainerId && link.TraineeId == persistedTraineeId && link.EpisodeId != null)
+            .Where(link => link.TrainerId == persistedTrainerId && link.TraineeId == persistedTraineeId && link.EpisodeId != null
+                && link.Trainer.DeletionState == AccountDeletionState.Active && link.Trainee.DeletionState == AccountDeletionState.Active)
             .Join(
                 _dbContext.CoachingEpisodes.AsNoTracking(),
                 link => link.EpisodeId,
@@ -31,7 +33,8 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
             .SingleOrDefaultAsync(cancellationToken);
         var relationshipPeriods = await _dbContext.CoachingEpisodes
             .AsNoTracking()
-            .Where(episode => episode.TrainerId == persistedTrainerId && episode.TraineeId == persistedTraineeId)
+            .Where(episode => episode.TrainerId == persistedTrainerId && episode.TraineeId == persistedTraineeId
+                && episode.Trainer.DeletionState == AccountDeletionState.Active && episode.Trainee.DeletionState == AccountDeletionState.Active)
             .Select(episode => new ReportingRelationshipPeriodFact(
                 episode.StartedAt,
                 episode.EndedAt,
@@ -54,7 +57,8 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
         var trainees = pairs.Select(pair => ReportingPersistenceAccountIds.ToPersisted(pair.TraineeId)).Distinct().ToArray();
         var requested = pairs.ToHashSet();
         var rows = await _dbContext.TrainerTraineeLinks.AsNoTracking()
-            .Where(link => trainers.Contains(link.TrainerId) && trainees.Contains(link.TraineeId) && link.EpisodeId != null)
+            .Where(link => trainers.Contains(link.TrainerId) && trainees.Contains(link.TraineeId) && link.EpisodeId != null
+                && link.Trainer.DeletionState == AccountDeletionState.Active && link.Trainee.DeletionState == AccountDeletionState.Active)
             .Join(_dbContext.CoachingEpisodes.AsNoTracking(), link => link.EpisodeId,
                 episode => (Id<CoachingEpisode>?)episode.Id,
                 (link, episode) => new { link.TrainerId, link.TraineeId, episode.Id, episode.AuthorizationRevision })
@@ -71,6 +75,8 @@ public sealed class ReportingRelationshipAccessPersistenceRepository : IReportin
     {
         var episode = await _dbContext.CoachingEpisodes.FirstOrDefaultAsync(candidate =>
             candidate.Id == activeEpisode.EpisodeId
+            && candidate.Trainer.DeletionState == AccountDeletionState.Active
+            && candidate.Trainee.DeletionState == AccountDeletionState.Active
             && candidate.EndedAt == null
             && candidate.AuthorizationRevision == activeEpisode.AuthorizationRevision,
             cancellationToken);

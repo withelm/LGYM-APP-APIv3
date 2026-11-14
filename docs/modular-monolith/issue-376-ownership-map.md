@@ -158,6 +158,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `RecurringReportAssignment` | `Reporting` |
 | `RecurringReportScheduleChange` | `Reporting` |
 | `Photo` | `Reporting` |
+| `PhotoDeletionWorkItem` | `Reporting` |
 | `PhotoUploadSession` | `Reporting` |
 | `TrainerPhotoType` | `Reporting` |
 | `ReportRequestDefinitionSnapshot` | `Reporting` |
@@ -191,7 +192,7 @@ Application files under `LgymApi.Application/WorkoutProgress/` classify as `Work
 | `CommandEnvelope` | `Platform / Reference Data` |
 | `ApiIdempotencyRecord` | `Platform / Reference Data` |
 
-Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 10, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 54 persisted entities.
+Totals are fixed: Identity & Accounts 10, Notifications 5, Reporting 11, Training Planning 3, Workout & Progress 11, Coaching 5, Nutrition 6, and Platform / Reference Data 4, for 55 persisted entities.
 
 ## Ownership tie-breaker
 

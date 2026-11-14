@@ -119,7 +119,7 @@ public sealed class PushNotificationDeliveryRecoveryTests
             => Task.FromResult(new List<PushInstallation>());
         public Task<List<PushInstallation>> GetBySessionIdAsync(Id<UserSession> sessionId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<PushInstallation>());
-        public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, CancellationToken cancellationToken = default)
+        public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, IReadOnlyList<Id<LgymApi.Identity.Contracts.AccountReference>> protectedAccounts, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<PushInstallation>());
         public Task AddAsync(PushInstallation item, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateAsync(PushInstallation item, CancellationToken cancellationToken = default) => Task.CompletedTask;

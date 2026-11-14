@@ -1,5 +1,7 @@
 # LgymApi.Infrastructure.csproj
 
+- Account lifecycle synchronization uses provider-neutral row updates inside caller-owned transactions. The shared save pipeline adds optimistic revision checks for tracked active-account authorization reads. Finalization stages the independent Reporting storage manifest and executes explicit set-based cleanup in the owning service transaction; repositories do not commit. Migration `20261114184523_AddRecoverableAccountDeletion` preserves deadlines and work across retries and refuses downgrade. See [account deletion](../docs/account-deletion.md).
+
 - Purpose: technical implementations.
 - Photo-type template usage accepts only an unambiguous legacy configuration whose views are all recognized and unique; invalid fields contribute no partial references when classifying new defaults.
 - Reporting photo-type backfill classifies only missing defaults using all surviving templates of the original surviving trainer, including optional photo fields and templates without issued requests. Unreferenced historical defaults and retained deleted-trainer defaults are archived; existing dictionary states and issued snapshots remain unchanged. The legacy catalog includes `Side` / `Bok` alongside Front, Back, SideLeft and SideRight.

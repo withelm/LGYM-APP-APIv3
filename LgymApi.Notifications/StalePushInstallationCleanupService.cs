@@ -1,5 +1,6 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Notifications.Repositories;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
@@ -12,17 +13,20 @@ internal sealed class StalePushInstallationCleanupService : IStalePushInstallati
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStalePushInstallationCleanupSettings _settings;
     private readonly ILogger<StalePushInstallationCleanupService> _logger;
+    private readonly IAccountDeletionRetention _accountRetention;
 
     public StalePushInstallationCleanupService(
         IPushInstallationRepository pushInstallationRepository,
         IUnitOfWork unitOfWork,
         IStalePushInstallationCleanupSettings settings,
-        ILogger<StalePushInstallationCleanupService> logger)
+        ILogger<StalePushInstallationCleanupService> logger,
+        IAccountDeletionRetention accountRetention)
     {
         _pushInstallationRepository = pushInstallationRepository;
         _unitOfWork = unitOfWork;
         _settings = settings;
         _logger = logger;
+        _accountRetention = accountRetention;
     }
 
     public async Task<int> CleanupAsync(CancellationToken cancellationToken = default)
@@ -37,8 +41,11 @@ internal sealed class StalePushInstallationCleanupService : IStalePushInstallati
         var staleInstallations = await _pushInstallationRepository.GetStaleActiveAsync(
             cutoff,
             _settings.BatchSize,
+            await _accountRetention.GetProtectedAccountIdsAsync(cancellationToken),
             cancellationToken);
 
+        await _accountRetention.EnsureEligibleAsync(staleInstallations.Where(item => item.UserId.HasValue)
+            .Select(item => item.UserId!.Value.Rebind<LgymApi.Identity.Contracts.AccountReference>()).Distinct().ToArray(), cancellationToken);
         foreach (var installation in staleInstallations)
         {
             installation.DisabledAt = DateTimeOffset.UtcNow;

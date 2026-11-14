@@ -4,6 +4,7 @@ using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Authorization;
 using LgymApi.Identity.Contracts.Authorization;
+using LgymApi.Reporting.AccountDeletion;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LgymApi.Application.Reporting;
@@ -20,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRecurringReportAssignmentService, RecurringReportAssignmentService>();
         services.AddScoped<IRelationshipEndedReportCancellationActionExecutionPort, RelationshipEndedReportCancellationActionExecutionPort>();
         services.AddScoped<IExpiredPhotoUploadCleanupService, ExpiredPhotoUploadCleanupService>();
+        services.AddScoped<IAccountPhotoDeletionService, AccountPhotoDeletionService>();
 
         return services;
     }

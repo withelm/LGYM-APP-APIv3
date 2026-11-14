@@ -39,6 +39,8 @@ internal static class TraineeNoteRules
             return new TrainerRelationshipForbiddenError(Messages.TrainerRoleRequired);
         }
 
+        if (!access.IsSubjectAvailable) return new NotFoundError(Messages.DidntFind);
+
         return traineeId.IsEmpty
             ? new BadRequestError(Messages.UserIdRequired)
             : null;

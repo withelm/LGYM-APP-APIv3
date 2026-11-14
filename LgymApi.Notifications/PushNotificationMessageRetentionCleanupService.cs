@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using LgymApi.Application.Repositories;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Application.Notifications;
@@ -10,17 +11,20 @@ internal sealed class PushNotificationMessageRetentionCleanupService : IPushNoti
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationRetentionSettings _settings;
     private readonly ILogger<PushNotificationMessageRetentionCleanupService> _logger;
+    private readonly IAccountDeletionRetention _accountRetention;
 
     public PushNotificationMessageRetentionCleanupService(
         IPushNotificationMessageRepository pushNotificationMessageRepository,
         IUnitOfWork unitOfWork,
         INotificationRetentionSettings settings,
-        ILogger<PushNotificationMessageRetentionCleanupService> logger)
+        ILogger<PushNotificationMessageRetentionCleanupService> logger,
+        IAccountDeletionRetention accountRetention)
     {
         _pushNotificationMessageRepository = pushNotificationMessageRepository;
         _unitOfWork = unitOfWork;
         _settings = settings;
         _logger = logger;
+        _accountRetention = accountRetention;
     }
 
     public async Task<int> CleanupAsync(CancellationToken cancellationToken = default)
@@ -44,12 +48,15 @@ internal sealed class PushNotificationMessageRetentionCleanupService : IPushNoti
                 var candidates = await _pushNotificationMessageRepository.GetRetentionCandidatesCreatedBeforeAsync(
                     cutoff,
                     _settings.BatchSize,
+                    await _accountRetention.GetProtectedAccountIdsAsync(cancellationToken),
                     cancellationToken);
                 if (candidates.Count == 0)
                 {
                     break;
                 }
 
+                await _accountRetention.EnsureEligibleAsync(candidates
+                    .Select(item => item.UserId.Rebind<LgymApi.Identity.Contracts.AccountReference>()).Distinct().ToArray(), cancellationToken);
                 _pushNotificationMessageRepository.RemoveRange(candidates);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 removedCount += candidates.Count;

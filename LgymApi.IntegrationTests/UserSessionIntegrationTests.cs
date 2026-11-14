@@ -175,7 +175,10 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
             }
             else
             {
-                updatedUser.IsDeleted.Should().BeTrue();
+                updatedUser.IsDeleted.Should().BeFalse();
+                updatedUser.DeletionState.Should().Be(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion);
+                updatedUser.Name.Should().Be(targetUser.Name);
+                updatedUser.Email.Should().Be(targetUser.Email);
             }
         }
 

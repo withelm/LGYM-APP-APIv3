@@ -19,6 +19,7 @@ using LgymApi.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using LgymApi.UnitTests.Fakes;
 using NSubstitute;
+using LgymApi.Identity.Contracts.AccountDeletion;
 
 namespace LgymApi.UnitTests;
 
@@ -30,7 +31,7 @@ public sealed class UserServiceProfileTests
     private IUnitOfWork _unitOfWork = null!;
     private ConfigurableUserRepository _userRepository = null!;
     private IRankService _rankService = null!;
-    private IAccountPushInstallationCleanupPort _accountPushInstallationCleanupPort = null!;
+    private IAccountDeletionService _accountDeletionService = null!;
     private UserProfileService _profileService = null!;
     private TrainerApplicationRepositoryStub _trainerApplications = null!;
 
@@ -42,7 +43,7 @@ public sealed class UserServiceProfileTests
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _userRepository = new ConfigurableUserRepository();
         _rankService = Substitute.For<IRankService>();
-        _accountPushInstallationCleanupPort = Substitute.For<IAccountPushInstallationCleanupPort>();
+        _accountDeletionService = Substitute.For<IAccountDeletionService>();
         _trainerApplications = new TrainerApplicationRepositoryStub();
         _userRepository.Update = (_, _) => Task.CompletedTask;
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
@@ -51,7 +52,7 @@ public sealed class UserServiceProfileTests
             _roleRepository,
             _rankService,
             _unitOfWork,
-            _accountPushInstallationCleanupPort,
+            _accountDeletionService,
             new AppDefaultsOptions { PreferredTimeZone = "UTC" },
             _tutorialService,
             BuildMapper(),
@@ -101,7 +102,7 @@ public sealed class UserServiceProfileTests
     }
 
     [Test]
-    public async Task DeleteAccountAsync_AnonymizesUserAndCommits()
+    public async Task DeleteAccountAsync_UsesCanonicalLifecycleWithoutAnonymizingProfile()
     {
         using var cancellationSource = new CancellationTokenSource();
         var cancellationToken = cancellationSource.Token;
@@ -110,48 +111,30 @@ public sealed class UserServiceProfileTests
         var result = await _profileService.DeleteAccountAsync(user, cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        user.IsDeleted.Should().BeTrue();
-        user.Name.Should().Be($"anonymized_user_{user.Id}");
-        user.Email.Value.Should().Be($"anonymized_{user.Id}@example.com");
-        _userRepository.Calls.Should().ContainSingle(call =>
-            call.Method == nameof(IUserRepository.UpdateAsync)
-            && call.Argument == user
-            && call.CancellationToken == cancellationToken);
-        await _unitOfWork.Received(1).SaveChangesAsync(cancellationToken);
+        user.IsDeleted.Should().BeFalse();
+        user.Name.Should().Be("user");
+        user.Email.Value.Should().Be("user@example.com");
+        await _accountDeletionService.Received(1).RequestAsync(user.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(), cancellationToken);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(cancellationToken);
     }
 
     [Test]
-    public async Task DeleteAccountAsync_StagesPushInstallationRemovalBeforeCommitting()
+    public async Task DeleteAccountAsync_PropagatesCancellationWithoutChangingProfile()
     {
         using var cancellationSource = new CancellationTokenSource();
         var cancellationToken = cancellationSource.Token;
         var user = CreateUser();
-        var operations = new List<string>();
-        _accountPushInstallationCleanupPort.StageRemoveForAccountAsync(
+        cancellationSource.Cancel();
+        _accountDeletionService.RequestAsync(
                 user.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
                 cancellationToken)
-            .Returns(_ =>
-            {
-                operations.Add("cleanup");
-                return Task.CompletedTask;
-            });
-        _userRepository.Update = (_, _) =>
-        {
-            operations.Add("update");
-            return Task.CompletedTask;
-        };
-        _unitOfWork.SaveChangesAsync(cancellationToken).Returns(_ =>
-        {
-            operations.Add("commit");
-            return Task.FromResult(1);
-        });
+            .Returns(Task.FromCanceled(cancellationToken));
 
-        await _profileService.DeleteAccountAsync(user, cancellationToken);
+        var action = () => _profileService.DeleteAccountAsync(user, cancellationToken);
 
-        await _accountPushInstallationCleanupPort.Received(1).StageRemoveForAccountAsync(
-            user.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
-            cancellationToken);
-        operations.Should().Equal("cleanup", "update", "commit");
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        user.Name.Should().Be("user");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]

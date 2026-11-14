@@ -21,6 +21,7 @@ using LgymApi.Application.Notifications.Authorization;
 using LgymApi.Authorization;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Identity.Contracts.Authorization;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -67,6 +68,7 @@ public static class NotificationsModule
         services.AddScoped<ICoachingEmailNotificationFeature, CoachingEmailNotificationSchedulerAdapter>();
         services.AddScoped<ICoachingEmailNotificationScheduler, CoachingEmailNotificationSchedulerAdapter>();
         services.AddScoped<IPasswordRecoveryEmailScheduler, PasswordRecoveryEmailSchedulerAdapter>();
+        services.AddScoped<IAccountRecoveryEmailOutbox, AccountRecoveryEmailOutbox>();
         services.AddScoped<IUserRegisteredActionExecutionPort, UserRegisteredActionExecutionPort>();
         services.AddScoped<IDietPlanUpdatedInAppNotificationDeliveryPort, DietPlanUpdatedInAppNotificationDeliveryService>();
         services.AddScoped<IDietPlanUpdatedActionExecutionPort, DietPlanUpdatedActionExecutionPort>();

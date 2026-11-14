@@ -14,6 +14,8 @@ using LgymApi.UnitTests.Fakes;
 using LgymApi.TestUtils.Fakes;
 using NSubstitute;
 using NUnit.Framework;
+using LgymApi.Identity.Contracts.AccountDeletion;
+using LgymApi.Identity.Contracts;
 
 namespace LgymApi.UnitTests;
 
@@ -26,6 +28,7 @@ public sealed class AdminUserServiceTests
     private FakeUserSessionStore _sessionStore = null!;
     private IUnitOfWork _unitOfWork = null!;
     private int _saveChangesCalls;
+    private IAccountDeletionService _accountDeletionService = null!;
 
     [SetUp]
     public void SetUp()
@@ -42,7 +45,8 @@ public sealed class AdminUserServiceTests
                 return Task.FromResult(1);
             });
 
-        _service = new AdminUserService(_userRepository, _roleRepository, _sessionStore, _unitOfWork);
+        _accountDeletionService = Substitute.For<IAccountDeletionService>();
+        _service = new AdminUserService(_userRepository, _roleRepository, _sessionStore, _unitOfWork, _accountDeletionService);
     }
 
     [Test]
@@ -115,18 +119,18 @@ public sealed class AdminUserServiceTests
     }
 
     [Test]
-    public async Task Should_SoftDeleteUserAndRevokeAllSessions_When_Called()
+    public async Task Should_RequestCanonicalLifecycle_When_DeletingAnotherUser()
     {
         var userId = Id<User>.New();
         var adminId = Id<User>.New();
         var user = new User { Id = (Domain.ValueObjects.Id<User>)userId, Name = "Test", Email = new Email("test@test.com") };
-        _userRepository.FindById = (_, _) => Task.FromResult<User?>(user);
+        _userRepository.FindByIdIncludingDeleted = (_, _) => Task.FromResult<User?>(user);
 
         var result = await _service.DeleteUserAsync(userId, adminId);
 
         result.IsSuccess.Should().BeTrue();
-        user.IsDeleted.Should().BeTrue();
-        _sessionStore.RevokedAllUserIds.Should().Contain(userId);
+        user.IsDeleted.Should().BeFalse();
+        await _accountDeletionService.Received(1).RequestAsync(userId.Rebind<AccountReference>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

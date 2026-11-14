@@ -42,4 +42,12 @@
   <data name="TrainingNoExercises" xml:space="preserve">
     <value>No exercises recorded.</value>
   </data>
+  <data name="AccountRecoverySubject" xml:space="preserve">
+    <value>Restore your LGYM account</value>
+  </data>
+  <data name="AccountRecoveryBody" xml:space="preserve">
+    <value>Use this recovery code in LGYM to cancel your pending account deletion: {0}
+
+The code expires after 30 minutes or at your account deletion deadline, whichever comes first. It cannot be used to access account data. If you did not request this code, ignore this message.</value>
+  </data>
 </root>

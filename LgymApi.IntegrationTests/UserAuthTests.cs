@@ -415,7 +415,7 @@ public sealed class UserAuthTests : IntegrationTestBase
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("GET", "/api/deleteAccount", "own", "owner-allow")]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("GET", "/api/deleteAccount", "own", "no-client-subject")]
-    public async Task DeleteAccount_WithValidToken_AnonymizesUserAndReturnsDeleted()
+    public async Task DeleteAccount_WithValidToken_PreservesIdentityForRecoveryAndReturnsDeleted()
     {
         var user = await SeedUserAsync(name: "todelete", email: "todelete@example.com");
         SetAuthorizationHeader(user.Id);
@@ -435,9 +435,11 @@ public sealed class UserAuthTests : IntegrationTestBase
             .FirstOrDefaultAsync(u => u.Id == user.Id);
 
         updatedUser.Should().NotBeNull();
-        updatedUser!.IsDeleted.Should().BeTrue();
-        updatedUser.Name.Should().StartWith("anonymized_user_");
-        updatedUser.Email.Value.Should().StartWith("anonymized_");
+        updatedUser!.IsDeleted.Should().BeFalse();
+        updatedUser.Name.Should().Be("todelete");
+        updatedUser.Email.Value.Should().Be("todelete@example.com");
+        updatedUser.LegacyHash.Should().Be(user.LegacyHash);
+        updatedUser.LegacySalt.Should().Be(user.LegacySalt);
     }
 
     [Test]

@@ -173,10 +173,10 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         services.GetServices<IEmailSender>().Should().ContainSingle()
             .Which.Should().BeSameAs(Factory.EmailSender);
         var emailTemplateComposers = services.GetServices<IEmailTemplateComposer>().ToArray();
-        emailTemplateComposers.Should().HaveCount(6);
+        emailTemplateComposers.Should().HaveCount(7);
         emailTemplateComposers.Select(composer => composer.GetType()).Should().OnlyHaveUniqueItems();
         var mappingProfiles = services.GetServices<IMappingProfile>().ToArray();
-        mappingProfiles.Should().HaveCount(48);
+        mappingProfiles.Should().HaveCount(49);
         mappingProfiles.Select(profile => profile.GetType()).Should().OnlyHaveUniqueItems();
         mappingProfiles.OfType<EnumLookupMappingProfile>().Should().ContainSingle();
         mappingProfiles.OfType<PlanExerciseWorkoutAdapterMappingProfile>().Should().ContainSingle();

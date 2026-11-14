@@ -204,4 +204,8 @@
   <data name="PlanPurpose_Unclassified" xml:space="preserve"><value>Unclassified</value></data>
   <data name="PlanPurpose_Personal" xml:space="preserve"><value>Personal</value></data>
   <data name="PlanPurpose_Professional" xml:space="preserve"><value>Professional</value></data>
+  <data name="AccountDeletionState_Active" xml:space="preserve"><value>Active</value></data>
+  <data name="AccountDeletionState_PendingDeletion" xml:space="preserve"><value>Pending deletion</value></data>
+  <data name="AccountDeletionState_Finalizing" xml:space="preserve"><value>Finalizing deletion</value></data>
+  <data name="AccountDeletionState_PermanentlyDeleted" xml:space="preserve"><value>Permanently deleted</value></data>
 </root>
