@@ -149,7 +149,7 @@ internal sealed class AuthenticatedAccountContextResolver : IAuthenticatedAccoun
         }
 
         var accessFacts = await _accountAccessReader.GetByIdAsync(accountId, cancellationToken);
-        if (accessFacts is null)
+        if (accessFacts is null || accessFacts.DeletionState != AccountDeletionState.Active)
         {
             return new AuthenticatedAccountResolution(AuthenticatedAccountResolutionStatus.AccountNotFound, null);
         }
