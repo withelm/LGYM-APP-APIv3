@@ -60,6 +60,7 @@ public sealed class PlanDayRelationshipAccessAdapterTests
         services.AddApplication();
         services.AddScoped(_ => Substitute.For<IUserAccessReadService>());
         services.AddScoped(_ => Substitute.For<IAccountAccessReader>());
+        services.AddScoped(_ => Substitute.For<IAccountLookupService>());
         services.AddScoped(_ => Substitute.For<ICoachingActiveLinkPersistence>());
 
         services.Count(descriptor => descriptor.ServiceType == typeof(IPlanDayRelationshipAccessPort))

@@ -21,6 +21,7 @@ internal static class PersistedCommandAuthorizationCatalog
     public static IReadOnlyList<PersistedCommandAuthorizationCatalogEntry> Entries { get; } =
     [
         Entry("UserRegisteredCommand", "Identity & Accounts", ["UserId"], ["UserId"], ["LgymApi.Identity/Registration/UserRegistrationService.cs"]),
+        Entry("AccountDeletionScheduledCommand", "Identity & Accounts", ["AccountId", "DeletionGeneration"], ["AccountId"], ["LgymApi.Identity/AccountDeletion/AccountDeletionService.cs"]),
         Entry("TrainingCompletedCommand", "Workout & Progress", ["TrainingId", "UserId"], ["UserId"], ["LgymApi.Infrastructure/Repositories/WorkoutProgress/WorkoutTrainingPersistenceRepository.cs"]),
         Entry("InvitationCreatedCommand", "Coaching", ["InvitationId"], ["InvitationId"], ["LgymApi.Application/Coaching/Invitations/Create/CreateInvitationUseCase.cs", "LgymApi.Application/Coaching/Invitations/CreateByEmail/CreateInvitationByEmailUseCase.cs"]),
         Entry("InvitationAcceptedCommand", "Coaching", ["InvitationId"], ["InvitationId"], ["LgymApi.Application/Coaching/Invitations/Accept/AcceptInvitationUseCase.cs"]),
@@ -30,11 +31,14 @@ internal static class PersistedCommandAuthorizationCatalog
         Entry("ReportSubmissionCreatedInAppNotificationCommand", "Reporting", ["SubmissionId", "TraineeId"], ["TrainerId"], ["LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs"]),
         Entry("ReportSubmissionAcceptedProgressCommand", "Reporting", ["Event.ReportSubmissionId", "Event.TraineeId"], ["Event.TraineeId"], ["LgymApi.Reporting/Features/Reporting/ReportSubmissionAcceptedProgressCommandFactory.cs"]),
         Entry("ReportRequestCreatedInAppNotificationCommand", "Reporting", ["RequestId", "TrainerId"], ["TraineeId"], ["LgymApi.Reporting/Features/Reporting/ReportingService.Requests.cs", "LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs"]),
+        Entry("RecurringReportReminderInAppNotificationCommand", "Reporting", ["AssignmentId", "TrainerId"], ["TraineeId"], ["LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.Processing.cs"]),
         Entry("ReportFeedbackAddedInAppNotificationCommand", "Reporting", ["SubmissionId", "TrainerId"], ["TraineeId"], ["LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs"]),
+        Entry("ReportFeedbackReadInAppNotificationCommand", "Reporting", ["SubmissionId", "TraineeId"], ["TrainerId"], ["LgymApi.Reporting/Features/Reporting/ReportingService.Submissions.cs"]),
         Entry("TrainerInvitationAcceptedInAppNotificationCommand", "Coaching", ["InvitationId", "TraineeId"], ["TrainerId"], ["LgymApi.Application/Coaching/Invitations/Accept/AcceptInvitationUseCase.cs"]),
         Entry("TrainerInvitationCreatedInAppNotificationCommand", "Coaching", ["InvitationId", "TrainerId"], ["TraineeId"], ["LgymApi.Application/Coaching/Invitations/Create/CreateInvitationUseCase.cs", "LgymApi.Application/Coaching/Invitations/CreateByEmail/CreateInvitationByEmailUseCase.cs"]),
         Entry("TrainerInvitationRejectedInAppNotificationCommand", "Coaching", ["InvitationId", "TrainerId"], ["TraineeId"], ["LgymApi.Application/Coaching/Invitations/Reject/RejectInvitationUseCase.cs"]),
-        Entry("TrainerRelationshipEndedInAppNotificationCommand", "Coaching", ["TrainerId"], ["TraineeId"], ["LgymApi.Application/Coaching/Relationships/DetachFromTrainer/DetachFromTrainerUseCase.cs"])
+        Entry("TrainerRelationshipEndedInAppNotificationCommand", "Coaching", ["TrainerId"], ["TraineeId"], ["LgymApi.Application/Coaching/Relationships/DetachFromTrainer/DetachFromTrainerUseCase.cs"]),
+        Entry("RelationshipEndedReportCancellationCommand", "Coaching", ["EpisodeId"], ["EpisodeId"], ["LgymApi.Application/Coaching/Relationships/DetachFromTrainer/DetachFromTrainerUseCase.cs", "LgymApi.Application/Coaching/Relationships/UnlinkTrainee/UnlinkTraineeUseCase.cs"])
     ];
 
     private static PersistedCommandAuthorizationCatalogEntry Entry(

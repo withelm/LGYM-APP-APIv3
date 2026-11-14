@@ -1,5 +1,6 @@
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,11 @@ internal sealed class UserSessionStore : IUserSessionStore
 
     public async Task<UserSession> CreateSessionAsync(Id<User> userId, DateTimeOffset expiresAtUtc, CancellationToken ct)
     {
+        var account = await _dbContext.Users.FirstOrDefaultAsync(user => user.Id == userId, ct);
+        if (account is null || account.IsBlocked || account.DeletionState != AccountDeletionState.Active)
+        {
+            throw new UnauthorizedAccessException(LgymApi.Resources.Messages.Unauthorized);
+        }
         var session = new UserSession
         {
             Id = Id<UserSession>.New(),
@@ -42,7 +48,11 @@ internal sealed class UserSessionStore : IUserSessionStore
                 session => session.Id == sessionId
                     && (userId == default || session.UserId == userId)
                     && session.RevokedAtUtc == null
+                    && session.RecoveryTokenHash == null
                     && session.ExpiresAtUtc > now
+                    && _dbContext.Users.Any(user => user.Id == session.UserId
+                        && !user.IsDeleted
+                        && user.DeletionState == AccountDeletionState.Active)
                     && !session.IsDeleted,
                 ct);
     }

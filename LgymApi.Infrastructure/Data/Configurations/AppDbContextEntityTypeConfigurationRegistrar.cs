@@ -83,6 +83,7 @@ internal static class AppDbContextEntityTypeConfigurationRegistrar
         Register(modelBuilder, new RecurringReportAssignmentEntityTypeConfiguration());
         Register(modelBuilder, new RecurringReportScheduleChangeEntityTypeConfiguration());
         Register(modelBuilder, new PhotoEntityTypeConfiguration());
+        Register(modelBuilder, new PhotoDeletionWorkItemEntityTypeConfiguration());
         Register(modelBuilder, new PhotoUploadSessionEntityTypeConfiguration());
         Register(modelBuilder, new TrainerPhotoTypeEntityTypeConfiguration());
         Register(modelBuilder, new ReportRequestDefinitionSnapshotEntityTypeConfiguration());

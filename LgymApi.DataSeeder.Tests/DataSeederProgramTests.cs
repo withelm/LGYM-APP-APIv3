@@ -76,7 +76,8 @@ public sealed class DataSeederProgramTests
 
         passwordService.Verify("seed-password", password.Hash, password.Salt, password.Iterations, password.KeyLength, password.Digest)
             .Should().BeTrue();
-        seeders.Should().HaveCount(41);
+        seeders.Should().HaveCount(42);
+        seeders.Should().ContainSingle(seeder => seeder is PhotoDeletionWorkItemSeeder);
         seeders.Should().ContainSingle(seeder => seeder is CoachingEpisodeSeeder);
         seeders.Should().ContainSingle(seeder => seeder is RecurringReportAssignmentSeeder);
         seeders.Should().ContainSingle(seeder => seeder is RecurringReportScheduleChangeSeeder);
@@ -103,7 +104,9 @@ public sealed class DataSeederProgramTests
 
         await orchestrator.RunAsync(context, new SeedContext(), seedOptions, CancellationToken.None);
 
-        seeders.Should().HaveCount(41);
+        seeders.Should().HaveCount(42);
+        (await context.PhotoDeletionWorkItems.CountAsync()).Should().Be(1);
+        (await context.PhotoDeletionWorkItems.SingleAsync()).CompletedAtUtc.Should().NotBeNull();
         (await context.Users.CountAsync()).Should().Be(firstUserCount);
         (await context.Roles.CountAsync()).Should().Be(firstRoleCount);
         (await context.RoleClaims.CountAsync()).Should().Be(firstRoleClaimCount);

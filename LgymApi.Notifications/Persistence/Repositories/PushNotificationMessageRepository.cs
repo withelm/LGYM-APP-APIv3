@@ -3,6 +3,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Notifications.Persistence;
+using LgymApi.Identity.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -113,11 +114,13 @@ internal sealed class PushNotificationMessageRepository : IPushNotificationMessa
     public async Task<IReadOnlyList<PushNotificationMessage>> GetRetentionCandidatesCreatedBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
     {
+        var protectedUserIds = protectedAccounts.Select(id => id.Rebind<User>()).ToArray();
         return await _persistenceContext.PushNotificationMessages
             .IgnoreQueryFilters()
-            .Where(message => message.CreatedAt < cutoff)
+            .Where(message => message.CreatedAt < cutoff && !protectedUserIds.Contains(message.UserId))
             .OrderBy(message => message.CreatedAt)
             .ThenBy(message => message.Id)
             .Take(candidateLimit)

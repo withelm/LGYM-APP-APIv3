@@ -11,6 +11,7 @@ public sealed class UserProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.CreateMap<string, AccountRecoveryTokenResponse>((source, _) => new AccountRecoveryTokenResponse { RecoveryToken = source });
         configuration.CreateMap<RankInfo, RankDto>((source, _) => new RankDto
         {
             Name = source.Name,

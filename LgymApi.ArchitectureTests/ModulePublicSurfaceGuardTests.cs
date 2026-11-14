@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 860;
+    private const int ManifestEntryCount = 877;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,23 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Identity/Contracts/AccountDeletion/AccountDeletionScheduledCommand.cs\tLgymApi.Identity.Contracts.AccountDeletion.AccountDeletionScheduledCommand",
+        "LgymApi.Identity/Contracts/AccountDeletion/AccountDeletionScheduledCommand.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionScheduleConfirmation",
+        "LgymApi.Identity/Contracts/AccountDeletion/IAccountDeletionSynchronization.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionSynchronization",
+        "LgymApi.Identity/Contracts/AccountDeletion/IAccountRecoveryEmailOutbox.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountRecoveryEmailOutbox",
+        "LgymApi.Identity/Contracts/AccountDeletion/IAccountRecoveryEmailOutbox.cs\tLgymApi.Identity.Contracts.AccountDeletion.AccountRecoveryEmail",
+        "LgymApi.Identity/Contracts/AccountDeletion/IAccountDeletionService.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionService",
+        "LgymApi.Identity/Contracts/AccountDeletion/IAccountDeletionRetention.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionRetention",
+        "LgymApi.Identity/AccountDeletion/Finalization/AccountFinalizationContracts.cs\tLgymApi.Identity.AccountDeletion.Finalization.AccountFinalizationCandidate",
+        "LgymApi.Identity/AccountDeletion/Finalization/AccountFinalizationContracts.cs\tLgymApi.Identity.AccountDeletion.Finalization.IAccountFinalizationStore",
+        "LgymApi.Identity/AccountDeletion/Finalization/AccountFinalizationContracts.cs\tLgymApi.Identity.AccountDeletion.Finalization.IAccountFinalizationCleanup",
+        "LgymApi.Identity/AccountDeletion/Finalization/AccountFinalizationContracts.cs\tLgymApi.Identity.AccountDeletion.Finalization.IAccountFinalizationPhotoManifest",
+        "LgymApi.Identity/AccountDeletion/Finalization/AccountFinalizationContracts.cs\tLgymApi.Identity.AccountDeletion.Finalization.IAccountFinalizationService",
+        "LgymApi.Reporting/AccountDeletion/IAccountPhotoDeletionService.cs\tLgymApi.Reporting.AccountDeletion.IAccountPhotoDeletionService",
+        "LgymApi.Reporting/AccountDeletion/IPhotoDeletionPersistence.cs\tLgymApi.Reporting.AccountDeletion.PhotoDeletionCandidate",
+        "LgymApi.Reporting/AccountDeletion/IPhotoDeletionPersistence.cs\tLgymApi.Reporting.AccountDeletion.IPhotoDeletionPersistence",
+        "LgymApi.Reporting/AccountDeletion/IPhotoDeletionPersistence.cs\tLgymApi.Reporting.AccountDeletion.PhotoStoragePage",
+        "LgymApi.Reporting/AccountDeletion/IPhotoDeletionPersistence.cs\tLgymApi.Reporting.AccountDeletion.IPhotoStorageInventory",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaProcessingScheduler",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.IExerciseMediaProcessor",
         "LgymApi.Application/WorkoutProgress/ExerciseMedia/ExerciseMediaContracts.cs\tLgymApi.Application.WorkoutProgress.ExerciseMedia.ExerciseMediaLimits",

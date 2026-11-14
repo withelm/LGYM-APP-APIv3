@@ -205,8 +205,10 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
         outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    [Test]
-    public async Task DeletedSubject_CutsOffExistingTrainerSessionFromPhotoUrlsAndNestedMetadataWithoutDeletingStoredObject()
+    [TestCase(false, false)]
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    public async Task DeletedSubject_CutsOffExistingTrainerSessionFromPhotoUrlsAndNestedMetadataWithoutDeletingStoredObject(bool pending, bool formerTrainer)
     {
         var scenario = await SeedScenarioAsync();
         LocalPhotoDevelopmentStore store;
@@ -227,7 +229,14 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             using (var scope = Factory.Services.CreateScope())
             {
                 var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                database.Users.Single(user => user.Id == scenario.TraineeId).IsDeleted = true;
+                var subject = database.Users.Single(user => user.Id == scenario.TraineeId);
+                subject.IsDeleted = !pending;
+                subject.DeletionState = pending ? AccountDeletionState.PendingDeletion : AccountDeletionState.Active;
+                if (formerTrainer)
+                {
+                    foreach (var link in database.TrainerTraineeLinks.Where(link => link.TraineeId == scenario.TraineeId)) link.IsDeleted = true;
+                    foreach (var episode in database.CoachingEpisodes.Where(episode => episode.TraineeId == scenario.TraineeId)) episode.EndedAt = DateTimeOffset.UtcNow;
+                }
                 await database.SaveChangesAsync();
             }
 
@@ -244,7 +253,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             historyBody.Should().NotContain(scenario.Photo.StorageKey);
 
             using var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
-            submissionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            submissionsResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
             var submissionsBody = await submissionsResponse.Content.ReadAsStringAsync();
             submissionsBody.Should().NotContain(scenario.Photo.Id.ToString());
             submissionsBody.Should().NotContain(scenario.Photo.StorageKey);

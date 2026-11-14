@@ -17,7 +17,7 @@ namespace LgymApi.IntegrationTests;
 internal sealed class PostgreSqlAccountDeletionPushCleanupTests : PostgreSqlIntegrationTestBase
 {
     [Test]
-    public async Task DeleteAccount_PreservesLegacyResponseAndCascadesOnlyTheDeletedAccountsPushData()
+    public async Task DeleteAccount_PreservesLegacyResponseAndRetainsPushDataDuringRecovery()
     {
         var user = await SeedUserAsync(
             $"postgres-delete-push-{Id<PostgreSqlAccountDeletionPushCleanupTests>.New():N}",
@@ -55,30 +55,32 @@ internal sealed class PostgreSqlAccountDeletionPushCleanupTests : PostgreSqlInte
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var deletedUser = await database.Users
+        var pendingUser = await database.Users
             .IgnoreQueryFilters()
             .AsNoTracking()
             .SingleAsync(candidate => candidate.Id == user.Id);
         var remainingInstallationIds = await database.PushInstallations
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Select(installation => installation.Id)
             .ToListAsync();
         var remainingMessageIds = await database.PushNotificationMessages
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Select(message => message.Id)
             .ToListAsync();
 
-        deletedUser.IsDeleted.Should().BeTrue();
-        deletedUser.Name.Should().Be($"anonymized_user_{user.Id}");
-        deletedUser.Email.Value.Should().Be($"anonymized_{user.Id}@example.com");
-        remainingInstallationIds.Should().Contain(unrelatedInstallationId)
-            .And.NotContain(activeInstallationId)
-            .And.NotContain(disabledInstallationId)
-            .And.NotContain(softDeletedInstallationId);
-        remainingMessageIds.Should().Contain(unrelatedMessageId)
-            .And.NotContain(activeMessageId)
-            .And.NotContain(disabledMessageId)
-            .And.NotContain(softDeletedMessageId);
+        pendingUser.IsDeleted.Should().BeFalse();
+        pendingUser.Name.Should().Be(user.Name);
+        pendingUser.Email.Should().Be(user.Email);
+        remainingInstallationIds.Should().BeEquivalentTo(new[]
+        {
+            unrelatedInstallationId, activeInstallationId, disabledInstallationId, softDeletedInstallationId
+        });
+        remainingMessageIds.Should().BeEquivalentTo(new[]
+        {
+            unrelatedMessageId, activeMessageId, disabledMessageId, softDeletedMessageId
+        });
     }
 
     private async Task SeedPushDataAsync(

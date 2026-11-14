@@ -1,5 +1,7 @@
 # LgymApi.Application.csproj
 
+- Coaching target checks distinguish unavailable accounts from ended relationships so former note authors cannot read pending-account history. Email invitations reject recovery-protected existing accounts instead of treating them as unregistered addresses.
+
 - Purpose: use-case and business orchestration for the remaining Workout & Progress, Coaching, and Nutrition capabilities.
 - Contains: services, service interfaces, feature repository abstractions, application models, notification abstractions, and module-owned app DI helpers. Shared neutral primitives and technical contracts compile from Platform.
 - Public neutral primitives `Result`, `Unit`, `AppError`, and its generic HTTP error types compile only from `LgymApi.Platform/BuildingBlocks`; their established `LgymApi.Application.BuildingBlocks.*` namespaces remain unchanged and `Common` must not provide compatibility aliases for them.

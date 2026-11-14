@@ -111,7 +111,7 @@ public sealed class InAppNotificationRepositoryTests
 
         IInAppNotificationRepository repository = new InAppNotificationRepository(db);
 
-        var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2);
+        var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2, []);
 
         candidates.Select(notification => notification.Id).Should().Equal(softDeleted.Id, oldest.Id);
         repository.RemoveRange(candidates);

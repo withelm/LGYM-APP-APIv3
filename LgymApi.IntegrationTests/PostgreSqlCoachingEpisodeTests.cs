@@ -579,9 +579,9 @@ internal sealed class PostgreSqlCoachingEpisodeMigrationTests
             activate: false,
             targetMigration: PreviousMigrationId);
         await using var database = CreateDbContext(environment.RuntimeConnectionString);
-        var trainer = await TestDataFactory.SeedUserAsync(database, "backfill-trainer", "backfill-trainer@example.test", "password123");
-        var trainee = await TestDataFactory.SeedUserAsync(database, "backfill-trainee", "backfill-trainee@example.test", "password123");
-        await database.SaveChangesAsync();
+        var trainer = new User { Id = Id<User>.New(), Name = "backfill-trainer", Email = "backfill-trainer@example.test", CreatedAt = DateTimeOffset.UtcNow };
+        var trainee = new User { Id = Id<User>.New(), Name = "backfill-trainee", Email = "backfill-trainee@example.test", CreatedAt = DateTimeOffset.UtcNow };
+        await PostgreSqlHistoricalUserSeed.AddAsync(database, trainer, trainee);
         var linkId = Id<TrainerTraineeLink>.New();
         await database.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "TrainerTraineeLinks" ("Id", "TrainerId", "TraineeId", "CreatedAt", "UpdatedAt", "IsDeleted")

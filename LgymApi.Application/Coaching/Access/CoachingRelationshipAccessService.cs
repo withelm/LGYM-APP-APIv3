@@ -14,15 +14,18 @@ internal sealed class CoachingRelationshipAccessService : ICoachingRelationshipA
     private readonly IUserAccessReadService _userAccess;
     private readonly ICoachingActiveLinkPersistence _activeLinks;
     private readonly IAccountAccessReader _accountAccess;
+    private readonly IAccountLookupService _accounts;
 
     public CoachingRelationshipAccessService(
         IUserAccessReadService userAccess,
         ICoachingActiveLinkPersistence activeLinks,
-        IAccountAccessReader accountAccess)
+        IAccountAccessReader accountAccess,
+        IAccountLookupService accounts)
     {
         _userAccess = userAccess;
         _activeLinks = activeLinks;
         _accountAccess = accountAccess;
+        _accounts = accounts;
     }
 
     public async Task<CoachingRelationshipAccessDecision> GetAccessDecisionAsync(
@@ -35,10 +38,16 @@ internal sealed class CoachingRelationshipAccessService : ICoachingRelationshipA
             return new CoachingRelationshipAccessDecision(false, false);
         }
 
-        var isTrainer = await _userAccess.IsTrainerAsync(trainerId, cancellationToken);
+        var isTrainer = await _accounts.GetByIdAsync(trainerId.Rebind<AccountReference>(), cancellationToken) is not null
+            && await _userAccess.IsTrainerAsync(trainerId, cancellationToken);
         if (!isTrainer || traineeId.IsEmpty)
         {
             return new CoachingRelationshipAccessDecision(isTrainer, false);
+        }
+
+        if (await _accounts.GetByIdAsync(traineeId.Rebind<AccountReference>(), cancellationToken) is null)
+        {
+            return new CoachingRelationshipAccessDecision(true, false, false);
         }
 
         var activeLink = await _activeLinks.FindByTrainerAndTraineeAsync(trainerId, traineeId, cancellationToken);
@@ -52,8 +61,10 @@ internal sealed class CoachingRelationshipAccessService : ICoachingRelationshipA
     {
         if (trainerId.IsEmpty) return new CoachingRelationshipAccessDecision(false, false);
         var account = await _accountAccess.GetByIdAsync(trainerId, cancellationToken);
-        var isTrainer = account?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) == true;
+        var isTrainer = account?.Roles.Contains(AuthConstants.Roles.Trainer, StringComparer.Ordinal) == true
+            && await _accounts.GetByIdAsync(trainerId, cancellationToken) is not null;
         if (!isTrainer || traineeId.IsEmpty) return new CoachingRelationshipAccessDecision(isTrainer, false);
+        if (await _accounts.GetByIdAsync(traineeId, cancellationToken) is null) return new CoachingRelationshipAccessDecision(true, false, false);
         return new CoachingRelationshipAccessDecision(true, await _activeLinks.HasActiveRelationshipAsync(trainerId, traineeId, cancellationToken));
     }
 }

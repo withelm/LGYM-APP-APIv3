@@ -10,7 +10,7 @@ namespace LgymApi.UnitTests;
 public sealed class BackgroundActionStartupValidationTests
 {
     [Test]
-    public void Validate_AcceptsExactlyEighteenRowsAndNineteenHandlers()
+    public void Validate_AcceptsExactlyNineteenRowsAndTwentyHandlers()
     {
         var registry = CommandContractRegistry.CreateDefault();
         var services = CreateValidServices(registry);
@@ -18,8 +18,8 @@ public sealed class BackgroundActionStartupValidationTests
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
         action.Should().NotThrow();
-        registry.Contracts.Should().HaveCount(18);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(19);
+        registry.Contracts.Should().HaveCount(19);
+        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(20);
     }
 
     [Test]

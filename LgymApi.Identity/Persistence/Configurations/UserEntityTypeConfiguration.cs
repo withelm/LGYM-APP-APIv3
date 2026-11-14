@@ -11,6 +11,9 @@ internal sealed class UserEntityTypeConfiguration : IEntityTypeConfiguration<Use
     {
         builder.ToTable("Users");
 
+        builder.Property(u => u.LifecycleRevision).IsConcurrencyToken();
+        builder.Property(u => u.DeletionState).HasConversion<string>().HasDefaultValue(LgymApi.Domain.Enums.AccountDeletionState.Active);
+        builder.HasIndex(u => new { u.DeletionState, u.DeletionEffectiveAt });
 
         builder.Property(u => u.Email)
             .HasConversion(email => email.Value, value => new Email(value));

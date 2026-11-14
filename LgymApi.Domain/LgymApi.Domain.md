@@ -26,3 +26,4 @@
 - `Plan.Purpose` defines `Unclassified = 0`, `Personal = 1`, and `Professional = 2`; persistence stores enum names and legacy rows default to Unclassified without changing plan or history identifiers.
 - `Plan.ShareCodeExpiresAt` and `Plan.ShareCodeDurationDays` are nullable; legacy share codes without a trustworthy expiry are not redeemable.
 - `Plan.ShareCodeRevision` is the optimistic concurrency token for share issuance, including reuse requests.
+- `PhotoDeletionWorkItem` is Reporting-owned durable storage cleanup work. It retains a deletion generation, object key or prefix, inventory cursor and completion state independently of account/photo foreign keys.

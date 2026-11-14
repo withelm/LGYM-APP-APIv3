@@ -2,6 +2,7 @@ using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.Identity.Access;
@@ -22,7 +23,7 @@ internal sealed class AccountReadService : IAccountReadService
         CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.FindByIdAsync(accountId, cancellationToken);
-        return user is { IsDeleted: false }
+        return user is { IsDeleted: false, DeletionState: AccountDeletionState.Active }
             ? _mapper.Map<UserEntity, AccountReadModel>(user, _mapper.CreateContext())
             : null;
     }
@@ -31,7 +32,7 @@ internal sealed class AccountReadService : IAccountReadService
     {
         var normalizedEmail = new Email(email);
         var user = await _userRepository.FindByEmailAsync(normalizedEmail, cancellationToken);
-        return user is { IsDeleted: false }
+        return user is { IsDeleted: false, DeletionState: AccountDeletionState.Active }
             ? _mapper.Map<UserEntity, AccountReadModel>(user, _mapper.CreateContext())
             : null;
     }
@@ -42,7 +43,7 @@ internal sealed class AccountReadService : IAccountReadService
     {
         var users = await _userRepository.GetByIdsAsync(accountIds, cancellationToken);
         var accountsById = users
-            .Where(user => !user.IsDeleted)
+            .Where(user => !user.IsDeleted && user.DeletionState == AccountDeletionState.Active)
             .Select(user => _mapper.Map<UserEntity, AccountReadModel>(user, _mapper.CreateContext()))
             .ToDictionary(account => account.Id);
 
@@ -50,5 +51,11 @@ internal sealed class AccountReadService : IAccountReadService
             .Where(accountsById.ContainsKey)
             .Select(accountId => accountsById[accountId])
             .ToList();
+    }
+
+    public async Task<bool> IsUnavailableByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.FindByEmailAsync(new Email(email), cancellationToken);
+        return user is not null && user.DeletionState != AccountDeletionState.Active;
     }
 }

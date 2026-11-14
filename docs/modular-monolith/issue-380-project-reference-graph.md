@@ -214,7 +214,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.BackgroundWorker -> LgymApi.Application` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:1` |
 | `LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common` | `LgymApi.BackgroundWorker/Actions/SendRegistrationEmailHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Identity` | `LgymApi.BackgroundWorker/Actions/LocalizedReportNotificationDispatcher.cs:13` |
-| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:60` |
+| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:61` |
 | `LgymApi.BackgroundWorker -> LgymApi.Notifications` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Platform` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:4` |
 | `LgymApi.BackgroundWorker -> LgymApi.Reporting` | `LgymApi.BackgroundWorker/Jobs/RecurringReportAssignmentProcessingJob.cs:1` |
@@ -225,7 +225,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.DataSeeder.Tests -> LgymApi.DataSeeder` | `LgymApi.DataSeeder.Tests/ConsolePromptTests.cs:37` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Domain` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:3` |
 | `LgymApi.DataSeeder.Tests -> LgymApi.Identity` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:1` |
-| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:92` |
+| `LgymApi.DataSeeder.Tests -> LgymApi.Infrastructure` | `LgymApi.DataSeeder.Tests/DataSeederProgramTests.cs:93` |
 | `LgymApi.Identity -> LgymApi.Authorization` | `LgymApi.Identity/Mapping/IdentityAccountContractMappingProfile.cs:2` |
 | `LgymApi.Identity -> LgymApi.Domain` | `LgymApi.Identity/Access/AccountReadService.cs:4` |
 | `LgymApi.Identity -> LgymApi.Platform` | `LgymApi.Identity/Access/AccountReadService.cs:2` |
@@ -269,13 +269,13 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.Reporting -> LgymApi.Authorization` | `LgymApi.Reporting/Reporting/Authorization/ReportingAuthorization.cs:1` |
 | `LgymApi.Reporting -> LgymApi.Domain` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:4` |
 | `LgymApi.Reporting -> LgymApi.Identity` | `LgymApi.Reporting/Features/Reporting/IRecurringReportAssignmentService.cs:6` |
-| `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/Features/Reporting/ExpiredPhotoUploadCleanupService.cs:13` |
+| `LgymApi.Reporting -> LgymApi.Platform` | `LgymApi.Reporting/AccountDeletion/AccountPhotoDeletionService.cs:12` |
 | `LgymApi.Reporting -> LgymApi.Resources` | `LgymApi.Reporting/Features/Reporting/RecurringReportAssignmentService.RequestNow.cs:54` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Authorization` | `LgymApi.Reporting.UnitTests/ReportingAuthorizationTestFactory.cs:3` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Domain` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:18` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Identity` | `LgymApi.Reporting.UnitTests/PhotoServiceTestFactory.cs:10` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Infrastructure` | `LgymApi.Reporting.UnitTests/CloudflareR2PhotoStorageProviderTests.cs:24` |
-| `LgymApi.Reporting.UnitTests -> LgymApi.Platform` | `LgymApi.Reporting.UnitTests/ExpiredPhotoUploadCleanupServiceTests.cs:27` |
+| `LgymApi.Reporting.UnitTests -> LgymApi.Platform` | `LgymApi.Reporting.UnitTests/ExpiredPhotoUploadCleanupServiceTests.cs:28` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Reporting` | `LgymApi.Reporting.UnitTests/ReportingServiceTests.cs:10` |
 | `LgymApi.Reporting.UnitTests -> LgymApi.Resources` | `LgymApi.Reporting.UnitTests/PhotoCompleteUploadServiceTests.cs:215` |
 | `LgymApi.Platform -> LgymApi.Domain` | `LgymApi.Platform/Contracts/Serialization/TypedIdJsonConverter.cs:3` |

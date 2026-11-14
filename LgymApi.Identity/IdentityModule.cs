@@ -29,9 +29,13 @@ using LgymApi.Application.Services;
 using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.Services;
 using LgymApi.Identity.Contracts.Accounts;
+using LgymApi.Identity.Contracts.AccountDeletion;
+using LgymApi.Identity.AccountDeletion;
+using LgymApi.Identity.AccountDeletion.Finalization;
 using LgymApi.Identity.Contracts.Authorization;
 using LgymApi.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LgymApi.Identity;
 
@@ -40,6 +44,11 @@ public static class IdentityModule
     public static IServiceCollection AddIdentityModule(this IServiceCollection services)
     {
         services.AddAuthorizationPolicy<GlobalPermissionAuthorizationContext, GlobalPermissionAuthorizationPolicy>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IAccountDeletionService, AccountDeletionService>();
+        services.AddScoped<IAccountFinalizationService, AccountFinalizationService>();
+        services.AddScoped<IAccountDeletionRetention, AccountDeletionRetention>();
+        services.AddScoped<IAccountDeletionScheduleConfirmation, AccountDeletionScheduleConfirmation>();
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();

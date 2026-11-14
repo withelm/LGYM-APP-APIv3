@@ -4,11 +4,12 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Options;
+using LgymApi.Reporting.AccountDeletion;
 using Microsoft.Extensions.Logging;
 
 namespace LgymApi.Infrastructure.Services;
 
-public sealed class CloudflareR2PhotoStorageProvider : IPhotoStorageProvider
+public sealed class CloudflareR2PhotoStorageProvider : IPhotoStorageProvider, IPhotoStorageInventory
 {
     private readonly PhotoStorageOptions _options;
     private readonly ILogger<CloudflareR2PhotoStorageProvider> _logger;
@@ -85,6 +86,20 @@ public sealed class CloudflareR2PhotoStorageProvider : IPhotoStorageProvider
             _logger.LogError(ex, "Failed to generate R2 signed read URL for key {StorageKey}", storageKey);
             throw;
         }
+    }
+
+    public async Task<PhotoStoragePage> ListAsync(string prefix, string? continuationToken, CancellationToken cancellationToken)
+    {
+        var response = await _client.ListObjectsV2Async(new ListObjectsV2Request
+        {
+            BucketName = _options.BucketName,
+            Prefix = prefix,
+            ContinuationToken = continuationToken,
+            MaxKeys = 500
+        }, cancellationToken);
+        return new PhotoStoragePage(
+            response.S3Objects?.Select(item => item.Key).ToArray() ?? [],
+            response.IsTruncated == true ? response.NextContinuationToken : null);
     }
 
     public async Task DeleteAsync(

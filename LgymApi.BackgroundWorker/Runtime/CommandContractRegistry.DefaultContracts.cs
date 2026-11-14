@@ -79,7 +79,10 @@ public sealed partial class CommandContractRegistry
             typeof(TrainerRelationshipEndedInAppNotificationCommandHandler)),
         Create<ApplicationRelationshipEndedReportCancellationCommand>(
             "LgymApi.BackgroundWorker.Common.Commands.RelationshipEndedReportCancellationCommand",
-            typeof(RelationshipEndedReportCancellationCommandHandler))
+            typeof(RelationshipEndedReportCancellationCommandHandler)),
+        Create<LgymApi.Identity.Contracts.AccountDeletion.AccountDeletionScheduledCommand>(
+            "LgymApi.BackgroundWorker.Common.Commands.AccountDeletionScheduledCommand",
+            typeof(AccountDeletionScheduledCommandHandler))
     ];
 
     private static CommandContract Create<TCommand>(string canonicalId, params Type[] handlerTypes)

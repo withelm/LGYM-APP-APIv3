@@ -521,8 +521,8 @@ public sealed class CompositionRootConvergenceTests
         ValidateSingleDescriptor(services, typeof(IActionMessageScheduler), ServiceLifetime.Scoped, expectedActionSchedulerType);
         ValidateSingleDescriptor(services, typeof(IPushBackgroundScheduler), ServiceLifetime.Scoped, expectedPushSchedulerType);
 
-        ValidateImplementationCollection(services, typeof(IEmailTemplateComposer), ServiceLifetime.Scoped, expectedCount: 6);
-        ValidateImplementationCollection(services, typeof(IMappingProfile), ServiceLifetime.Singleton, expectedCount: 48);
+        ValidateImplementationCollection(services, typeof(IEmailTemplateComposer), ServiceLifetime.Scoped, expectedCount: 7);
+        ValidateImplementationCollection(services, typeof(IMappingProfile), ServiceLifetime.Singleton, expectedCount: 49);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountLookupService)).Should().Be(1);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountAccessReader)).Should().Be(1);
         services.Count(descriptor => descriptor.ServiceType == typeof(IAccountSessionValidator)).Should().Be(1);
@@ -614,8 +614,8 @@ public sealed class CompositionRootConvergenceTests
             typeof(FcmPushSender));
 
         var registry = CommandContractRegistry.CreateDefault();
-        registry.Contracts.Should().HaveCount(18);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(19);
+        registry.Contracts.Should().HaveCount(19);
+        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(20);
         BackgroundActionRegistrationValidator.Validate(services, registry);
     }
 

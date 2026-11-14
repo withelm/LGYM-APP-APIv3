@@ -50,6 +50,7 @@ public static class ServiceProvider
         var commandContractRegistry = CommandContractRegistry.CreateDefault();
         services.AddSingleton(commandContractRegistry);
         services.AddScoped<ExerciseMediaProcessingJob>();
+        services.AddScoped<AccountFinalizationJob>();
         if (isTesting)
             services.AddScoped<IExerciseMediaProcessingScheduler, InlineExerciseMediaProcessingScheduler>();
         else
@@ -116,6 +117,7 @@ public static class ServiceProvider
         services.AddScoped<IPushNotificationMessageRetentionCleanupJob, PushNotificationMessageRetentionCleanupJob>();
         services.AddScoped<IDisabledPushInstallationRetentionCleanupJob, DisabledPushInstallationRetentionCleanupJob>();
         services.AddScoped<IInAppNotificationRetentionCleanupJob, InAppNotificationRetentionCleanupJob>();
+        services.AddScoped<AccountPhotoDeletionJob>();
 
         services.AddScoped<BackgroundActionOrchestratorService>();
         services.AddScoped<PushNotificationJobHandlerService>();
@@ -144,6 +146,7 @@ public static class ServiceProvider
         services.AddBackgroundAction<TraineeNoteUpdatedInAppNotificationCommand, TraineeNoteUpdatedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<TrainerRelationshipEndedInAppNotificationCommand, TrainerRelationshipEndedInAppNotificationCommandHandler>();
         services.AddBackgroundAction<RelationshipEndedReportCancellationCommand, RelationshipEndedReportCancellationCommandHandler>();
+        services.AddBackgroundAction<LgymApi.Identity.Contracts.AccountDeletion.AccountDeletionScheduledCommand, AccountDeletionScheduledCommandHandler>();
 
         BackgroundActionRegistrationValidator.Validate(services, commandContractRegistry);
         return services;

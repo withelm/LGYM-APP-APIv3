@@ -6,7 +6,8 @@ namespace LgymApi.Application.Coaching.Contracts.Access;
 
 public sealed record CoachingRelationshipAccessDecision(
     bool IsTrainer,
-    bool HasActiveRelationship);
+    bool HasActiveRelationship,
+    bool IsSubjectAvailable = true);
 
 public interface ICoachingRelationshipAccessService
 {

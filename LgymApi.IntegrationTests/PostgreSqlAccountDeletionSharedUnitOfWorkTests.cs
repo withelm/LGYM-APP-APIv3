@@ -1,22 +1,15 @@
 using FluentAssertions;
-using LgymApi.Application.Features.Tutorial;
-using LgymApi.Application.Identity.Contracts.Accounts;
-using LgymApi.Application.Identity.Profile;
-using LgymApi.Application.Mapping.Core;
-using LgymApi.Application.Notifications;
-using LgymApi.Application.Notifications.Adapters;
-using LgymApi.Application.Notifications.Repositories;
-using LgymApi.Application.Options;
-using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
-using LgymApi.Infrastructure.Repositories;
 using LgymApi.Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using LgymApi.Identity.AccountDeletion;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.AccountDeletion;
 
 namespace LgymApi.IntegrationTests;
 
@@ -25,7 +18,35 @@ namespace LgymApi.IntegrationTests;
 internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSqlIntegrationTestBase
 {
     [Test]
-    public async Task DeleteAccountAsync_StagesAnonymizationAndPushRemovalUntilOneSharedCommit()
+    public async Task ProtectedWrite_AuthorizedBeforeDeletion_RollsBackAfterAccountBecomesPending()
+    {
+        var user = await SeedUserAsync($"fenced-{Id<User>.New()}", $"fenced-{Id<User>.New()}@example.test");
+        await using var staleScope = Factory.Services.CreateAsyncScope();
+        var staleDatabase = staleScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await staleDatabase.Users.SingleAsync(candidate => candidate.Id == user.Id);
+        await using (var deletingScope = Factory.Services.CreateAsyncScope())
+        {
+            await deletingScope.ServiceProvider.GetRequiredService<IAccountDeletionService>()
+                .RequestAsync(user.Id.Rebind<AccountReference>());
+        }
+        var measurementId = Id<Measurement>.New();
+        staleDatabase.Measurements.Add(new Measurement
+        {
+            Id = measurementId, UserId = user.Id, Value = 42, Unit = "cm"
+        });
+
+        var save = () => staleDatabase.SaveChangesAsync();
+
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await using var verifyScope = Factory.Services.CreateAsyncScope();
+        var database = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await database.Measurements.AnyAsync(measurement => measurement.Id == measurementId)).Should().BeFalse();
+        (await database.Users.SingleAsync(candidate => candidate.Id == user.Id)).DeletionState
+            .Should().Be(AccountDeletionState.PendingDeletion);
+    }
+
+    [Test]
+    public async Task DeleteAccountAsync_CommitsPendingStateAndRetainsRecoveryDataAtomically()
     {
         var user = await SeedUserAsync(
             $"postgres-shared-delete-{Id<PostgreSqlAccountDeletionSharedUnitOfWorkTests>.New():N}",
@@ -42,36 +63,30 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
             var unitOfWork = new ObservedUnitOfWork(new EfUnitOfWork(database), async () =>
             {
                 var beforeCommit = await ReadStateAsync(user.Id, installationId, messageId);
-                writesWereInvisibleBeforeCommit = !beforeCommit.IsDeleted
+                writesWereInvisibleBeforeCommit = beforeCommit.DeletionState == AccountDeletionState.Active
                     && beforeCommit.InstallationExists
                     && beforeCommit.MessageExists;
             });
-            var profileService = new UserProfileService(
-                serviceScope.ServiceProvider.GetRequiredService<IUserRepository>(),
-                serviceScope.ServiceProvider.GetRequiredService<IRoleRepository>(),
-                serviceScope.ServiceProvider.GetRequiredService<IRankService>(),
+            var deletionService = new AccountDeletionService(
+                database,
                 unitOfWork,
-                new PushInstallationAccountCleanupAdapter(new PushInstallationLifecycleService(
-                    new PushInstallationRepository(database),
-                    serviceScope.ServiceProvider.GetRequiredService<IPushInstallationPersistenceConflictClassifier>(),
-                    unitOfWork)),
-                new AppDefaultsOptions(),
-                serviceScope.ServiceProvider.GetRequiredService<ITutorialService>(),
-                serviceScope.ServiceProvider.GetRequiredService<IMapper>(),
-                serviceScope.ServiceProvider.GetRequiredService<LgymApi.Identity.Approval.ITrainerApplicationRepository>());
+                serviceScope.ServiceProvider.GetRequiredService<ILegacyPasswordService>(),
+                TimeProvider.System,
+                serviceScope.ServiceProvider.GetRequiredService<IAccountDeletionSynchronization>(),
+                serviceScope.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>(),
+                serviceScope.ServiceProvider.GetRequiredService<LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandOutboxWriter>());
 
-            var result = await profileService.DeleteAccountAsync(scopedUser);
+            await deletionService.RequestAsync(scopedUser.Id.Rebind<AccountReference>());
 
-            result.IsSuccess.Should().BeTrue();
             unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(0);
+            unitOfWork.BeginTransactionCalls.Should().Be(1);
         }
 
         writesWereInvisibleBeforeCommit.Should().BeTrue();
         var persisted = await ReadStateAsync(user.Id, installationId, messageId);
-        persisted.IsDeleted.Should().BeTrue();
-        persisted.InstallationExists.Should().BeFalse();
-        persisted.MessageExists.Should().BeFalse();
+        persisted.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
+        persisted.InstallationExists.Should().BeTrue();
+        persisted.MessageExists.Should().BeTrue();
     }
 
     private async Task SeedPushDataAsync(
@@ -105,18 +120,18 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
         await database.SaveChangesAsync();
     }
 
-    private async Task<AccountDeletionState> ReadStateAsync(
+    private async Task<PersistedDeletionState> ReadStateAsync(
         Id<User> userId,
         Id<PushInstallation> installationId,
         Id<PushNotificationMessage> messageId)
     {
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var isDeleted = await database.Users
+        var deletionState = await database.Users
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(user => user.Id == userId)
-            .Select(user => user.IsDeleted)
+            .Select(user => user.DeletionState)
             .SingleAsync();
         var installationExists = await database.PushInstallations
             .AsNoTracking()
@@ -124,8 +139,8 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
         var messageExists = await database.PushNotificationMessages
             .AsNoTracking()
             .AnyAsync(message => message.Id == messageId);
-        return new AccountDeletionState(isDeleted, installationExists, messageExists);
+        return new PersistedDeletionState(deletionState, installationExists, messageExists);
     }
 
-    private sealed record AccountDeletionState(bool IsDeleted, bool InstallationExists, bool MessageExists);
+    private sealed record PersistedDeletionState(AccountDeletionState DeletionState, bool InstallationExists, bool MessageExists);
 }

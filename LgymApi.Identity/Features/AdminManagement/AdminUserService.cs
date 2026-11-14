@@ -7,6 +7,9 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
+using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.AccountDeletion;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.Features.AdminManagement;
 
@@ -16,17 +19,20 @@ internal sealed class AdminUserService : IAdminUserService
     private readonly IRoleRepository _roleRepository;
     private readonly IUserSessionStore _userSessionStore;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAccountDeletionService _accountDeletionService;
 
     public AdminUserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IUserSessionStore userSessionStore,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAccountDeletionService accountDeletionService)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _userSessionStore = userSessionStore;
         _unitOfWork = unitOfWork;
+        _accountDeletionService = accountDeletionService;
     }
 
     public async Task<Result<Pagination<UserResult>, AppError>> GetUsersAsync(FilterInput filterInput, bool includeDeleted, CancellationToken cancellationToken = default)
@@ -67,7 +73,7 @@ internal sealed class AdminUserService : IAdminUserService
         }
 
         var user = await _userRepository.FindByIdIncludingDeletedAsync(userId, cancellationToken);
-        if (user == null)
+        if (user == null || user.DeletionState is AccountDeletionState.PendingDeletion or AccountDeletionState.Finalizing)
         {
             return Result<UserResult, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
@@ -98,7 +104,7 @@ internal sealed class AdminUserService : IAdminUserService
         }
 
         var user = await _userRepository.FindByIdIncludingDeletedAsync(targetUserId, cancellationToken);
-        if (user == null)
+        if (user == null || user.DeletionState != AccountDeletionState.Active)
         {
             return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
@@ -134,16 +140,13 @@ internal sealed class AdminUserService : IAdminUserService
             return Result<Unit, AppError>.Failure(new ForbiddenError(Messages.CannotDeleteSelf));
         }
 
-        var user = await _userRepository.FindByIdAsync(targetUserId, cancellationToken);
+        var user = await _userRepository.FindByIdIncludingDeletedAsync(targetUserId, cancellationToken);
         if (user == null)
         {
             return Result<Unit, AppError>.Failure(new NotFoundError(Messages.DidntFind));
         }
 
-        user.IsDeleted = true;
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _userSessionStore.RevokeAllUserSessionsAsync(targetUserId, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _accountDeletionService.RequestAsync(targetUserId.Rebind<AccountReference>(), cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }

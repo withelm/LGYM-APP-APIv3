@@ -42,4 +42,12 @@
   <data name="TrainingNoExercises" xml:space="preserve">
     <value>Brak cwiczen.</value>
   </data>
+  <data name="AccountRecoverySubject" xml:space="preserve">
+    <value>Przywroc konto LGYM</value>
+  </data>
+  <data name="AccountRecoveryBody" xml:space="preserve">
+    <value>Wpisz ten kod odzyskiwania w LGYM, aby anulowac oczekujace usuniecie konta: {0}
+
+Kod wygasa po 30 minutach lub w terminie usuniecia konta, w zaleznosci od tego, co nastapi wczesniej. Nie daje dostepu do danych konta. Jesli nie prosiles o kod, zignoruj te wiadomosc.</value>
+  </data>
 </root>

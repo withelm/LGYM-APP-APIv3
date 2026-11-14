@@ -127,7 +127,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
     [Test]
     [LgymApi.IntegrationTests.Authorization.AuthorizationEvidence("POST", "/api/admin/users/{id}/delete", "admin", "current-permission-allow")]
-    public async Task Should_SoftDeleteUser_When_CalledAsAdmin()
+    public async Task Should_RequestRecoverableDeletion_When_CalledAsAdmin()
     {
         await AuthenticateAsAdminAsync();
         var user = await SeedUserAsync(name: "delete-user", email: "delete@example.com", password: "pass1234");
@@ -140,7 +140,11 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var deleted = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == user.Id);
         deleted.Should().NotBeNull();
-        deleted!.IsDeleted.Should().BeTrue();
+        deleted!.IsDeleted.Should().BeFalse();
+        deleted.Name.Should().Be(user.Name);
+        deleted.Email.Should().Be(user.Email);
+        deleted.DeletionState.Should().Be(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion);
+        deleted.DeletionEffectiveAt.Should().Be(deleted.DeletionRequestedAt!.Value.AddDays(30));
     }
 
     [Test]

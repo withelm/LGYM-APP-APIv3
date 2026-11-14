@@ -190,6 +190,8 @@ public sealed class ReportPhotoPersistenceRepository : IReportPhotoPersistence
         var entities = await _dbContext.PhotoUploadSessions
             .AsNoTracking()
             .Where(session => session.ExpiresAtUtc < nowUtc
+                && session.OwnerUser.DeletionState == AccountDeletionState.Active
+                && session.InitiatedByUser.DeletionState == AccountDeletionState.Active
                 && (session.Status == PhotoUploadSessionStatus.Pending || session.Status == PhotoUploadSessionStatus.Failed))
             .OrderBy(session => session.ExpiresAtUtc)
             .ToListAsync(cancellationToken);

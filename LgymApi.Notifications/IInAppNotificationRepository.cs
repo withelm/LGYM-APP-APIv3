@@ -2,6 +2,7 @@ using LgymApi.Application.Notifications.Models;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Application.Notifications;
 
@@ -24,6 +25,7 @@ internal interface IInAppNotificationRepository
     Task<IReadOnlyList<InAppNotification>> GetRetentionCandidatesCreatedBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 

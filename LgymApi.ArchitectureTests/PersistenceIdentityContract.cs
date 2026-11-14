@@ -77,6 +77,7 @@ internal static class PersistenceIdentityContract
         DbSet("PushNotificationMessages", "PushNotificationMessage"),
         DbSet("UserExternalLogins", "UserExternalLogin"),
         DbSet("Photos", "Photo"),
+        DbSet("PhotoDeletionWorkItems", "PhotoDeletionWorkItem"),
         DbSet("PhotoUploadSessions", "PhotoUploadSession"),
         DbSet("TrainerPhotoTypes", "TrainerPhotoType"),
         DbSet("ReportRequestDefinitionSnapshots", "ReportRequestDefinitionSnapshot")
@@ -135,6 +136,7 @@ internal static class PersistenceIdentityContract
         "RecurringReportAssignmentEntityTypeConfiguration",
         "RecurringReportScheduleChangeEntityTypeConfiguration",
         "PhotoEntityTypeConfiguration",
+        "PhotoDeletionWorkItemEntityTypeConfiguration",
         "PhotoUploadSessionEntityTypeConfiguration",
         "TrainerPhotoTypeEntityTypeConfiguration",
         "ReportRequestDefinitionSnapshotEntityTypeConfiguration"

@@ -9,6 +9,8 @@ using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using LgymApi.Identity.Contracts.AccountDeletion;
+using NSubstitute;
 
 namespace LgymApi.UnitTests;
 
@@ -22,7 +24,7 @@ public sealed class NotificationRetentionCleanupServiceTests
         var repository = new PushNotificationMessageRepository(database);
         var unitOfWork = new RecordingUnitOfWork(database);
         var logger = new CapturingLogger<PushNotificationMessageRetentionCleanupService>();
-        var service = new PushNotificationMessageRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger);
+        var service = new PushNotificationMessageRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger, Substitute.For<IAccountDeletionRetention>());
 
         var removed = await service.CleanupAsync();
 
@@ -46,7 +48,7 @@ public sealed class NotificationRetentionCleanupServiceTests
         var repository = new PushNotificationMessageRepository(database);
         var unitOfWork = new RecordingUnitOfWork(database);
         var logger = new CapturingLogger<PushNotificationMessageRetentionCleanupService>();
-        var service = new PushNotificationMessageRetentionCleanupService(repository, unitOfWork, new RetentionSettings(BatchSize: 1), logger);
+        var service = new PushNotificationMessageRetentionCleanupService(repository, unitOfWork, new RetentionSettings(BatchSize: 1), logger, Substitute.For<IAccountDeletionRetention>());
 
         var removed = await service.CleanupAsync();
 
@@ -69,7 +71,7 @@ public sealed class NotificationRetentionCleanupServiceTests
         var repository = new PushInstallationRepository(database);
         var unitOfWork = new RecordingUnitOfWork(database);
         var logger = new CapturingLogger<DisabledPushInstallationRetentionCleanupService>();
-        var service = new DisabledPushInstallationRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger);
+        var service = new DisabledPushInstallationRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger, Substitute.For<IAccountDeletionRetention>());
 
         var firstRunRemoved = await service.CleanupAsync();
         var secondRunRemoved = await service.CleanupAsync();
@@ -91,7 +93,7 @@ public sealed class NotificationRetentionCleanupServiceTests
         var repository = new InAppNotificationRepository(database);
         var unitOfWork = new RecordingUnitOfWork(database, new InvalidOperationException("retention commit failed"));
         var logger = new CapturingLogger<InAppNotificationRetentionCleanupService>();
-        var service = new InAppNotificationRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger);
+        var service = new InAppNotificationRetentionCleanupService(repository, unitOfWork, new RetentionSettings(), logger, Substitute.For<IAccountDeletionRetention>());
 
         var action = async () => await service.CleanupAsync();
 

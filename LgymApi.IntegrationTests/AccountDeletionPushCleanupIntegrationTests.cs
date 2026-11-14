@@ -13,7 +13,7 @@ namespace LgymApi.IntegrationTests;
 public sealed class AccountDeletionPushCleanupIntegrationTests : IntegrationTestBase
 {
     [Test]
-    public async Task DeleteAccount_RemovesEveryAccountInstallationAndDependentMessageInTheAnonymizationCommit()
+    public async Task DeleteAccount_PreservesInstallationsAndMessageHistoryDuringRecoveryWindow()
     {
         var user = await SeedUserAsync(
             name: $"delete-push-{Id<AccountDeletionPushCleanupIntegrationTests>.New():N}",
@@ -67,30 +67,32 @@ public sealed class AccountDeletionPushCleanupIntegrationTests : IntegrationTest
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var anonymizedUser = await verificationDatabase.Users
+        var pendingUser = await verificationDatabase.Users
             .IgnoreQueryFilters()
             .AsNoTracking()
             .SingleAsync(candidate => candidate.Id == user.Id);
         var remainingInstallationIds = await verificationDatabase.PushInstallations
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Select(installation => installation.Id)
             .ToListAsync();
         var remainingMessageIds = await verificationDatabase.PushNotificationMessages
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Select(message => message.Id)
             .ToListAsync();
 
-        anonymizedUser.IsDeleted.Should().BeTrue();
-        anonymizedUser.Name.Should().Be($"anonymized_user_{user.Id}");
-        anonymizedUser.Email.Value.Should().Be($"anonymized_{user.Id}@example.com");
-        remainingInstallationIds.Should().Contain(unrelatedInstallationId)
-            .And.NotContain(activeInstallationId)
-            .And.NotContain(disabledInstallationId)
-            .And.NotContain(softDeletedInstallationId);
-        remainingMessageIds.Should().Contain(unrelatedMessageId)
-            .And.NotContain(activeMessageId)
-            .And.NotContain(disabledMessageId)
-            .And.NotContain(softDeletedMessageId);
+        pendingUser.IsDeleted.Should().BeFalse();
+        pendingUser.Name.Should().Be(user.Name);
+        pendingUser.Email.Should().Be(user.Email);
+        remainingInstallationIds.Should().BeEquivalentTo(new[]
+        {
+            unrelatedInstallationId, activeInstallationId, disabledInstallationId, softDeletedInstallationId
+        });
+        remainingMessageIds.Should().BeEquivalentTo(new[]
+        {
+            unrelatedMessageId, activeMessageId, disabledMessageId, softDeletedMessageId
+        });
     }
 
     private static PushInstallation CreateInstallation(

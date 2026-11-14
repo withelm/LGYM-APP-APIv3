@@ -11,6 +11,7 @@ using LgymApi.Application.Options;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Security;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Resources;
 using UserEntity = LgymApi.Domain.Entities.User;
@@ -103,7 +104,7 @@ internal sealed class UserCredentialLoginService : IUserCredentialLoginService
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }
 
-        if (user.IsDeleted || user.IsBlocked)
+        if (user.IsDeleted || user.IsBlocked || user.DeletionState != AccountDeletionState.Active)
         {
             return Result<LoginResult, AppError>.Failure(new UserUnauthorizedError(Messages.Unauthorized));
         }

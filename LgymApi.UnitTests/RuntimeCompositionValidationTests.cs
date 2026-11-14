@@ -182,9 +182,9 @@ public sealed class RuntimeCompositionValidationTests
         var approvedCollections = new Dictionary<Type, int>
         {
             [typeof(LgymApi.Application.WorkoutProgress.Scoring.Elo.IExerciseEloCalculator)] = 4,
-            [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 6,
+            [typeof(LgymApi.BackgroundWorker.Common.Notifications.IEmailTemplateComposer)] = 7,
             [typeof(IAccountAccessOwnerCapabilityExtension)] = 3,
-            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 48
+            [typeof(LgymApi.Application.Mapping.Core.IMappingProfile)] = 49
         };
 
         foreach (var group in moduleDescriptors)
@@ -249,7 +249,8 @@ public sealed class RuntimeCompositionValidationTests
     {
         var controllerTypes = GetApiControllerTypes();
 
-        controllerTypes.Should().HaveCount(36);
+        controllerTypes.Should().HaveCount(37);
+        controllerTypes.Should().Contain(typeof(LgymApi.Api.Features.User.Controllers.AccountRecoveryController));
         foreach (var controllerType in controllerTypes)
         {
             serviceProvider.GetRequiredService(controllerType)

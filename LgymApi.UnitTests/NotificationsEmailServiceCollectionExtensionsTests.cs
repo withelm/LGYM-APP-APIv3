@@ -22,7 +22,8 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
         typeof(TrainerInvitationRevokedEmailTemplateComposer),
         typeof(TrainingCompletedEmailTemplateComposer),
         typeof(WelcomeEmailTemplateComposer),
-        typeof(PasswordRecoveryEmailTemplateComposer)
+        typeof(PasswordRecoveryEmailTemplateComposer),
+        typeof(AccountRecoveryEmailTemplateComposer)
     ];
 
     [Test]
@@ -113,7 +114,7 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
                 || descriptor.ImplementationInstance is not null)
             || !composerDescriptors.Select(descriptor => descriptor.ImplementationType).ToHashSet().SetEquals(ExpectedComposerTypes))
         {
-            throw new InvalidOperationException("Email template composers must use the exact six scoped type descriptors.");
+            throw new InvalidOperationException("Email template composers must use the exact seven scoped type descriptors.");
         }
     }
 

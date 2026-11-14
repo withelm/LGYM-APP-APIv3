@@ -179,10 +179,12 @@ public sealed class HangfireContractCompatibilityTests
             new RecurringJobContract("push-stale-installation-cleanup", Cron.Daily(3), typeof(IStalePushInstallationCleanupJob)),
             new RecurringJobContract("push-notification-message-retention-cleanup", Cron.Daily(), typeof(IPushNotificationMessageRetentionCleanupJob)),
             new RecurringJobContract("push-disabled-installation-retention-cleanup", Cron.Daily(), typeof(IDisabledPushInstallationRetentionCleanupJob)),
-            new RecurringJobContract("in-app-notification-retention-cleanup", Cron.Daily(), typeof(IInAppNotificationRetentionCleanupJob))
+            new RecurringJobContract("in-app-notification-retention-cleanup", Cron.Daily(), typeof(IInAppNotificationRetentionCleanupJob)),
+            new RecurringJobContract("identity-account-finalization", "* * * * *", typeof(AccountFinalizationJob)),
+            new RecurringJobContract("reporting-account-photo-deletion", "* * * * *", typeof(AccountPhotoDeletionJob))
         };
 
-        storage.RecurringJobHashes.Should().HaveCount(7);
+        storage.RecurringJobHashes.Should().HaveCount(9);
         foreach (var expectedJob in expectedJobs)
         {
             var hash = storage.RecurringJobHashes[$"recurring-job:{expectedJob.Id}"];

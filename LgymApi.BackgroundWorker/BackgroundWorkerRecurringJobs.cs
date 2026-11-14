@@ -1,5 +1,6 @@
 using Hangfire;
 using LgymApi.BackgroundWorker.Common.Jobs;
+using LgymApi.BackgroundWorker.Jobs;
 
 namespace LgymApi.BackgroundWorker;
 
@@ -14,5 +15,7 @@ public static class BackgroundWorkerRecurringJobs
         RecurringJob.AddOrUpdate<IPushNotificationMessageRetentionCleanupJob>("push-notification-message-retention-cleanup", job => job.ExecuteAsync(CancellationToken.None), Cron.Daily());
         RecurringJob.AddOrUpdate<IDisabledPushInstallationRetentionCleanupJob>("push-disabled-installation-retention-cleanup", job => job.ExecuteAsync(CancellationToken.None), Cron.Daily());
         RecurringJob.AddOrUpdate<IInAppNotificationRetentionCleanupJob>("in-app-notification-retention-cleanup", job => job.ExecuteAsync(CancellationToken.None), Cron.Daily());
+        RecurringJob.AddOrUpdate<AccountFinalizationJob>("identity-account-finalization", job => job.ExecuteAsync(CancellationToken.None), Cron.Minutely);
+        RecurringJob.AddOrUpdate<AccountPhotoDeletionJob>("reporting-account-photo-deletion", job => job.ExecuteAsync(CancellationToken.None), Cron.Minutely);
     }
 }

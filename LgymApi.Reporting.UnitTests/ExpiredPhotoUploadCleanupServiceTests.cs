@@ -7,6 +7,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
+using LgymApi.Identity.Contracts.AccountDeletion;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
@@ -90,7 +91,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
     }
 
     [Test]
-    public async Task CleanupExpiredUploadsAsync_WhenMarkExpiredFails_DoesNotCountCandidateAsCleaned()
+    public async Task CleanupExpiredUploadsAsync_WhenMarkExpiredFails_AbortsWithoutCommitting()
     {
         var candidate = CreatePendingUpload("photos/mark-fail.jpg");
         var tracker = Substitute.For<IReportPhotoPersistence>();
@@ -103,9 +104,9 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var service = CreateService(tracker, storage, unitOfWork);
 
-        var cleaned = await service.CleanupExpiredUploadsAsync();
+        var cleanup = () => service.CleanupExpiredUploadsAsync();
 
-        cleaned.Should().Be(0);
+        await cleanup.Should().ThrowAsync<InvalidOperationException>();
         await storage.Received(1).DeleteAsync(candidate.StorageKey, Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -119,7 +120,9 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
             tracker,
             storage,
             unitOfWork,
-            logger ?? Substitute.For<ILogger<ExpiredPhotoUploadCleanupService>>());
+            logger ?? Substitute.For<ILogger<ExpiredPhotoUploadCleanupService>>(),
+            Substitute.For<IAccountDeletionSynchronization>(),
+            Substitute.For<IAccountDeletionRetention>());
 
     private static PendingPhotoUpload CreatePendingUpload(string storageKey)
         => new(

@@ -4,6 +4,7 @@ using LgymApi.Application.Identity.Mapping;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -25,7 +26,7 @@ internal sealed class AccountLookupService : IAccountLookupService
     public async Task<AccountLookup?> GetByIdAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.FindByIdAsync(accountId.Rebind<User>(), cancellationToken);
-        return user is { IsDeleted: false }
+        return user is { IsDeleted: false, DeletionState: AccountDeletionState.Active }
             ? _mapper.Map<User, AccountLookup>(user, _mapper.CreateContext())
             : null;
     }
@@ -33,7 +34,7 @@ internal sealed class AccountLookupService : IAccountLookupService
     public async Task<AccountLookup?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.FindByEmailAsync(new Email(email), cancellationToken);
-        return user is { IsDeleted: false }
+        return user is { IsDeleted: false, DeletionState: AccountDeletionState.Active }
             ? _mapper.Map<User, AccountLookup>(user, _mapper.CreateContext())
             : null;
     }
@@ -46,7 +47,7 @@ internal sealed class AccountLookupService : IAccountLookupService
             accountIds.Select(accountId => accountId.Rebind<User>()).ToList(),
             cancellationToken);
         var accountsById = users
-            .Where(user => !user.IsDeleted)
+            .Where(user => !user.IsDeleted && user.DeletionState == AccountDeletionState.Active)
             .Select(user => _mapper.Map<User, AccountLookup>(user, _mapper.CreateContext()))
             .ToDictionary(account => account.Id);
 
@@ -78,7 +79,7 @@ internal sealed class AccountAccessReader : IAccountAccessReader
         CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.FindByIdIncludingDeletedAsync(accountId.Rebind<User>(), cancellationToken);
-        if (user is null)
+        if (user is null || user.DeletionState != AccountDeletionState.Active)
         {
             return null;
         }

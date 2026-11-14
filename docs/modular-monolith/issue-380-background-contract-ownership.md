@@ -18,7 +18,7 @@ Notifications owns provider-neutral push contracts, policy, private FCM delivery
 
 - Canonical persisted command IDs remain the legacy `LgymApi.BackgroundWorker.Common.Commands.*` strings.
 - Worker writers emit canonical IDs only. CLR names from Application or extracted modules are accepted as read aliases where the registry defines them.
-- The registry remains closed at 15 commands and 16 handlers. `TrainingCompletedCommand` is the sole two-handler command.
+- The registry remains closed at 19 commands and 20 handlers. `TrainingCompletedCommand` is the sole two-handler command. Identity stages `AccountDeletionScheduledCommand` in the deletion request transaction; its Worker handler confirms the current pending generation for the due scan, without an external 30-day timer.
 - Common job interface targets, method signatures, recurring-job identities, email wire models, and template output paths remain unchanged.
 - Provider SDK types, credentials, raw push tokens, and raw provider responses remain private to the smallest runtime owner that needs them.
 

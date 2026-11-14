@@ -3,6 +3,7 @@ using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Application.Notifications;
 using LgymApi.Notifications.Persistence;
+using LgymApi.Identity.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace LgymApi.Infrastructure.Repositories;
@@ -124,11 +125,15 @@ internal sealed class InAppNotificationRepository : IInAppNotificationRepository
     public async Task<IReadOnlyList<InAppNotification>> GetRetentionCandidatesCreatedBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
     {
+        var protectedUserIds = protectedAccounts.Select(id => id.Rebind<User>()).ToArray();
         return await _persistenceContext.InAppNotifications
             .IgnoreQueryFilters()
-            .Where(notification => notification.CreatedAt < cutoff)
+            .Where(notification => notification.CreatedAt < cutoff
+                && !protectedUserIds.Contains(notification.RecipientId)
+                && (!notification.SenderUserId.HasValue || !protectedUserIds.Contains(notification.SenderUserId.Value)))
             .OrderBy(notification => notification.CreatedAt)
             .ThenBy(notification => notification.Id)
             .Take(candidateLimit)

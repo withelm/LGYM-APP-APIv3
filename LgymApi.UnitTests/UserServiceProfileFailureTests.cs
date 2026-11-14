@@ -10,6 +10,7 @@ using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.UnitTests.Fakes;
 using NSubstitute;
+using LgymApi.Identity.Contracts.AccountDeletion;
 
 namespace LgymApi.UnitTests;
 
@@ -18,7 +19,7 @@ public sealed class UserServiceProfileFailureTests
 {
     private IUnitOfWork _unitOfWork = null!;
     private ConfigurableUserRepository _userRepository = null!;
-    private IAccountPushInstallationCleanupPort _accountPushInstallationCleanupPort = null!;
+    private IAccountDeletionService _accountDeletionService = null!;
     private UserProfileService _profileService = null!;
 
     [SetUp]
@@ -26,13 +27,13 @@ public sealed class UserServiceProfileFailureTests
     {
         _unitOfWork = Substitute.For<IUnitOfWork>();
         _userRepository = new ConfigurableUserRepository();
-        _accountPushInstallationCleanupPort = Substitute.For<IAccountPushInstallationCleanupPort>();
+        _accountDeletionService = Substitute.For<IAccountDeletionService>();
         _profileService = new UserProfileService(
             _userRepository,
             new ConfigurableRoleRepository(),
             Substitute.For<LgymApi.Application.Services.IRankService>(),
             _unitOfWork,
-            _accountPushInstallationCleanupPort,
+            _accountDeletionService,
             new LgymApi.Application.Options.AppDefaultsOptions(),
             Substitute.For<LgymApi.Application.Features.Tutorial.ITutorialService>(),
             Substitute.For<IMapper>(),
@@ -60,11 +61,11 @@ public sealed class UserServiceProfileFailureTests
     }
 
     [Test]
-    public async Task DeleteAccountAsync_LeavesUserUnchangedWithoutCommit_WhenPushCleanupStagingFails()
+    public async Task DeleteAccountAsync_LeavesUserUnchangedWithoutCommit_WhenLifecycleRequestFails()
     {
         var user = new User { Id = Id<User>.New(), Name = "profile-failure", Email = "profile-failure@example.com" };
-        var stagingFailure = new InvalidOperationException("Push installation cleanup staging failed.");
-        _accountPushInstallationCleanupPort.StageRemoveForAccountAsync(
+        var stagingFailure = new InvalidOperationException("Lifecycle request failed.");
+        _accountDeletionService.RequestAsync(
                 user.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
                 CancellationToken.None)
             .Returns(Task.FromException(stagingFailure));

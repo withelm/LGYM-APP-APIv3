@@ -254,7 +254,7 @@ public sealed class CoachingManagedPlanSliceIntegrationTests : IntegrationTestBa
         invalidName.Error.Should().BeOfType<InvalidPlanError>();
         invalidPlanId.Error.Should().BeOfType<InvalidPlanError>();
         foreignPlanResult.Error.Should().BeOfType<PlanNotFoundError>();
-        unavailableOwner.Error.Should().BeOfType<PlanNotFoundError>();
+        unavailableOwner.Error.Should().BeOfType<LgymApi.Application.Coaching.Errors.TrainerRelationshipNotFoundError>();
     }
 
     private async Task SeedRelationshipAsync(

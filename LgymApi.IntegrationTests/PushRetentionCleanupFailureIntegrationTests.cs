@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using LgymApi.Identity.Contracts.AccountDeletion;
 
 namespace LgymApi.IntegrationTests;
 
@@ -48,7 +49,8 @@ public sealed class PushRetentionCleanupFailureIntegrationTests
                 new PushNotificationMessageRepository(database),
                 new FailOnSaveUnitOfWork(new EfUnitOfWork(database), failingSaveCall: 2),
                 cleanupScope.ServiceProvider.GetRequiredService<INotificationRetentionSettings>(),
-                NullLogger<PushNotificationMessageRetentionCleanupService>.Instance);
+                NullLogger<PushNotificationMessageRetentionCleanupService>.Instance,
+                cleanupScope.ServiceProvider.GetRequiredService<IAccountDeletionRetention>());
 
             var action = () => cleanup.CleanupAsync();
 

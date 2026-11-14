@@ -8,8 +8,8 @@
     },
     {
       "name": "LgymApi.Identity",
-      "exportedTypeCount": 84,
-      "sha256": "4bf227941ed9999efa92687a686ae6c1237646caf7c5abba3bf20930989c0a6b"
+      "exportedTypeCount": 96,
+      "sha256": "2726102f295c80775223e020bb01b1b789d8468895517f2f414f965c56dce67a"
     },
     {
       "name": "LgymApi.Notifications",
@@ -23,8 +23,8 @@
     },
     {
       "name": "LgymApi.Reporting",
-      "exportedTypeCount": 95,
-      "sha256": "94adc18e32bf439863584a616aa397625abccfaead33829d9fe5ed02cd333701"
+      "exportedTypeCount": 100,
+      "sha256": "017ed61ab828c97f921ad72efd1b23328c062824f3f6ff4e1e309d763a3e6a64"
     },
     {
       "name": "LgymApi.TrainingPlanning",

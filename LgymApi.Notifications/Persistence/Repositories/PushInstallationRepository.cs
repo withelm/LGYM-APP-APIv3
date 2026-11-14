@@ -86,10 +86,12 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, CancellationToken cancellationToken = default)
+    public Task<List<PushInstallation>> GetStaleActiveAsync(DateTimeOffset lastSeenBefore, int limit, IReadOnlyList<Id<AccountReference>> protectedAccounts, CancellationToken cancellationToken = default)
     {
+        var protectedUserIds = protectedAccounts.Select(id => id.Rebind<User>()).ToArray();
         return _persistenceContext.PushInstallations
-            .Where(x => x.DisabledAt == null && x.LastSeenAt < lastSeenBefore)
+            .Where(x => x.DisabledAt == null && x.LastSeenAt < lastSeenBefore
+                && (!x.UserId.HasValue || !protectedUserIds.Contains(x.UserId.Value)))
             .OrderBy(x => x.LastSeenAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
@@ -243,11 +245,14 @@ internal sealed class PushInstallationRepository : IPushInstallationRepository
     public async Task<IReadOnlyList<PushInstallation>> GetRetentionCandidatesDisabledBeforeAsync(
         DateTimeOffset cutoff,
         int candidateLimit,
+        IReadOnlyList<Id<AccountReference>> protectedAccounts,
         CancellationToken cancellationToken = default)
     {
+        var protectedUserIds = protectedAccounts.Select(id => id.Rebind<User>()).ToArray();
         return await _persistenceContext.PushInstallations
             .IgnoreQueryFilters()
-            .Where(installation => installation.DisabledAt != null && installation.DisabledAt < cutoff)
+            .Where(installation => installation.DisabledAt != null && installation.DisabledAt < cutoff
+                && (!installation.UserId.HasValue || !protectedUserIds.Contains(installation.UserId.Value)))
             .OrderBy(installation => installation.DisabledAt)
             .ThenBy(installation => installation.Id)
             .Take(candidateLimit)

@@ -28,6 +28,7 @@ internal static class EmailServiceCollectionExtensions
         services.AddScoped<IEmailTemplateComposer, TrainingCompletedEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, WelcomeEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposer, PasswordRecoveryEmailTemplateComposer>();
+        services.AddScoped<IEmailTemplateComposer, AccountRecoveryEmailTemplateComposer>();
         services.AddScoped<IEmailTemplateComposerFactory, EmailTemplateComposerFactory>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<DummyEmailSender>();

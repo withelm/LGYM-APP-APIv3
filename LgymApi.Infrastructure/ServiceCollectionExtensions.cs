@@ -24,6 +24,7 @@ public static partial class ServiceCollectionExtensions
         services.AddNutritionInfrastructure();
         services.AddReportingInfrastructure(configuration, enableSensitiveLogging, isTesting);
         services.AddNotificationsInfrastructure();
+        AddIdentityAccountDeletionInfrastructure(services);
 
         return services;
     }
