@@ -29,7 +29,7 @@ internal sealed class UpdatePlanUseCase : IUpdatePlanUseCase
             return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
-        if (string.IsNullOrWhiteSpace(input.Name))
+        if (string.IsNullOrWhiteSpace(input.Name) || (input.Purpose.HasValue && !Enum.IsDefined(input.Purpose.Value)))
         {
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
         }
@@ -46,6 +46,10 @@ internal sealed class UpdatePlanUseCase : IUpdatePlanUseCase
         }
 
         plan.Name = input.Name;
+        if (input.Purpose.HasValue)
+        {
+            plan.Purpose = input.Purpose.Value;
+        }
         await _planRepository.UpdateAsync(plan, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

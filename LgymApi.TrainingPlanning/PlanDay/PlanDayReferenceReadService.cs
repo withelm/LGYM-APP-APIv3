@@ -20,8 +20,15 @@ internal sealed class PlanDayReferenceReadService(
         CancellationToken cancellationToken = default)
     {
         var planDays = await persistence.GetPlanDaysByIdsAsync(planDayIds, cancellationToken);
+        var plans = new Dictionary<Id<PlanReference>, PlanDayPlanPersistenceModel?>();
+        foreach (var planId in planDays.Select(day => day.PlanId).Distinct())
+        {
+            plans[planId] = await persistence.FindPlanAsync(planId, cancellationToken);
+        }
+
         var planDaysById = mapper
-            .MapList<PlanDayPersistenceModel, PlanDayReferenceReadModel>(planDays)
+            .MapList<PlanDayReferenceSource, PlanDayReferenceReadModel>(
+                planDays.Select(day => new PlanDayReferenceSource(day, plans[day.PlanId])))
             .ToDictionary(planDay => planDay.PlanDayId);
 
         return planDayIds

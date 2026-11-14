@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LgymApi.Api.Interfaces;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Api.Features.Plan.Contracts;
 
@@ -13,6 +14,9 @@ public sealed class PlanFormDto : IDto, IResultDto
 
     [JsonPropertyName("isActive")]
     public bool? IsActive { get; set; }
+
+    [JsonPropertyName("purpose")]
+    public PlanPurpose? Purpose { get; set; }
 }
 
 public sealed record CopyPlanDto(
@@ -32,6 +36,9 @@ public sealed class PlanDto : IResultDto
 
     [JsonPropertyName("userId")]
     public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("purpose")]
+    public PlanPurpose Purpose { get; set; }
 }
 
 public sealed record ShareCodeResponseDto(

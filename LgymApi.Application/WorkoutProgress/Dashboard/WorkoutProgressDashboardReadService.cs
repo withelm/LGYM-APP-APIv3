@@ -6,6 +6,8 @@ using LgymApi.Application.WorkoutProgress.ProgressData;
 using LgymApi.Application.WorkoutProgress.ProgressData.Models;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
+using LgymApi.Identity.Contracts;
 
 namespace LgymApi.Application.WorkoutProgress.Dashboard;
 
@@ -43,7 +45,7 @@ public sealed class WorkoutProgressDashboardReadService : IWorkoutProgressDashbo
             cancellationToken);
         return Result<WorkoutProgressDashboardTrainingsWithTranslations, AppError>.Success(new WorkoutProgressDashboardTrainingsWithTranslations
         {
-            Trainings = result.Value.Select(MapTraining).ToList(),
+            Trainings = result.Value.Select(training => MapTraining(training, traineeId)).ToList(),
             Translations = translations
         });
     }
@@ -66,13 +68,16 @@ public sealed class WorkoutProgressDashboardReadService : IWorkoutProgressDashbo
     public Task<Result<List<MainRecordBestReadModel>, AppError>> GetBestMainRecordsAsync(Id<LgymApi.Identity.Contracts.AccountReference> traineeId, CancellationToken cancellationToken = default)
         => _progress.GetBestMainRecordsAsync(traineeId, cancellationToken);
 
-    private static WorkoutProgressDashboardTrainingReadModel MapTraining(TrainingByDateDetails training)
+    private static WorkoutProgressDashboardTrainingReadModel MapTraining(TrainingByDateDetails training, Id<AccountReference> traineeId)
     {
+        var visiblePlanDay = training.PlanDay is { Purpose: PlanPurpose.Personal } day && day.OwnerId == traineeId
+            ? day
+            : null;
         return new WorkoutProgressDashboardTrainingReadModel(
             training.Id.ToString(),
-            training.TypePlanDayId.ToString(),
+            visiblePlanDay?.PlanDayId.ToString() ?? string.Empty,
             training.CreatedAt,
-            training.PlanDay == null ? null : new WorkoutProgressDashboardPlanDayReadModel(training.PlanDay.PlanDayId.ToString(), training.PlanDay.Name),
+            visiblePlanDay == null ? null : new WorkoutProgressDashboardPlanDayReadModel(visiblePlanDay.PlanDayId.ToString(), visiblePlanDay.Name),
             training.Gym,
             training.Exercises.Select(MapExercise).ToList());
     }

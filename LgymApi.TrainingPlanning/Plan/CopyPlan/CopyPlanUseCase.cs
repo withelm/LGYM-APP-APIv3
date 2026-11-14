@@ -5,6 +5,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.Models;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Resources;
+using LgymApi.Domain.Enums;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using LgymApi.TrainingPlanning.Contracts;
 
@@ -54,6 +55,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
                 exerciseIdMap,
                 isActive: true,
                 cancellationToken);
+            plan.Purpose = PlanPurpose.Unclassified;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
@@ -71,5 +73,6 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
         plan.UserId,
         plan.Name,
         plan.IsActive,
-        plan.ShareCode);
+        plan.ShareCode,
+        plan.Purpose);
 }

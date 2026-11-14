@@ -207,6 +207,8 @@ public sealed class TrainingServiceAddTrainingTests
 
     private void ArrangeAccountAndGym(Id<AccountReference> accountId, Id<Gym> gymId)
     {
+        _planDayReferences.GetByIdAsync(Arg.Any<Id<PlanDayReference>>(), Arg.Any<CancellationToken>())
+            .Returns(call => new PlanDayReferenceReadModel(call.ArgAt<Id<PlanDayReference>>(0), Id<PlanReference>.New(), "Plan day", true, false, accountId));
         _accountAccess.GetByIdAsync(accountId, Arg.Any<CancellationToken>()).Returns(new AccountAccessFacts(accountId, false, false, [], []));
         _gyms.FindByIdAsync(gymId, Arg.Any<CancellationToken>()).Returns(new WorkoutGymPersistenceModel(gymId, accountId, "Gym", null, false, default, default));
     }

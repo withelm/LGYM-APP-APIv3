@@ -1143,6 +1143,13 @@ namespace LgymApi.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Unclassified");
+
                     b.Property<string>("ShareCode")
                         .HasColumnType("text");
 

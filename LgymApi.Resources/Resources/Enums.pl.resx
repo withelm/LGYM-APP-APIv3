@@ -201,4 +201,7 @@
   <data name="TrainerApprovalStatus_PendingApproval" xml:space="preserve"><value>Oczekuje na zatwierdzenie</value></data>
   <data name="TrainerApprovalStatus_Approved" xml:space="preserve"><value>Zatwierdzony</value></data>
   <data name="TrainerApprovalStatus_Rejected" xml:space="preserve"><value>Odrzucony</value></data>
+  <data name="PlanPurpose_Unclassified" xml:space="preserve"><value>Niesklasyfikowany</value></data>
+  <data name="PlanPurpose_Personal" xml:space="preserve"><value>Osobisty</value></data>
+  <data name="PlanPurpose_Professional" xml:space="preserve"><value>Profesjonalny</value></data>
 </root>

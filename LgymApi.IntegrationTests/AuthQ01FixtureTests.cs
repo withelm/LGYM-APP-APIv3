@@ -135,11 +135,18 @@ public sealed partial class AuthQ01FixtureTests : IntegrationTestBase
         using var bResponse = await Client.GetAsync($"/api/trainer/trainees/{b.Id}/plans");
         bResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var bPlans = await bResponse.Content.ReadFromJsonAsync<List<ManagedPlanResponse>>();
-        bPlans.Should().ContainSingle(item => item.Id == bPlan.Id.ToString() && item.Name == bPlan.Name);
+        bPlans.Should().BeEmpty();
+        (await bResponse.Content.ReadAsStringAsync()).Should().NotContain(bPlan.Id.ToString()).And.NotContain(bPlan.Name);
 
         using var cResponse = await Client.GetAsync($"/api/trainer/trainees/{c.Id}/plans");
         cResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await cResponse.Content.ReadAsStringAsync()).Should().NotContain(cPlan.Id.ToString()).And.NotContain(cPlan.Name);
+
+        SetAuthorizationHeader(b.Id);
+        using var ownerResponse = await Client.GetAsync($"/api/{b.Id}/getPlansList");
+        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ownerPlans = await ownerResponse.Content.ReadFromJsonAsync<List<ManagedPlanResponse>>();
+        ownerPlans.Should().ContainSingle(item => item.Id == bPlan.Id.ToString() && item.Name == bPlan.Name);
     }
 
     private async Task<AuthQ01SeededFixture> SeedAuthQ01Async(AuthQ01RelationshipScenario scenario = AuthQ01RelationshipScenario.Initial)

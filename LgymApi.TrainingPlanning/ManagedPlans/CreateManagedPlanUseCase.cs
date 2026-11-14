@@ -5,6 +5,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 
@@ -44,6 +45,7 @@ internal sealed class CreateManagedPlanUseCase : ICreateManagedPlanUseCase
             Id = Id<PlanEntity>.New(),
             UserId = command.TrainerId.Rebind<LgymApi.Domain.Entities.User>(),
             Name = command.Name.Trim(),
+            Purpose = PlanPurpose.Professional,
             IsActive = false,
             IsDeleted = false
         };

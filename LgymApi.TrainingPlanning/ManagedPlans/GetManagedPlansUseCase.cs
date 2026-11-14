@@ -4,6 +4,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 
@@ -32,7 +33,7 @@ internal sealed class GetManagedPlansUseCase : IGetManagedPlansUseCase
 
         var plans = await _planRepository.GetByUserIdAsync(query.TraineeId, cancellationToken);
         var result = _mapper.MapList<PlanEntity, ManagedPlanReadModel>(
-            plans.OrderByDescending(plan => plan.CreatedAt),
+            plans.Where(plan => plan.Purpose == PlanPurpose.Personal).OrderByDescending(plan => plan.CreatedAt),
             _mapper.CreateContext());
 
         return Result<IReadOnlyList<ManagedPlanReadModel>, AppError>.Success(result);

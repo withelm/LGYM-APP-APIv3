@@ -15,6 +15,8 @@ internal interface IPlanRepository
         return plan?.UserId == userId ? plan : null;
     }
     Task<Plan?> FindActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);
+    async Task<List<Plan>> GetActiveForUpdateAsync(Id<User> userId, CancellationToken cancellationToken = default)
+        => (await GetByUserIdAsync(userId, cancellationToken)).Where(plan => plan.IsActive).ToList();
     Task<PlanReadModel?> FindActiveReadModelByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);
     Task<Plan?> FindLastActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);
     Task<List<Plan>> GetByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default);
@@ -44,6 +46,9 @@ internal interface IPlanRepository
 
     Task<Plan?> FindActiveByUserIdAsync(Id<AccountReference> userId, CancellationToken cancellationToken = default)
         => FindActiveByUserIdAsync(userId.Rebind<User>(), cancellationToken);
+
+    Task<List<Plan>> GetActiveForUpdateAsync(Id<AccountReference> userId, CancellationToken cancellationToken = default)
+        => GetActiveForUpdateAsync(userId.Rebind<User>(), cancellationToken);
 
     Task<PlanReadModel?> FindActiveReadModelByUserIdAsync(Id<AccountReference> userId, CancellationToken cancellationToken = default)
         => FindActiveReadModelByUserIdAsync(userId.Rebind<User>(), cancellationToken);

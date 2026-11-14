@@ -6,6 +6,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 
 namespace LgymApi.Application.TrainingPlanning.ManagedPlans;
@@ -43,9 +44,19 @@ internal sealed class UnassignManagedPlanUseCase : IUnassignManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
+        var activePlans = await _planRepository.GetActiveForUpdateAsync(command.TraineeId, cancellationToken);
+        if (activePlans.Any(activePlan => activePlan.Purpose != PlanPurpose.Personal))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
+        }
+
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            foreach (var activePlan in activePlans)
+            {
+                await _planRepository.UpdateAsync(activePlan, cancellationToken);
+            }
             await _planRepository.ClearActivePlansAsync(command.TraineeId, cancellationToken);
             await _activePlanPointerStore.StageActivePlanIdAsync(command.TraineeId, null, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

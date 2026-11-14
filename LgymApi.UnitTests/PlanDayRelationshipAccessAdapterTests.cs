@@ -26,7 +26,7 @@ public sealed class PlanDayRelationshipAccessAdapterTests
         var relationshipAccess = Substitute.For<IMarkerCoachingRelationshipAccessService>();
         relationshipAccess.GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None)
             .Returns(new CoachingRelationshipAccessDecision(true, hasActiveRelationship));
-        var adapter = new PlanDayRelationshipAccessAdapter(relationshipAccess);
+        var adapter = new PlanDayRelationshipAccessAdapter(relationshipAccess, Substitute.For<ICoachingEpisodeAuthorizationService>());
 
         var result = await adapter.HasActiveRelationshipAsync(trainerId, traineeId);
 
@@ -45,7 +45,7 @@ public sealed class PlanDayRelationshipAccessAdapterTests
         var relationshipAccess = Substitute.For<IMarkerCoachingRelationshipAccessService>();
         relationshipAccess.GetAccessDecisionAsync(trainerId, traineeId, cancellationToken)
             .Returns(new CoachingRelationshipAccessDecision(true, false));
-        var adapter = new PlanDayRelationshipAccessAdapter(relationshipAccess);
+        var adapter = new PlanDayRelationshipAccessAdapter(relationshipAccess, Substitute.For<ICoachingEpisodeAuthorizationService>());
 
         await adapter.HasActiveRelationshipAsync(trainerId, traineeId, cancellationToken);
 

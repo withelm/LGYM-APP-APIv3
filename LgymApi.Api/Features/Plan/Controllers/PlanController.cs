@@ -9,6 +9,7 @@ using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.TrainingPlanning.ApiAdapters;
 using LgymApi.Application.TrainingPlanning.Plan.Models;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.Resources;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +45,7 @@ public sealed class PlanController : ControllerBase
         }
 
         var result = await _plans.CreateAsync(
-            new PlanCreateAccountCommand(accountId, routeAccountId, form.Name),
+            new PlanCreateAccountCommand(accountId, routeAccountId, form.Name, form.Purpose ?? PlanPurpose.Unclassified),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -73,7 +74,7 @@ public sealed class PlanController : ControllerBase
         }
 
         var result = await _plans.UpdateAsync(
-            new PlanUpdateAccountCommand(accountId, routeAccountId, planId, form.Name),
+            new PlanUpdateAccountCommand(accountId, routeAccountId, planId, form.Name, form.Purpose),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -129,7 +130,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(List<PlanFormDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPlansList([FromRoute] string id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetPlansList([FromRoute] string id, [FromQuery] PlanPurpose? purpose = null, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
         if (!Id<AccountReference>.TryParse(id, out var routeAccountId))
@@ -138,7 +139,7 @@ public sealed class PlanController : ControllerBase
         }
 
         var result = await _plans.GetListAsync(
-            new PlanGetListAccountQuery(accountId, routeAccountId),
+            new PlanGetListAccountQuery(accountId, routeAccountId, purpose),
             cancellationToken);
         if (result.IsFailure)
         {

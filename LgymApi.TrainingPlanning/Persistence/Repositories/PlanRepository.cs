@@ -1,6 +1,7 @@
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.Models;
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.TrainingPlanning.Contracts;
 using LgymApi.TrainingPlanning.Persistence;
@@ -36,17 +37,20 @@ internal sealed partial class PlanRepository : IPlanRepository
     public Task<Plan?> FindActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
         => _context.Plans.AsNoTracking().FirstOrDefaultAsync(plan => plan.UserId == userId && plan.IsActive && !plan.IsDeleted, cancellationToken);
 
+    public Task<List<Plan>> GetActiveForUpdateAsync(Id<User> userId, CancellationToken cancellationToken = default)
+        => _context.Plans.Where(plan => plan.UserId == userId && plan.IsActive && !plan.IsDeleted).ToListAsync(cancellationToken);
+
     public Task<PlanReadModel?> FindActiveReadModelByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
         => _context.Plans
             .AsNoTracking()
             .Where(plan => plan.UserId == userId && plan.IsActive && !plan.IsDeleted)
-            .Select(plan => new PlanReadModel(plan.Id, plan.UserId, plan.Name, plan.IsActive, plan.ShareCode))
+            .Select(plan => new PlanReadModel(plan.Id, plan.UserId, plan.Name, plan.IsActive, plan.ShareCode, plan.Purpose))
             .FirstOrDefaultAsync(cancellationToken);
 
     public Task<Plan?> FindLastActiveByUserIdAsync(Id<User> userId, CancellationToken cancellationToken = default)
         => _context.Plans
             .AsNoTracking()
-            .Where(plan => plan.UserId == userId && !plan.IsActive && !plan.IsDeleted)
+            .Where(plan => plan.UserId == userId && !plan.IsActive && !plan.IsDeleted && plan.Purpose != PlanPurpose.Professional)
             .OrderByDescending(plan => plan.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -57,7 +61,7 @@ internal sealed partial class PlanRepository : IPlanRepository
         => _context.Plans
             .AsNoTracking()
             .Where(plan => plan.UserId == userId && !plan.IsDeleted)
-            .Select(plan => new PlanReadModel(plan.Id, plan.UserId, plan.Name, plan.IsActive, plan.ShareCode))
+            .Select(plan => new PlanReadModel(plan.Id, plan.UserId, plan.Name, plan.IsActive, plan.ShareCode, plan.Purpose))
             .ToListAsync(cancellationToken);
 
     public Task AddAsync(Plan plan, CancellationToken cancellationToken = default)

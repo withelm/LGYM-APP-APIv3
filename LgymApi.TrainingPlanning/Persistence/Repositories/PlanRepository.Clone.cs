@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.TrainingPlanning.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ internal sealed partial class PlanRepository
 
     private async Task<Plan> CreateNewPlanAsync(Plan sourcePlan, Id<User> userId, bool isActive, CancellationToken cancellationToken)
     {
-        var newPlan = new Plan { Id = Id<Plan>.New(), UserId = userId, Name = sourcePlan.Name, IsActive = isActive, IsDeleted = false };
+        var newPlan = new Plan { Id = Id<Plan>.New(), UserId = userId, Name = sourcePlan.Name, Purpose = PlanPurpose.Personal, IsActive = isActive, IsDeleted = false };
         await _context.Plans.AddAsync(newPlan, cancellationToken);
         return newPlan;
     }

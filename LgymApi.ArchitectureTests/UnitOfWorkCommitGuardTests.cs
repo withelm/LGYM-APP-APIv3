@@ -26,6 +26,7 @@ public sealed class UnitOfWorkCommitGuardTests
     {
         "/LgymApi.UnitTests/",
         "/LgymApi.Reporting.UnitTests/",
+        "/LgymApi.TrainingPlanning.UnitTests/",
         "/LgymApi.IntegrationTests/",
         "/LgymApi.DataSeeder.Tests/",
         "/LgymApi.ArchitectureTests/"

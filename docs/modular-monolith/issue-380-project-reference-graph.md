@@ -34,6 +34,7 @@ A project promotion must update the descriptor, solution membership, root Projec
 22. `LgymApi.UnitTests` (`Test`)
 23. `LgymApi.Reporting` (`Production`)
 24. `LgymApi.Reporting.UnitTests` (`Test`)
+25. `LgymApi.TrainingPlanning.UnitTests` (`Test`)
 
 ## Canonical direct edge manifest
 
@@ -152,6 +153,10 @@ Sources and targets are alphabetical. Every item is one direct `ProjectReference
 - `LgymApi.TrainingPlanning` -> `LgymApi.Identity`
 - `LgymApi.TrainingPlanning` -> `LgymApi.Platform`
 - `LgymApi.TrainingPlanning` -> `LgymApi.Resources`
+- `LgymApi.TrainingPlanning.UnitTests` -> `LgymApi.Domain`
+- `LgymApi.TrainingPlanning.UnitTests` -> `LgymApi.Identity`
+- `LgymApi.TrainingPlanning.UnitTests` -> `LgymApi.Platform`
+- `LgymApi.TrainingPlanning.UnitTests` -> `LgymApi.TrainingPlanning`
 - `LgymApi.UnitTests` -> `LgymApi.Api`
 - `LgymApi.UnitTests` -> `LgymApi.Application`
 - `LgymApi.UnitTests` -> `LgymApi.Authorization`
@@ -285,7 +290,11 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.TrainingPlanning -> LgymApi.Domain` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/AssignManagedPlanCommand.cs:1` |
 | `LgymApi.TrainingPlanning -> LgymApi.Identity` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/AssignManagedPlanCommand.cs:2` |
 | `LgymApi.TrainingPlanning -> LgymApi.Platform` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/IAssignManagedPlanUseCase.cs:1` |
-| `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:44` |
+| `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:45` |
+| `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Domain` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:6` |
+| `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Identity` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:8` |
+| `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Platform` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:27` |
+| `LgymApi.TrainingPlanning.UnitTests -> LgymApi.TrainingPlanning` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:3` |
 | `LgymApi.UnitTests -> LgymApi.Api` | `LgymApi.UnitTests/AccountReadServiceTests.cs:195` |
 | `LgymApi.UnitTests -> LgymApi.Application` | `LgymApi.UnitTests/AcceptedProgressCommandOutboxTests.cs:8` |
 | `LgymApi.UnitTests -> LgymApi.Authorization` | `LgymApi.UnitTests/ApiAuthorizationExtensionsTests.cs:6` |
@@ -303,9 +312,9 @@ Each row is one representative source location whose symbol resolves to the targ
 
 ## Locked topology
 
-Current derived snapshot: 24 approved projects, 127 approved direct `ProjectReference` edges, and 425 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 126 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
+Current derived snapshot: 25 approved projects, 131 approved direct `ProjectReference` edges, and 469 forbidden cross-project edges. Counts are diagnostics derived from the manifest, not promotion constraints. The current graph is acyclic, every edge is unique, 130 edges have a Roslyn-resolved direct source/import use, and the Resources Generator edge is analyzer-configured.
 
-Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Notifications.UnitTests` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.UnitTests`
+Topological order: `LgymApi.Domain` -> `LgymApi.BackgroundWorker.Common` -> `LgymApi.Resources.Generator` -> `LgymApi.Resources` -> `LgymApi.Platform` -> `LgymApi.Authorization` -> `LgymApi.Authorization.UnitTests` -> `LgymApi.Identity` -> `LgymApi.Identity.UnitTests` -> `LgymApi.Notifications` -> `LgymApi.Notifications.UnitTests` -> `LgymApi.Reporting` -> `LgymApi.TrainingPlanning` -> `LgymApi.Application` -> `LgymApi.Infrastructure` -> `LgymApi.BackgroundWorker` -> `LgymApi.Api` -> `LgymApi.ArchitectureTests` -> `LgymApi.DataSeeder` -> `LgymApi.DataSeeder.Tests` -> `LgymApi.Reporting.UnitTests` -> `LgymApi.TestUtils` -> `LgymApi.IntegrationTests` -> `LgymApi.TrainingPlanning.UnitTests` -> `LgymApi.UnitTests`
 
 This topology retains one `AppDbContext`, migration root, snapshot, database, schema, and migration stream. Worker selects environment-specific scheduling and delegates hosted Hangfire server registration to the Infrastructure-owned persistence helper.
 

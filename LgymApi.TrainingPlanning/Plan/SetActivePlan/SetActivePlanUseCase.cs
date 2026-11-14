@@ -4,6 +4,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Resources;
+using LgymApi.Domain.Enums;
 
 namespace LgymApi.Application.TrainingPlanning.Plan.SetActivePlan;
 
@@ -42,6 +43,11 @@ internal sealed class SetActivePlanUseCase : ISetActivePlanUseCase
         }
 
         if (plan.UserId != input.CurrentUserId.Rebind<LgymApi.Domain.Entities.User>())
+        {
+            return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
+        }
+
+        if (plan.Purpose == PlanPurpose.Professional)
         {
             return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }

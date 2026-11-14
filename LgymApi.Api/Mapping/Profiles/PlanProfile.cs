@@ -13,7 +13,8 @@ public sealed class PlanProfile : IMappingProfile
         {
             Id = source.Id.ToString(),
             Name = source.Name,
-            IsActive = source.IsActive
+            IsActive = source.IsActive,
+            Purpose = source.Purpose
         });
 
         configuration.CreateMap<Plan, PlanDto>((source, _) => new PlanDto
@@ -21,14 +22,16 @@ public sealed class PlanProfile : IMappingProfile
             Id = source.Id.ToString(),
             Name = source.Name,
             IsActive = source.IsActive,
-            UserId = source.UserId.ToString()
+            UserId = source.UserId.ToString(),
+            Purpose = source.Purpose
         });
 
         configuration.CreateMap<PlanReadModel, PlanFormDto>((source, _) => new PlanFormDto
         {
             Id = source.Id.ToString(),
             Name = source.Name,
-            IsActive = source.IsActive
+            IsActive = source.IsActive,
+            Purpose = source.Purpose
         });
 
         configuration.CreateMap<PlanReadModel, PlanDto>((source, _) => new PlanDto
@@ -36,7 +39,8 @@ public sealed class PlanProfile : IMappingProfile
             Id = source.Id.ToString(),
             Name = source.Name,
             IsActive = source.IsActive,
-            UserId = source.UserId.ToString()
+            UserId = source.UserId.ToString(),
+            Purpose = source.Purpose
         });
 
         configuration.CreateMap<string, ShareCodeResponseDto>((source, _) => new ShareCodeResponseDto(source));

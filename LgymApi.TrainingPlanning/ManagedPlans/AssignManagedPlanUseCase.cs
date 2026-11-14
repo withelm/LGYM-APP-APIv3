@@ -8,6 +8,7 @@ using LgymApi.Application.TrainingPlanning.Plan.ActivePlanPointer;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 
@@ -50,7 +51,8 @@ internal sealed class AssignManagedPlanUseCase : IAssignManagedPlanUseCase
         }
 
         var plan = await _planRepository.FindByIdAsync(command.PlanId, cancellationToken);
-        if (plan is null || (plan.UserId != command.TraineeId.Rebind<LgymApi.Domain.Entities.User>() && plan.UserId != command.TrainerId.Rebind<LgymApi.Domain.Entities.User>()))
+        if (plan is null || (plan.UserId != command.TrainerId.Rebind<LgymApi.Domain.Entities.User>() &&
+            (plan.UserId != command.TraineeId.Rebind<LgymApi.Domain.Entities.User>() || plan.Purpose != PlanPurpose.Personal)))
         {
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
@@ -60,9 +62,19 @@ internal sealed class AssignManagedPlanUseCase : IAssignManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
+        var activePlans = await _planRepository.GetActiveForUpdateAsync(command.TraineeId, cancellationToken);
+        if (activePlans.Any(activePlan => activePlan.Purpose != PlanPurpose.Personal))
+        {
+            return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
+        }
+
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            foreach (var activePlan in activePlans.Where(activePlan => activePlan.Id != plan.Id))
+            {
+                await _planRepository.UpdateAsync(activePlan, cancellationToken);
+            }
             Id<PlanEntity> assignedPlanId;
             if (plan.UserId == command.TrainerId.Rebind<LgymApi.Domain.Entities.User>())
             {
@@ -79,6 +91,7 @@ internal sealed class AssignManagedPlanUseCase : IAssignManagedPlanUseCase
             }
             else
             {
+                await _planRepository.UpdateAsync(plan, cancellationToken);
                 await _planRepository.SetActivePlanAsync(command.TraineeId, command.PlanId, cancellationToken);
                 assignedPlanId = command.PlanId.Rebind<PlanEntity>();
             }
