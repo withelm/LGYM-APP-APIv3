@@ -8,7 +8,8 @@ public sealed record UpdateExerciseInput(
     string? Name,
     BodyParts BodyPart,
     string? Description,
-    string? Image);
+    string? Image,
+    bool UpdateImage = false);
 
 public sealed record UpdateExerciseWithFormulaInput(
     Id<LgymApi.Domain.Entities.Exercise> ExerciseId,
@@ -16,4 +17,5 @@ public sealed record UpdateExerciseWithFormulaInput(
     BodyParts BodyPart,
     ExerciseEloFormula? EloFormula,
     string? Description,
-    string? Image);
+    string? Image,
+    bool UpdateImage = false);

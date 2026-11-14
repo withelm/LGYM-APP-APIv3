@@ -143,7 +143,7 @@ public sealed partial class ExerciseController : ControllerBase
         }
 
         var exerciseId = form.Id.ToIdOrEmpty<ExerciseEntity>();
-        var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image);
+        var input = new UpdateExerciseInput(exerciseId, form.Name, form.BodyPart, form.Description, form.Image, form.UpdateImage);
         var result = await _exerciseService.UpdateExerciseAsync(currentAccount, input, cancellationToken);
         if (result.IsFailure)
         {

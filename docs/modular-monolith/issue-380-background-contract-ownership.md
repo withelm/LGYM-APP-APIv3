@@ -31,3 +31,7 @@ The Worker password-recovery adapter maps Identity's public request to the retai
 ## Verification
 
 Run the project graph and import guards, command and envelope compatibility tests, Hangfire compatibility tests, and email payload/template tests. The current graph is defined by [issue-380-project-reference-graph.md](issue-380-project-reference-graph.md). [issue-375-project-reference-graph.md](issue-375-project-reference-graph.md) is an unchanged historical capture.
+
+## Exercise Media Durable Processing
+
+Workout & Progress owns its provider-neutral processing/scheduling ports in Application. Worker registers the concrete ExerciseMediaProcessingJob target and chooses the Hangfire scheduler outside Testing, or an inline adapter in Testing. Its operation UUID and bounded original image bytes are persisted in existing private Hangfire PostgreSQL storage. The concrete target retains its actual retry/distributed-concurrency filters; no Common interface, command-registry row, project edge, table or migration is added. Worker consumes the already-authorized upload intent; it does not reconstruct an actor or grant a role bypass. Native/R2 adapters remain Infrastructure-owned. Caller cancellation does not cancel durable processing. Conditional publication readback makes replay after interrupted PUT acknowledgement safe.

@@ -588,7 +588,7 @@ internal sealed class PostgreSqlCoachingEpisodeMigrationTests
             VALUES ({linkId.ToString()}::uuid, {trainer.Id.ToString()}::uuid, {trainee.Id.ToString()}::uuid, {DateTimeOffset.UtcNow.AddYears(-2)}, {DateTimeOffset.UtcNow}, FALSE)
             """);
 
-        await database.Database.MigrateAsync();
+        await database.Database.MigrateAsync("20261107094438_AddCoachingEpisodes");
 
         database.ChangeTracker.Clear();
         var link = await database.TrainerTraineeLinks.IgnoreQueryFilters().SingleAsync(candidate => candidate.Id == linkId);

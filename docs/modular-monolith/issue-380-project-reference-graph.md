@@ -214,7 +214,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.BackgroundWorker -> LgymApi.Application` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:1` |
 | `LgymApi.BackgroundWorker -> LgymApi.BackgroundWorker.Common` | `LgymApi.BackgroundWorker/Actions/SendRegistrationEmailHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Identity` | `LgymApi.BackgroundWorker/Actions/LocalizedReportNotificationDispatcher.cs:13` |
-| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:54` |
+| `LgymApi.BackgroundWorker -> LgymApi.Infrastructure` | `LgymApi.BackgroundWorker/ServiceProvider.cs:60` |
 | `LgymApi.BackgroundWorker -> LgymApi.Notifications` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:2` |
 | `LgymApi.BackgroundWorker -> LgymApi.Platform` | `LgymApi.BackgroundWorker/Actions/DietPlanUpdatedInAppNotificationCommandHandler.cs:4` |
 | `LgymApi.BackgroundWorker -> LgymApi.Reporting` | `LgymApi.BackgroundWorker/Jobs/RecurringReportAssignmentProcessingJob.cs:1` |

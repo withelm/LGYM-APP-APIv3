@@ -396,4 +396,6 @@
   <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
     <value>Page must be positive and page size must be between 1 and 100.</value>
   </data>
+  <data name="ExerciseMediaInvalid" xml:space="preserve"><value>The file or upload reference is invalid. Use a GIF, PNG, JPEG or still WebP up to 5 MiB; HEIC and animated PNG/WebP are not supported.</value></data>
+  <data name="ExerciseMediaUnavailable" xml:space="preserve"><value>Exercise media storage is unavailable. Please try again.</value></data>
 </root>

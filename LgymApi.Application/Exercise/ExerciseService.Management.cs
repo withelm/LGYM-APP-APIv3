@@ -128,14 +128,14 @@ public sealed partial class ExerciseService : IExerciseService
 
     public async Task<Result<Unit, AppError>> UpdateExerciseAsync(AuthenticatedAccountContext? currentUser, UpdateExerciseInput input, CancellationToken cancellationToken = default)
     {
-        var (exerciseId, name, bodyPart, description, image) = input;
-        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, null, description, image), cancellationToken);
+        var (exerciseId, name, bodyPart, description, image, updateImage) = input;
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, null, description, image, updateImage), cancellationToken);
     }
 
     public async Task<Result<Unit, AppError>> UpdateExerciseWithFormulaAsync(AuthenticatedAccountContext? currentUser, UpdateExerciseWithFormulaInput input, CancellationToken cancellationToken = default)
     {
-        var (exerciseId, name, bodyPart, eloFormula, description, image) = input;
-        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, eloFormula, description, image), cancellationToken);
+        var (exerciseId, name, bodyPart, eloFormula, description, image, updateImage) = input;
+        return await UpdateExerciseCoreAsync(new UpdateExerciseRequest(currentUser, exerciseId, name, bodyPart, eloFormula, description, image, updateImage), cancellationToken);
     }
 
     private async Task<Result<Unit, AppError>> UpdateExerciseCoreAsync(
@@ -173,7 +173,7 @@ public sealed partial class ExerciseService : IExerciseService
 
         exercise = exercise with { Description = request.Description, Image = request.Image };
 
-        await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted), cancellationToken);
+        await _exerciseRepository.UpdateAsync(new WorkoutExerciseWriteModel(exercise.Id, exercise.OwnerId, exercise.Name, exercise.BodyPart, exercise.EloFormula, exercise.Description, exercise.Image, exercise.IsDeleted, exercise.OwnerId.HasValue || request.UpdateImage), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
     }
@@ -185,7 +185,8 @@ public sealed partial class ExerciseService : IExerciseService
         BodyParts BodyPart,
         ExerciseEloFormula? EloFormula,
         string? Description,
-        string? Image);
+        string? Image,
+        bool UpdateImage);
 
     private async Task<WorkoutExercisePersistenceModel?> FindEditableExerciseAsync(
         AuthenticatedAccountContext account,

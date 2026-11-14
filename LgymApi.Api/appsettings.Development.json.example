@@ -26,5 +26,14 @@
     "DevMaxTotalBytes": 8589934592,
     "DevMaxUploadsPerDay": 200,
     "DevMaxUploadInitPerUserPerHour": 50
+  },
+  "ExerciseMediaStorage": {
+    "Enabled": false,
+    "Endpoint": "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com",
+    "Bucket": "YOUR_EXERCISE_MEDIA_BUCKET",
+    "AccessKeyId": "YOUR_ACCESS_KEY_ID",
+    "SecretAccessKey": "YOUR_SECRET_ACCESS_KEY",
+    "PublicBaseUrl": "https://media.example.invalid",
+    "AllowDevelopmentR2Dev": false
   }
 }

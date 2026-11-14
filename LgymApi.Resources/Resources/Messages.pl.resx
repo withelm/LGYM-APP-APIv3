@@ -375,4 +375,6 @@
   <data name="TrainerApplicationPagingInvalid" xml:space="preserve">
     <value>Numer strony musi być dodatni, a rozmiar strony musi wynosić od 1 do 100.</value>
   </data>
+  <data name="ExerciseMediaInvalid" xml:space="preserve"><value>Plik lub identyfikator przesyłania jest nieprawidłowy. Wybierz GIF, PNG, JPEG lub statyczny WebP do 5 MiB; HEIC oraz animowane PNG/WebP nie są obsługiwane.</value></data>
+  <data name="ExerciseMediaUnavailable" xml:space="preserve"><value>Magazyn zdjęć ćwiczeń jest niedostępny. Spróbuj ponownie.</value></data>
 </root>

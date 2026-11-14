@@ -49,7 +49,8 @@ public sealed class ExerciseProfile : IMappingProfile
             source.BodyPart,
             ParseExerciseEloFormula(source.EloFormula),
             source.Description,
-            source.Image));
+            source.Image,
+            source.UpdateImage));
 
         configuration.CreateMap<ProgressExerciseReadModel, ExerciseResponseDto>((source, context) => new ExerciseResponseDto
         {

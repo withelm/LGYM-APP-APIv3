@@ -13,6 +13,7 @@ using LgymApi.Infrastructure.Services;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Application.Notifications.Contracts.Push;
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.BackgroundWorker.Services;
 using LgymApi.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +49,11 @@ public static class ServiceProvider
     {
         var commandContractRegistry = CommandContractRegistry.CreateDefault();
         services.AddSingleton(commandContractRegistry);
+        services.AddScoped<ExerciseMediaProcessingJob>();
+        if (isTesting)
+            services.AddScoped<IExerciseMediaProcessingScheduler, InlineExerciseMediaProcessingScheduler>();
+        else
+            services.AddScoped<IExerciseMediaProcessingScheduler, HangfireExerciseMediaProcessingScheduler>();
 
         if (!isTesting && hostBackgroundServer)
         {

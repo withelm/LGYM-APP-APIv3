@@ -1,3 +1,4 @@
+using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Application.WorkoutProgress.Scoring.Elo;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.EloRegistry;
@@ -40,6 +41,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TrainingMainRecordsData>();
         services.AddScoped<ITrainingMainRecordsUpdatePort, TrainingMainRecordsUpdateService>();
         services.AddScoped<IExerciseService, ExerciseService>();
+        services.AddScoped<IExerciseMediaService, ExerciseMediaService>();
+        services.AddScoped<IExerciseMediaProcessor, ExerciseMediaProcessor>();
         services.AddScoped<IExerciseScoresService, ExerciseScoresService>();
         services.AddScoped<IEloRegistryService, EloRegistryService>();
         services.AddScoped<IGymService, GymService>();

@@ -88,6 +88,33 @@ public sealed class ExerciseRepositoryTests
         }
     }
 
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("https://old.test/stale.gif")]
+    public async Task MetadataReadBeforeExplicitImageChange_DoesNotWriteOrRevertImage(string? staleImage)
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        await using var metadata = new AppDbContext(options);
+        await metadata.Database.EnsureCreatedAsync();
+        var exercise = Exercise(Id<Exercise>.New(), null, "Before"); exercise.Image = "https://old.test/stale.gif";
+        metadata.Exercises.Add(exercise); await metadata.SaveChangesAsync();
+        var stale = await new WorkoutExercisePersistenceRepository(metadata).FindGlobalByIdAsync(exercise.Id);
+        await using (var imageContext = new AppDbContext(options))
+        {
+            await new WorkoutExercisePersistenceRepository(imageContext).UpdateAsync(new(stale!.Id, null, stale.Name, stale.BodyPart, stale.EloFormula, stale.Description, "https://new.test/current.gif", false, true));
+            await imageContext.SaveChangesAsync();
+        }
+        await new WorkoutExercisePersistenceRepository(metadata).UpdateAsync(new(stale!.Id, null, "Metadata saved later", stale.BodyPart, stale.EloFormula, stale.Description, staleImage, false));
+        metadata.ChangeTracker.DetectChanges();
+        metadata.Entry(exercise).Property(x => x.Image).IsModified.Should().BeFalse();
+        await metadata.SaveChangesAsync();
+        await using var read = new AppDbContext(options);
+        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Image.Should().Be("https://new.test/current.gif");
+        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Name.Should().Be("Metadata saved later");
+    }
+
     private static Exercise Exercise(Id<Exercise> id, Id<User>? ownerId, string name) => new()
     {
         Id = id,

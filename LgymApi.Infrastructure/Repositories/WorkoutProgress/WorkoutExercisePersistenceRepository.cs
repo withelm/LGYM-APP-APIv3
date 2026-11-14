@@ -89,7 +89,7 @@ public sealed class WorkoutExercisePersistenceRepository(AppDbContext dbContext)
         entity.BodyPart = exercise.BodyPart;
         entity.EloFormula = exercise.EloFormula;
         entity.Description = exercise.Description;
-        entity.Image = exercise.Image;
+        if (exercise.UpdateImage) entity.Image = exercise.Image;
         entity.IsDeleted = exercise.IsDeleted;
     }
 

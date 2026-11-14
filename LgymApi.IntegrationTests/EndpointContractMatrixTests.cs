@@ -12,6 +12,7 @@ using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
@@ -303,6 +304,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         var registered = typeof(IActionMessageJob).Assembly.GetExportedTypes()
             .Where(type => type.IsInterface && type.Namespace == "LgymApi.BackgroundWorker.Common.Jobs" && type.GetMethods().Length > 0)
+            .Concat(typeof(LgymApi.BackgroundWorker.Jobs.ActionMessageJob).Assembly.GetExportedTypes()
+                .Where(type => type.IsClass && !type.IsAbstract && type.Namespace == "LgymApi.BackgroundWorker.Jobs"
+                    && type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Any(method => method.Name == "ExecuteAsync")
+                    && !type.GetInterfaces().Any(contract => contract.Namespace == "LgymApi.BackgroundWorker.Common.Jobs")))
             .OrderBy(type => type.Name, StringComparer.Ordinal)
             .ToArray();
 
@@ -354,10 +359,13 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
 
     private static string GetPublicJobSignature(Type type)
     {
-        var methods = type.GetMethods();
+        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         methods.Should().ContainSingle($"{type.Name} must expose one persisted entrypoint");
         var method = methods[0];
-        return $"{method.ReturnType.Name} {method.Name}({string.Join(',', method.GetParameters().Select(parameter => parameter.ParameterType.Name))})";
+        var returnType = method.ReturnType.IsGenericType
+            ? $"{method.ReturnType.Name.Split('`')[0]}<{string.Join(',', method.ReturnType.GetGenericArguments().Select(argument => argument.Name))}>"
+            : method.ReturnType.Name;
+        return $"{returnType} {method.Name}({string.Join(',', method.GetParameters().Select(parameter => parameter.ParameterType.Name))})";
     }
 
     [Test]
@@ -565,6 +573,12 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .Select(parameter => parameter.Type.Name)
             .DefaultIfEmpty("none")
             .SingleOrDefault() ?? "none";
+        if (request == "none")
+        {
+            request = action.Parameters.OfType<ControllerParameterDescriptor>()
+                .Where(parameter => parameter.ParameterInfo.GetCustomAttribute<FromFormAttribute>() is not null)
+                .Select(parameter => parameter.ParameterType.Name).DefaultIfEmpty("none").Single();
+        }
         var responses = apiDescription is null
             ? Array.Empty<string>()
             : apiDescription.SupportedResponseTypes
