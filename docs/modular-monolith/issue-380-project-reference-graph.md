@@ -290,7 +290,7 @@ Each row is one representative source location whose symbol resolves to the targ
 | `LgymApi.TrainingPlanning -> LgymApi.Domain` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/AssignManagedPlanCommand.cs:1` |
 | `LgymApi.TrainingPlanning -> LgymApi.Identity` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/AssignManagedPlanCommand.cs:2` |
 | `LgymApi.TrainingPlanning -> LgymApi.Platform` | `LgymApi.TrainingPlanning/Contracts/ManagedPlans/IAssignManagedPlanUseCase.cs:1` |
-| `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:45` |
+| `LgymApi.TrainingPlanning -> LgymApi.Resources` | `LgymApi.TrainingPlanning/ManagedPlans/AssignManagedPlanUseCase.cs:46` |
 | `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Domain` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:6` |
 | `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Identity` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:8` |
 | `LgymApi.TrainingPlanning.UnitTests -> LgymApi.Platform` | `LgymApi.TrainingPlanning.UnitTests/PlanPurposeAccessTests.cs:27` |

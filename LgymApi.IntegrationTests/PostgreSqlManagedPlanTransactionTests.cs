@@ -112,6 +112,9 @@ internal sealed class PostgreSqlManagedPlanTransactionTests : PostgreSqlIntegrat
         {
             return _inner.BeginTransactionAsync(cancellationToken);
         }
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+            => _inner.BeginTransactionAsync(isolationLevel, cancellationToken);
     }
 
     private sealed class PlanRepositoryFake : IPlanRepository
