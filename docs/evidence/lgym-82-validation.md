@@ -2,7 +2,19 @@
 
 Validation performed on the Windows workstation on 2026-11-14. The lifecycle and operational handoff are in [account deletion](../account-deletion.md).
 
-## Build and suites
+## LGYM-82 review-fix evidence
+
+After the review fixes for scheduled finalization and shared recovery data, the targeted `PostgreSqlAccountDeletion` slice passed **23/23 tests**. Its TRX receipt is `TestResults/PostgreSql/integration-tests-with-postgresql-54097cf1ede44c8faa29aa4eaa57c373.trx`. This is focused PostgreSQL evidence for the account-deletion tests, not a full IntegrationTests suite or CI result.
+
+A separate targeted inventory agent reported **59 architecture tests** and **173 unit tests** passed. This is agent-reported evidence; no corresponding test command output or TRX receipt was supplied here. It is not evidence that the complete architecture or unit-test suites passed. No claim is made that the full suite or CI passed.
+
+The PostgreSQL cases cover atomic pending-state/session-revocation/schedule-outbox persistence, deterministic schedule-envelope reuse, generation-matched confirmation, dead-letter blocking until replay, and shared-participant recovery deferral. See the detailed behavior in [account deletion](../account-deletion.md) and ownership notes in the Identity, Infrastructure, BackgroundWorker and IntegrationTests project docs.
+
+The review worktree also completed a locked solution restore and Release solution build with zero errors (one existing obsolete Hangfire constructor warning). Its full UnitTests run passed 2274 of 2276 tests; the two stale command/handler cardinalities were corrected to 19/20 and both failed tests passed in a targeted rerun. Its full ArchitectureTests run passed 722 of 723 tests; the remaining failure identified direct Guid construction in the new fairness test. These review-worktree results supersede the earlier totals below where applicable; they do not claim an entirely green full run.
+
+The fairness fixture was corrected to assert successful typed-ID parsing. Its PostgreSQL rerun passed 1/1 (`TestResults/PostgreSql/integration-tests-with-postgresql-661b1504ca5b4e218540a7a60aee7eab.trx`), and the GUID/public-surface guard slice passed 24/24. The final read-only gate accepted the keyset traversal correction: deferred accounts no longer prevent later candidates from being processed, while shared recovery checks remain in place.
+
+## Build and suites before review corrections
 
 | Check | Observed result |
 | --- | --- |

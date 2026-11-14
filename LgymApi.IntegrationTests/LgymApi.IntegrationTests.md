@@ -1,6 +1,6 @@
 # LgymApi.IntegrationTests.csproj
 
-- Account deletion coverage includes password/email recovery, OAuth-only accounts, old-session revocation, exact deadline rejection, duplicate intent stability, current/former-trainer cutoff and retained uploads selected before deletion. PostgreSQL cases verify finalization replay, failed-manifest and post-cleanup rollback, and rejection of protected writes authorized before the pending transition. Live S3/R2 verification remains separate; see [account deletion](../docs/account-deletion.md).
+- Account deletion coverage includes password/email recovery, OAuth-only accounts, old-session revocation, exact deadline rejection, duplicate intent stability, current/former-trainer cutoff and retained uploads selected before deletion. PostgreSQL cases verify atomic pending/session-revocation/schedule-outbox commit, deterministic envelope reuse, generation-aware confirmation, dead-letter blocking and replay, shared-participant recovery deferral, finalization replay, failed-manifest and post-cleanup rollback, and rejection of protected writes authorized before the pending transition. Live S3/R2 verification remains separate; see [account deletion](../docs/account-deletion.md) and [LGYM-82 validation evidence](../docs/evidence/lgym-82-validation.md).
 
 - Purpose: end-to-end API tests.
 - Contains: `WebApplicationFactory`, middleware/auth/serialization/localization coverage, and test persistence.
