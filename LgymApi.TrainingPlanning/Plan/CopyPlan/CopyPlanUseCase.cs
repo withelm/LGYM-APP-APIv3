@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -5,6 +6,7 @@ using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Plan.Models;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Resources;
+using LgymApi.Domain.Enums;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 using LgymApi.TrainingPlanning.Contracts;
 
@@ -36,7 +38,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
             return Result<PlanReadModel, AppError>.Failure(new PlanUnauthorizedError(Messages.Unauthorized));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         try
         {
             var sourcePlan = await _planRepository.FindByShareCodeAsync(input.ShareCode, cancellationToken);
@@ -48,12 +50,14 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
 
             var sourceExerciseIds = await _planRepository.GetPlanExerciseIdsAsync(sourcePlan.Id, cancellationToken);
             var exerciseIdMap = await _exerciseClone.StageClonesAsync(input.CurrentUserId, sourceExerciseIds, cancellationToken);
+            await _planRepository.ClearActivePlansAsync(input.CurrentUserId, cancellationToken);
             var plan = await _planRepository.ClonePlanAsync(
                 sourcePlan.Id.Rebind<PlanReference>(),
                 input.CurrentUserId,
                 exerciseIdMap,
                 isActive: true,
                 cancellationToken);
+            plan.Purpose = PlanPurpose.Unclassified;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
@@ -71,5 +75,6 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
         plan.UserId,
         plan.Name,
         plan.IsActive,
-        plan.ShareCode);
+        plan.ShareCode,
+        plan.Purpose);
 }

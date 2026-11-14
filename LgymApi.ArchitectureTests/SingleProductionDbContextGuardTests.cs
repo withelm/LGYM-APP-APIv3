@@ -35,7 +35,8 @@ public sealed class SingleProductionDbContextGuardTests
         ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
         ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "79cf212c1835f38a00f61733b0527c41015dd96fd1ec87c8292949794c09c534",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "2a5fdd38868cdc785710932c29a9f65b471d4c5874c7f48aa217ce0bc3fb3dca",
-        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2"
+        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2",
+        ["LgymApi.TrainingPlanning.UnitTests/LgymApi.TrainingPlanning.UnitTests.csproj"] = "0bbb183860a4bd3861666948e7206da25ba28feeafe1dd84aace35e7b36c0845"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -62,7 +63,9 @@ public sealed class SingleProductionDbContextGuardTests
         [MigrationRoot + "/20261110194056_AddRecurringReportScheduleChanges.Designer.cs"] = "f2c4aad620c31c016df128c20f2ff9d8cfa24f426c90f3aa84b33fa4ff07feaf",
         [MigrationRoot + "/20261112192912_AddReportFirstFeedbackMarker.cs"] = "5b42e893c06803d19e21f2d811c783752160b87b6501a975d59974b5c65ddd49",
         [MigrationRoot + "/20261112192912_AddReportFirstFeedbackMarker.Designer.cs"] = "d8da13227b33a1f72137d978137625f035c2a1312bef4ca340f94671fe5a7c08",
-        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "6fa3ab660221d13618d7cfd3016d4fcd1d4f89afa57f9ffe7af8ee167712bdd8"
+        [MigrationRoot + "/20261113232705_AddPlanPurpose.cs"] = "0dc45901dfd44a89ee9548ed26c67eef4347f6f2d0ccb17cfbb358bad3fa5474",
+        [MigrationRoot + "/20261113232705_AddPlanPurpose.Designer.cs"] = "3c580a2aaeede26b4366acf7f534d0f7805fc34ffb8cc29293d4302741a339f6",
+        [MigrationRoot + "/AppDbContextModelSnapshot.cs"] = "12e5f8e2fc6e4f1a146271b294cd3a9fb271d8e53107061ecc97aa7376e5078a"
     };
 
     [Test]

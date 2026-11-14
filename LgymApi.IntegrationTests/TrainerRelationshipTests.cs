@@ -1607,11 +1607,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    [Test]
+    [TestCase(PlanPurpose.Unclassified)]
+    [TestCase(PlanPurpose.Personal)]
+    [TestCase(PlanPurpose.Professional)]
     [AuthorizationEvidence("GET", "/api/trainee/plan/active", "own", "owner-allow")]
     [AuthorizationEvidence("GET", "/api/trainee/plan/active", "own", "no-client-subject")]
     [AuthorizationEvidence("GET", "/api/trainee/plan/active", "own", "anonymous-denial")]
-    public async Task TraineeActivePlanRoute_ReturnsOnlyTheAuthenticatedTraineesPlan()
+    public async Task TraineeActivePlanRoute_ReturnsOnlyTheAuthenticatedTraineesPlan(PlanPurpose purpose)
     {
         var trainer = await SeedTrainerAsync("task10-active-plan-trainer", "task10-active-plan-trainer@example.test");
         var trainee = await SeedUserAsync("task10-active-plan-trainee", "task10-active-plan-trainee@example.test");
@@ -1621,6 +1623,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             Id = Id<Plan>.New(),
             UserId = trainee.Id,
             Name = "Protected active trainee plan",
+            Purpose = purpose,
             IsActive = true
         };
 

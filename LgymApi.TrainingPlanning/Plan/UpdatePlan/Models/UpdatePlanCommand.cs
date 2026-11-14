@@ -1,4 +1,5 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
@@ -10,7 +11,8 @@ public sealed record UpdatePlanCommand(
     Id<AccountReference> CurrentUserId,
     Id<AccountReference> RouteUserId,
     Id<PlanReference> PlanId,
-    string Name)
+    string Name,
+    PlanPurpose? Purpose = null)
 {
     internal UpdatePlanCommand(Id<UserEntity> currentUserId, Id<UserEntity> routeUserId, Id<PlanEntity> planId, string name)
         : this(currentUserId.Rebind<AccountReference>(), routeUserId.Rebind<AccountReference>(), planId.Rebind<PlanReference>(), name)

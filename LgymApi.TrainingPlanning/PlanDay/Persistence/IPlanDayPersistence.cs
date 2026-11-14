@@ -1,4 +1,5 @@
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning.Contracts;
@@ -8,6 +9,7 @@ namespace LgymApi.Application.TrainingPlanning.PlanDay.Persistence;
 internal interface IPlanDayPersistence
 {
     Task<PlanDayPlanPersistenceModel?> FindPlanAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default);
+    Task StagePlanRevisionAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default);
     Task<PlanDayPlanPersistenceModel?> FindActivePlanAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default);
     Task<PlanDayPersistenceModel?> FindPlanDayAsync(Id<PlanDayReference> planDayId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PlanDayPersistenceModel>> GetPlanDaysAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default);
@@ -21,13 +23,16 @@ internal interface IPlanDayPersistence
 
 internal sealed record PlanDayPlanPersistenceModel(
     Id<PlanReference> Id,
-    Id<AccountReference> OwnerId);
+    Id<AccountReference> OwnerId,
+    PlanPurpose Purpose = PlanPurpose.Unclassified);
 
 internal sealed record PlanDayPersistenceModel(
     Id<PlanDayReference> Id,
     Id<PlanReference> PlanId,
     string Name,
     bool IsDeleted);
+
+internal sealed record PlanDayReferenceSource(PlanDayPersistenceModel Day, PlanDayPlanPersistenceModel? Plan);
 
 internal sealed record PlanDayExercisePersistenceModel(
     Id<PlanDayReference> PlanDayId,

@@ -17,5 +17,6 @@ internal sealed class EnumLookupMappingProfile : IMappingProfile
         configuration.CreateMap<WeightUnits, EnumLookupEntry>((source, context) => _formatter.Format(source, context));
         configuration.CreateMap<HeightUnits, EnumLookupEntry>((source, context) => _formatter.Format(source, context));
         configuration.CreateMap<Platforms, EnumLookupEntry>((source, context) => _formatter.Format(source, context));
+        configuration.CreateMap<PlanPurpose, EnumLookupEntry>((source, context) => _formatter.Format(source, context));
     }
 }

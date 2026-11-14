@@ -4,6 +4,7 @@ using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.ManagedPlans;
+using LgymApi.Domain.Enums;
 using LgymApi.Resources;
 using PlanEntity = LgymApi.Domain.Entities.Plan;
 
@@ -39,7 +40,8 @@ internal sealed class UpdateManagedPlanUseCase : IUpdateManagedPlanUseCase
         }
 
         var plan = await _planRepository.FindByIdAsync(command.PlanId, cancellationToken);
-        if (plan is null || (plan.UserId != command.TraineeId.Rebind<LgymApi.Domain.Entities.User>() && plan.UserId != command.TrainerId.Rebind<LgymApi.Domain.Entities.User>()))
+        if (plan is null || (plan.UserId != command.TrainerId.Rebind<LgymApi.Domain.Entities.User>() &&
+            (plan.UserId != command.TraineeId.Rebind<LgymApi.Domain.Entities.User>() || plan.Purpose != PlanPurpose.Personal)))
         {
             return Result<ManagedPlanReadModel, AppError>.Failure(
                 new PlanNotFoundError(Messages.DidntFind));

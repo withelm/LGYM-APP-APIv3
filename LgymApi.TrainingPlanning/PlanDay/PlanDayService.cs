@@ -5,6 +5,7 @@ using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.TrainingPlanning.PlanDay.Persistence;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.Resources;
 using LgymApi.TrainingPlanning.Contracts;
@@ -46,7 +47,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan, true, cancellationToken))
         {
             return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -62,6 +63,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<Unit, AppError>.Failure(catalogResult.Error);
         }
 
+        await _persistence.StagePlanRevisionAsync(plan.Id, cancellationToken);
         await _persistence.CreatePlanDayAsync(command.PlanId, command.Input, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -96,7 +98,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan, true, cancellationToken))
         {
             return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -110,6 +112,7 @@ internal sealed class PlanDayService : IPlanDayService
         await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            await _persistence.StagePlanRevisionAsync(plan.Id, cancellationToken);
             await _persistence.UpdatePlanDayAsync(command.PlanDayId, command.Input.Name, cancellationToken);
             await _persistence.ReplacePlanDayExercisesAsync(command.PlanDayId, command.Input.Exercises, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -142,7 +145,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<PlanDayReadModel, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan, false, cancellationToken))
         {
             return Result<PlanDayReadModel, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -164,7 +167,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<IReadOnlyList<PlanDayReadModel>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan, false, cancellationToken))
         {
             return Result<IReadOnlyList<PlanDayReadModel>, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -237,11 +240,12 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<Unit, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(command.CurrentAccountId, plan, true, cancellationToken))
         {
             return Result<Unit, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
 
+        await _persistence.StagePlanRevisionAsync(plan.Id, cancellationToken);
         await _persistence.MarkPlanDayDeletedAsync(command.PlanDayId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<Unit, AppError>.Success(Unit.Value);
@@ -260,7 +264,7 @@ internal sealed class PlanDayService : IPlanDayService
             return Result<IReadOnlyList<PlanDayInfoReadModel>, AppError>.Failure(new PlanDayNotFoundError(Messages.DidntFind));
         }
 
-        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan.OwnerId, cancellationToken))
+        if (!await CanAccessPlanAsync(query.CurrentAccountId, plan, false, cancellationToken))
         {
             return Result<IReadOnlyList<PlanDayInfoReadModel>, AppError>.Failure(new PlanDayForbiddenError(Messages.Forbidden));
         }
@@ -342,14 +346,17 @@ internal sealed class PlanDayService : IPlanDayService
 
     private async Task<bool> CanAccessPlanAsync(
         Id<AccountReference> currentAccountId,
-        Id<AccountReference> planOwnerId,
+        PlanDayPlanPersistenceModel plan,
+        bool write,
         CancellationToken cancellationToken)
     {
-        if (currentAccountId == planOwnerId)
+        if (currentAccountId == plan.OwnerId)
         {
             return true;
         }
 
-        return await _relationshipAccess.HasActiveRelationshipAsync(currentAccountId, planOwnerId, cancellationToken);
+        return plan.Purpose == PlanPurpose.Personal && (write
+            ? await _relationshipAccess.AuthorizeWriteAsync(currentAccountId, plan.OwnerId, cancellationToken)
+            : await _relationshipAccess.HasActiveRelationshipAsync(currentAccountId, plan.OwnerId, cancellationToken));
     }
 }

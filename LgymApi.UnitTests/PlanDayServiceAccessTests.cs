@@ -7,6 +7,7 @@ using LgymApi.Application.TrainingPlanning.PlanDay;
 using LgymApi.Application.TrainingPlanning.PlanDay.Persistence;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.ValueObjects;
+using LgymApi.Domain.Enums;
 using LgymApi.Identity.Contracts;
 using LgymApi.TrainingPlanning;
 using LgymApi.TrainingPlanning.Contracts;
@@ -27,7 +28,7 @@ public sealed class PlanDayServiceAccessTests
         var result = await CreateAsync(harness.Service, ownerId, harness.PlanId);
 
         result.IsSuccess.Should().BeTrue();
-        await harness.RelationshipAccess.DidNotReceiveWithAnyArgs().HasActiveRelationshipAsync(default, default);
+        await harness.RelationshipAccess.DidNotReceiveWithAnyArgs().AuthorizeWriteAsync(default, default);
         await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
             ownerId,
@@ -43,12 +44,12 @@ public sealed class PlanDayServiceAccessTests
         var ownerId = Id<AccountReference>.New();
         using var cancellation = new CancellationTokenSource();
         var harness = CreateHarness(ownerId);
-        harness.RelationshipAccess.HasActiveRelationshipAsync(trainerId, ownerId, cancellation.Token).Returns(true);
+        harness.RelationshipAccess.AuthorizeWriteAsync(trainerId, ownerId, cancellation.Token).Returns(true);
 
         var result = await CreateAsync(harness.Service, trainerId, harness.PlanId, cancellation.Token);
 
         result.IsSuccess.Should().BeTrue();
-        await harness.RelationshipAccess.Received(1).HasActiveRelationshipAsync(trainerId, ownerId, cancellation.Token);
+        await harness.RelationshipAccess.Received(1).AuthorizeWriteAsync(trainerId, ownerId, cancellation.Token);
         await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
             ownerId,
@@ -63,7 +64,7 @@ public sealed class PlanDayServiceAccessTests
         var actorId = Id<AccountReference>.New();
         var ownerId = Id<AccountReference>.New();
         var harness = CreateHarness(ownerId);
-        harness.RelationshipAccess.HasActiveRelationshipAsync(actorId, ownerId, Arg.Any<CancellationToken>()).Returns(false);
+        harness.RelationshipAccess.AuthorizeWriteAsync(actorId, ownerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await CreateAsync(harness.Service, actorId, harness.PlanId);
 
@@ -80,15 +81,15 @@ public sealed class PlanDayServiceAccessTests
         var linkedOwnerId = Id<AccountReference>.New();
         var foreignOwnerId = Id<AccountReference>.New();
         var harness = CreateHarness(foreignOwnerId);
-        harness.RelationshipAccess.HasActiveRelationshipAsync(trainerId, linkedOwnerId, Arg.Any<CancellationToken>()).Returns(true);
-        harness.RelationshipAccess.HasActiveRelationshipAsync(trainerId, foreignOwnerId, Arg.Any<CancellationToken>()).Returns(false);
+        harness.RelationshipAccess.AuthorizeWriteAsync(trainerId, linkedOwnerId, Arg.Any<CancellationToken>()).Returns(true);
+        harness.RelationshipAccess.AuthorizeWriteAsync(trainerId, foreignOwnerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await CreateAsync(harness.Service, trainerId, harness.PlanId);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<PlanDayForbiddenError>();
-        await harness.RelationshipAccess.Received(1).HasActiveRelationshipAsync(trainerId, foreignOwnerId, Arg.Any<CancellationToken>());
-        await harness.RelationshipAccess.DidNotReceive().HasActiveRelationshipAsync(trainerId, linkedOwnerId, Arg.Any<CancellationToken>());
+        await harness.RelationshipAccess.Received(1).AuthorizeWriteAsync(trainerId, foreignOwnerId, Arg.Any<CancellationToken>());
+        await harness.RelationshipAccess.DidNotReceive().AuthorizeWriteAsync(trainerId, linkedOwnerId, Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -125,7 +126,7 @@ public sealed class PlanDayServiceAccessTests
         var planId = Id<PlanReference>.New();
         var persistence = new PlanDayPersistenceFake
         {
-            Plan = new PlanDayPlanPersistenceModel(planId, ownerId)
+            Plan = new PlanDayPlanPersistenceModel(planId, ownerId, PlanPurpose.Personal)
         };
 
         var relationshipAccess = Substitute.For<IPlanDayRelationshipAccessPort>();
@@ -172,6 +173,8 @@ internal sealed class PlanDayPersistenceFake : IPlanDayPersistence
         Id<PlanReference> planId,
         CancellationToken cancellationToken = default)
         => Task.FromResult(Plan);
+
+    public Task StagePlanRevisionAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
     public Task<PlanDayPlanPersistenceModel?> FindActivePlanAsync(
         Id<AccountReference> accountId,

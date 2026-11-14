@@ -23,7 +23,8 @@ internal sealed class EnumService : IEnumService
         { nameof(MeasurementUnits), typeof(MeasurementUnits) },
         { nameof(WeightUnits), typeof(WeightUnits) },
         { nameof(HeightUnits), typeof(HeightUnits) },
-        { nameof(Platforms), typeof(Platforms) }
+        { nameof(Platforms), typeof(Platforms) },
+        { nameof(PlanPurpose), typeof(PlanPurpose) }
     };
 
     public EnumService(IMapper mapper)

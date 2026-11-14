@@ -508,6 +508,7 @@ public sealed class ServiceTransactionBehaviorTests
         public int ReplaceExerciseCalls { get; private set; }
 
         public Task<PlanDayPlanPersistenceModel?> FindPlanAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default) => Task.FromResult(PlanToReturn);
+        public Task StagePlanRevisionAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<PlanDayPlanPersistenceModel?> FindActivePlanAsync(Id<AccountReference> accountId, CancellationToken cancellationToken = default) => Task.FromResult(PlanToReturn);
         public Task<PlanDayPersistenceModel?> FindPlanDayAsync(Id<PlanDayReference> planDayId, CancellationToken cancellationToken = default) => Task.FromResult(PlanDayToReturn);
         public Task<IReadOnlyList<PlanDayPersistenceModel>> GetPlanDaysAsync(Id<PlanReference> planId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PlanDayPersistenceModel>>([]);
@@ -536,6 +537,7 @@ public sealed class ServiceTransactionBehaviorTests
     private sealed class PlanDayRelationshipAccessStub : IPlanDayRelationshipAccessPort
     {
         public Task<bool> HasActiveRelationshipAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> AuthorizeWriteAsync(Id<AccountReference> trainerId, Id<AccountReference> traineeId, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class RecordingUnitOfWork : IUnitOfWork
@@ -559,6 +561,9 @@ public sealed class ServiceTransactionBehaviorTests
         {
             return Task.FromResult<IUnitOfWorkTransaction>(Transaction);
         }
+
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+            => BeginTransactionAsync(cancellationToken);
 
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }

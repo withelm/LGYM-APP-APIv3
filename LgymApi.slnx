@@ -27,5 +27,6 @@
   <Project Path="LgymApi.Resources/LgymApi.Resources.csproj" />
   <Project Path="LgymApi.TestUtils/LgymApi.TestUtils.csproj" />
   <Project Path="LgymApi.TrainingPlanning/LgymApi.TrainingPlanning.csproj" />
+  <Project Path="LgymApi.TrainingPlanning.UnitTests/LgymApi.TrainingPlanning.UnitTests.csproj" />
   <Project Path="LgymApi.UnitTests/LgymApi.UnitTests.csproj" />
 </Solution>

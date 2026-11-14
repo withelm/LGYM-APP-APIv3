@@ -1,4 +1,5 @@
 using LgymApi.Domain.Entities;
+using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,8 @@ internal sealed class PlanEntityTypeConfiguration : IEntityTypeConfiguration<Pla
     public void Configure(EntityTypeBuilder<Plan> builder)
     {
         builder.ToTable("Plans");
+
+        builder.Property(plan => plan.Purpose).HasConversion<string>().HasDefaultValue(PlanPurpose.Unclassified).IsConcurrencyToken();
 
         builder.HasIndex(plan => plan.ShareCode)
             .IsUnique()

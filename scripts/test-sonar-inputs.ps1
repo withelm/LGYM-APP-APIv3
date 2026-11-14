@@ -5,7 +5,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ExpectedSuites = @("Unit", "AuthorizationUnit", "IdentityUnit", "NotificationsUnit", "ReportingUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
+$ExpectedSuites = @("Unit", "AuthorizationUnit", "IdentityUnit", "NotificationsUnit", "ReportingUnit", "TrainingPlanningUnit", "Architecture", "InMemoryIntegration", "PostgreSqlIntegration", "DataSeeder")
 $script:FailureResults = [System.Collections.Generic.List[object]]::new()
 
 function Write-FixtureJson {

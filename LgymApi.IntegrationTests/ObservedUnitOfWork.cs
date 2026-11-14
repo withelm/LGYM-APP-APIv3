@@ -1,4 +1,5 @@
 using LgymApi.Application.Repositories;
+using System.Data;
 
 namespace LgymApi.IntegrationTests;
 
@@ -26,6 +27,13 @@ internal sealed class ObservedUnitOfWork(
     {
         BeginTransactionCalls++;
         var transaction = await inner.BeginTransactionAsync(cancellationToken);
+        return new ObservedTransaction(transaction, this);
+    }
+
+    public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+    {
+        BeginTransactionCalls++;
+        var transaction = await inner.BeginTransactionAsync(isolationLevel, cancellationToken);
         return new ObservedTransaction(transaction, this);
     }
 

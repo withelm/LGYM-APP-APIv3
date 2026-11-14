@@ -14,7 +14,7 @@ namespace LgymApi.UnitTests;
 public sealed class EnumLookupMappingProfileTests
 {
     [Test]
-    public void Mapper_Should_Register_Exactly_The_Six_Supported_Enum_Lookup_Maps()
+    public void Mapper_Should_Register_Exactly_The_Supported_Enum_Lookup_Maps()
     {
         var mapper = CreateApplicationMapper();
         var concreteMapper = mapper.Should().BeOfType<Mapper>().Subject;
@@ -31,7 +31,8 @@ public sealed class EnumLookupMappingProfileTests
             typeof(MeasurementUnits),
             typeof(WeightUnits),
             typeof(HeightUnits),
-            typeof(Platforms)
+            typeof(Platforms),
+            typeof(PlanPurpose)
         ]);
     }
 
@@ -96,7 +97,8 @@ public sealed class EnumLookupMappingProfileTests
             service.GetLookup<MeasurementUnits>(culture),
             service.GetLookup<WeightUnits>(culture),
             service.GetLookup<HeightUnits>(culture),
-            service.GetLookup<Platforms>(culture)
+            service.GetLookup<Platforms>(culture),
+            service.GetLookup<PlanPurpose>(culture)
         };
         var pullupWeighted = lookups[1].Single(value => value.Id == nameof(ExerciseEloFormula.PullupWeighted));
 

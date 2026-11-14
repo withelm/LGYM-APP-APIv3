@@ -9,4 +9,9 @@ public interface IPlanDayRelationshipAccessPort
         Id<AccountReference> trainerId,
         Id<AccountReference> traineeId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> AuthorizeWriteAsync(
+        Id<AccountReference> trainerId,
+        Id<AccountReference> traineeId,
+        CancellationToken cancellationToken = default);
 }

@@ -176,6 +176,13 @@ internal static class ProjectReferenceGraphManifest
             "LgymApi.Platform",
             "LgymApi.Resources"
         ]),
+        new("LgymApi.TrainingPlanning.UnitTests", ProjectKind.Test,
+        [
+            "LgymApi.Domain",
+            "LgymApi.Identity",
+            "LgymApi.Platform",
+            "LgymApi.TrainingPlanning"
+        ]),
         new("LgymApi.UnitTests", ProjectKind.Test,
         [
             "LgymApi.Api",
