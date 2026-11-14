@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.Repositories;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -33,14 +34,22 @@ public sealed class EfUnitOfWork : IUnitOfWork
         return saved;
     }
 
-    public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => BeginTransactionCoreAsync(null, cancellationToken);
+
+    public Task<IUnitOfWorkTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+        => BeginTransactionCoreAsync(isolationLevel, cancellationToken);
+
+    private async Task<IUnitOfWorkTransaction> BeginTransactionCoreAsync(IsolationLevel? isolationLevel, CancellationToken cancellationToken)
     {
         if (_dbContext.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
         {
             return new NoOpUnitOfWorkTransaction(_dbContext);
         }
 
-        var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var transaction = isolationLevel.HasValue
+            ? await _dbContext.Database.BeginTransactionAsync(isolationLevel.Value, cancellationToken)
+            : await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         return new EfUnitOfWorkTransaction(transaction, _dbContext, _committedIntentDispatcher, _logger);
     }
 

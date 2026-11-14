@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -44,6 +45,7 @@ internal sealed class DeleteManagedPlanUseCase : IDeleteManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var plan = await _planRepository.FindByIdAsync(command.PlanId, cancellationToken);
         if (plan is null || (plan.UserId != command.TrainerId.Rebind<LgymApi.Domain.Entities.User>() &&
             (plan.UserId != command.TraineeId.Rebind<LgymApi.Domain.Entities.User>() || plan.Purpose != PlanPurpose.Personal)))
@@ -56,7 +58,6 @@ internal sealed class DeleteManagedPlanUseCase : IDeleteManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             plan.IsActive = false;
@@ -66,6 +67,12 @@ internal sealed class DeleteManagedPlanUseCase : IDeleteManagedPlanUseCase
             var activePlanId = await _activePlanPointerStore.GetActivePlanIdAsync(command.TraineeId, cancellationToken);
             if (activePlanId == plan.Id)
             {
+                var activePlans = await _planRepository.GetActiveForUpdateAsync(command.TraineeId, cancellationToken);
+                if (activePlans.Any(activePlan => activePlan.Id != plan.Id && activePlan.Purpose != PlanPurpose.Personal))
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
+                }
                 await _activePlanPointerStore.StageActivePlanIdAsync(command.TraineeId, null, cancellationToken);
             }
 

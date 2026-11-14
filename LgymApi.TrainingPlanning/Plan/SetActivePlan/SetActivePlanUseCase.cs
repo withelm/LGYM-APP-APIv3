@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -36,6 +37,7 @@ internal sealed class SetActivePlanUseCase : ISetActivePlanUseCase
             return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var plan = await _planRepository.FindByIdAsync(input.PlanId, cancellationToken);
         if (plan is null)
         {
@@ -52,7 +54,6 @@ internal sealed class SetActivePlanUseCase : ISetActivePlanUseCase
             return Result<Unit, AppError>.Failure(new PlanForbiddenError(Messages.Forbidden));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             await _planRepository.SetActivePlanAsync(input.CurrentUserId, input.PlanId, cancellationToken);

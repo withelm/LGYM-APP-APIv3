@@ -70,3 +70,16 @@ The all-solution command reached its terminal timeout during integration executi
 | Legacy mixed-purpose history and foreign IDs | Workout rows/results remain; coach-private plan metadata is hidden; foreign day cannot be used to complete a workout | PlanPurposeHistoryTests and PlanPurposeCoachingTests in the in-memory artifact |
 | Copy and assignment | Shared copy stays Unclassified and hidden from recipient's coach; assignment remains an independent Personal copy | PlanPurposeIntegrationTests and CoachingManagedPlanSliceIntegrationTests in the in-memory artifact |
 | Migration and stale coach writes | Repeated migration preserves graph; stale writes roll back; opposite ordering preserves committed history | PostgreSqlPlanPurposeTests and PostgreSqlPlanningRepositoryTransactionTests in the complete PostgreSQL artifact |
+
+## Active-selection race correction
+
+The publication gate identified a collection race: a private plan created after the coach's initial active-plan read could appear in a later bulk update. Purpose concurrency alone cannot reject a newly observed row whose purpose has not changed.
+
+All seven active-selection writers now begin Serializable transactions before their relevant reads: owner create/copy/select/delete and managed assign/unassign/delete. Copy clears the previous active selection within that transaction. The normal Unit of Work overload retains its existing default isolation; the explicit isolation overload fails closed for unsupported implementations and is forwarded by EF. Managed deletion checks protected active rows before clearing the selection.
+
+Eight PostgreSQL interleavings cover assignment/unassignment, an initially active/empty selection, and owner creation/activation after the coach's active-plan query. The owner-selected private plan remains the only active plan, and a losing assignment leaves no clone. Serialization failures are allowed only when the provider reports SQLSTATE 40001; unexpected failures still fail the tests.
+
+- Passing race evidence: `TestResults/PostgreSql/integration-tests-with-postgresql-58052eaf9db4479083f1488ed6144e84.trx` (8/8).
+- Mutation proof: temporarily changing only coach assign/unassign to ReadCommitted reproduced all eight private-selection violations: `TestResults/PostgreSql/integration-tests-with-postgresql-a6e83abe3dc640e9ae0e3b692d98a653.trx` (0/8, expected). Serializable was restored before the passing run and commit.
+- Related checks: Release build passed; 233 unit tests, 54 HTTP integration tests and 59 architecture tests passed. Reports: `LgymApi.UnitTests/TestResults/lgym196-isolation-unit.trx`, `LgymApi.IntegrationTests/TestResults/lgym196-isolation-http.trx`, `LgymApi.ArchitectureTests/TestResults/lgym196-isolation-architecture.trx`.
+- The eight existing PostgreSQL purpose/migration/repository transaction cases also passed after the isolation change in `TestResults/PostgreSql/integration-tests-with-postgresql-f2628d19e21d4f02a4a8739d4c5d2b16.trx`; that run's six new-race failures were test exception-wrapper handling, subsequently corrected and covered by the 8/8 passing report above.

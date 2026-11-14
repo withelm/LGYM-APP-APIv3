@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -39,6 +40,7 @@ internal sealed class UnassignManagedPlanUseCase : IUnassignManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.UserIdRequired));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         if (await _accountReadService.GetByIdAsync(command.TraineeId, cancellationToken) is null)
         {
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
@@ -50,7 +52,6 @@ internal sealed class UnassignManagedPlanUseCase : IUnassignManagedPlanUseCase
             return Result<Unit, AppError>.Failure(new PlanNotFoundError(Messages.DidntFind));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             foreach (var activePlan in activePlans)

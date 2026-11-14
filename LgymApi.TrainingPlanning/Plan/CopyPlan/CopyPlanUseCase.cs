@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -37,7 +38,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
             return Result<PlanReadModel, AppError>.Failure(new PlanUnauthorizedError(Messages.Unauthorized));
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         try
         {
             var sourcePlan = await _planRepository.FindByShareCodeAsync(input.ShareCode, cancellationToken);
@@ -49,6 +50,7 @@ internal sealed class CopyPlanUseCase : ICopyPlanUseCase
 
             var sourceExerciseIds = await _planRepository.GetPlanExerciseIdsAsync(sourcePlan.Id, cancellationToken);
             var exerciseIdMap = await _exerciseClone.StageClonesAsync(input.CurrentUserId, sourceExerciseIds, cancellationToken);
+            await _planRepository.ClearActivePlansAsync(input.CurrentUserId, cancellationToken);
             var plan = await _planRepository.ClonePlanAsync(
                 sourcePlan.Id.Rebind<PlanReference>(),
                 input.CurrentUserId,

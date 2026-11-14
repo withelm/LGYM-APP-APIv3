@@ -562,6 +562,9 @@ public sealed class ServiceTransactionBehaviorTests
             return Task.FromResult<IUnitOfWorkTransaction>(Transaction);
         }
 
+        public Task<IUnitOfWorkTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+            => BeginTransactionAsync(cancellationToken);
+
         public void DetachEntity<TEntity>(TEntity entity) where TEntity : class { }
     }
 

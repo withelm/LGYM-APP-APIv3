@@ -1,3 +1,4 @@
+using System.Data;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -43,6 +44,7 @@ internal sealed class CreatePlanUseCase : ICreatePlanUseCase
             return Result<Unit, AppError>.Failure(new InvalidPlanError(Messages.FieldRequired));
         }
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var plan = new PlanEntity
         {
             Id = Id<PlanEntity>.New(),
@@ -59,6 +61,7 @@ internal sealed class CreatePlanUseCase : ICreatePlanUseCase
             await _activePlanPointerStore.StageActivePlanIdAsync(input.CurrentUserId, plan.Id, cancellationToken);
         }
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Unit, AppError>.Success(Unit.Value);
     }
