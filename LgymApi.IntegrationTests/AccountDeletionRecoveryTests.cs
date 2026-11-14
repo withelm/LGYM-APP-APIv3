@@ -24,12 +24,13 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
 {
     private const string Recovery = "/api/account-deletion/recovery";
 
-    [Test]
+    [TestCase(false)]
+    [TestCase(true)]
     [Authorization.AuthorizationEvidence("POST", Recovery + "/login", "public", "anonymous-intended-behavior")]
     [Authorization.AuthorizationEvidence("POST", Recovery + "/cancel", "public", "anonymous-intended-behavior")]
-    public async Task Recovery_RestoresOriginalAccountDataAndRelationshipsWithoutRevivingOldSessions()
+    public async Task Recovery_RestoresOriginalAccountDataAndRelationshipsWithoutRevivingOldSessions(bool isAdmin)
     {
-        var user = await SeedUserAsync();
+        var user = await SeedUserAsync(isAdmin: isAdmin);
         var trainer = await SeedUserAsync("recovery-trainer", "recovery-trainer@example.test");
         using (var setup = Factory.Services.CreateScope())
         {
@@ -42,17 +43,20 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         var firstSession = Client.DefaultRequestHeaders.Authorization;
         SetAuthorizationHeader(user.Id);
         var secondSession = Client.DefaultRequestHeaders.Authorization;
+        (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync("/api/deleteAccount")).StatusCode.Should().Be(HttpStatusCode.OK);
         foreach (var session in new[] { firstSession, secondSession })
         {
             Client.DefaultRequestHeaders.Authorization = session;
             (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
         ClearAuthorizationHeader();
         (await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var token = await RecoveryTokenAsync(Client, user.Name);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         ClearAuthorizationHeader();
 
         var cancellation = await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token });
