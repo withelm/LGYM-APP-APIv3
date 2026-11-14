@@ -6,7 +6,7 @@ using UserEntity = LgymApi.Domain.Entities.User;
 
 namespace LgymApi.Application.TrainingPlanning.Plan.GenerateShareCode;
 
-public sealed record GenerateShareCodeCommand(Id<AccountReference> CurrentUserId, Id<PlanReference> PlanId)
+public sealed record GenerateShareCodeCommand(Id<AccountReference> CurrentUserId, Id<PlanReference> PlanId, int DurationDays = 7)
 {
     internal GenerateShareCodeCommand(Id<UserEntity> currentUserId, Id<PlanEntity> planId)
         : this(currentUserId.Rebind<AccountReference>(), planId.Rebind<PlanReference>())

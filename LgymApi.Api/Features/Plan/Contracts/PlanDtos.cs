@@ -45,6 +45,12 @@ public sealed record ShareCodeResponseDto(
     [property: JsonPropertyName("shareCode")] string ShareCode
 ) : IResultDto;
 
+public sealed class ShareCodeRequestDto : IDto
+{
+    [JsonPropertyName("durationDays")]
+    public int? DurationDays { get; set; }
+}
+
 public sealed class SetActivePlanDto : IDto
 {
     [JsonPropertyName("_id")]

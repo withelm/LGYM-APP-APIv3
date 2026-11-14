@@ -137,5 +137,6 @@ internal sealed class PostgreSqlManagedPlanTransactionTests : PostgreSqlIntegrat
         public Task<IReadOnlyCollection<Id<PlanExerciseReference>>> GetPlanExerciseIdsAsync(Id<Plan> planId, CancellationToken cancellationToken = default) => Task.FromResult(ExerciseIds);
         public Task<Plan> ClonePlanAsync(Id<Plan> sourcePlanId, Id<User> userId, IReadOnlyDictionary<Id<PlanExerciseReference>, Id<PlanExerciseReference>> exerciseIdMap, bool isActive = true, CancellationToken cancellationToken = default) => CloneHandler is null ? Task.FromException<Plan>(new InvalidOperationException("A clone handler must be configured.")) : Task.FromResult(CloneHandler());
         public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default) => Task.FromResult(string.Empty);
+        public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

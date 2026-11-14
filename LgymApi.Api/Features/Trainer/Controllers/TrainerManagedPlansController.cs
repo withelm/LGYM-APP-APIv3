@@ -66,6 +66,7 @@ public sealed class TrainerManagedPlansController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/update")]
     [ProducesResponseType(typeof(TrainerManagedPlanDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, [FromBody] TrainerPlanFormRequest request, CancellationToken cancellationToken = default)
     {
         if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
@@ -85,6 +86,7 @@ public sealed class TrainerManagedPlansController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/delete")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DeleteTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
@@ -104,6 +106,7 @@ public sealed class TrainerManagedPlansController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/{planId}/assign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AssignTraineePlan([FromRoute] string traineeId, [FromRoute] string planId, CancellationToken cancellationToken = default)
     {
         if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))
@@ -123,6 +126,7 @@ public sealed class TrainerManagedPlansController : ControllerBase
 
     [HttpPost("trainees/{traineeId}/plans/unassign")]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UnassignTraineePlan([FromRoute] string traineeId, CancellationToken cancellationToken = default)
     {
         if (!Id<AccountReference>.TryParse(traineeId, out var parsedTraineeId))

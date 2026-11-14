@@ -18,6 +18,7 @@
 - Reporting API/controller, middleware, validator, Worker, Workout & Progress accepted-progress consumer, and cross-cutting composition coverage remains here; Reporting-owned behavior lives in `LgymApi.Reporting.UnitTests`.
 - Coaching coverage exercises focused use cases and ports, persistence staging without repository commits, the Worker invitation-email adapter mapping, and exact-one port registration. Run the suite with `dotnet test LgymApi.UnitTests/LgymApi.UnitTests.csproj --configuration Release --no-build` after a Release build.
 - `ActorRowSecurityScopeTests` cover empty actors, InMemory no-op behavior, fail-closed relational setup, cancellation, and preservation of pre-existing tracked entries.
+- Plan share repository coverage checks 1/7/30-day expiry calculation, same-period reuse, changed or elapsed period rotation, collision retries, and exhaustion without mutation.
 
 
 - Exercise-media durable job tests verify persisted argument/operation identity, actual concrete-target Hangfire filters, cancellation of the caller without job deletion, rejected input/results, sanitized failures and worker cancellation. Storage tests prove conditional replay accepts only identical final bytes and never overwrites mismatches.

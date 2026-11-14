@@ -28,13 +28,15 @@ public sealed class PlanRepositoryTests
             Id = planId,
             UserId = userId,
             Name = "Plan",
-            ShareCode = "EXISTING01"
+            ShareCode = "EXISTING01",
+            ShareCodeDurationDays = 7,
+            ShareCodeExpiresAt = new DateTimeOffset(2030, 1, 8, 0, 0, 0, TimeSpan.Zero)
         });
         await dbContext.SaveChangesAsync();
 
         var repository = new PlanRepository(dbContext, _ => "NEVERUSED1");
 
-        var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
+        var result = await repository.GenerateShareCodeAsync(planId, userId, 7, new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero), CancellationToken.None);
 
         result.Should().Be("EXISTING01");
     }

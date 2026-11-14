@@ -1,4 +1,6 @@
 using LgymApi.Resources;
+using Microsoft.EntityFrameworkCore;
+using Plan = LgymApi.Domain.Entities.Plan;
 
 namespace LgymApi.Api.Middleware;
 
@@ -18,6 +20,15 @@ public sealed class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (DbUpdateConcurrencyException ex) when (ex.Entries.Count > 0 && ex.Entries.All(entry => entry.Entity is Plan))
+        {
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            await ErrorResponseWriter.WriteAsync(context, StatusCodes.Status409Conflict, Messages.TryAgain, context.RequestAborted);
         }
         catch (UnauthorizedAccessException ex)
         {

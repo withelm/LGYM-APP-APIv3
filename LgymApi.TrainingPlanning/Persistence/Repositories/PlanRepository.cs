@@ -129,7 +129,10 @@ internal sealed partial class PlanRepository : IPlanRepository
         return await ClonePlanGraphAsync(planToCopy, userId, exerciseIdMap, isActive, cancellationToken);
     }
 
-    public async Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default)
+    public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default)
+        => GenerateShareCodeAsync(planId, userId, 7, DateTimeOffset.UtcNow, cancellationToken);
+
+    public async Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var plan = await _context.Plans.FirstOrDefaultAsync(item => item.Id == planId && !item.IsDeleted, cancellationToken);
 
@@ -143,15 +146,14 @@ internal sealed partial class PlanRepository : IPlanRepository
             throw new UnauthorizedAccessException("Only the plan owner can generate a share code");
         }
 
-        if (!string.IsNullOrEmpty(plan.ShareCode))
+        if (!string.IsNullOrEmpty(plan.ShareCode) && plan.ShareCodeExpiresAt > now && plan.ShareCodeDurationDays == durationDays)
         {
             var isCurrentCodeTaken = await IsShareCodeTakenAsync(plan.ShareCode, plan.Id, cancellationToken);
             if (!isCurrentCodeTaken)
             {
+                plan.ShareCodeRevision = checked(plan.ShareCodeRevision + 1);
                 return plan.ShareCode;
             }
-
-            plan.ShareCode = null;
         }
 
         for (var attempt = 0; attempt < ShareCodeGenerationMaxAttempts; attempt++)
@@ -162,12 +164,15 @@ internal sealed partial class PlanRepository : IPlanRepository
                 continue;
             }
 
-            if (await IsShareCodeTakenAsync(candidateCode, plan.Id, cancellationToken))
+            if (candidateCode == plan.ShareCode || await IsShareCodeTakenAsync(candidateCode, plan.Id, cancellationToken))
             {
                 continue;
             }
 
             plan.ShareCode = candidateCode;
+            plan.ShareCodeExpiresAt = now.AddDays(durationDays);
+            plan.ShareCodeDurationDays = durationDays;
+            plan.ShareCodeRevision = checked(plan.ShareCodeRevision + 1);
             return plan.ShareCode;
         }
 

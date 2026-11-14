@@ -292,6 +292,10 @@ public sealed class CoachingApiContractImmutabilityGuardTests
         new("TrainerDashboardProgressController", "GetTraineeExerciseScoresChartData", "StatusCodes.Status400BadRequest", "ResponseMessageDto"), new("TrainerDashboardProgressController", "GetTraineeExerciseScoresChartData", "StatusCodes.Status404NotFound", "ResponseMessageDto"),
         new("TrainerDashboardProgressController", "GetTraineeEloChart", "StatusCodes.Status400BadRequest", "ResponseMessageDto"), new("TrainerDashboardProgressController", "GetTraineeEloChart", "StatusCodes.Status404NotFound", "ResponseMessageDto"),
         new("TrainerDashboardProgressController", "GetTraineeMainRecordsHistory", "StatusCodes.Status400BadRequest", "ResponseMessageDto"), new("TrainerDashboardProgressController", "GetTraineeMainRecordsHistory", "StatusCodes.Status404NotFound", "ResponseMessageDto"),
+        new("TrainerManagedPlansController", "UpdateTraineePlan", "StatusCodes.Status409Conflict", "ResponseMessageDto"),
+        new("TrainerManagedPlansController", "DeleteTraineePlan", "StatusCodes.Status409Conflict", "ResponseMessageDto"),
+        new("TrainerManagedPlansController", "AssignTraineePlan", "StatusCodes.Status409Conflict", "ResponseMessageDto"),
+        new("TrainerManagedPlansController", "UnassignTraineePlan", "StatusCodes.Status409Conflict", "ResponseMessageDto"),
         new("PublicInvitationController", "GetInvitationStatus", "StatusCodes.Status404NotFound", "<missing>")
     }.Concat(ExpectedActions.Select(action => new ResponseContract(action.Controller, action.Action, action.SuccessStatus, action.SuccessResponse))).ToArray();
 

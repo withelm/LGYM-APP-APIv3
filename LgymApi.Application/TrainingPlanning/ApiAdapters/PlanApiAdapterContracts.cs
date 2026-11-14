@@ -29,5 +29,5 @@ public sealed record PlanHasAccountQuery(Id<AccountReference> CurrentAccountId, 
 public sealed record PlanGetListAccountQuery(Id<AccountReference> CurrentAccountId, Id<AccountReference> RouteAccountId, PlanPurpose? Purpose = null);
 public sealed record PlanSetActiveAccountCommand(Id<AccountReference> CurrentAccountId, Id<AccountReference> RouteAccountId, Id<PlanEntity> PlanId);
 public sealed record PlanCopyAccountCommand(Id<AccountReference> CurrentAccountId, string ShareCode);
-public sealed record PlanGenerateShareCodeAccountCommand(Id<AccountReference> CurrentAccountId, Id<PlanEntity> PlanId);
+public sealed record PlanGenerateShareCodeAccountCommand(Id<AccountReference> CurrentAccountId, Id<PlanEntity> PlanId, int DurationDays = 7);
 public sealed record PlanDeleteAccountCommand(Id<AccountReference> CurrentAccountId, Id<PlanEntity> PlanId);

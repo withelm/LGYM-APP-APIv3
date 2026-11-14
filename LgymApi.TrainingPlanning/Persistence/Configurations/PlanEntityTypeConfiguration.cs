@@ -12,6 +12,7 @@ internal sealed class PlanEntityTypeConfiguration : IEntityTypeConfiguration<Pla
         builder.ToTable("Plans");
 
         builder.Property(plan => plan.Purpose).HasConversion<string>().HasDefaultValue(PlanPurpose.Unclassified).IsConcurrencyToken();
+        builder.Property(plan => plan.ShareCodeRevision).IsConcurrencyToken();
 
         builder.HasIndex(plan => plan.ShareCode)
             .IsUnique()

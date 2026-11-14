@@ -605,6 +605,8 @@ public sealed class ManagedPlanContractRegistrationTests
 
         public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default)
             => Task.FromResult(string.Empty);
+        public Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class ActivePlanPointerStoreFake : IActivePlanPointerStore

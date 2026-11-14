@@ -24,3 +24,5 @@
 - `ReportRequestStatus.Completed` is the durable internal state after trainee feedback acknowledgement. API compatibility maps that state back to legacy `Submitted` for existing request-status consumers.
 - `ReportSubmission.HasEverHadFeedback` records first-feedback history; null means the history is unknown and cannot authorize an answer edit.
 - `Plan.Purpose` defines `Unclassified = 0`, `Personal = 1`, and `Professional = 2`; persistence stores enum names and legacy rows default to Unclassified without changing plan or history identifiers.
+- `Plan.ShareCodeExpiresAt` and `Plan.ShareCodeDurationDays` are nullable; legacy share codes without a trustworthy expiry are not redeemable.
+- `Plan.ShareCodeRevision` is the optimistic concurrency token for share issuance, including reuse requests.

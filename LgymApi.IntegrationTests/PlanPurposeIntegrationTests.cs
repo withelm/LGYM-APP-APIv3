@@ -15,6 +15,108 @@ namespace LgymApi.IntegrationTests;
 public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
 {
     [Test]
+    public async Task AssignedTemplateCreatesIndependentPersonalPlan()
+    {
+        var coach = await SeedUserAsync("assignment-coach", "assignment-coach@example.test");
+        var trainee = await SeedUserAsync("assignment-trainee", "assignment-trainee@example.test");
+        var source = new Plan { Id = Id<Plan>.New(), UserId = coach.Id, Name = "Template", Purpose = PlanPurpose.Professional, IsActive = false };
+        var day = new PlanDay { Id = Id<PlanDay>.New(), PlanId = source.Id, Name = "Template day" };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, coach.Id));
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = coach.Id, TraineeId = trainee.Id });
+            db.AddRange(source, day);
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(coach.Id);
+        using var assigned = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{source.Id}/assign", null);
+        assigned.StatusCode.Should().Be(HttpStatusCode.OK);
+        string copyId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var copy = await db.Plans.AsNoTracking().SingleAsync(p => p.UserId == trainee.Id);
+            copy.Id.Should().NotBe(source.Id);
+            copy.Purpose.Should().Be(PlanPurpose.Personal);
+            copyId = copy.Id.ToString();
+            var copiedDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.PlanId == copy.Id);
+            copiedDay.Id.Should().NotBe(day.Id);
+            copiedDay.Name.Should().Be(day.Name);
+        }
+        SetAuthorizationHeader(trainee.Id);
+        using var editCopy = await PostAsJsonWithApiOptionsAsync($"/api/{trainee.Id}/updatePlan", new { _id = copyId, name = "Personal edit", purpose = "Personal" });
+        editCopy.StatusCode.Should().Be(HttpStatusCode.OK);
+        SetAuthorizationHeader(coach.Id);
+        using var editSource = await PostAsJsonWithApiOptionsAsync($"/api/{coach.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Template edit", purpose = "Professional" });
+        editSource.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verification = Factory.Services.CreateScope();
+        var plans = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().ToListAsync();
+        plans.Single(p => p.Id == source.Id).Name.Should().Be("Template edit");
+        plans.Single(p => p.Id.ToString() == copyId).Name.Should().Be("Personal edit");
+        plans.Single(p => p.Id.ToString() == copyId).Purpose.Should().Be(PlanPurpose.Personal);
+    }
+
+    [Test]
+    public async Task SharedCopiesRemainIndependentAndCodeWorksAfterUnlink()
+    {
+        var owner = await SeedUserAsync("copy-coach", "copy-coach@example.test");
+        var recipient = await SeedUserAsync("copy-trainee", "copy-trainee@example.test");
+        var source = new Plan { Id = Id<Plan>.New(), UserId = owner.Id, Name = "Source", Purpose = PlanPurpose.Professional };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.UserRoles.Add(LgymApi.TestUtils.TestDataFactory.ApprovedTrainerRole(db, owner.Id));
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = owner.Id, TraineeId = recipient.Id });
+            db.Plans.Add(source);
+            await db.SaveChangesAsync();
+        }
+
+        SetAuthorizationHeader(owner.Id);
+        using var share = await Client.PostAsync($"/api/{source.Id}/share", null);
+        share.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var shareBody = JsonDocument.Parse(await share.Content.ReadAsStringAsync());
+        var code = shareBody.RootElement.GetProperty("shareCode").GetString();
+        SetAuthorizationHeader(recipient.Id);
+        using var first = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var firstBody = JsonDocument.Parse(await first.Content.ReadAsStringAsync());
+        var firstId = firstBody.RootElement.GetProperty("id").GetString();
+        firstBody.RootElement.GetProperty("purpose").GetString().Should().Be("Unclassified");
+
+        SetAuthorizationHeader(owner.Id);
+        using var unlink = await Client.PostAsync($"/api/trainer/trainees/{recipient.Id}/unlink", null);
+        unlink.StatusCode.Should().Be(HttpStatusCode.OK);
+        SetAuthorizationHeader(recipient.Id);
+        using var second = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
+        second.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var secondBody = JsonDocument.Parse(await second.Content.ReadAsStringAsync());
+        var secondId = secondBody.RootElement.GetProperty("id").GetString();
+        secondBody.RootElement.GetProperty("purpose").GetString().Should().Be("Unclassified");
+        firstId.Should().NotBe(secondId);
+        secondId.Should().NotBe(source.Id.ToString());
+
+        using var denied = await PostAsJsonWithApiOptionsAsync($"/api/{recipient.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Intrusion" });
+        denied.IsSuccessStatusCode.Should().BeFalse();
+        using var editCopy = await PostAsJsonWithApiOptionsAsync($"/api/{recipient.Id}/updatePlan", new { _id = firstId, name = "Copy edited" });
+        editCopy.StatusCode.Should().Be(HttpStatusCode.OK);
+        SetAuthorizationHeader(owner.Id);
+        using var editSource = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Source edited", purpose = "Professional" });
+        editSource.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verification = Factory.Services.CreateScope();
+        var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        var plans = await dbVerify.Plans.AsNoTracking().Where(p => p.UserId == owner.Id || p.UserId == recipient.Id).ToListAsync();
+        plans.Should().HaveCount(3);
+        plans.Single(p => p.Id == source.Id).Name.Should().Be("Source edited");
+        plans.Single(p => p.Id.ToString() == firstId).Name.Should().Be("Copy edited");
+        plans.Single(p => p.Id.ToString() == secondId).Name.Should().Be("Source");
+        plans.Where(p => p.UserId == recipient.Id).Should().OnlyContain(p => p.Purpose == PlanPurpose.Unclassified);
+    }
+
+    [Test]
     public async Task ChainedCoachingExposesOnlyDirectTraineePersonalPlans()
     {
         var coach = await SeedUserAsync("chain-coach", "chain-coach@example.test");

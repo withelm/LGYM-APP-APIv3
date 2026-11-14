@@ -34,6 +34,7 @@ internal interface IPlanRepository
         bool isActive = true,
         CancellationToken cancellationToken = default);
     Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, CancellationToken cancellationToken = default);
+    Task<string> GenerateShareCodeAsync(Id<Plan> planId, Id<User> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default);
 
     Task<Plan?> FindByIdAsync(Id<PlanReference> id, CancellationToken cancellationToken = default)
         => FindByIdAsync(id.Rebind<Plan>(), cancellationToken);
@@ -84,5 +85,8 @@ internal interface IPlanRepository
 
     Task<string> GenerateShareCodeAsync(Id<PlanReference> planId, Id<AccountReference> userId, CancellationToken cancellationToken = default)
         => GenerateShareCodeAsync(planId.Rebind<Plan>(), userId.Rebind<User>(), cancellationToken);
+
+    Task<string> GenerateShareCodeAsync(Id<PlanReference> planId, Id<AccountReference> userId, int durationDays, DateTimeOffset now, CancellationToken cancellationToken = default)
+        => GenerateShareCodeAsync(planId.Rebind<Plan>(), userId.Rebind<User>(), durationDays, now, cancellationToken);
 }
 

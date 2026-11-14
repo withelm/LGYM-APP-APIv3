@@ -36,6 +36,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreatePlan([FromRoute] string id, [FromBody] PlanFormDto form, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
@@ -60,6 +61,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdatePlan([FromRoute] string id, [FromBody] PlanFormDto form, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
@@ -154,6 +156,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SetNewActivePlan([FromRoute] string id, [FromBody] SetActivePlanDto form, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
@@ -182,6 +185,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(PlanDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CopyPlan([FromBody] CopyPlanDto dto, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
@@ -201,7 +205,8 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ShareCodeResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GenerateShareCode([FromRoute] string id, CancellationToken cancellationToken = default)
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> GenerateShareCode([FromRoute] string id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ShareCodeRequestDto? request, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
         if (!Id<PlanEntity>.TryParse(id, out var planId))
@@ -210,7 +215,7 @@ public sealed class PlanController : ControllerBase
         }
 
         var result = await _plans.GenerateShareCodeAsync(
-            new PlanGenerateShareCodeAccountCommand(accountId, planId),
+            new PlanGenerateShareCodeAccountCommand(accountId, planId, request?.DurationDays ?? 7),
             cancellationToken);
         if (result.IsFailure)
         {
@@ -224,6 +229,7 @@ public sealed class PlanController : ControllerBase
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DeletePlan([FromRoute] string id, CancellationToken cancellationToken = default)
     {
         var accountId = HttpContext.GetAuthenticatedAccountContext()?.Id ?? Id<AccountReference>.Empty;
