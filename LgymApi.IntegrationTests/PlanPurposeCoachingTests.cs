@@ -16,6 +16,70 @@ namespace LgymApi.IntegrationTests;
 public sealed class PlanPurposeCoachingTests : IntegrationTestBase
 {
     [Test]
+    public async Task CurrentCoachUpdatesAndAssignsTraineePersonalPlanThroughHttp()
+    {
+        var coach = await SeedUserAsync("managed-coach", "managed-coach@example.test");
+        var owner = await SeedUserAsync("managed-owner", "managed-owner@example.test");
+        var plan = new Plan { Id = Id<Plan>.New(), UserId = owner.Id, Name = "Before", Purpose = PlanPurpose.Personal, IsActive = false };
+        var previous = new Plan { Id = Id<Plan>.New(), UserId = owner.Id, Name = "Previous", Purpose = PlanPurpose.Personal, IsActive = true };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(db, coach.Id));
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = coach.Id, TraineeId = owner.Id });
+            db.Plans.AddRange(plan, previous);
+            await db.SaveChangesAsync();
+        }
+        SetAuthorizationHeader(coach.Id);
+
+        using var update = await Client.PostAsJsonAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/update", new { name = "After" });
+        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var assign = await Client.PostAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/assign", null);
+        assign.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verification = Factory.Services.CreateScope();
+        var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persisted = await dbVerify.Plans.AsNoTracking().SingleAsync(item => item.Id == plan.Id);
+        persisted.UserId.Should().Be(owner.Id);
+        persisted.Name.Should().Be("After");
+        persisted.Purpose.Should().Be(PlanPurpose.Personal);
+        persisted.IsActive.Should().BeTrue();
+        var previousPersisted = await dbVerify.Plans.AsNoTracking().SingleAsync(item => item.Id == previous.Id);
+        previousPersisted.IsActive.Should().BeFalse();
+    }
+
+    [TestCase("update")]
+    [TestCase("delete")]
+    [TestCase("assign")]
+    public async Task CurrentCoachCannotMutateForeignPersonalPlanByKnownId(string operation)
+    {
+        var coach = await SeedUserAsync("foreign-coach", "foreign-coach@example.test");
+        var trainee = await SeedUserAsync("foreign-trainee", "foreign-trainee@example.test");
+        var owner = await SeedUserAsync("foreign-plan-owner", "foreign-plan-owner@example.test");
+        var plan = new Plan { Id = Id<Plan>.New(), UserId = owner.Id, Name = "Foreign", Purpose = PlanPurpose.Personal, IsActive = false };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.UserRoles.Add(TestDataFactory.ApprovedTrainerRole(db, coach.Id));
+            db.TrainerTraineeLinks.Add(new TrainerTraineeLink { Id = Id<TrainerTraineeLink>.New(), TrainerId = coach.Id, TraineeId = trainee.Id });
+            db.Plans.Add(plan);
+            await db.SaveChangesAsync();
+        }
+        SetAuthorizationHeader(coach.Id);
+
+        using var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{plan.Id}/{operation}", new { name = "Intrusion" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var verification = Factory.Services.CreateScope();
+        var persisted = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.IgnoreQueryFilters().AsNoTracking().SingleAsync(item => item.Id == plan.Id);
+        persisted.UserId.Should().Be(owner.Id);
+        persisted.Name.Should().Be("Foreign");
+        persisted.Purpose.Should().Be(PlanPurpose.Personal);
+        persisted.IsDeleted.Should().BeFalse();
+        persisted.IsActive.Should().BeFalse();
+    }
+
+    [Test]
     public async Task CoachOfTrainer_ListsOnlyPersonalPlansAndCannotReachIndirectTrainee()
     {
         var coach = await SeedUserAsync("coach-a", "coach-a@example.test");
