@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Application.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
@@ -6,6 +7,7 @@ using LgymApi.Api.Middleware;
 using LgymApi.Identity.Contracts;
 using LgymApi.Identity.Contracts.Accounts;
 using LgymApi.Identity.Contracts.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace LgymApi.Api.Idempotency;
 
@@ -56,13 +58,19 @@ internal sealed class IdentityIdempotencyReplayAccessPort : IApiIdempotencyRepla
 {
     private readonly IAuthenticatedAccountContextResolver _contextResolver;
     private readonly IAuthenticatedAccountAuthorizationService _authorizationService;
+    private readonly IAccountLookupService _accounts;
+    private readonly JsonSerializerOptions _jsonOptions;
 
     public IdentityIdempotencyReplayAccessPort(
         IAuthenticatedAccountContextResolver contextResolver,
-        IAuthenticatedAccountAuthorizationService authorizationService)
+        IAuthenticatedAccountAuthorizationService authorizationService,
+        IAccountLookupService accounts,
+        IOptions<Microsoft.AspNetCore.Mvc.JsonOptions> jsonOptions)
     {
         _contextResolver = contextResolver;
         _authorizationService = authorizationService;
+        _accounts = accounts;
+        _jsonOptions = jsonOptions.Value.JsonSerializerOptions;
     }
 
     public ApiIdempotencyReplayOwner Owner => ApiIdempotencyReplayOwner.Identity;
@@ -90,8 +98,50 @@ internal sealed class IdentityIdempotencyReplayAccessPort : IApiIdempotencyRepla
             return false;
         }
 
-        return context.Metadata.RequiredPermission is null
-            || _authorizationService.HasPermission(currentAccount, context.Metadata.RequiredPermission);
+        if (context.Metadata.RequiredPermission is { } permission
+            && !_authorizationService.HasPermission(currentAccount, permission))
+        {
+            return false;
+        }
+
+        return context.Metadata.ReplayResourceBinding switch
+        {
+            ApiIdempotencyReplayResourceBinding.None or ApiIdempotencyReplayResourceBinding.RouteAccount => true,
+            ApiIdempotencyReplayResourceBinding.BodyTraineeAccount =>
+                await CanReplayForTraineeAsync(context.HttpContext.Request, cancellationToken),
+            _ => false
+        };
+    }
+
+    private async Task<bool> CanReplayForTraineeAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.Body.CanSeek)
+        {
+            return false;
+        }
+
+        var position = request.Body.Position;
+        try
+        {
+            request.Body.Position = 0;
+            var invitation = await JsonSerializer.DeserializeAsync<CreateTrainerInvitationRequest>(
+                request.Body, _jsonOptions, cancellationToken);
+            if (invitation is null
+                || !Id<AccountReference>.TryParse(invitation.TraineeId, out var traineeId))
+            {
+                return false;
+            }
+
+            return await _accounts.GetByIdAsync(traineeId, cancellationToken) is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        finally
+        {
+            request.Body.Position = position;
+        }
     }
 }
 

@@ -37,7 +37,8 @@ internal sealed class IdentityAccountContractMappingProfile : IMappingProfile
             source.IsDeleted,
             source.IsBlocked,
             context?.Get(Keys.Roles) ?? [],
-            context?.Get(Keys.PermissionClaims) ?? []));
+            context?.Get(Keys.PermissionClaims) ?? [],
+            source.DeletionState));
 
         configuration.CreateMap<AccountAccessFacts, AuthenticatedAccountContext>((source, context) => new AuthenticatedAccountContext(
             source.Id,
@@ -45,7 +46,8 @@ internal sealed class IdentityAccountContractMappingProfile : IMappingProfile
             source.Roles,
             source.PermissionClaims,
             source.IsBlocked,
-            source.IsDeleted));
+            source.IsDeleted,
+            source.DeletionState));
 
         configuration.CreateMap<AuthenticatedAccountContext, AuthorizationActor>((source, _) =>
             new AuthorizationActor(source.Id.Rebind<ActorReference>()));

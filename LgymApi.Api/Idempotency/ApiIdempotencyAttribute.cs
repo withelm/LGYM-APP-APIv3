@@ -52,7 +52,8 @@ public enum ApiIdempotencyReplayOwner
 public enum ApiIdempotencyReplayResourceBinding
 {
     None = 0,
-    RouteAccount = 1
+    RouteAccount = 1,
+    BodyTraineeAccount = 2
 }
 
 public static class ApiIdempotencyHeaders

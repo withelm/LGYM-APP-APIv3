@@ -32,6 +32,8 @@ internal sealed class AuthenticatedAccountAuthorizationService : IAuthenticatedA
         var actor = CreateActor(accountContext);
         return _evaluator.Evaluate(
             actor,
-            new GlobalPermissionAuthorizationContext(permission, accountContext.PermissionClaims)).IsAllowed;
+            new GlobalPermissionAuthorizationContext(
+                permission, accountContext.PermissionClaims, accountContext.DeletionState,
+                accountContext.IsBlocked, accountContext.IsDeleted)).IsAllowed;
     }
 }

@@ -3,6 +3,7 @@ using LgymApi.Application.Identity.Authorization;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Authorization;
 using LgymApi.Authorization.Contracts;
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Security;
 using LgymApi.Identity;
@@ -84,6 +85,44 @@ public sealed class AuthorizationActorBridgeTests
         service.HasPermission(accountContext, "permissions.other").Should().BeFalse();
     }
 
+    [TestCase(AccountDeletionState.PendingDeletion)]
+    [TestCase(AccountDeletionState.Finalizing)]
+    [TestCase(AccountDeletionState.PermanentlyDeleted)]
+    [TestCase((AccountDeletionState)999)]
+    public void Evaluate_DeniesPrivilegedClaimsForNonActiveLifecycle(AccountDeletionState state)
+    {
+        var account = CreateAccountContext([AuthConstants.Permissions.AdminAccess, AuthConstants.Permissions.TrainerAccess], ["Admin", "Trainer"]) with { DeletionState = state };
+        var service = new AuthenticatedAccountAuthorizationService(
+            IdentityTestMapper.Create(),
+            new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
+
+        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
+        service.HasPermission(account, AuthConstants.Permissions.TrainerAccess).Should().BeFalse();
+    }
+
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    public void Evaluate_DeniesPrivilegedClaimsForBlockedOrDeletedAccount(bool blocked, bool deleted)
+    {
+        var account = CreateAccountContext([AuthConstants.Permissions.AdminAccess]) with { IsBlocked = blocked, IsDeleted = deleted };
+        var service = new AuthenticatedAccountAuthorizationService(
+            IdentityTestMapper.Create(),
+            new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
+
+        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
+    }
+
+    [Test]
+    public void Evaluate_DeniesWhenLifecycleIsUnknown()
+    {
+        var account = CreateAccountContext([AuthConstants.Permissions.AdminAccess]) with { DeletionState = null };
+        var service = new AuthenticatedAccountAuthorizationService(
+            IdentityTestMapper.Create(),
+            new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
+
+        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
+    }
+
     [Test]
     public void GlobalPermissionPolicy_DeniesWhenNoPolicyIsRegistered()
     {
@@ -132,5 +171,6 @@ public sealed class AuthorizationActorBridgeTests
             roles ?? [],
             permissionClaims,
             IsBlocked: false,
-            IsDeleted: false);
+            IsDeleted: false,
+            DeletionState: AccountDeletionState.Active);
 }

@@ -1,3 +1,4 @@
+using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.Identity.Contracts.Accounts;
@@ -16,7 +17,8 @@ public sealed record AccountAccessFacts(
     bool IsDeleted,
     bool IsBlocked,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> PermissionClaims);
+    IReadOnlyList<string> PermissionClaims,
+    AccountDeletionState? DeletionState = null);
 
 public sealed record AuthenticatedAccountContext(
     Id<AccountReference> Id,
@@ -24,7 +26,8 @@ public sealed record AuthenticatedAccountContext(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> PermissionClaims,
     bool IsBlocked,
-    bool IsDeleted);
+    bool IsDeleted,
+    AccountDeletionState? DeletionState = null);
 
 public sealed record AuthenticatedAccountResolution(
     AuthenticatedAccountResolutionStatus Status,
