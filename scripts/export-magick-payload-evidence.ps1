@@ -18,7 +18,7 @@ if (Test-Path -LiteralPath $OutputDirectory) {
 }
 $notice = Join-Path $package "Notice.txt"
 $nuspecFiles = @(Get-ChildItem -LiteralPath $package -Filter "*.nuspec" -File)
-if ($nuspecFiles.Count -ne 1 -or !(Test-Path -LiteralPath $notice)) {
+if ($nuspecFiles.Count -ne 1 -or -not (Test-Path -LiteralPath $notice)) {
     throw "Expected one NuGet manifest and Notice.txt in the extracted package."
 }
 [xml]$nuspec = Get-Content -LiteralPath $nuspecFiles[0].FullName -Raw

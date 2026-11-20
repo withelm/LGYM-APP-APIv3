@@ -19,7 +19,7 @@ env:
   SONAR_ORG: ${{ vars.SONAR_ORG != '' && vars.SONAR_ORG || secrets.SONAR_ORG }}
   SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_PROJECT_KEY || secrets.SONAR_PROJECT_KEY }}
   # PowerShell CI tools are fixture-tested separately; C# OpenCover reports cannot measure them.
-  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1,scripts/assert-ci-verification-evidence.ps1,scripts/assert-sonar-inputs.ps1,scripts/test-sonar-inputs.ps1"
+  SONAR_COVERAGE_EXCLUSIONS: "**/.github/**,**/Migrations/**,**/LgymApi.Resources.Generator/**,**/LgymApi.DataSeeder/**,**/LgymApi.Application/Common/Errors/*Errors.cs,scripts/run-verification-matrix.ps1,scripts/test-ci-verification-workflows.ps1,scripts/assert-ci-verification-evidence.ps1,scripts/assert-sonar-inputs.ps1,scripts/test-sonar-inputs.ps1,scripts/export-magick-payload-evidence.ps1,scripts/test-magick-payload-evidence.ps1"
 
 jobs:
   release-build:
@@ -551,10 +551,19 @@ jobs:
           dotnet-version: 10.0.102
 
       - name: Install SonarScanner
+        # Python has its own coverage report; PowerShell fixtures follow the
+        # existing explicitly scoped tooling-coverage policy above.
         run: dotnet tool install --global dotnet-sonarscanner
 
+      - name: Verify native build tooling
+        run: |
+          pwsh -File scripts/test-magick-payload-evidence.ps1
+          python3 -m pip install coverage==7.6.1
+          python3 -m coverage run --source=scripts/magick-native --omit='*/test_*.py' scripts/magick-native/test_prepare.py
+          python3 -m coverage xml -o native-coverage.xml
+
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.qualitygate.wait=true /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.qualitygate.wait=true /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.python.coverage.reportPaths="native-coverage.xml" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
         run: dotnet restore LgymApi.slnx
@@ -625,8 +634,15 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
 
+      - name: Verify native build tooling
+        run: |
+          pwsh -File scripts/test-magick-payload-evidence.ps1
+          python3 -m pip install coverage==7.6.1
+          python3 -m coverage run --source=scripts/magick-native --omit='*/test_*.py' scripts/magick-native/test_prepare.py
+          python3 -m coverage xml -o native-coverage.xml
+
       - name: Sonar Begin
-        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
+        run: dotnet sonarscanner begin /k:"${{ env.SONAR_PROJECT_KEY }}" /o:"${{ env.SONAR_ORG }}" /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.exclusions="**/.github/**,**/Migrations/**" /d:sonar.cpd.exclusions="deploy/postgres/activate-tutorial-row-security.sql,deploy/postgres/deactivate-tutorial-row-security.sql" /d:sonar.coverage.exclusions="${{ env.SONAR_COVERAGE_EXCLUSIONS }}" /d:sonar.python.coverage.reportPaths="native-coverage.xml" /d:sonar.cs.opencover.reportsPaths="TestResults/SonarInputs/**/coverage.opencover.xml" /d:sonar.cs.vstest.reportsPaths="TestResults/SonarInputs/**/*.trx" /d:sonar.verbose=true
 
       - name: Restore
         run: dotnet restore LgymApi.slnx

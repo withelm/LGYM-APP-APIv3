@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Pinned sources matching Magick.NET-Q8-AnyCPU 15.1.0. Never execute the library
 # during this build: verification below uses ELF metadata and the linker inputs.
-test "$(uname -m)" = x86_64
+[[ "$(uname -m)" = x86_64 ]]
 git init /src/native
 cd /src/native
 git remote add origin https://github.com/dlemstra/Magick.Native.git
@@ -14,13 +14,14 @@ cd src/ImageMagick/ImageMagick
 git remote add origin https://github.com/ImageMagick/ImageMagick.git
 git fetch --depth 1 origin 5d1bcc55f2c83bc2ff802118b7369756610f3ad4
 git checkout --detach FETCH_HEAD
-test "$(cat ../ImageMagick.commit)" = 5d1bcc55f2c83bc2ff802118b7369756610f3ad4
-curl --fail --location --retry 3 \
+[[ "$(cat ../ImageMagick.commit)" = 5d1bcc55f2c83bc2ff802118b7369756610f3ad4 ]]
+curl --proto '=https' --proto-redir '=https' --fail --location --retry 3 \
     https://github.com/ImageMagick/Dependencies/releases/download/2026.10.31.2057/linux-x64-static.zip \
     --output /tmp/dependencies.zip
 echo 'fe5f2e5f820cc01374dd6a406ccbe48a05c56a62983af40b381242942df5708e  /tmp/dependencies.zip' | sha256sum --check
-mkdir /tmp/dependencies
-unzip -q /tmp/dependencies.zip -d /tmp/dependencies
+mkdir /src/native/dependencies
+ln -s /src/native/dependencies /tmp/dependencies
+unzip -q /tmp/dependencies.zip -d /src/native/dependencies
 python3 /scripts/prepare.py
 bash /src/native/build/shared/build.imagemagick.sh linux x64 Q8 no
 cd /src/native/src/Magick.Native

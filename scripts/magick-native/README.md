@@ -34,3 +34,10 @@ Linux variant.
 Ordinary local `dotnet publish` still uses the original NuGet assets. Use the
 Dockerfile for this codec-reduced deployment. Existing license/NOTICE obligations
 for retained dependencies still apply (LGYM-269).
+
+Tooling regression checks run in both Sonar jobs: `test_prepare.py` verifies
+fail-closed edits and selective archive removal with synthetic upstream files;
+`scripts/test-magick-payload-evidence.ps1` checks inventory matching, overwrite
+refusal and tamper rejection. Python coverage is imported into Sonar. The two
+PowerShell inventory scripts follow the existing explicit tooling coverage
+exclusions, while their executable fixtures remain mandatory in CI.

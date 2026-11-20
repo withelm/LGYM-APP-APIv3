@@ -1,7 +1,8 @@
 """Fail-closed edits to the pinned upstream native build (no library loading)."""
 from pathlib import Path
+import sys
 
-root = Path("/src/native")
+root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/src/native")
 
 
 def replace_once(path, old, new):
@@ -29,7 +30,7 @@ replace_once(
 replace_once(cmake, 'set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")', "")
 replace_once(cmake, 'set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")', "")
 # Make accidental linkage impossible even if a future configure step changes.
-for path in Path("/tmp/dependencies").rglob("*"):
+for path in (root / "dependencies").rglob("*"):
     if path.is_file() and path.name.startswith(
         ("libheif.", "libde265.", "libopenh264.", "libx264.", "libx265.")
     ):
