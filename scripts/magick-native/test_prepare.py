@@ -1,10 +1,8 @@
 """Exercise fail-closed patching with disposable synthetic upstream sources."""
 from pathlib import Path
-import runpy
-import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from prepare import prepare
 
 
 class PrepareTests(unittest.TestCase):
@@ -30,9 +28,7 @@ class PrepareTests(unittest.TestCase):
             retained = ["libwebp.a", "libpng.a", "libturbojpeg.a"]
             for name in forbidden + retained:
                 (libraries / name).write_bytes(b"fixture")
-            command = [sys.executable, str(Path(__file__).with_name("prepare.py")), str(root)]
-            with patch.object(sys, "argv", command[1:]):
-                runpy.run_path(command[1], run_name="__main__")
+            prepare(root)
             self.assertEqual(sorted(p.name for p in libraries.iterdir()), sorted(retained))
             self.assertIn("--without-heic", settings.read_text())
             self.assertNotIn("libheif.a", cmake.read_text())
@@ -40,9 +36,8 @@ class PrepareTests(unittest.TestCase):
             self.assertIn("-Wl,-z,defs", cmake.read_text())
             self.assertIn("set(LIBWEBP libwebp.a)", cmake.read_text())
             # Reapplying or upstream drift must fail rather than silently skipping edits.
-            with patch.object(sys, "argv", command[1:]):
-                with self.assertRaisesRegex(RuntimeError, "Unexpected upstream content"):
-                    runpy.run_path(command[1], run_name="__main__")
+            with self.assertRaisesRegex(RuntimeError, "Unexpected upstream content"):
+                prepare(root)
 
 
 if __name__ == "__main__":
