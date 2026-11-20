@@ -243,6 +243,17 @@ public sealed class ApiDockerProjectClosureGuardTests
         Assert.That(violations, Is.Empty);
     }
 
+    [TestCase("--from=native /out/decoder.so /tmp/native/", false)]
+    [TestCase("/out/decoder.so /tmp/native/", true)]
+    [TestCase("../decoder.so /tmp/native/", true)]
+    [Category("Issue427Fixture")]
+    public void DockerfileParser_Should_Distinguish_Stage_Paths_From_Context_Paths(
+        string copyArguments, bool rejectsSource)
+    {
+        var copy = ParseCopy(copyArguments, "/src");
+        Assert.That(copy.Issues.Contains("out-of-context-copy-source"), Is.EqualTo(rejectsSource));
+    }
+
     [Test]
     [Category("Issue427Fixture")]
     public void DockerIgnoreMatcher_Should_Honor_Last_Match_And_DockerfileSpecific_Precedence()
@@ -1039,7 +1050,7 @@ public sealed class ApiDockerProjectClosureGuardTests
             issues.Add("variable-bearing-copy");
         }
 
-        if (sources.Any(source => source.StartsWith('/') || NormalizeCopySource(source).StartsWith("../", StringComparison.Ordinal)))
+        if (!stageTransfer && sources.Any(source => source.StartsWith('/') || NormalizeCopySource(source).StartsWith("../", StringComparison.Ordinal)))
         {
             issues.Add("out-of-context-copy-source");
         }
