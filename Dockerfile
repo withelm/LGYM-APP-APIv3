@@ -2,6 +2,18 @@
 
 ARG DOTNET_VERSION=10.0
 
+FROM ubuntu:20.04 AS magick-native
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+    autoconf automake autopoint binutils build-essential ca-certificates cmake \
+    curl git libtool pkg-config python3 unzip \
+    && rm -rf /var/lib/apt/lists/*
+COPY scripts/magick-native/ /scripts/
+RUN bash /scripts/build.sh
+
+FROM scratch AS magick-evidence
+COPY --from=magick-native /out/ /
+
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS authorization-build
 WORKDIR /src
 
@@ -54,6 +66,13 @@ RUN dotnet publish "LgymApi.Api/LgymApi.Api.csproj" \
     --no-restore \
     --output /app/publish \
     /p:UseAppHost=false
+
+COPY --from=magick-native /out/Magick.Native-Q8-x64.dll.so /tmp/lgym-native/
+RUN test "$(uname -m)" = x86_64 \
+    && grep -Fq '<PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="15.1.0"' Directory.Packages.props \
+    && find /app/publish -type f -name 'Magick.Native*' -delete \
+    && mkdir -p /app/publish/runtimes/linux-x64/native \
+    && cp /tmp/lgym-native/Magick.Native-Q8-x64.dll.so /app/publish/runtimes/linux-x64/native/
 
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
 WORKDIR /app

@@ -41,6 +41,20 @@ PostgreSQL and fresh worker providers. The HTTP intake limiter still bounds two
 multipart requests with no waiting before buffering, and retains the 60-second deadline.
 Extension and Content-Type come from verified bytes.
 
+Decoder replacement and native-payload investigation:
+[LGYM-266 evidence and PAGE/MOBILE compatibility gates](evidence/lgym-266-magick-payload.md).
+This checkpoint does not approve a new decoder or establish release license compliance.
+
+The Docker build now prepares a linux-x64 Q8 native variant without HEIC/libheif,
+libde265 or OpenH264 and removes the original native RID assets from its publish
+output. GIF/PNG/JPEG/static WebP remain the upload contract. Build details and
+static evidence export: [native decoder build](../scripts/magick-native/README.md).
+The existing 87-test media unit slice passed in an owner-authorized isolated Linux
+container using the exact replacement from the built API image (loader and hash
+evidence retained in the linked report). Live R2 and client-device acceptance are
+separate gates. Ordinary local `dotnet publish` still contains the upstream NuGet
+native bundle.
+
 One immutable key uses `exercises/<server UUID>/<sanitized SHA-256>/<filename>`.
 R2 PUT must confirm success before returning its URL. SDK path-style/region,
 non-streaming payload-signing and optional checksum settings retain R2 compatibility.

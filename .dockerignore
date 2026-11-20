@@ -17,6 +17,9 @@
 !LgymApi.Resources.Generator/**
 !LgymApi.TrainingPlanning/**
 !README.md
+!scripts/
+!scripts/magick-native/
+!scripts/magick-native/**
 !docker/
 !docker/logpanel/
 !docker/logpanel/**
