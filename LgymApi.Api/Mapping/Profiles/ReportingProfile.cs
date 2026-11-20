@@ -8,6 +8,12 @@ public sealed class ReportingProfile : IMappingProfile
 {
     public void Configure(MappingConfiguration configuration)
     {
+        configuration.CreateMap<ReportSubmissionArchiveResult, ReportSubmissionArchiveDto>((source, mapper) => new ReportSubmissionArchiveDto
+        {
+            Items = mapper!.MapList<ReportSubmissionResult, ReportSubmissionDto>(source.Items),
+            NextPage = source.NextPage
+        });
+
         configuration.CreateMap<ReportTemplateFieldResult, ReportTemplateFieldDto>((source, _) => new ReportTemplateFieldDto
         {
             Key = source.Key,

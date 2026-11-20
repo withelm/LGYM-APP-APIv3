@@ -119,6 +119,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 - Preserve legacy payload shapes such as `_id`, `msg`, and `req`.
 - Keep the request flow: `Controller -> FluentValidation -> Application Service -> Repository -> Unit of Work -> Mapper -> Middleware`.
 - Keep controllers thin; business rules belong in Application services.
+- For simple page-based GET collections, bind one shared `PaginationQueryVm` (`LgymApi.Api/Features/Common/Contracts`) with `[FromQuery]`; do not declare separate page/size or offset/limit controller arguments. Use the existing `PaginatedRequest` pipeline when filter groups and sort descriptors are supported.
 - Keep repositories stage-only; services own `IUnitOfWork.SaveChangesAsync()` and transactions.
 - For runtime application persistence, use provider-neutral EF Core APIs. Do not use raw SQL or branch on `Database.ProviderName` or provider-name string literals.
 - Map between distinct layer models or results, including entities, application/read models, and DTOs, through registered custom `IMapper` mapping profiles (`IMapper`, `IMappingProfile`, `MappingContext`). AutoMapper, ad-hoc mapper implementations, and manual cross-layer mapping in controllers, services, or adapters are prohibited. Trivial scalar assignments without model transformation are allowed.

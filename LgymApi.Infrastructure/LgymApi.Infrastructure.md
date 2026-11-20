@@ -1,5 +1,7 @@
 # LgymApi.Infrastructure.csproj
 
+- Reporting archive candidate pages bind to the authenticated source trainer, exclude unavailable subjects and non-submitted requests, and order by creation time then ID before pagination. Snapshot/template loading retains the existing historical projection; Reporting rechecks episode authorization before disclosure.
+
 - Account lifecycle synchronization uses provider-neutral row updates inside caller-owned transactions. The shared save pipeline adds optimistic revision checks for tracked active-account authorization reads. Finalization scans due candidates in account-ID keyset pages, discovers and locks shared-data participant accounts in stable ID order, then defers when discovery changes or a participant remains recoverable; it stages the independent Reporting storage manifest and executes explicit set-based cleanup in the owning service transaction. Migration `20261114184523_AddRecoverableAccountDeletion` preserves deadlines and work across retries and refuses downgrade. Migration `20261114215739_ConfirmAccountDeletionSchedules` adds `DeletionScheduledGeneration`, backfills existing pending/finalizing generations as confirmed, and refuses downgrade so scheduling confirmation cannot be lost. See [account deletion](../docs/account-deletion.md).
 
 - Purpose: technical implementations.

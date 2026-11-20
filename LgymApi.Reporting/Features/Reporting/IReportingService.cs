@@ -10,6 +10,7 @@ namespace LgymApi.Application.Features.Reporting;
 
 public interface IReportingService
 {
+    Task<Result<ReportSubmissionArchiveResult, AppError>> GetSourceTrainerArchiveAsync(AuthenticatedAccountContext currentTrainer, int offset, int limit, CancellationToken cancellationToken = default);
     Task<Result<ReportTemplateResult, AppError>> CreateTemplateAsync(AuthenticatedAccountContext currentTrainer, CreateReportTemplateCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<ReportTemplateResult>, AppError>> GetTrainerTemplatesAsync(AuthenticatedAccountContext currentTrainer, CancellationToken cancellationToken = default);
     Task<Result<ReportTemplateResult, AppError>> GetTrainerTemplateAsync(AuthenticatedAccountContext currentTrainer, Id<ReportTemplate> templateId, CancellationToken cancellationToken = default);

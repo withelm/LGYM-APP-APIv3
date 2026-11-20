@@ -183,6 +183,19 @@ public sealed partial class TrainerReportingController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, _mapper.Map<ReportRequestResult, ReportRequestDto>(result.Value));
     }
 
+    [HttpGet("report-submissions")]
+    [ProducesResponseType(typeof(ReportSubmissionArchiveDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetSourceTrainerArchive([FromQuery] PaginationQueryVm query, CancellationToken cancellationToken = default)
+    {
+        var result = await _requests.GetArchiveAsync(HttpContext.GetAuthenticatedAccountContext()!, (query.Page - 1) * query.PageSize, query.PageSize, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+        return Ok(_mapper.Map<ReportSubmissionArchiveResult, ReportSubmissionArchiveDto>(result.Value));
+    }
+
     [HttpGet("trainees/{traineeId}/report-submissions")]
     [ProducesResponseType(typeof(List<ReportSubmissionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseMessageDto), StatusCodes.Status400BadRequest)]

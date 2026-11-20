@@ -13,6 +13,47 @@ namespace LgymApi.Application.Features.Reporting;
 
 public sealed partial class ReportingService
 {
+    public async Task<Result<ReportSubmissionArchiveResult, AppError>> GetSourceTrainerArchiveAsync(
+        AuthenticatedAccountContext currentTrainer, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var trainerCheck = EnsureTrainer(currentTrainer);
+        if (trainerCheck.IsFailure)
+        {
+            return Result<ReportSubmissionArchiveResult, AppError>.Failure(trainerCheck.Error);
+        }
+        if (offset < 0 || offset > int.MaxValue - 101 || limit is < 1 or > 100)
+        {
+            return Result<ReportSubmissionArchiveResult, AppError>.Failure(new InvalidReportingError(Messages.FieldRequired));
+        }
+
+        // Advance over candidates, not disclosed items: an authorization-filtered page
+        // may be empty and still carry a continuation. Each request has bounded work.
+        var candidates = await _requestSubmissionPersistence.ListSourceTrainerSubmissionsAsync(
+            currentTrainer.Id, offset, limit + 1, cancellationToken);
+        var authorized = new List<ReportSubmissionPersistenceModel>();
+        var accessByTrainee = new Dictionary<Id<AccountReference>, ReportingRelationshipAccessFact>();
+        foreach (var submission in candidates.Take(limit))
+        {
+            if (!accessByTrainee.TryGetValue(submission.TraineeId, out var access))
+            {
+                access = await _relationshipAccessPersistence.GetAccessAsync(currentTrainer.Id, submission.TraineeId, cancellationToken);
+                accessByTrainee.Add(submission.TraineeId, access);
+            }
+            if (_authorization.CanReadSubmission(currentTrainer, submission, access))
+            {
+                authorized.Add(submission);
+            }
+        }
+        var results = _mapper.MapList<ReportSubmissionPersistenceModel, ReportSubmissionResult>(authorized);
+        await PopulateFeedbackCapabilitiesForListAsync(currentTrainer, authorized, results, cancellationToken);
+        await HydrateSubmissionPhotosAsync(currentTrainer, results, cancellationToken);
+        return Result<ReportSubmissionArchiveResult, AppError>.Success(new ReportSubmissionArchiveResult
+        {
+            Items = results,
+            NextPage = candidates.Count > limit ? offset / limit + 2 : null
+        });
+    }
+
     public async Task<Result<List<ReportSubmissionResult>, AppError>> GetTraineeSubmissionsAsync(
         AuthenticatedAccountContext currentTrainer,
         Id<AccountReference> traineeId,

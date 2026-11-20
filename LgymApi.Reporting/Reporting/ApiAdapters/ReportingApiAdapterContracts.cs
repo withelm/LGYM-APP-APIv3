@@ -27,6 +27,7 @@ public interface ITrainerPhotoTypeApiPort
 
 public interface ITrainerReportRequestApiPort
 {
+    Task<Result<ReportSubmissionArchiveResult, AppError>> GetArchiveAsync(AuthenticatedAccountContext trainer, int offset, int limit, CancellationToken cancellationToken = default);
     Task<Result<ReportRequestResult, AppError>> CreateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default);
     Task<Result<List<ReportSubmissionResult>, AppError>> GetSubmissionsAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CancellationToken cancellationToken = default);
     Task<Result<ReportSubmissionResult, AppError>> UpdateFeedbackAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, Id<ReportSubmission> submissionId, UpdateReportSubmissionFeedbackCommand command, CancellationToken cancellationToken = default);

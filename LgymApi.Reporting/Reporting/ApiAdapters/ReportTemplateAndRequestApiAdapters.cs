@@ -45,6 +45,9 @@ internal sealed class TrainerReportRequestApiAdapter : ITrainerReportRequestApiP
     private readonly IReportingService _reportingService;
     public TrainerReportRequestApiAdapter(IReportingService reportingService) => _reportingService = reportingService;
 
+    public Task<Result<ReportSubmissionArchiveResult, AppError>> GetArchiveAsync(AuthenticatedAccountContext trainer, int offset, int limit, CancellationToken cancellationToken = default)
+        => _reportingService.GetSourceTrainerArchiveAsync(trainer, offset, limit, cancellationToken);
+
     public Task<Result<ReportRequestResult, AppError>> CreateAsync(AuthenticatedAccountContext trainer, Id<AccountReference> traineeId, CreateReportRequestCommand command, CancellationToken cancellationToken = default)
         => _reportingService.CreateReportRequestAsync(trainer, traineeId, command, cancellationToken);
 

@@ -1,5 +1,7 @@
 # LgymApi.ArchitectureTests.csproj
 
+- LGYM-226 adds the explicitly authorized, additive trainer archive endpoint and `ReportSubmissionArchiveResult`/DTO. Reporting route/response/property baselines include this extension; source manifest count is 878 and compiled export count is 856 (Reporting 101). No existing Reporting route or DTO shape is removed.
+
 - Purpose: Roslyn-based architecture guard tests.
 - Contains: dependency direction checks, ID boundary checks, DI placement checks, feature layout checks, mapping checks, enum guards, UoW guards, persistence ownership guards, single-production-DbContext guards, and ownership documentation parsing guards.
 - Rules: treat failures as architecture violations unless intentionally documented.

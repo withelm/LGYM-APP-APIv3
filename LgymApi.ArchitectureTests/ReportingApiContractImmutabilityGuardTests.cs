@@ -225,7 +225,7 @@ public sealed class ReportingApiContractImmutabilityGuardTests
     [
         "UpsertReportTemplateRequest", "ReportTemplateFieldRequest", "ReportTemplateDto", "ReportTemplateFieldDto",
         "CreateReportRequestRequest", "UpsertRecurringReportAssignmentRequest", "ReportRequestDto",
-        "SubmitReportRequestRequest", "EditReportAnswersRequest", "UpdateReportSubmissionFeedbackRequest", "ReportSubmissionDto",
+        "SubmitReportRequestRequest", "EditReportAnswersRequest", "UpdateReportSubmissionFeedbackRequest", "ReportSubmissionDto", "ReportSubmissionArchiveDto",
         "RecurringReportAssignmentDto", "NextRecurringReportRequestDto", "SetNextRecurringReportOverrideRequest",
         "ProposeNextRecurringReportScheduleRequest", "RecurringReportScheduleProposalDto",
         "InitiatePhotoUploadRequest", "InitiatePhotoUploadResponse",
@@ -250,6 +250,7 @@ public sealed class ReportingApiContractImmutabilityGuardTests
         new("TrainerReportingController", "DeleteTemplate", "POST", "api/trainer/report-templates/{templateId}/delete"),
         new("TrainerReportingController", "CreateReportRequest", "POST", "api/trainer/trainees/{traineeId}/report-requests"),
         new("TrainerReportingController", "GetTraineeSubmissions", "GET", "api/trainer/trainees/{traineeId}/report-submissions"),
+        new("TrainerReportingController", "GetSourceTrainerArchive", "GET", "api/trainer/report-submissions"),
         new("TrainerReportingController", "UpdateSubmissionFeedback", "POST", "api/trainer/trainees/{traineeId}/report-submissions/{submissionId}/feedback"),
         new("TrainerReportingController", "CreateRecurringReportAssignment", "POST", "api/trainer/trainees/{traineeId}/recurring-report-assignments"),
         new("TrainerReportingController", "RequestRecurringReportNow", "POST", "api/trainer/trainees/{traineeId}/recurring-report-assignments/{id}/request-now"),
@@ -292,6 +293,8 @@ public sealed class ReportingApiContractImmutabilityGuardTests
         new("TrainerReportingController", "CreateReportRequest", "StatusCodes.Status201Created", "ReportRequestDto"),
         new("TrainerReportingController", "CreateReportRequest", "StatusCodes.Status400BadRequest", "ResponseMessageDto"),
         new("TrainerReportingController", "GetTraineeSubmissions", "StatusCodes.Status200OK", "List<ReportSubmissionDto>"),
+        new("TrainerReportingController", "GetSourceTrainerArchive", "StatusCodes.Status200OK", "ReportSubmissionArchiveDto"),
+        new("TrainerReportingController", "GetSourceTrainerArchive", "StatusCodes.Status400BadRequest", "ResponseMessageDto"),
         new("TrainerReportingController", "GetTraineeSubmissions", "StatusCodes.Status400BadRequest", "ResponseMessageDto"),
         new("TrainerReportingController", "UpdateSubmissionFeedback", "StatusCodes.Status200OK", "ReportSubmissionDto"),
         new("TrainerReportingController", "UpdateSubmissionFeedback", "StatusCodes.Status400BadRequest", "ResponseMessageDto"),
@@ -347,6 +350,7 @@ public sealed class ReportingApiContractImmutabilityGuardTests
 
     private static readonly DtoPropertyContract[] ExpectedDtoProperties =
     [
+        new("ReportSubmissionArchiveDto", "Items", "items"), new("ReportSubmissionArchiveDto", "NextPage", "nextPage"),
         new("UpsertReportTemplateRequest", "Name", "name"), new("UpsertReportTemplateRequest", "Description", "description"), new("UpsertReportTemplateRequest", "Fields", "fields"),
         new("ReportTemplateFieldRequest", "Key", "key"), new("ReportTemplateFieldRequest", "Label", "label"), new("ReportTemplateFieldRequest", "Type", "type"), new("ReportTemplateFieldRequest", "IsRequired", "isRequired"), new("ReportTemplateFieldRequest", "Order", "order"), new("ReportTemplateFieldRequest", "ModuleConfig", "moduleConfig"),
         new("ReportTemplateDto", "Id", "_id"), new("ReportTemplateDto", "TrainerId", "trainerId"), new("ReportTemplateDto", "Name", "name"), new("ReportTemplateDto", "Description", "description"), new("ReportTemplateDto", "CreatedAt", "createdAt"), new("ReportTemplateDto", "Fields", "fields"),
