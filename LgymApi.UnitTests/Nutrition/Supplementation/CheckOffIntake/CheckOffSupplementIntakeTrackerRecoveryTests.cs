@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Models;
 using LgymApi.Application.Repositories;
@@ -44,13 +43,13 @@ public sealed class CheckOffSupplementIntakeTrackerRecoveryTests
 
         var result = await useCase.ExecuteAsync(new CheckOffSupplementIntakeCommand(traineeId, item.Id, Monday, null));
 
-        result.IsSuccess.Should().BeTrue();
-        losingContext.ChangeTracker.Entries<SupplementIntakeLog>().Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(losingContext.ChangeTracker.Entries<SupplementIntakeLog>(), Is.Empty);
         await unitOfWork.SaveChangesAsync();
 
         await using var verificationContext = new AppDbContext(options);
-        (await verificationContext.SupplementIntakeLogs.AsNoTracking().ToListAsync()).Should().ContainSingle();
-        unitOfWork.SaveCalls.Should().Be(2);
+        Assert.That((await verificationContext.SupplementIntakeLogs.AsNoTracking().ToListAsync()), Has.Exactly(1).Items);
+        Assert.That(unitOfWork.SaveCalls, Is.EqualTo(2));
     }
 
     private static SupplementPlan CreatePlan(Id<UserEntity> traineeId)

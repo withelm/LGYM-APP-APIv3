@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
@@ -39,8 +38,8 @@ public sealed class TrainerTraineeNotesControllerTests
 
         var result = await controller.GetNotes("bad-id");
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedId.IsEmpty.Should().BeTrue();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedId.IsEmpty, Is.True);
     }
 
     [Test]
@@ -61,11 +60,11 @@ public sealed class TrainerTraineeNotesControllerTests
             IsPinned = true
         });
 
-        result.Should().BeOfType<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status201Created);
-        captured.Should().NotBeNull();
-        captured.Should().NotBeNull();
-        captured!.Data.Content.Should().Be("Warm up first");
+        Assert.That(result, Is.TypeOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status201Created));
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.Data.Content, Is.EqualTo("Warm up first"));
     }
 
     [Test]
@@ -73,8 +72,8 @@ public sealed class TrainerTraineeNotesControllerTests
     {
         var controller = CreateController();
 
-        (await controller.UpdateNote("bad-user", Id<TraineeNote>.New().ToString(), new UpsertTraineeNoteRequest())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.UpdateNote(Id<User>.New().ToString(), "bad-note", new UpsertTraineeNoteRequest())).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.UpdateNote("bad-user", Id<TraineeNote>.New().ToString(), new UpsertTraineeNoteRequest())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.UpdateNote(Id<User>.New().ToString(), "bad-note", new UpsertTraineeNoteRequest())), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -89,7 +88,7 @@ public sealed class TrainerTraineeNotesControllerTests
 
         var result = await controller.UpdateNote(traineeId.ToString(), noteId.ToString(), new UpsertTraineeNoteRequest { Content = "Updated" });
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -97,8 +96,8 @@ public sealed class TrainerTraineeNotesControllerTests
     {
         var controller = CreateController();
 
-        (await controller.DeleteNote("bad-user", Id<TraineeNote>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.DeleteNote(Id<User>.New().ToString(), "bad-note")).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.DeleteNote("bad-user", Id<TraineeNote>.New().ToString())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.DeleteNote(Id<User>.New().ToString(), "bad-note")), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -113,7 +112,7 @@ public sealed class TrainerTraineeNotesControllerTests
 
         var result = await controller.DeleteNote(traineeId.ToString(), noteId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -135,8 +134,8 @@ public sealed class TrainerTraineeNotesControllerTests
 
         var result = await controller.GetNoteHistory(traineeId.ToString(), noteId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<TraineeNoteHistoryDto>>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(((OkObjectResult)result).Value, Is.InstanceOf<IEnumerable<TraineeNoteHistoryDto>>());
     }
 
     [Test]
@@ -144,8 +143,8 @@ public sealed class TrainerTraineeNotesControllerTests
     {
         var controller = CreateController();
 
-        (await controller.GetNoteHistory("bad-user", Id<TraineeNote>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.GetNoteHistory(Id<User>.New().ToString(), "bad-note")).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.GetNoteHistory("bad-user", Id<TraineeNote>.New().ToString())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.GetNoteHistory(Id<User>.New().ToString(), "bad-note")), Is.InstanceOf<ObjectResult>());
     }
 
     private static TrainerTraineeNotesController CreateController(

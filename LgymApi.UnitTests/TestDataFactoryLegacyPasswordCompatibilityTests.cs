@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -25,13 +24,13 @@ public sealed class TestDataFactoryLegacyPasswordCompatibilityTests
 
         using (Assert.EnterMultipleScope())
         {
-            user.LegacyIterations.Should().Be(25000);
-            user.LegacyKeyLength.Should().Be(512);
-            user.LegacyDigest.Should().Be("sha256");
-            user.LegacyHash.Should().MatchRegex("^[0-9a-f]+$");
-            user.LegacySalt.Should().MatchRegex("^[0-9a-f]+$");
-            verifier.Verify(password, user.LegacyHash!, user.LegacySalt!, user.LegacyIterations, user.LegacyKeyLength, user.LegacyDigest).Should().BeTrue();
-            verifier.Verify("wrong-password", user.LegacyHash!, user.LegacySalt!, user.LegacyIterations, user.LegacyKeyLength, user.LegacyDigest).Should().BeFalse();
+            Assert.That(user.LegacyIterations, Is.EqualTo(25000));
+            Assert.That(user.LegacyKeyLength, Is.EqualTo(512));
+            Assert.That(user.LegacyDigest, Is.EqualTo("sha256"));
+            Assert.That(user.LegacyHash, Does.Match("^[0-9a-f]+$"));
+            Assert.That(user.LegacySalt, Does.Match("^[0-9a-f]+$"));
+            Assert.That(verifier.Verify(password, user.LegacyHash!, user.LegacySalt!, user.LegacyIterations, user.LegacyKeyLength, user.LegacyDigest), Is.True);
+            Assert.That(verifier.Verify("wrong-password", user.LegacyHash!, user.LegacySalt!, user.LegacyIterations, user.LegacyKeyLength, user.LegacyDigest), Is.False);
         }
     }
 }

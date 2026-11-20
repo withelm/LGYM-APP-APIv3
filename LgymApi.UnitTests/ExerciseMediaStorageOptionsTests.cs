@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Options;
@@ -44,7 +43,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         var options = Options();
         options.Bucket = bucket;
         Action validate = () => options.Validate();
-        validate.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { validate(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [TestCase("not an absolute URI")]
@@ -61,7 +60,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         var options = Options();
         options.Endpoint = endpoint;
         Action validate = () => options.Validate();
-        validate.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { validate(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [TestCase("not an absolute URI")]
@@ -83,7 +82,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         var options = Options();
         options.PublicBaseUrl = origin;
         Action validate = () => options.Validate();
-        validate.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { validate(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [TestCase("tenant-one-assets")]
@@ -107,8 +106,8 @@ public sealed class ExerciseMediaStorageOptionsTests
         options.AllowDevelopmentR2Dev = optIn;
         options.PublicBaseUrl = "https://pub-example.r2.dev";
         Action validate = () => options.Validate(environmentName);
-        if (accepted) validate.Should().NotThrow();
-        else validate.Should().Throw<InvalidOperationException>();
+        if (accepted) Assert.That(() => { validate(); }, Throws.Nothing);
+        else Assert.That(() => { validate(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -122,9 +121,9 @@ public sealed class ExerciseMediaStorageOptionsTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         const string key = "exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/image.png";
-        ((ExerciseMediaStorage)scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>()).GetPublicUrl(key).Should().Be("https://pub-example.r2.dev/" + key);
+        Assert.That(((ExerciseMediaStorage)scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>()).GetPublicUrl(key), Is.EqualTo("https://pub-example.r2.dev/" + key));
         Action production = () => new ServiceCollection().AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false);
-        production.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { production(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [TestCase("AccessKeyId")]
@@ -135,7 +134,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         if (setting == "AccessKeyId") options.AccessKeyId = " ";
         else options.SecretAccessKey = " ";
         Action validate = () => options.Validate();
-        validate.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { validate(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -144,10 +143,10 @@ public sealed class ExerciseMediaStorageOptionsTests
         var options = new ExerciseMediaStorageOptions();
         options.Validate();
         using var storage = new ExerciseMediaStorage(options);
-        storage.IsConfigured.Should().BeFalse();
+        Assert.That(storage.IsConfigured, Is.False);
         const string key = "exercises/00000000-0000-0000-0000-000000000001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/animation.gif";
         Action url = () => storage.GetPublicUrl(key);
-        url.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { url(); }, Throws.InstanceOf<InvalidOperationException>());
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await storage.PublishAsync(key, [1], "image/gif", default));
     }
 
@@ -159,7 +158,7 @@ public sealed class ExerciseMediaStorageOptionsTests
         if (sharedAuthority == "bucket") values["PhotoStorage:BucketName"] = values["ExerciseMediaStorage:Bucket"];
         else values["PhotoStorage:AccessKeyId"] = values["ExerciseMediaStorage:AccessKeyId"];
         Action register = () => new ServiceCollection().AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
-        register.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { register(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -174,8 +173,8 @@ public sealed class ExerciseMediaStorageOptionsTests
         services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(values), enableSensitiveLogging: false, isTesting: true);
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured.Should().BeFalse();
-        scope.ServiceProvider.GetRequiredService<LgymApi.Application.WorkoutProgress.Persistence.IWorkoutExercisePersistence>().Should().NotBeNull();
+        Assert.That(scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured, Is.False);
+        Assert.That(scope.ServiceProvider.GetRequiredService<LgymApi.Application.WorkoutProgress.Persistence.IWorkoutExercisePersistence>(), Is.Not.Null);
     }
 
     [Test]
@@ -185,8 +184,8 @@ public sealed class ExerciseMediaStorageOptionsTests
         services.AddInfrastructure(TestConfigurationBuilder.BuildConfiguration(DedicatedConfiguration()), enableSensitiveLogging: false, isTesting: true);
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured.Should().BeTrue();
-        provider.GetRequiredService<ExerciseMediaStorageOptions>().Bucket.Should().Be("tenant-one-assets");
+        Assert.That(scope.ServiceProvider.GetRequiredService<IExerciseMediaStorage>().IsConfigured, Is.True);
+        Assert.That(provider.GetRequiredService<ExerciseMediaStorageOptions>().Bucket, Is.EqualTo("tenant-one-assets"));
     }
 
     private static Dictionary<string, string?> DedicatedConfiguration()

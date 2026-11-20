@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -20,16 +19,17 @@ public sealed partial class RecurringReportAssignmentServiceTests
     [Test]
     public void ConstructorUsesOutboxWriterAndNotDispatcher()
     {
-        var parameterTypes = typeof(RecurringReportAssignmentService)
-            .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .Should().ContainSingle().Subject
+        var assertedValue64 = (typeof(RecurringReportAssignmentService)
+                    .GetConstructors(BindingFlags.Public | BindingFlags.Instance)).ToArray();
+        Assert.That(assertedValue64, Has.Exactly(1).Items);
+        var parameterTypes = assertedValue64.Single()
             .GetParameters()
             .Select(parameter => parameter.ParameterType)
             .ToArray();
 
-        parameterTypes.Should().Contain(typeof(ICommandOutboxWriter));
-        parameterTypes.Should().NotContain(typeof(ICommandDispatcher));
-        parameterTypes.Should().Contain(typeof(ILogger<RecurringReportAssignmentService>));
+        Assert.That(parameterTypes, Does.Contain(typeof(ICommandOutboxWriter)));
+        Assert.That(parameterTypes, Does.Not.Contain(typeof(ICommandDispatcher)));
+        Assert.That(parameterTypes, Does.Contain(typeof(ILogger<RecurringReportAssignmentService>)));
     }
 
     [Test]
@@ -127,7 +127,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
             Arg.Is<RecurringReportReminderInAppNotificationCommand>(command => command.IsUpcomingRequestReminder),
             Arg.Any<CancellationToken>());
         await harness.TemplatePersistence.DidNotReceiveWithAnyArgs().AddPhotoTypeAsync(default!, default);
-        harness.Transaction.CommitCalls.Should().Be(scenario == "active" ? 1 : 0);
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(scenario == "active" ? 1 : 0));
     }
 
     [Test]
@@ -164,10 +164,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Logger.Entries.Should().ContainSingle(entry => entry.Outcome == "Failed");
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That((harness.Logger.Entries).Where(entry => entry.Outcome == "Failed"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -177,12 +177,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
-        harness.Logger.Entries.Should().ContainSingle(entry => entry.Reason == "CurrentRequestCancelled");
+        Assert.That((harness.Logger.Entries).Where(entry => entry.Reason == "CurrentRequestCancelled"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -198,10 +198,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync(cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.RollbackTokens.Should().ContainSingle().Which.CanBeCanceled.Should().BeFalse();
-        harness.Logger.Entries.Should().ContainSingle(entry => entry.Reason == "CancellationRequested");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        var assertedValue65 = (harness.Transaction.RollbackTokens).ToArray();
+        Assert.That(assertedValue65, Has.Exactly(1).Items);
+        Assert.That(assertedValue65.Single().CanBeCanceled, Is.False);
+        Assert.That((harness.Logger.Entries).Where(entry => entry.Reason == "CancellationRequested"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -220,10 +222,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync(cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.RollbackTokens.Should().ContainSingle().Which.CanBeCanceled.Should().BeFalse();
-        harness.Logger.Entries.Should().ContainSingle(entry => entry.Reason == "CancellationRequested");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        var assertedValue66 = (harness.Transaction.RollbackTokens).ToArray();
+        Assert.That(assertedValue66, Has.Exactly(1).Items);
+        Assert.That(assertedValue66.Single().CanBeCanceled, Is.False);
+        Assert.That((harness.Logger.Entries).Where(entry => entry.Reason == "CancellationRequested"), Has.Exactly(1).Items);
         await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -243,7 +247,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await harness.AssignmentPersistence.DidNotReceive().FindByIdForUpdateAsync(
             second.Id,
             Arg.Any<CancellationToken>());
@@ -257,9 +261,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.Transaction.CommitCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(0);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -272,11 +276,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await harness.AssignmentPersistence.DidNotReceive().FindByIdForUpdateAsync(
             second.Id,
             Arg.Any<CancellationToken>());
-        harness.Logger.Entries.Should().ContainSingle(entry => entry.Reason == "DisposeFailed");
+        Assert.That((harness.Logger.Entries).Where(entry => entry.Reason == "DisposeFailed"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -290,9 +294,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.UnitOfWork.BeginCalls.Should().Be(0);
-        harness.Logger.Entries.Should().BeEmpty();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(0));
+        Assert.That(harness.Logger.Entries, Is.Empty);
     }
 
     [Test]
@@ -305,14 +309,14 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.UnitOfWork.BeginCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(1));
         await harness.AssignmentPersistence.DidNotReceive().FindByIdForUpdateAsync(
             assignment.Id,
             Arg.Any<CancellationToken>());
-        harness.Logger.Entries.Should().ContainSingle(entry =>
-            entry.Outcome == "Aborted" && entry.Reason == "BeginTransactionFailed");
-        harness.Logger.AllText.Should().NotContain("begin-secret");
+        Assert.That((harness.Logger.Entries).Where(entry =>
+            entry.Outcome == "Aborted" && entry.Reason == "BeginTransactionFailed"), Has.Exactly(1).Items);
+        Assert.That(harness.Logger.AllText, Does.Not.Contain("begin-secret"));
     }
 
     [Test]
@@ -322,11 +326,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        var entry = harness.Logger.Entries.Should().ContainSingle(log => log.Outcome == "Created").Subject;
-        entry.CommitCompleted.Should().BeTrue();
-        entry.Exception.Should().BeNull();
-        entry.Properties.Keys.Should().BeEquivalentTo(
-            "AssignmentId", "RequestId", "EnvelopeId", "Outcome", "Reason", "{OriginalFormat}");
+        var assertedValue67 = (harness.Logger.Entries).Where(log => log.Outcome == "Created").ToArray();
+        Assert.That(assertedValue67, Has.Exactly(1).Items);
+        var entry = assertedValue67.Single();
+        Assert.That(entry.CommitCompleted, Is.True);
+        Assert.That(entry.Exception, Is.Null);
+        Assert.That(entry.Properties.Keys, Is.EquivalentTo(new[] { "AssignmentId", "RequestId", "EnvelopeId", "Outcome", "Reason", "{OriginalFormat}" }));
     }
 
     [Test]
@@ -336,9 +341,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        var entry = harness.Logger.Entries.Should().ContainSingle(log => log.Outcome == "Deactivated").Subject;
-        entry.CommitCompleted.Should().BeTrue();
-        entry.Reason.Should().Be("TemplateDeleted");
+        var assertedValue68 = (harness.Logger.Entries).Where(log => log.Outcome == "Deactivated").ToArray();
+        Assert.That(assertedValue68, Has.Exactly(1).Items);
+        var entry = assertedValue68.Single();
+        Assert.That(entry.CommitCompleted, Is.True);
+        Assert.That(entry.Reason, Is.EqualTo("TemplateDeleted"));
         await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -355,10 +362,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        var entry = harness.Logger.Entries.Should().ContainSingle(log => log.Outcome == "Failed").Subject;
-        entry.RollbackCompleted.Should().BeTrue();
-        entry.Reason.Should().Be("EnvelopeMissing");
-        entry.Exception.Should().BeNull();
+        var assertedValue69 = (harness.Logger.Entries).Where(log => log.Outcome == "Failed").ToArray();
+        Assert.That(assertedValue69, Has.Exactly(1).Items);
+        var entry = assertedValue69.Single();
+        Assert.That(entry.RollbackCompleted, Is.True);
+        Assert.That(entry.Reason, Is.EqualTo("EnvelopeMissing"));
+        Assert.That(entry.Exception, Is.Null);
     }
 
     [Test]
@@ -369,12 +378,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.Logger.Entries.Should().ContainSingle(entry =>
-            entry.Outcome == "Aborted" && entry.Reason == "CommitFailed");
-        harness.Logger.Entries.Should().NotContain(entry =>
-            entry.Outcome == "Created" || entry.Outcome == "Failed");
-        harness.Logger.AllText.Should().NotContain("commit-user-content");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That((harness.Logger.Entries).Where(entry =>
+            entry.Outcome == "Aborted" && entry.Reason == "CommitFailed"), Has.Exactly(1).Items);
+        Assert.That((harness.Logger.Entries).Any(entry =>
+            entry.Outcome == "Created" || entry.Outcome == "Failed"), Is.False);
+        Assert.That(harness.Logger.AllText, Does.Not.Contain("commit-user-content"));
     }
 
     [Test]
@@ -389,11 +398,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var action = () => harness.Service.ProcessDueAssignmentsAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.Logger.Entries.Should().ContainSingle(entry =>
-            entry.Outcome == "Aborted" && entry.Reason == "RollbackFailed");
-        harness.Logger.Entries.Should().NotContain(entry => entry.Outcome == "Failed");
-        harness.Logger.AllText.Should().NotContain("rollback-user-content");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That((harness.Logger.Entries).Where(entry =>
+            entry.Outcome == "Aborted" && entry.Reason == "RollbackFailed"), Has.Exactly(1).Items);
+        Assert.That((harness.Logger.Entries).Any(entry => entry.Outcome == "Failed"), Is.False);
+        Assert.That(harness.Logger.AllText, Does.Not.Contain("rollback-user-content"));
     }
 
     [Test]
@@ -405,18 +414,20 @@ public sealed partial class RecurringReportAssignmentServiceTests
             templateName: "private-template-name");
         var harness = CreateProcessingHarness(assignment);
 
-        assignment.NextEligibleAt.Should().BeBefore(DateTimeOffset.UtcNow);
+        Assert.That(assignment.NextEligibleAt, Is.LessThan(DateTimeOffset.UtcNow));
 
         await harness.Service.ProcessDueAssignmentsAsync();
 
-        var entry = harness.Logger.Entries.Should().ContainSingle().Subject;
-        entry.Level.Should().Be(LogLevel.Information);
-        entry.Outcome.Should().Be("Skipped");
-        entry.Reason.Should().Be("CurrentRequestPending");
-        entry.Exception.Should().BeNull();
-        entry.Properties.Keys.Should().BeEquivalentTo("AssignmentId", "Outcome", "Reason", "{OriginalFormat}");
-        harness.Logger.AllText.Should().NotContain("private-report-note");
-        harness.Logger.AllText.Should().NotContain("private-template-name");
+        var assertedValue70 = (harness.Logger.Entries).ToArray();
+        Assert.That(assertedValue70, Has.Exactly(1).Items);
+        var entry = assertedValue70.Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Information));
+        Assert.That(entry.Outcome, Is.EqualTo("Skipped"));
+        Assert.That(entry.Reason, Is.EqualTo("CurrentRequestPending"));
+        Assert.That(entry.Exception, Is.Null);
+        Assert.That(entry.Properties.Keys, Is.EquivalentTo(new[] { "AssignmentId", "Outcome", "Reason", "{OriginalFormat}" }));
+        Assert.That(harness.Logger.AllText, Does.Not.Contain("private-report-note"));
+        Assert.That(harness.Logger.AllText, Does.Not.Contain("private-template-name"));
     }
 
     private static ProcessingHarness CreateProcessingHarness(

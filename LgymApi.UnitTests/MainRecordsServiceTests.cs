@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -30,8 +29,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.AddNewRecordAsync(input);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     [Test]
@@ -41,8 +40,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetMainRecordsHistoryAsync(Id<AccountReference>.Empty);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     [Test]
@@ -52,8 +51,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetLastMainRecordsAsync(Id<AccountReference>.Empty, []);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     [Test]
@@ -63,8 +62,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.DeleteMainRecordAsync(Id<AccountReference>.Empty, Id<MainRecord>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     [Test]
@@ -75,8 +74,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.UpdateMainRecordAsync(input);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     [Test]
@@ -86,8 +85,8 @@ public sealed class MainRecordsServiceTests
 
         var result = await service.GetRecordOrPossibleRecordInExerciseAsync(Id<AccountReference>.Empty, Id<Exercise>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidMainRecordsError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidMainRecordsError>());
     }
 
     private static MainRecordsService CreateService()

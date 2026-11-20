@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -33,7 +32,7 @@ public sealed class RecurringReportAssignmentSchemaTests
 
         var persistAction = async () => await setupContext.SaveChangesAsync();
 
-        await persistAction.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await persistAction(); }, Throws.Nothing);
 
         await using var verificationContext = CreateDbContext(sqliteConnection);
         var storedRequests = await verificationContext.ReportRequests
@@ -42,8 +41,8 @@ public sealed class RecurringReportAssignmentSchemaTests
             .OrderBy(request => request.Note)
             .ToListAsync();
 
-        storedRequests.Should().HaveCount(2);
-        storedRequests.Select(request => request.Note).Should().Equal("first", "second");
+        Assert.That(storedRequests, Has.Exactly(2).Items);
+        Assert.That(storedRequests.Select(request => request.Note), Is.EqualTo(new[] { "first", "second" }));
     }
 
     [Test]
@@ -60,7 +59,7 @@ public sealed class RecurringReportAssignmentSchemaTests
             .GetIndexes()
             .Single(index => index.Properties.Select(property => property.Name).SequenceEqual([nameof(ReportRequest.RecurringReportAssignmentId)]));
 
-        recurringAssignmentIndex.IsUnique.Should().BeFalse();
+        Assert.That(recurringAssignmentIndex.IsUnique, Is.False);
     }
 
     private static AppDbContext CreateDbContext(SqliteConnection sqliteConnection)

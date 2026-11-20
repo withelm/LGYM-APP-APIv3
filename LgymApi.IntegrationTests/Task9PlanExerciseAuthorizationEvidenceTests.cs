@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.IntegrationTests.Authorization;
 
 namespace LgymApi.IntegrationTests;
@@ -104,7 +103,7 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         foreach (var send in requests)
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
     }
 
@@ -134,7 +133,7 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         foreach (var send in requests)
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
     }
 
@@ -155,7 +154,7 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         foreach (var send in responses)
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         }
     }
 
@@ -175,14 +174,14 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(currentAdmin.Id);
         using (var demotion = await Client.PostAsJsonAsync($"/api/roles/users/{demotedAdmin.Id}/roles", new { roles = new[] { "User" } }))
         {
-            demotion.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(demotion.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         Client.DefaultRequestHeaders.Authorization = preIssuedToken;
         foreach (var send in CreateGlobalExerciseRouteRequests(demotedAdmin.Id.ToString(), globalExercise.ToString()))
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         }
     }
 
@@ -203,21 +202,21 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(ordinaryUser.Id);
         using (var ordinaryUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = globalExercise.ToString(), name = "Denied update", bodyPart = "Back" }))
         {
-            ordinaryUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(ordinaryUpdate.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
         using (var ordinaryDelete = await Client.PostAsJsonAsync($"/api/exercise/{ordinaryUser.Id}/deleteExercise", new { id = globalExercise.ToString() }))
         {
-            ordinaryDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(ordinaryDelete.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         SetAuthorizationHeader(manager.Id);
         using (var managerUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = globalExercise.ToString(), name = "Manager update", bodyPart = "Back" }))
         {
-            managerUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(managerUpdate.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         using (var managerDelete = await Client.PostAsJsonAsync($"/api/exercise/{manager.Id}/deleteExercise", new { id = globalExercise.ToString() }))
         {
-            managerDelete.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(managerDelete.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         var retainedGlobalExercise = await CreateGlobalExerciseViaEndpointAsync(manager.Id, "Task9 Retained Global");
@@ -226,16 +225,16 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(currentAdmin.Id);
         using (var demotion = await Client.PostAsJsonAsync($"/api/roles/users/{manager.Id}/roles", new { roles = new[] { "User" } }))
         {
-            demotion.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(demotion.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         Client.DefaultRequestHeaders.Authorization = preIssuedToken;
         using (var staleUpdate = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", new { _id = retainedGlobalExercise.ToString(), name = "Stale update", bodyPart = "Back" }))
         {
-            staleUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(staleUpdate.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
         using var staleDelete = await Client.PostAsJsonAsync($"/api/exercise/{manager.Id}/deleteExercise", new { id = retainedGlobalExercise.ToString() });
-        staleDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(staleDelete.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     private IEnumerable<Func<Task<HttpResponseMessage>>> CreateGlobalExerciseRouteRequests(string accountId, string exerciseId)
@@ -259,7 +258,7 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(ordinaryUser.Id);
         using (var globalResponse = await Client.GetAsync($"/api/exercise/{globalExercise}/getExercise"))
         {
-            globalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(globalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         var owner = await SeedUserAsync("task9-detail-owner", "task9-detail-owner@example.com");
@@ -268,12 +267,12 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(manager.Id);
         using (var managerGlobalResponse = await Client.GetAsync($"/api/exercise/{globalExercise}/getExercise"))
         {
-            managerGlobalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(managerGlobalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using (var managerForeignCustomResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise"))
         {
-            managerForeignCustomResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(managerForeignCustomResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         var preIssuedToken = Client.DefaultRequestHeaders.Authorization;
@@ -281,17 +280,17 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         SetAuthorizationHeader(currentAdmin.Id);
         using (var demotion = await Client.PostAsJsonAsync($"/api/roles/users/{manager.Id}/roles", new { roles = new[] { "User" } }))
         {
-            demotion.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(demotion.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         Client.DefaultRequestHeaders.Authorization = preIssuedToken;
         using (var demotedGlobalResponse = await Client.GetAsync($"/api/exercise/{globalExercise}/getExercise"))
         {
-            demotedGlobalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(demotedGlobalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using var demotedForeignCustomResponse = await Client.GetAsync($"/api/exercise/{customExercise}/getExercise");
-        demotedForeignCustomResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(demotedForeignCustomResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -304,6 +303,6 @@ public sealed class Task9PlanExerciseAuthorizationEvidenceTests : IntegrationTes
         var id = "00000000-0000-0000-0000-000000000001";
 
         using var response = await Client.PostAsJsonAsync($"/api/exercise/{victim.Id}/getLastExerciseScores", new { exerciseId = id, exerciseName = "Denied", series = 1, gymId = id });
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -37,13 +36,14 @@ public sealed class PushRetentionRepositoryTests
             var repository = new PushNotificationMessageRepository(database);
             var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2, []);
 
-            candidates.Select(message => message.Id).Should().Equal(softDeletedId, firstId);
+            Assert.That(candidates.Select(message => message.Id), Is.EqualTo(new[] { softDeletedId, firstId }));
             repository.RemoveRange(candidates);
-            database.Entry(candidates[0]).State.Should().Be(EntityState.Deleted);
+            Assert.That(database.Entry(candidates[0]).State, Is.EqualTo(EntityState.Deleted));
 
             await using var uncommittedDatabase = CreateDatabase(databaseName);
-            (await uncommittedDatabase.PushNotificationMessages.Select(message => message.Id).ToListAsync())
-                .Should().Contain(firstId).And.Contain(secondId);
+            var assertedChain46 = (await uncommittedDatabase.PushNotificationMessages.Select(message => message.Id).ToListAsync());
+            Assert.That(assertedChain46, Does.Contain(firstId));
+            Assert.That(assertedChain46, Does.Contain(secondId));
 
             await database.SaveChangesAsync();
         }
@@ -53,8 +53,10 @@ public sealed class PushRetentionRepositoryTests
             .OrderBy(message => message.CreatedAt)
             .Select(message => message.Id)
             .ToListAsync();
-        remainingIds.Should().Equal(secondId, thirdId, atCutoffId, recentId);
-        remainingIds.Should().NotContain(softDeletedId).And.NotContain(firstId);
+        Assert.That(remainingIds, Is.EqualTo(new[] { secondId, thirdId, atCutoffId, recentId }));
+        var assertedChain47 = remainingIds;
+        Assert.That(assertedChain47, Does.Not.Contain(softDeletedId));
+        Assert.That(assertedChain47, Does.Not.Contain(firstId));
     }
 
     [Test]
@@ -82,22 +84,27 @@ public sealed class PushRetentionRepositoryTests
             var repository = new PushInstallationRepository(database);
             var candidates = await repository.GetRetentionCandidatesDisabledBeforeAsync(cutoff, 2, []);
 
-            candidates.Select(installation => installation.Id).Should().Equal(softDeletedId, firstId);
+            Assert.That(candidates.Select(installation => installation.Id), Is.EqualTo(new[] { softDeletedId, firstId }));
             repository.RemoveRange(candidates);
-            database.Entry(candidates[0]).State.Should().Be(EntityState.Deleted);
+            Assert.That(database.Entry(candidates[0]).State, Is.EqualTo(EntityState.Deleted));
 
             await using var uncommittedDatabase = CreateDatabase(databaseName);
-            (await uncommittedDatabase.PushInstallations.Select(installation => installation.Id).ToListAsync())
-                .Should().Contain(firstId).And.Contain(secondId);
+            var assertedChain48 = (await uncommittedDatabase.PushInstallations.Select(installation => installation.Id).ToListAsync());
+            Assert.That(assertedChain48, Does.Contain(firstId));
+            Assert.That(assertedChain48, Does.Contain(secondId));
 
             await database.SaveChangesAsync();
         }
 
         await using var freshDatabase = CreateDatabase(databaseName);
         var remaining = await freshDatabase.PushInstallations.ToListAsync();
-        remaining.Select(installation => installation.Id).Should().Contain(secondId).And.Contain(thirdId);
-        remaining.Select(installation => installation.Id).Should().NotContain(softDeletedId).And.NotContain(firstId);
-        remaining.Count(installation => installation.DisabledAt == null).Should().Be(2);
+        var assertedChain49 = remaining.Select(installation => installation.Id);
+        Assert.That(assertedChain49, Does.Contain(secondId));
+        Assert.That(assertedChain49, Does.Contain(thirdId));
+        var assertedChain50 = remaining.Select(installation => installation.Id);
+        Assert.That(assertedChain50, Does.Not.Contain(softDeletedId));
+        Assert.That(assertedChain50, Does.Not.Contain(firstId));
+        Assert.That(remaining.Count(installation => installation.DisabledAt == null), Is.EqualTo(2));
     }
 
     private static AppDbContext CreateDatabase(string databaseName)

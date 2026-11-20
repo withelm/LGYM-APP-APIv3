@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.IntegrationTests.Authorization;
 using LgymApi.Domain.Enums;
@@ -94,12 +93,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         Action missingField = () => ParseMatrixRow("| GET | /api/example | Example.Action |");
 
-        missingField.Should().Throw<AssertionException>()
-            .WithMessage("*must define every contract column*");
+        Assert.That(() => { missingField(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*must define every contract column*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
         var parsed = ParseMatrixRow("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |");
 
-        parsed.ToDocumentRow().Should().Be("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |");
+        Assert.That(parsed.ToDocumentRow(), Is.EqualTo("| GET | /api/example | Example.Action | anonymous | none | 200 | application/json | msg | UUID string | none | no | no | EndpointContractMatrixTests.LiveControllerEndpointInventory_MatchesTheBaselineMatrix | public | none | EndpointContractMatrixTests.SemanticAuthorizationParser_AcceptsCompleteClassAndFacetProfiles | identity | read | public | non-sensitive-current;no-replay-contract | AUTH-A08 |"));
     }
 
     [TestCaseSource(nameof(CompleteSemanticAuthorizationRows))]
@@ -131,7 +129,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         Action parse = () => AssertAuthorizationEvidenceResolves(ParseMatrixRow(row));
 
-        parse.Should().NotThrow("a complete semantic authorization profile must preserve all existing columns and add access class, access facets, and executable authorization evidence");
+        Assert.That(() => { (parse).Invoke(); }, Throws.Nothing, "a complete semantic authorization profile must preserve all existing columns and add access class, access facets, and executable authorization evidence");
     }
 
     [TestCaseSource(nameof(SemanticAuthorizationSchemaFailureRows))]
@@ -139,7 +137,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         Action parse = () => ParseMatrixRow(row);
 
-        parse.Should().Throw<AssertionException>().WithMessage(expectedMessage);
+        Assert.That(() => { parse(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCaseSource(nameof(SemanticAuthorizationGuardFailureRows))]
@@ -155,30 +153,29 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         Action parse = () => AssertAuthorizationEvidenceResolves(ParseMatrixRow(row));
 
-        parse.Should().Throw<AssertionException>().WithMessage(expectedMessage);
+        Assert.That(() => { parse(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
     public void LiveControllerEndpointInventory_MatchesTheBaselineMatrix()
     {
         var rows = GetLiveRows();
-        rows.Should().NotBeEmpty();
-        rows.Select(row => row.Row.RouteKey).Should().OnlyHaveUniqueItems("each current route and method needs exactly one matrix row");
-        rows.Should().OnlyContain(row => row.ApiDescriptionCount == 1, "each endpoint must have exactly one live API description");
-        rows.Select(row => row.Row).Should().OnlyContain(row => row.HasContractMetadata, "every row needs concrete contract metadata and one executable evidence owner");
+        Assert.That(rows, Is.Not.Empty);
+        Assert.That(rows.Select(row => row.Row.RouteKey), Is.Unique, "each current route and method needs exactly one matrix row");
+        Assert.That((rows).All(row => row.ApiDescriptionCount == 1), Is.True, "each endpoint must have exactly one live API description");
+        Assert.That((rows.Select(row => row.Row)).All(row => row.HasContractMetadata), Is.True, "every row needs concrete contract metadata and one executable evidence owner");
 
         var inventory = string.Join('\n', rows.Select(row => row.Row.EndpointKey));
         var inventoryHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(inventory))).ToLowerInvariant();
         var matrix = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md"));
         var matrixRows = ReadMatrixRows(matrix);
 
-        matrix.Should().Contain("Todo 1 baseline SHA: `b22198b1509bf0e68f9e85dcd7b1375c768e2713`");
-        matrix.Should().Contain($"Route inventory SHA-256: `{inventoryHash}`");
-        matrix.Should().Contain($"Route count: `{rows.Length}`");
+        Assert.That(matrix, Does.Contain("Todo 1 baseline SHA: `b22198b1509bf0e68f9e85dcd7b1375c768e2713`"));
+        Assert.That(matrix, Does.Contain($"Route inventory SHA-256: `{inventoryHash}`"));
+        Assert.That(matrix, Does.Contain($"Route count: `{rows.Length}`"));
         AssertRowsMatch(matrixRows, rows.Select(row => row.Row).ToArray());
 
-        matrixRows.Should().OnlyContain(row => row.HasAuthorizationMigrationInventory,
-            "every live controller route must explicitly carry the AUTH-K01 ownership inventory");
+        Assert.That((matrixRows).All(row => row.HasAuthorizationMigrationInventory), Is.True, "every live controller route must explicitly carry the AUTH-K01 ownership inventory");
 
         foreach (var row in matrixRows)
         {
@@ -214,8 +211,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         Action unknownOwner = () => ParseMatrixRow(valid.Replace("| identity |", "| unknown-owner |", StringComparison.Ordinal), true);
         Action unknownTask = () => ParseMatrixRow(valid.Replace("| AUTH-A08 |", "| AUTH-Z99 |", StringComparison.Ordinal), true);
 
-        unknownOwner.Should().Throw<AssertionException>().WithMessage("*field 'owner'*unknown-owner*");
-        unknownTask.Should().Throw<AssertionException>().WithMessage("*approved migration tasks*");
+        Assert.That(() => { unknownOwner(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*field 'owner'*unknown-owner*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { unknownTask(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*approved migration tasks*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -244,8 +241,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var documented = ReadTechnicalInventory(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md")))
             .Where(row => row.Kind == "http-endpoint")
             .ToArray();
-        endpoints.Select(endpoint => $"{endpoint.Methods} {endpoint.Route}").OrderBy(value => value, StringComparer.Ordinal)
-            .Should().Equal(documented.Select(row => $"{row.Methods} {row.Route}").OrderBy(value => value, StringComparer.Ordinal),
+        Assert.That(endpoints.Select(endpoint => $"{endpoint.Methods} {endpoint.Route}").OrderBy(value => value, StringComparer.Ordinal),
+            Is.EqualTo(documented.Select(row => $"{row.Methods} {row.Route}").OrderBy(value => value, StringComparer.Ordinal)),
                 "every non-controller host endpoint must have one explicit technical-inventory row");
         AssertTechnicalRowsAreUnique(documented);
 
@@ -255,9 +252,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 endpoints.Single(endpoint => endpoint.Methods == row.Methods && endpoint.Route == row.Route).Authorization,
                 row.ActionPolicy,
                 row.Route);
-            ApprovedAuthorizationOwners.Should().Contain(row.Owner, $"{row.Route} needs a known owner");
-            ApprovedCollectionScopes.Should().Contain(row.Scope, $"{row.Route} needs a known scope");
-            ApprovedSensitiveReplayDispositions.Should().Contain(row.SensitiveReplay, $"{row.Route} needs a known response/replay disposition");
+            Assert.That(ApprovedAuthorizationOwners, Does.Contain(row.Owner), $"{row.Route} needs a known owner");
+            Assert.That(ApprovedCollectionScopes, Does.Contain(row.Scope), $"{row.Route} needs a known scope");
+            Assert.That(ApprovedSensitiveReplayDispositions, Does.Contain(row.SensitiveReplay), $"{row.Route} needs a known response/replay disposition");
             AssertMigrationTasks(row.MigrationTasks, row.Route);
         }
     }
@@ -270,8 +267,10 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         Action duplicate = () => AssertTechnicalRowsAreUnique([row, row]);
         Action wrongAuthorization = () => AssertTechnicalAuthorization("authorize", "anonymous", "/health/live");
 
-        duplicate.Should().Throw<AssertionException>().WithMessage("*duplicate a host surface*");
-        wrongAuthorization.Should().Throw<AssertionException>().WithMessage("*/health/live*authorization metadata*authorize*anonymous*");
+        Assert.That(() => { duplicate(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*duplicate a host surface*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { wrongAuthorization(); }, Throws.InstanceOf<AssertionException>()
+            .With.Message.Contains("/health/live").And.Message.Contains("authorization metadata")
+            .And.Message.Contains("Expected: \"anonymous\"").And.Message.Contains("But was:  \"authorize\""));
     }
 
     [Test]
@@ -282,22 +281,20 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .Select(row => $"{row.Methods}|{row.Route}|{row.EntryPoint}|{row.ActionPolicy}")
             .ToArray();
 
-        middleware.Should().Equal(
-        [
+        Assert.That(middleware, Is.EqualTo(new[] {
             "GET|/swagger/v1/swagger.json|Program.swagger-json|anonymous-development-only",
             "GET|/swagger/{**path}|Program.swagger-ui|anonymous-development-only",
             "GET|/hangfire|ProgramHangfire.ConfigureDashboard|policy.admin.access"
-        ]);
+        }));
     }
 
     private static void AssertTechnicalRowsAreUnique(IReadOnlyCollection<TechnicalInventoryRow> rows)
     {
-        rows.Select(row => $"{row.Kind}|{row.Methods}|{row.Route}")
-            .Should().OnlyHaveUniqueItems("technical endpoint rows must not duplicate a host surface");
+        Assert.That(rows.Select(row => $"{row.Kind}|{row.Methods}|{row.Route}"), Is.Unique, "technical endpoint rows must not duplicate a host surface");
     }
 
     private static void AssertTechnicalAuthorization(string actual, string expected, string route) =>
-        actual.Should().Be(expected, $"{route} technical authorization metadata must match the documented policy");
+        Assert.That(actual, Is.EqualTo(expected), $"{route} technical authorization metadata must match the documented policy");
 
     [Test]
     public void RegisteredInternalJobEntrypoints_AreExactlyClassifiedByTheLinkedTechnicalInventory()
@@ -314,13 +311,13 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var documented = ReadTechnicalInventory(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md")))
             .Where(row => row.Kind == "internal-job")
             .ToArray();
-        documented.Select(row => row.EntryPoint).Should().Equal(registered.Select(type => type.Name));
+        Assert.That(documented.Select(row => row.EntryPoint), Is.EqualTo(registered.Select(type => type.Name)));
 
         foreach (var type in registered)
         {
-            Factory.Services.GetRequiredService(type).Should().NotBeNull($"{type.Name} is a registered Worker entrypoint");
+            Assert.That(Factory.Services.GetRequiredService(type), Is.Not.Null, $"{type.Name} is a registered Worker entrypoint");
             var documentedRow = documented.Single(row => row.EntryPoint == type.Name);
-            documentedRow.Methods.Should().Be(GetPublicJobSignature(type), $"{type.Name} must keep its persisted public job signature");
+            Assert.That(documentedRow.Methods, Is.EqualTo(GetPublicJobSignature(type)), $"{type.Name} must keep its persisted public job signature");
         }
     }
 
@@ -353,14 +350,14 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         Action unmapped = () => AssertTechnicalAcceptanceIsClosed(inventory, []);
         Action invalidLocator = () => AssertTechnicalEvidenceLocatorResolves("MissingFixture.MissingTest", "http-endpoint Program.health-live");
 
-        unmapped.Should().Throw<AssertionException>().WithMessage("*technical acceptance evidence must map every inventory entry exactly once*");
-        invalidLocator.Should().Throw<AssertionException>().WithMessage("*MissingFixture.MissingTest*executable NUnit test*");
+        Assert.That(() => { unmapped(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*technical acceptance evidence must map every inventory entry exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { invalidLocator(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*MissingFixture.MissingTest*executable NUnit test*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static string GetPublicJobSignature(Type type)
     {
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        methods.Should().ContainSingle($"{type.Name} must expose one persisted entrypoint");
+        Assert.That(methods, Has.Exactly(1).Items, $"{type.Name} must expose one persisted entrypoint");
         var method = methods[0];
         var returnType = method.ReturnType.IsGenericType
             ? $"{method.ReturnType.Name.Split('`')[0]}<{string.Join(',', method.ReturnType.GetGenericArguments().Select(argument => argument.Name))}>"
@@ -375,15 +372,15 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var matrix = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "docs", "validation", "issue-395-validation-matrix.md"));
         var matrixRows = ReadMatrixRows(matrix);
 
-        CutoverControllers.Should().OnlyHaveUniqueItems();
+        Assert.That(CutoverControllers, Is.Unique);
         foreach (var controller in CutoverControllers)
         {
-            liveRows.Should().Contain(row => row.Controller == controller, $"{controller} was changed by the adapter cutover");
-            matrixRows.Should().Contain(row => row.Controller == controller, $"{controller} needs a current matrix row");
+            Assert.That((liveRows).Any(row => row.Controller == controller), Is.True, $"{controller} was changed by the adapter cutover");
+            Assert.That((matrixRows).Any(row => row.Controller == controller), Is.True, $"{controller} needs a current matrix row");
         }
 
-        matrix.Should().Contain("EndpointContractMatrixTests.AdapterCutoverRows_ExecuteHttpCompatibilityContracts");
-        matrix.Should().Contain("EndpointContractMatrixTests.RepresentativeLegacyRows_ExecuteHttpCompatibilityContracts");
+        Assert.That(matrix, Does.Contain("EndpointContractMatrixTests.AdapterCutoverRows_ExecuteHttpCompatibilityContracts"));
+        Assert.That(matrix, Does.Contain("EndpointContractMatrixTests.RepresentativeLegacyRows_ExecuteHttpCompatibilityContracts"));
         AssertEvidenceLocatorResolves("EndpointContractMatrixTests.AdapterCutoverRows_ExecuteHttpCompatibilityContracts", "adapter-cutover coverage");
         AssertEvidenceLocatorResolves("EndpointContractMatrixTests.RepresentativeLegacyRows_ExecuteHttpCompatibilityContracts", "legacy-route coverage");
     }
@@ -395,7 +392,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
 
         using var gymResponse = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", new { name = "Matrix Gym" });
-        gymResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(gymResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await AssertLegacyMessageAsync(gymResponse, "Created");
 
         using var measurementResponse = await Client.PostAsJsonAsync("/api/measurements/add", new
@@ -404,16 +401,16 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             unit = MeasurementUnits.Kilograms.ToString(),
             value = 80.5
         });
-        measurementResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(measurementResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await AssertLegacyMessageAsync(measurementResponse, "Created");
 
         var exerciseId = await CreateExerciseViaEndpointAsync(user.Id, "Matrix Exercise", BodyParts.Back);
         using var exerciseResponse = await Client.GetAsync($"/api/exercise/{exerciseId}/getExercise");
-        exerciseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(exerciseResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var exercise = JsonDocument.Parse(await exerciseResponse.Content.ReadAsStringAsync()))
         {
-            exercise.RootElement.GetProperty("_id").GetString().Should().Be(exerciseId.ToString());
-            exercise.RootElement.GetProperty("bodyPart").GetProperty("id").GetString().Should().Be(BodyParts.Back.ToString());
+            Assert.That(exercise.RootElement.GetProperty("_id").GetString(), Is.EqualTo(exerciseId.ToString()));
+            Assert.That(exercise.RootElement.GetProperty("bodyPart").GetProperty("id").GetString(), Is.EqualTo(BodyParts.Back.ToString()));
         }
 
         using var recordResponse = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{user.Id}/addNewRecord", new
@@ -423,20 +420,20 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         });
-        recordResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(recordResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await AssertLegacyMessageAsync(recordResponse, "Created");
 
         using var eloResponse = await Client.GetAsync($"/api/eloRegistry/{user.Id}/getEloRegistryChart");
-        eloResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(eloResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var elo = JsonDocument.Parse(await eloResponse.Content.ReadAsStringAsync());
         var entry = elo.RootElement.EnumerateArray().Single();
-        LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(entry.GetProperty("_id").GetString()!, out _).Should().BeTrue("cutover UUID wire values remain JSON strings");
+        Assert.That(LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(entry.GetProperty("_id").GetString()!, out _), Is.True, "cutover UUID wire values remain JSON strings");
 
         using var unauthorizedPushResponse = await SendWithoutAuthorizationAsync(
             HttpMethod.Post,
             "/api/internal/push/test-event",
             new { recipientUserId = user.Id.ToString(), type = "System", eventId = "matrix" });
-        unauthorizedPushResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(unauthorizedPushResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -454,17 +451,17 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var repeated = await SendRepeatedRequestAsync("/api/register", registerRequest, "matrix-legacy-register");
         using var firstRegistration = repeated.first;
         using var secondRegistration = repeated.second;
-        firstRegistration.StatusCode.Should().Be(HttpStatusCode.OK);
-        secondRegistration.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstRegistration.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(secondRegistration.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await AssertLegacyMessageAsync(firstRegistration);
         await AssertLegacyMessageAsync(secondRegistration);
 
         using var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name = "matrix_legacy", password = "password123" });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var login = JsonDocument.Parse(await loginResponse.Content.ReadAsStringAsync()))
         {
-            login.RootElement.GetProperty("req").GetProperty("_id").GetString().Should().NotBeNullOrWhiteSpace();
-            login.RootElement.TryGetProperty("user", out _).Should().BeFalse();
+            Assert.That(string.IsNullOrWhiteSpace(login.RootElement.GetProperty("req").GetProperty("_id").GetString()), Is.False);
+            Assert.That(login.RootElement.TryGetProperty("user", out _), Is.False);
         }
 
         using var polishRequest = new HttpRequestMessage(HttpMethod.Post, "/api/appConfig/getAppVersion")
@@ -473,9 +470,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         };
         polishRequest.Headers.AcceptLanguage.ParseAdd("pl");
         using var localizedResponse = await Client.SendAsync(polishRequest);
-        localizedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(localizedResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var localizedBody = JsonDocument.Parse(await localizedResponse.Content.ReadAsStringAsync());
-        localizedBody.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(localizedBody.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString()), Is.False);
     }
 
     [TestCase("POST", "/api/appConfig/createNewAppVersion/{id}", "policy.appconfig.manage")]
@@ -492,9 +489,9 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
                 && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains(method) == true);
 
         var authorization = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
-        endpoint.Metadata.GetMetadata<IAllowAnonymous>().Should().BeNull();
-        authorization.Should().ContainSingle();
-        authorization.Single().Policy.Should().Be(policy);
+        Assert.That(endpoint.Metadata.GetMetadata<IAllowAnonymous>(), Is.Null);
+        Assert.That(authorization, Has.Exactly(1).Items);
+        Assert.That(authorization.Single().Policy, Is.EqualTo(policy));
     }
 
     [Test]
@@ -532,8 +529,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         var baseline = ExampleRow();
         Action action = () => AssertRowsMatch([baseline], [mutate(baseline)]);
 
-        action.Should().Throw<AssertionException>()
-            .WithMessage($"*{field}*{expected}*{actual}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<AssertionException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{field}*{expected}*{actual}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private EndpointMatrixRow[] GetLiveRows()
@@ -641,11 +637,11 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static async Task AssertLegacyMessageAsync(HttpResponseMessage response, string? expectedMessage = null)
     {
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
-        body.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        Assert.That(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("msg").GetString()), Is.False);
+        Assert.That(body.RootElement.TryGetProperty("message", out _), Is.False);
         if (expectedMessage is not null)
         {
-            body.RootElement.GetProperty("msg").GetString().Should().Be(expectedMessage);
+            Assert.That(body.RootElement.GetProperty("msg").GetString(), Is.EqualTo(expectedMessage));
         }
     }
 
@@ -653,7 +649,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
         var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| method | route | action |", StringComparison.Ordinal));
-        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the endpoint matrix must have its contract header");
+        Assert.That(headerIndex, Is.GreaterThanOrEqualTo(0), "the endpoint matrix must have its contract header");
 
         return lines.Skip(headerIndex + 2)
             .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
@@ -665,7 +661,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
         var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| kind | methods | route | entry point |", StringComparison.Ordinal));
-        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the matrix must include its linked technical inventory header");
+        Assert.That(headerIndex, Is.GreaterThanOrEqualTo(0), "the matrix must include its linked technical inventory header");
 
         return lines.Skip(headerIndex + 2)
             .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
@@ -679,7 +675,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     {
         var lines = matrix.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
         var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| technical entry | positive executable evidence |", StringComparison.Ordinal));
-        headerIndex.Should().BeGreaterThanOrEqualTo(0, "the matrix must include its K01 technical acceptance evidence header");
+        Assert.That(headerIndex, Is.GreaterThanOrEqualTo(0), "the matrix must include its K01 technical acceptance evidence header");
 
         return lines.Skip(headerIndex + 2)
             .TakeWhile(line => line.StartsWith("| ", StringComparison.Ordinal))
@@ -690,8 +686,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static TechnicalAcceptanceEvidenceRow ParseTechnicalAcceptanceEvidenceRow(string line)
     {
         var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
-        values.Should().HaveCount(3, $"technical acceptance row '{line}' must define its entry and positive/negative evidence");
-        values.Should().NotContain(string.Empty, "technical acceptance evidence cannot be blank");
+        Assert.That(values, Has.Exactly(3).Items, $"technical acceptance row '{line}' must define its entry and positive/negative evidence");
+        Assert.That(values, Does.Not.Contain(string.Empty), "technical acceptance evidence cannot be blank");
         return new TechnicalAcceptanceEvidenceRow(values[0], values[1], values[2]);
     }
 
@@ -708,8 +704,8 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .OrderBy(value => value, StringComparer.Ordinal)
             .ToArray();
 
-        actual.Should().OnlyHaveUniqueItems("technical acceptance evidence cannot duplicate an inventory entry");
-        actual.Should().Equal(expected, "technical acceptance evidence must map every inventory entry exactly once");
+        Assert.That(actual, Is.Unique, "technical acceptance evidence cannot duplicate an inventory entry");
+        Assert.That(actual, Is.EqualTo(expected), "technical acceptance evidence must map every inventory entry exactly once");
     }
 
     private static IEnumerable<string> SplitTechnicalEvidenceLocators(string value) =>
@@ -736,7 +732,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             .Where(path => path.Split(Path.DirectorySeparatorChar)
                 .Any(segment => segment.EndsWith("Tests", StringComparison.Ordinal)))
             .ToArray();
-        fixtureFiles.Should().ContainSingle($"'{technicalEntry}' locator '{locator}' must resolve to one executable NUnit test fixture");
+        Assert.That(fixtureFiles, Has.Exactly(1).Items, $"'{technicalEntry}' locator '{locator}' must resolve to one executable NUnit test fixture");
 
         var source = File.ReadAllText(fixtureFiles[0]);
         var methodPattern = $@"(?<attributes>(?:\s*\[[^\]]+\]\s*)+)\s*(?:public|internal)\s+(?:async\s+)?(?:Task(?:<[^>]+>)?|void)\s+{Regex.Escape(parts[1])}\s*\(";
@@ -750,14 +746,14 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static TechnicalInventoryRow ParseTechnicalInventoryRow(string line)
     {
         var values = line.Trim().Trim('|').Split('|').Select(value => value.Trim()).ToArray();
-        values.Should().HaveCount(9, $"technical inventory row '{line}' must define every classification column");
-        values.Should().NotContain(string.Empty, "technical inventory never permits unclassified values");
+        Assert.That(values, Has.Exactly(9).Items, $"technical inventory row '{line}' must define every classification column");
+        Assert.That(values, Does.Not.Contain(string.Empty), "technical inventory never permits unclassified values");
 
         var row = new TechnicalInventoryRow(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
-        row.Kind.Should().BeOneOf("http-endpoint", "internal-job", "host-middleware");
-        ApprovedAuthorizationOwners.Should().Contain(row.Owner, $"{row.EntryPoint} needs a known owner");
-        ApprovedCollectionScopes.Should().Contain(row.Scope, $"{row.EntryPoint} needs a known scope");
-        ApprovedSensitiveReplayDispositions.Should().Contain(row.SensitiveReplay, $"{row.EntryPoint} needs a known response/replay disposition");
+        Assert.That(row.Kind, Is.AnyOf("http-endpoint", "internal-job", "host-middleware"));
+        Assert.That(ApprovedAuthorizationOwners, Does.Contain(row.Owner), $"{row.EntryPoint} needs a known owner");
+        Assert.That(ApprovedCollectionScopes, Does.Contain(row.Scope), $"{row.EntryPoint} needs a known scope");
+        Assert.That(ApprovedSensitiveReplayDispositions, Does.Contain(row.SensitiveReplay), $"{row.EntryPoint} needs a known response/replay disposition");
         AssertMigrationTasks(row.MigrationTasks, row.EntryPoint);
         return row;
     }
@@ -765,25 +761,25 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
     private static void AssertMigrationTasks(string value, string identity)
     {
         var tasks = value.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        tasks.Should().NotBeEmpty($"{identity} needs at least one migration task");
-        tasks.Should().OnlyHaveUniqueItems($"{identity} must not duplicate migration tasks");
-        tasks.Should().OnlyContain(task => ApprovedMigrationTasks.Contains(task, StringComparer.Ordinal), $"{identity} must only name approved migration tasks");
+        Assert.That(tasks, Is.Not.Empty, $"{identity} needs at least one migration task");
+        Assert.That(tasks, Is.Unique, $"{identity} must not duplicate migration tasks");
+        Assert.That((tasks).All(task => ApprovedMigrationTasks.Contains(task, StringComparer.Ordinal)), Is.True, $"{identity} must only name approved migration tasks");
     }
 
     private static void AssertRowsMatch(IReadOnlyList<MatrixRow> expectedRows, IReadOnlyList<MatrixRow> actualRows)
     {
-        expectedRows.Should().HaveSameCount(actualRows, "the document must have one row per live controller endpoint");
-        expectedRows.Select(row => row.RouteKey).Should().OnlyHaveUniqueItems("the document must not duplicate a method and route");
-        actualRows.Select(row => row.RouteKey).Should().OnlyHaveUniqueItems("live metadata must not duplicate a method and route");
+        Assert.That((expectedRows).Count(), Is.EqualTo((actualRows).Count()), "the document must have one row per live controller endpoint");
+        Assert.That(expectedRows.Select(row => row.RouteKey), Is.Unique, "the document must not duplicate a method and route");
+        Assert.That(actualRows.Select(row => row.RouteKey), Is.Unique, "live metadata must not duplicate a method and route");
 
         var expectedByAction = expectedRows.GroupBy(row => row.Action, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal);
         var actualByAction = actualRows.GroupBy(row => row.Action, StringComparer.Ordinal).ToDictionary(group => group.Key, StringComparer.Ordinal);
         foreach (var expectedGroup in expectedByAction)
         {
-            actualByAction.TryGetValue(expectedGroup.Key, out var actualGroup).Should().BeTrue($"action '{expectedGroup.Key}' must remain in the live endpoint inventory");
+            Assert.That(actualByAction.TryGetValue(expectedGroup.Key, out var actualGroup), Is.True, $"action '{expectedGroup.Key}' must remain in the live endpoint inventory");
             var expected = expectedGroup.OrderBy(row => row.EndpointKey, StringComparer.Ordinal).ToArray();
             var actual = actualGroup!.OrderBy(row => row.EndpointKey, StringComparer.Ordinal).ToArray();
-            expected.Should().HaveSameCount(actual, $"action '{expectedGroup.Key}' must keep its route aliases");
+            Assert.That((expected).Count(), Is.EqualTo((actual).Count()), $"action '{expectedGroup.Key}' must keep its route aliases");
 
             for (var index = 0; index < expected.Length; index++)
             {
@@ -791,8 +787,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
             }
         }
 
-        actualByAction.Keys.OrderBy(key => key, StringComparer.Ordinal)
-            .Should().Equal(expectedByAction.Select(group => group.Key));
+        Assert.That(actualByAction.Keys.OrderBy(key => key, StringComparer.Ordinal), Is.EqualTo(expectedByAction.Select(group => group.Key)));
     }
 
     private static void AssertRowMatches(MatrixRow expected, MatrixRow actual)
@@ -859,7 +854,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         foreach (var send in CreateTask8AdminRouteRequests(user.Id.ToString()))
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden, "admin request {0} must be denied before action execution", requestIndex++);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), string.Format(System.Globalization.CultureInfo.InvariantCulture, "admin request {0} must be denied before action execution", requestIndex++));
         }
     }
 
@@ -898,7 +893,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         SetAuthorizationHeader(administrator.Id);
         using (var demotion = await Client.PostAsJsonAsync($"/api/roles/users/{demotedAdministrator.Id}/roles", new { roles = new[] { "User" } }))
         {
-            demotion.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(demotion.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         Client.DefaultRequestHeaders.Authorization = preIssuedToken;
@@ -906,7 +901,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         foreach (var send in CreateTask8AdminRouteRequests(demotedAdministrator.Id.ToString()))
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden, "demoted administrator request {0} must be denied before action execution", requestIndex++);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), string.Format(System.Globalization.CultureInfo.InvariantCulture, "demoted administrator request {0} must be denied before action execution", requestIndex++));
         }
     }
 
@@ -1014,7 +1009,7 @@ public sealed class EndpointContractMatrixTests : IntegrationTestBase
         foreach (var send in requests)
         {
             using var response = await send();
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
     }
 

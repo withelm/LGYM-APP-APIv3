@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 
@@ -40,14 +39,12 @@ public sealed class HttpResponseParityTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var json = await _harness.GetResponseJsonAsync(response);
-        json.RootElement.TryGetProperty("msg", out _).Should().BeTrue(
-            "error responses must use 'msg' field for backward compatibility");
+        Assert.That(json.RootElement.TryGetProperty("msg", out _), Is.True, "error responses must use 'msg' field for backward compatibility");
 
-        json.RootElement.TryGetProperty("message", out _).Should().BeFalse(
-            "error responses must not use 'message' field (wrong capitalization)");
+        Assert.That(json.RootElement.TryGetProperty("message", out _), Is.False, "error responses must not use 'message' field (wrong capitalization)");
     }
 
     /// <summary>
@@ -66,8 +63,7 @@ public sealed class HttpResponseParityTests : IntegrationTestBase
         _harness.AssertSuccessResponse(response, HttpStatusCode.OK);
 
         var json = await _harness.GetResponseJsonAsync(response);
-        json.RootElement.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array,
-            "getGyms should return an array");
+        Assert.That(json.RootElement.ValueKind, Is.EqualTo(System.Text.Json.JsonValueKind.Array), "getGyms should return an array");
     }
 
     /// <summary>
@@ -85,7 +81,7 @@ public sealed class HttpResponseParityTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym",
             new { name = "Test Gym for Create" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await _harness.AssertErrorMessageResponseAsync(response, HttpStatusCode.OK,
             because: "create endpoint should return ResponseMessageDto with success message");
@@ -113,7 +109,7 @@ public sealed class HttpResponseParityTests : IntegrationTestBase
             latestVersion = "2.0.0"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         await _harness.AssertErrorMessageResponseAsync(response, HttpStatusCode.Forbidden,
             because: "forbidden operation should return ResponseMessageDto error format");

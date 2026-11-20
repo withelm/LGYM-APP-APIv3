@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.BackgroundWorker.Runtime;
@@ -17,9 +16,9 @@ public sealed class BackgroundActionStartupValidationTests
 
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
-        action.Should().NotThrow();
-        registry.Contracts.Should().HaveCount(19);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(20);
+        Assert.That(() => { action(); }, Throws.Nothing);
+        Assert.That(registry.Contracts, Has.Exactly(19).Items);
+        Assert.That(registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count), Is.EqualTo(20));
     }
 
     [Test]
@@ -35,8 +34,7 @@ public sealed class BackgroundActionStartupValidationTests
 
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{contract.CanonicalId}*{handlerType.FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{contract.CanonicalId}*{handlerType.FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -50,8 +48,7 @@ public sealed class BackgroundActionStartupValidationTests
 
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{contract.CanonicalId}*{handlerType.FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{contract.CanonicalId}*{handlerType.FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -63,8 +60,7 @@ public sealed class BackgroundActionStartupValidationTests
 
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(ExtraCommand).FullName}*{typeof(ExtraHandler).FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(ExtraCommand).FullName}*{typeof(ExtraHandler).FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -85,8 +81,7 @@ public sealed class BackgroundActionStartupValidationTests
 
         var action = () => BackgroundActionRegistrationValidator.Validate(services, registry);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{first.CanonicalId}*{firstHandler.FullName}*{secondHandler.FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{first.CanonicalId}*{firstHandler.FullName}*{secondHandler.FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static ServiceCollection CreateValidServices(CommandContractRegistry registry)

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -42,7 +41,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
 
         var action = () => service.SubmitReportRequestAsync(ReportingTestData.Account(traineeId), request.Id, command);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -82,7 +81,7 @@ public sealed class ReportSubmissionPhotoHydrationFailureTests
 
         var action = () => service.MarkTrainerFeedbackAsReadAsync(ReportingTestData.Account(traineeId), submission.Id);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

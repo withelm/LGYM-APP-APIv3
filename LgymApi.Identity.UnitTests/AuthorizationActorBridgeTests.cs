@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Authorization;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Authorization;
@@ -32,7 +31,7 @@ public sealed class AuthorizationActorBridgeTests
 
         var result = service.HasPermission(accountContext, "permissions.manage");
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
         mapper.Received(1).Map<AuthenticatedAccountContext, AuthorizationActor>(accountContext, null);
         evaluator.Received(1).Evaluate(
             actor,
@@ -52,7 +51,7 @@ public sealed class AuthorizationActorBridgeTests
             mapper,
             Substitute.For<IAuthorizationEvaluator<GlobalPermissionAuthorizationContext>>());
 
-        service.CreateActor(accountContext).Should().BeSameAs(expectedActor);
+        Assert.That(service.CreateActor(accountContext), Is.SameAs(expectedActor));
         mapper.Received(1).Map<AuthenticatedAccountContext, AuthorizationActor>(accountContext, null);
     }
 
@@ -68,7 +67,7 @@ public sealed class AuthorizationActorBridgeTests
 
         var result = service.HasPermission(accountContext, "permissions.manage");
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -81,8 +80,8 @@ public sealed class AuthorizationActorBridgeTests
         var evaluator = new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]);
         var service = new AuthenticatedAccountAuthorizationService(mapper, evaluator);
 
-        service.HasPermission(accountContext, AuthConstants.Permissions.ManageGlobalExercises).Should().BeTrue();
-        service.HasPermission(accountContext, "permissions.other").Should().BeFalse();
+        Assert.That(service.HasPermission(accountContext, AuthConstants.Permissions.ManageGlobalExercises), Is.True);
+        Assert.That(service.HasPermission(accountContext, "permissions.other"), Is.False);
     }
 
     [TestCase(AccountDeletionState.PendingDeletion)]
@@ -96,8 +95,8 @@ public sealed class AuthorizationActorBridgeTests
             IdentityTestMapper.Create(),
             new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
 
-        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
-        service.HasPermission(account, AuthConstants.Permissions.TrainerAccess).Should().BeFalse();
+        Assert.That(service.HasPermission(account, AuthConstants.Permissions.AdminAccess), Is.False);
+        Assert.That(service.HasPermission(account, AuthConstants.Permissions.TrainerAccess), Is.False);
     }
 
     [TestCase(true, false)]
@@ -109,7 +108,7 @@ public sealed class AuthorizationActorBridgeTests
             IdentityTestMapper.Create(),
             new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
 
-        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
+        Assert.That(service.HasPermission(account, AuthConstants.Permissions.AdminAccess), Is.False);
     }
 
     [Test]
@@ -120,7 +119,7 @@ public sealed class AuthorizationActorBridgeTests
             IdentityTestMapper.Create(),
             new AuthorizationPolicyEvaluator<GlobalPermissionAuthorizationContext>([new GlobalPermissionAuthorizationPolicy()]));
 
-        service.HasPermission(account, AuthConstants.Permissions.AdminAccess).Should().BeFalse();
+        Assert.That(service.HasPermission(account, AuthConstants.Permissions.AdminAccess), Is.False);
     }
 
     [Test]
@@ -132,7 +131,7 @@ public sealed class AuthorizationActorBridgeTests
             new AuthorizationActor(Id<ActorReference>.New()),
             new GlobalPermissionAuthorizationContext("permissions.manage", ["permissions.manage"]));
 
-        result.Should().Be(AuthorizationDecision.Deny);
+        Assert.That(result, Is.EqualTo(AuthorizationDecision.Deny));
     }
 
     [Test]
@@ -142,12 +141,12 @@ public sealed class AuthorizationActorBridgeTests
 
         services.AddIdentityModule();
 
-        services.Should().ContainSingle(descriptor =>
+        Assert.That((services).Where(descriptor =>
             descriptor.ServiceType == typeof(IAuthorizationPolicy<GlobalPermissionAuthorizationContext>)
-            && descriptor.ImplementationType == typeof(GlobalPermissionAuthorizationPolicy));
-        services.Should().ContainSingle(descriptor =>
+            && descriptor.ImplementationType == typeof(GlobalPermissionAuthorizationPolicy)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor =>
             descriptor.ServiceType == typeof(IAuthenticatedAccountAuthorizationService)
-            && descriptor.ImplementationType == typeof(AuthenticatedAccountAuthorizationService));
+            && descriptor.ImplementationType == typeof(AuthenticatedAccountAuthorizationService)), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -158,8 +157,7 @@ public sealed class AuthorizationActorBridgeTests
 
         var act = () => services.AddIdentityModule();
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*GlobalPermissionAuthorizationContext*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*GlobalPermissionAuthorizationContext*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static AuthenticatedAccountContext CreateAccountContext(

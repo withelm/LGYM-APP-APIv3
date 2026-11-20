@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.Identity.Ranking;
@@ -25,11 +24,11 @@ public sealed class UserRankingServiceTests
 
         var result = await service.ChangeVisibilityInRankingAsync(user, false);
 
-        result.IsSuccess.Should().BeTrue();
-        user.IsVisibleInRanking.Should().BeFalse();
-        repository.Calls.Should().ContainSingle(call =>
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.IsVisibleInRanking, Is.False);
+        Assert.That((repository.Calls).Where(call =>
             call.Method == nameof(IUserRepository.UpdateAsync)
-            && call.Argument == user);
+            && call.Argument == user), Has.Exactly(1).Items);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -41,8 +40,8 @@ public sealed class UserRankingServiceTests
 
         var result = await service.ChangeVisibilityInRankingAsync(null, true);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

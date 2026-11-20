@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
@@ -15,15 +14,16 @@ public sealed class ExerciseMediaOpenApiTests : IntegrationTestBase
         using var text = new StringWriter();
         document.SerializeAsV3(new OpenApiJsonWriter(text));
         var json = text.ToString();
-        json.Should().Contain("/api/exercise/media/upload").And.Contain("multipart/form-data").And.Contain("updateImage")
-            .And.NotContain("/api/exercise/media/create").And.NotContain("/api/exercise/{id}/media")
-            .And.NotContain("/api/exercise/media/cleanup").And.NotContain("X-Exercise-Media-Operation-Id")
-            .And.NotContain("sourceSha256").And.NotContain("expectedImage");
+        var assertedChain7 = json;
+        Assert.That(assertedChain7, Does.Contain("/api/exercise/media/upload"));
+        Assert.That(assertedChain7, Does.Contain("multipart/form-data").And.Contain("updateImage")
+            .And.Not.Contain("/api/exercise/media/create").And.Not.Contain("/api/exercise/{id}/media")
+            .And.Not.Contain("/api/exercise/media/cleanup").And.Not.Contain("X-Exercise-Media-Operation-Id")
+            .And.Not.Contain("sourceSha256").And.Not.Contain("expectedImage"));
         using var parsed = System.Text.Json.JsonDocument.Parse(json);
-        parsed.RootElement.GetProperty("paths").GetProperty("/api/exercise/media/upload").GetProperty("post")
+        Assert.That(parsed.RootElement.GetProperty("paths").GetProperty("/api/exercise/media/upload").GetProperty("post")
             .GetProperty("requestBody").GetProperty("content").GetProperty("multipart/form-data")
-            .GetProperty("schema").GetProperty("required").EnumerateArray().Select(x => x.GetString())
-            .Should().Equal("file");
+            .GetProperty("schema").GetProperty("required").EnumerateArray().Select(x => x.GetString()), Is.EqualTo(new[] { "file" }));
         var output = Environment.GetEnvironmentVariable("LGYM_OPENAPI_OUTPUT");
         if (!string.IsNullOrWhiteSpace(output))
         {

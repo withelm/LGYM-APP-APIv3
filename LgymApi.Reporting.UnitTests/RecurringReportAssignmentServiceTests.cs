@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -45,9 +44,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
             Note = "weekly check-in"
         });
 
-        result.IsSuccess.Should().BeTrue();
-        db.RecurringReportAssignments.Should().ContainSingle();
-        db.RecurringReportAssignments.Single().TemplateId.Should().Be(template.Id);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(db.RecurringReportAssignments, Has.Exactly(1).Items);
+        Assert.That(db.RecurringReportAssignments.Single().TemplateId, Is.EqualTo(template.Id));
     }
 
     [Test]
@@ -70,8 +69,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
             StartsAt = DateTimeOffset.UtcNow,
         });
 
-        result.IsFailure.Should().BeTrue();
-        db.RecurringReportAssignments.Should().BeEmpty();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(db.RecurringReportAssignments, Is.Empty);
     }
 
     [Test]
@@ -89,9 +88,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
         var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: false);
         var result = await service.PauseAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(db.RecurringReportAssignments.Single().IsActive, Is.True);
     }
 
     [Test]
@@ -109,9 +108,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
         var service = CreateService(db, caller.Id, traineeId, ownsTrainee: true, isTrainer: false);
         var result = await service.PauseAsync(ReportingTestData.Account(caller.Id), ReportingTestData.AccountId(traineeId), assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingForbiddenError>();
-        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingForbiddenError>());
+        Assert.That(db.RecurringReportAssignments.Single().IsActive, Is.True);
     }
 
     [Test]
@@ -172,7 +171,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await service.ProcessDueAssignmentsAsync();
 
-        db.ReportRequests.Should().HaveCount(1);
+        Assert.That(db.ReportRequests, Has.Exactly(1).Items);
         await commandOutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -236,8 +235,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         await service.ProcessDueAssignmentsAsync();
 
-        db.ReportRequests.Should().HaveCount(2);
-        db.RecurringReportAssignments.Single().CurrentReportRequestId.Should().NotBe(currentRequest.Id);
+        Assert.That(db.ReportRequests, Has.Exactly(2).Items);
+        Assert.That(db.RecurringReportAssignments.Single().CurrentReportRequestId, Is.Not.EqualTo(currentRequest.Id));
         await commandOutboxWriter.Received(1).StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -302,7 +301,7 @@ public sealed partial class RecurringReportAssignmentServiceTests
         await service.ProcessDueAssignmentsAsync();
         await service.ProcessDueAssignmentsAsync();
 
-        db.ReportRequests.Should().HaveCount(2);
+        Assert.That(db.ReportRequests, Has.Exactly(2).Items);
         await commandOutboxWriter.Received(1).StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -334,12 +333,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
             Note = "updated note"
         });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         var stored = db.RecurringReportAssignments.Single();
-        stored.TemplateId.Should().Be(newTemplate.Id);
-        stored.IntervalValue.Should().Be(2);
-        stored.IntervalUnit.Should().Be(RecurringReportIntervalUnit.Month);
-        stored.Note.Should().Be("updated note");
+        Assert.That(stored.TemplateId, Is.EqualTo(newTemplate.Id));
+        Assert.That(stored.IntervalValue, Is.EqualTo(2));
+        Assert.That(stored.IntervalUnit, Is.EqualTo(RecurringReportIntervalUnit.Month));
+        Assert.That(stored.Note, Is.EqualTo("updated note"));
     }
 
     [Test]
@@ -356,11 +355,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var service = CreateService(db, trainer.Id, traineeId, ownsTrainee: true);
 
-        (await service.PauseAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id)).IsSuccess.Should().BeTrue();
-        db.RecurringReportAssignments.Single().IsActive.Should().BeFalse();
+        Assert.That((await service.PauseAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id)).IsSuccess, Is.True);
+        Assert.That(db.RecurringReportAssignments.Single().IsActive, Is.False);
 
-        (await service.ResumeAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id)).IsSuccess.Should().BeTrue();
-        db.RecurringReportAssignments.Single().IsActive.Should().BeTrue();
+        Assert.That((await service.ResumeAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id)).IsSuccess, Is.True);
+        Assert.That(db.RecurringReportAssignments.Single().IsActive, Is.True);
     }
 
     [Test]
@@ -379,10 +378,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var result = await service.DeleteAsync(ReportingTestData.Account(trainer.Id, true), ReportingTestData.AccountId(traineeId), assignment.Id);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         var stored = db.RecurringReportAssignments.IgnoreQueryFilters().Single();
-        stored.IsDeleted.Should().BeTrue();
-        stored.IsActive.Should().BeFalse();
+        Assert.That(stored.IsDeleted, Is.True);
+        Assert.That(stored.IsActive, Is.False);
     }
 
     [Test]
@@ -422,8 +421,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
             Note = "updated"
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     private static RecurringReportAssignmentService CreateService(

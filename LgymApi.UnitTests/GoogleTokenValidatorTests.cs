@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using FluentAssertions;
 using Google.Apis.Auth;
 using LgymApi.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -22,7 +21,7 @@ public sealed class GoogleTokenValidatorTests
 
         var action = async () => await validator.ValidateAsync("token", null, CancellationToken.None);
 
-        action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*GoogleAuth:ClientId*");
+        Assert.That(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*GoogleAuth:ClientId*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -35,7 +34,7 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await validator.ValidateAsync("definitely-not-a-google-jwt", null, CancellationToken.None);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     [Test]
@@ -54,9 +53,9 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await InvokeResolveUserInfoAsync(validator, payload, "access-token");
 
-        GetProperty<string?>(result, "Email").Should().Be("user@example.com");
-        GetProperty<bool>(result, "EmailVerified").Should().BeTrue();
-        handler.CallCount.Should().Be(0);
+        Assert.That(GetProperty<string?>(result, "Email"), Is.EqualTo("user@example.com"));
+        Assert.That(GetProperty<bool>(result, "EmailVerified"), Is.True);
+        Assert.That(handler.CallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -67,8 +66,8 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await InvokeResolveUserInfoAsync(validator, payload, null);
 
-        GetProperty<string?>(result, "Email").Should().BeNull();
-        GetProperty<bool>(result, "EmailVerified").Should().BeFalse();
+        Assert.That(GetProperty<string?>(result, "Email"), Is.Null);
+        Assert.That(GetProperty<bool>(result, "EmailVerified"), Is.False);
     }
 
     [Test]
@@ -96,11 +95,11 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await InvokeResolveUserInfoAsync(validator, payload, "access-token");
 
-        GetProperty<string?>(result, "Email").Should().Be("user@example.com");
-        GetProperty<bool>(result, "EmailVerified").Should().BeTrue();
-        GetProperty<string?>(result, "Name").Should().Be("Google User");
-        GetProperty<string?>(result, "Picture").Should().Be("avatar");
-        handler.LastRequest!.Headers.Authorization!.Scheme.Should().Be("Bearer");
+        Assert.That(GetProperty<string?>(result, "Email"), Is.EqualTo("user@example.com"));
+        Assert.That(GetProperty<bool>(result, "EmailVerified"), Is.True);
+        Assert.That(GetProperty<string?>(result, "Name"), Is.EqualTo("Google User"));
+        Assert.That(GetProperty<string?>(result, "Picture"), Is.EqualTo("avatar"));
+        Assert.That(handler.LastRequest!.Headers.Authorization!.Scheme, Is.EqualTo("Bearer"));
     }
 
     [Test]
@@ -115,7 +114,7 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await InvokeResolveUserInfoAsync(validator, payload, "access-token");
 
-        GetProperty<string?>(result, "Email").Should().BeNull();
+        Assert.That(GetProperty<string?>(result, "Email"), Is.Null);
     }
 
     [Test]
@@ -127,7 +126,7 @@ public sealed class GoogleTokenValidatorTests
 
         var result = await InvokeResolveUserInfoAsync(validator, payload, "access-token");
 
-        GetProperty<string?>(result, "Email").Should().BeNull();
+        Assert.That(GetProperty<string?>(result, "Email"), Is.Null);
     }
 
     private static IConfiguration DefaultConfiguration()

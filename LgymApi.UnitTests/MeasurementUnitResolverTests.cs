@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Measurements;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
@@ -11,48 +10,48 @@ public sealed class MeasurementUnitResolverTests
     [Test]
     public void BodyPartHelpers_ClassifyMeasurementsCorrectly()
     {
-        MeasurementUnitResolver.IsSpecialUnitMeasurement(BodyParts.BodyFat).Should().BeTrue();
-        MeasurementUnitResolver.IsSpecialUnitMeasurement(BodyParts.Bmi).Should().BeTrue();
-        MeasurementUnitResolver.IsWeightMeasurement(BodyParts.BodyWeight).Should().BeTrue();
-        MeasurementUnitResolver.IsLengthMeasurement(BodyParts.Waist).Should().BeTrue();
-        MeasurementUnitResolver.IsLengthMeasurement(BodyParts.Unknown).Should().BeFalse();
+        Assert.That(MeasurementUnitResolver.IsSpecialUnitMeasurement(BodyParts.BodyFat), Is.True);
+        Assert.That(MeasurementUnitResolver.IsSpecialUnitMeasurement(BodyParts.Bmi), Is.True);
+        Assert.That(MeasurementUnitResolver.IsWeightMeasurement(BodyParts.BodyWeight), Is.True);
+        Assert.That(MeasurementUnitResolver.IsLengthMeasurement(BodyParts.Waist), Is.True);
+        Assert.That(MeasurementUnitResolver.IsLengthMeasurement(BodyParts.Unknown), Is.False);
     }
 
     [Test]
     public void IsUnitAllowedForBodyPart_ValidatesPerMeasurementType()
     {
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Unknown, MeasurementUnits.Kilograms).Should().BeFalse();
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyWeight, MeasurementUnits.Kilograms).Should().BeTrue();
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyWeight, MeasurementUnits.Centimeters).Should().BeFalse();
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyFat, MeasurementUnits.Percent).Should().BeTrue();
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Bmi, MeasurementUnits.Bmi).Should().BeTrue();
-        MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Waist, MeasurementUnits.Centimeters).Should().BeTrue();
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Unknown, MeasurementUnits.Kilograms), Is.False);
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyWeight, MeasurementUnits.Kilograms), Is.True);
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyWeight, MeasurementUnits.Centimeters), Is.False);
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.BodyFat, MeasurementUnits.Percent), Is.True);
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Bmi, MeasurementUnits.Bmi), Is.True);
+        Assert.That(MeasurementUnitResolver.IsUnitAllowedForBodyPart(BodyParts.Waist, MeasurementUnits.Centimeters), Is.True);
     }
 
     [Test]
     public void GetDefaultUnit_ReturnsExpectedDefaults()
     {
-        MeasurementUnitResolver.GetDefaultUnit(BodyParts.BodyWeight).Should().Be(MeasurementUnits.Kilograms);
-        MeasurementUnitResolver.GetDefaultUnit(BodyParts.BodyFat).Should().Be(MeasurementUnits.Percent);
-        MeasurementUnitResolver.GetDefaultUnit(BodyParts.Bmi).Should().Be(MeasurementUnits.Bmi);
-        MeasurementUnitResolver.GetDefaultUnit(BodyParts.Waist).Should().Be(MeasurementUnits.Centimeters);
+        Assert.That(MeasurementUnitResolver.GetDefaultUnit(BodyParts.BodyWeight), Is.EqualTo(MeasurementUnits.Kilograms));
+        Assert.That(MeasurementUnitResolver.GetDefaultUnit(BodyParts.BodyFat), Is.EqualTo(MeasurementUnits.Percent));
+        Assert.That(MeasurementUnitResolver.GetDefaultUnit(BodyParts.Bmi), Is.EqualTo(MeasurementUnits.Bmi));
+        Assert.That(MeasurementUnitResolver.GetDefaultUnit(BodyParts.Waist), Is.EqualTo(MeasurementUnits.Centimeters));
     }
 
     [Test]
     public void TryParseStoredUnit_AndUnitConverters_HandleValidAndInvalidValues()
     {
-        MeasurementUnitResolver.TryParseStoredUnit("kilograms", out var kilograms).Should().BeTrue();
-        kilograms.Should().Be(MeasurementUnits.Kilograms);
-        MeasurementUnitResolver.TryParseStoredUnit("unknown", out _).Should().BeFalse();
-        MeasurementUnitResolver.TryParseStoredUnit(null, out _).Should().BeFalse();
+        Assert.That(MeasurementUnitResolver.TryParseStoredUnit("kilograms", out var kilograms), Is.True);
+        Assert.That(kilograms, Is.EqualTo(MeasurementUnits.Kilograms));
+        Assert.That(MeasurementUnitResolver.TryParseStoredUnit("unknown", out _), Is.False);
+        Assert.That(MeasurementUnitResolver.TryParseStoredUnit(null, out _), Is.False);
 
-        MeasurementUnitResolver.TryGetHeightUnit(MeasurementUnits.Meters, out var heightUnit).Should().BeTrue();
-        heightUnit.Should().Be(HeightUnits.Meters);
-        MeasurementUnitResolver.TryGetHeightUnit(MeasurementUnits.Kilograms, out _).Should().BeFalse();
+        Assert.That(MeasurementUnitResolver.TryGetHeightUnit(MeasurementUnits.Meters, out var heightUnit), Is.True);
+        Assert.That(heightUnit, Is.EqualTo(HeightUnits.Meters));
+        Assert.That(MeasurementUnitResolver.TryGetHeightUnit(MeasurementUnits.Kilograms, out _), Is.False);
 
-        MeasurementUnitResolver.TryGetWeightUnit(MeasurementUnits.Pounds, out var weightUnit).Should().BeTrue();
-        weightUnit.Should().Be(WeightUnits.Pounds);
-        MeasurementUnitResolver.TryGetWeightUnit(MeasurementUnits.Percent, out _).Should().BeFalse();
+        Assert.That(MeasurementUnitResolver.TryGetWeightUnit(MeasurementUnits.Pounds, out var weightUnit), Is.True);
+        Assert.That(weightUnit, Is.EqualTo(WeightUnits.Pounds));
+        Assert.That(MeasurementUnitResolver.TryGetWeightUnit(MeasurementUnits.Percent, out _), Is.False);
     }
 
     [TestCase("kg", MeasurementUnits.Kilograms)]
@@ -62,7 +61,7 @@ public sealed class MeasurementUnitResolverTests
     [TestCase("%", MeasurementUnits.Percent)]
     public void TryParseStoredUnit_AllowsCommonAliases(string rawUnit, MeasurementUnits expectedUnit)
     {
-        MeasurementUnitResolver.TryParseStoredUnit(rawUnit, out var parsedUnit).Should().BeTrue();
-        parsedUnit.Should().Be(expectedUnit);
+        Assert.That(MeasurementUnitResolver.TryParseStoredUnit(rawUnit, out var parsedUnit), Is.True);
+        Assert.That(parsedUnit, Is.EqualTo(expectedUnit));
     }
 }

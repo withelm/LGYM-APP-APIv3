@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -37,12 +36,11 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
 
         var save = () => staleDatabase.SaveChangesAsync();
 
-        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await save(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
         await using var verifyScope = Factory.Services.CreateAsyncScope();
         var database = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Measurements.AnyAsync(measurement => measurement.Id == measurementId)).Should().BeFalse();
-        (await database.Users.SingleAsync(candidate => candidate.Id == user.Id)).DeletionState
-            .Should().Be(AccountDeletionState.PendingDeletion);
+        Assert.That((await database.Measurements.AnyAsync(measurement => measurement.Id == measurementId)), Is.False);
+        Assert.That((await database.Users.SingleAsync(candidate => candidate.Id == user.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
     }
 
     [Test]
@@ -78,15 +76,15 @@ internal sealed class PostgreSqlAccountDeletionSharedUnitOfWorkTests : PostgreSq
 
             await deletionService.RequestAsync(scopedUser.Id.Rebind<AccountReference>());
 
-            unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(1);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(1));
         }
 
-        writesWereInvisibleBeforeCommit.Should().BeTrue();
+        Assert.That(writesWereInvisibleBeforeCommit, Is.True);
         var persisted = await ReadStateAsync(user.Id, installationId, messageId);
-        persisted.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        persisted.InstallationExists.Should().BeTrue();
-        persisted.MessageExists.Should().BeTrue();
+        Assert.That(persisted.DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That(persisted.InstallationExists, Is.True);
+        Assert.That(persisted.MessageExists, Is.True);
     }
 
     private async Task SeedPushDataAsync(

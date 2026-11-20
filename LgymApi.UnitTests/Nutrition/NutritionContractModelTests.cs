@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Nutrition.DietPlans.Models;
 using LgymApi.Application.Nutrition.Supplementation.Models;
 using LgymApi.Domain.Entities;
@@ -31,10 +30,10 @@ public sealed class NutritionContractModelTests
     {
         var violations = ContractTypes.SelectMany(type => GetViolations(type, type.Name)).ToArray();
 
-        violations.Should().BeEmpty();
-        ContractTypes.All(type => type.IsClass && type.IsSealed).Should().BeTrue();
-        ContractTypes.All(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .All(property => property.SetMethod == null || IsInitOnly(property.SetMethod))).Should().BeTrue();
+        Assert.That(violations, Is.Empty);
+        Assert.That(ContractTypes.All(type => type.IsClass && type.IsSealed), Is.True);
+        Assert.That(ContractTypes.All(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .All(property => property.SetMethod == null || IsInitOnly(property.SetMethod))), Is.True);
     }
 
     [Test]
@@ -43,8 +42,12 @@ public sealed class NutritionContractModelTests
         var userViolations = GetViolations(typeof(LeakingUserContract), nameof(LeakingUserContract)).ToArray();
         var mutableViolations = GetViolations(typeof(LeakingForeignContract), nameof(LeakingForeignContract)).ToArray();
 
-        userViolations.Should().ContainSingle().Which.Should().Contain("LeakingUserContract.User");
-        mutableViolations.Should().ContainSingle().Which.Should().Contain("LeakingForeignContract.Foreign");
+        var assertedValue188 = (userViolations).ToArray();
+        Assert.That(assertedValue188, Has.Exactly(1).Items);
+        Assert.That(assertedValue188.Single(), Does.Contain("LeakingUserContract.User"));
+        var assertedValue189 = (mutableViolations).ToArray();
+        Assert.That(assertedValue189, Has.Exactly(1).Items);
+        Assert.That(assertedValue189.Single(), Does.Contain("LeakingForeignContract.Foreign"));
     }
 
     private static IEnumerable<string> GetViolations(Type type, string path)

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
@@ -38,7 +37,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, 7, new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero), CancellationToken.None);
 
-        result.Should().Be("EXISTING01");
+        Assert.That(result, Is.EqualTo("EXISTING01"));
     }
 
     [Test]
@@ -74,7 +73,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        result.Should().Be("UNIQUE0001");
+        Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
 
     [Test]
@@ -109,7 +108,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        result.Should().Be("UNIQUE0001");
+        Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
 
     [Test]
@@ -136,7 +135,7 @@ public sealed class PlanRepositoryTests
 
         var result = await repository.GenerateShareCodeAsync(planId, userId, CancellationToken.None);
 
-        result.Should().Be("UNIQUE0001");
+        Assert.That(result, Is.EqualTo("UNIQUE0001"));
     }
 
     [Test]
@@ -183,10 +182,10 @@ public sealed class PlanRepositoryTests
         catch (InvalidOperationException ex)
         {
             exceptionThrown = true;
-            ex.Message.Should().Be("Unable to generate unique share code");
+            Assert.That(ex.Message, Is.EqualTo("Unable to generate unique share code"));
         }
 
-        exceptionThrown.Should().BeTrue();
-        generationCount.Should().Be(ExpectedShareCodeGenerationAttempts);
+        Assert.That(exceptionThrown, Is.True);
+        Assert.That(generationCount, Is.EqualTo(ExpectedShareCodeGenerationAttempts));
     }
 }

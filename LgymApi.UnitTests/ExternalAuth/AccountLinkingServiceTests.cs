@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.ExternalAuth;
@@ -46,10 +45,10 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.LinkGoogleAsync(Id<User>.New(), "token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        result.Error!.Message.Should().Be(Messages.GoogleTokenInvalid);
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
+        Assert.That(result.Error!.Message, Is.EqualTo(Messages.GoogleTokenInvalid));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -59,10 +58,10 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.LinkGoogleAsync(Id<User>.New(), "token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        result.Error!.Message.Should().Be(Messages.GoogleEmailNotVerified);
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
+        Assert.That(result.Error!.Message, Is.EqualTo(Messages.GoogleEmailNotVerified));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -84,12 +83,12 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.LinkGoogleAsync(user.Id, "token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ConflictError>();
-        result.Error!.Message.Should().Be(Messages.GoogleAccountAlreadyLinked);
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.FindByProviderAsync));
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.AddAsync));
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ConflictError>());
+        Assert.That(result.Error!.Message, Is.EqualTo(Messages.GoogleAccountAlreadyLinked));
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.FindByProviderAsync)), Is.False);
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.AddAsync)), Is.False);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -114,10 +113,10 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.LinkGoogleAsync(user.Id, "token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ConflictError>();
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.AddAsync));
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ConflictError>());
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.AddAsync)), Is.False);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -133,18 +132,16 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.LinkGoogleAsync(user.Id, "token", null, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        _userExternalLoginRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(_userExternalLoginRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserExternalLoginRepository.AddAsync)
                 && call.Argument is UserExternalLogin externalLogin
                 && externalLogin.UserId == user.Id
                 && externalLogin.Provider == AuthConstants.ExternalProviders.Google
                 && externalLogin.ProviderKey == payload.Subject
-                && externalLogin.ProviderEmail == payload.Email)
-            .Should()
-            .ContainSingle();
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+                && externalLogin.ProviderEmail == payload.Email), Has.Exactly(1).Items);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -154,13 +151,13 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.UnlinkGoogleAsync(Id<User>.New(), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
-        result.Error!.Message.Should().Be(Messages.DidntFind);
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.FindActiveGoogleByUserIdAsync));
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.MarkGoogleDeletedAsync));
-        _googleTokenValidator.Calls.Should().BeEmpty();
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserNotFoundError>());
+        Assert.That(result.Error!.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.FindActiveGoogleByUserIdAsync)), Is.False);
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.MarkGoogleDeletedAsync)), Is.False);
+        Assert.That(_googleTokenValidator.Calls, Is.Empty);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -173,26 +170,22 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.UnlinkGoogleAsync(user.Id, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
-        result.Error!.Message.Should().Be(Messages.DidntFind);
-        _userRepository.Calls
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(result.Error!.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.FindByIdAsync)
                 && call.Argument is Id<User> id
-                && id == user.Id)
-            .Should()
-            .ContainSingle();
-        _userExternalLoginRepository.Calls
+                && id == user.Id), Has.Exactly(1).Items);
+        Assert.That(_userExternalLoginRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserExternalLoginRepository.FindActiveGoogleByUserIdAsync)
                 && call.Argument is Id<User> id
-                && id == user.Id)
-            .Should()
-            .ContainSingle();
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.MarkGoogleDeletedAsync));
-        _googleTokenValidator.Calls.Should().BeEmpty();
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+                && id == user.Id), Has.Exactly(1).Items);
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.MarkGoogleDeletedAsync)), Is.False);
+        Assert.That(_googleTokenValidator.Calls, Is.Empty);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -213,30 +206,24 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.UnlinkGoogleAsync(user.Id, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        _userRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.FindByIdAsync)
                 && call.Argument is Id<User> id
-                && id == user.Id)
-            .Should()
-            .ContainSingle();
-        _userExternalLoginRepository.Calls
+                && id == user.Id), Has.Exactly(1).Items);
+        Assert.That(_userExternalLoginRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserExternalLoginRepository.FindActiveGoogleByUserIdAsync)
                 && call.Argument is Id<User> id
-                && id == user.Id)
-            .Should()
-            .ContainSingle();
-        _userExternalLoginRepository.Calls
+                && id == user.Id), Has.Exactly(1).Items);
+        Assert.That(_userExternalLoginRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserExternalLoginRepository.MarkGoogleDeletedAsync)
                 && call.Argument is Id<User> id
-                && id == user.Id)
-            .Should()
-            .ContainSingle();
-        _googleTokenValidator.Calls.Should().BeEmpty();
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+                && id == user.Id), Has.Exactly(1).Items);
+        Assert.That(_googleTokenValidator.Calls, Is.Empty);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -268,10 +255,10 @@ public sealed class AccountLinkingServiceTests
 
         var result = await _service.GetExternalLoginsAsync(user.Id, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
-        result.Value[0].Should().BeEquivalentTo(new ExternalLoginInfo(AuthConstants.ExternalProviders.Google, "google@example.com"));
-        result.Value[1].Should().BeEquivalentTo(new ExternalLoginInfo("facebook", "fb@example.com"));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(2).Items);
+        Assert.That(result.Value[0], Is.EqualTo(new ExternalLoginInfo(AuthConstants.ExternalProviders.Google, "google@example.com")).UsingPropertiesComparer());
+        Assert.That(result.Value[1], Is.EqualTo(new ExternalLoginInfo("facebook", "fb@example.com")).UsingPropertiesComparer());
     }
 
     private static User CreateUser()

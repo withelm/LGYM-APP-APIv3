@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -63,7 +62,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             fcmToken = "token-validation",
             environment = "development"
         });
-        blankRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(blankRegistration.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         var alternateRegistration = await Client.PostAsJsonAsync("/api/push/installations/register", new
         {
@@ -72,7 +71,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             fcmToken = "token-validation",
             environment = "development"
         });
-        alternateRegistration.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(alternateRegistration.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         await Client.PostAsJsonAsync("/api/push/installations/register", new
         {
@@ -87,17 +86,17 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var blankDisassociate = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationId = "" });
         var alternateDisassociate = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationKey = "device-validation" });
 
-        blankUnregister.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        alternateUnregister.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        blankDisassociate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        alternateDisassociate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(blankUnregister.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(alternateUnregister.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(blankDisassociate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(alternateDisassociate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-validation");
-        installation.UserId.Should().Be(user.Id);
-        installation.SessionId.Should().NotBeNull();
-        installation.DisabledAt.Should().BeNull();
+        Assert.That(installation.UserId, Is.EqualTo(user.Id));
+        Assert.That(installation.SessionId, Is.Not.Null);
+        Assert.That(installation.DisabledAt, Is.Null);
     }
 
     [Test]
@@ -121,16 +120,16 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "development"
         });
 
-        missingToken.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        missingPlatform.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await missingToken.Content.ReadAsStringAsync()).Should().Contain("All fields are required.");
-        (await missingPlatform.Content.ReadAsStringAsync())
-            .Should().Contain("All fields are required.")
-            .And.NotContain("token-that-must-not-leak");
+        Assert.That(missingToken.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(missingPlatform.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That((await missingToken.Content.ReadAsStringAsync()), Does.Contain("All fields are required."));
+        var assertedChain15 = (await missingPlatform.Content.ReadAsStringAsync());
+        Assert.That(assertedChain15, Does.Contain("All fields are required."));
+        Assert.That(assertedChain15, Does.Not.Contain("token-that-must-not-leak"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.PushInstallations.CountAsync()).Should().Be(0);
+        Assert.That((await db.PushInstallations.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -159,15 +158,15 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var unregisterResponse = await Client.PostAsJsonAsync("/api/push/installations/unregister", new { installationId = "device-owner" });
         var disassociateResponse = await Client.PostAsJsonAsync("/api/push/installations/disassociate", new { installationId = "device-owner" });
 
-        unregisterResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        disassociateResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(unregisterResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(disassociateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         using var assertionScope = Factory.Services.CreateScope();
         var assertionDb = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await assertionDb.PushInstallations.SingleAsync(x => x.InstallationId == "device-owner");
-        installation.UserId.Should().Be(owner.Id);
-        installation.SessionId.Should().Be(ownerSessionId);
-        installation.DisabledAt.Should().BeNull();
+        Assert.That(installation.UserId, Is.EqualTo(owner.Id));
+        Assert.That(installation.SessionId, Is.EqualTo(ownerSessionId));
+        Assert.That(installation.DisabledAt, Is.Null);
     }
 
     [Test]
@@ -183,7 +182,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             fcmToken = "token-takeover",
             environment = "testing"
         });
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(attacker.Id);
         var installationTakeover = await Client.PostAsJsonAsync("/api/push/installations/register", new
@@ -201,14 +200,14 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "testing"
         });
 
-        installationTakeover.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        tokenTakeover.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(installationTakeover.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(tokenTakeover.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await database.PushInstallations.SingleAsync();
-        installation.UserId.Should().Be(owner.Id);
-        installation.InstallationId.Should().Be("device-takeover");
-        installation.FcmToken.Should().Be("token-takeover");
+        Assert.That(installation.UserId, Is.EqualTo(owner.Id));
+        Assert.That(installation.InstallationId, Is.EqualTo("device-takeover"));
+        Assert.That(installation.FcmToken, Is.EqualTo("token-takeover"));
     }
 
     [Test]
@@ -223,7 +222,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             fcmToken = "token-session-owned",
             environment = "testing"
         });
-        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(register.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         LgymApi.Domain.Entities.UserSession originalSession;
         using (var originalScope = Factory.Services.CreateScope())
         {
@@ -240,14 +239,14 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             fcmToken = "token-replaced",
             environment = "testing"
         });
-        reregister.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(reregister.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await database.PushInstallations.SingleAsync();
-        installation.FcmToken.Should().Be("token-replaced");
-        installation.DisabledAt.Should().BeNull();
-        installation.UserId.Should().Be(owner.Id);
-        installation.SessionId.Should().NotBe(originalSession.Id);
+        Assert.That(installation.FcmToken, Is.EqualTo("token-replaced"));
+        Assert.That(installation.DisabledAt, Is.Null);
+        Assert.That(installation.UserId, Is.EqualTo(owner.Id));
+        Assert.That(installation.SessionId, Is.Not.EqualTo(originalSession.Id));
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
@@ -255,7 +254,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var oldSessionUnregister = await Client.PostAsJsonAsync(
             "/api/push/installations/unregister",
             new { installationId = "device-session-owned" });
-        oldSessionUnregister.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(oldSessionUnregister.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         var currentSession = await database.UserSessions.AsNoTracking()
             .SingleAsync(session => session.Id == installation.SessionId);
@@ -265,7 +264,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var currentSessionUnregister = await Client.PostAsJsonAsync(
             "/api/push/installations/unregister",
             new { installationId = "device-session-owned" });
-        currentSessionUnregister.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(currentSessionUnregister.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -284,8 +283,8 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
 
         var first = await Client.PostAsJsonAsync("/api/push/installations/register", request);
         var replay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -298,7 +297,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
 
         var deniedReplay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
         ClearIdempotencyKey();
-        deniedReplay.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(deniedReplay.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -327,11 +326,11 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         var replay = await Client.PostAsJsonAsync("/api/push/installations/unregister", request);
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var assertionScope = Factory.Services.CreateScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await assertionDatabase.PushInstallations.SingleAsync()).UpdatedAt.Should().Be(firstUpdatedAt);
+        Assert.That((await assertionDatabase.PushInstallations.SingleAsync()).UpdatedAt, Is.EqualTo(firstUpdatedAt));
     }
 
     [TestCase("{", "application/json")]
@@ -353,8 +352,8 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             new StringContent(body, Encoding.UTF8, mediaType));
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        retry.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(retry.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -371,7 +370,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "testing"
         };
         var first = await Client.PostAsJsonAsync("/api/push/installations/register", request);
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -383,7 +382,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
 
         var replay = await Client.PostAsJsonAsync("/api/push/installations/register", request);
         ClearIdempotencyKey();
-        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -408,8 +407,8 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             new { installationId = "device-disassociate-no-replay" });
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        retry.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(retry.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -439,11 +438,11 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installations = await db.PushInstallations.Where(x => x.InstallationId == "device-reactivate").ToListAsync();
-        installations.Should().ContainSingle();
-        installations[0].UserId.Should().Be(user.Id);
-        installations[0].FcmToken.Should().Be("token-new");
-        installations[0].DisabledAt.Should().BeNull();
-        installations[0].DisabledReason.Should().BeNull();
+        Assert.That(installations, Has.Exactly(1).Items);
+        Assert.That(installations[0].UserId, Is.EqualTo(user.Id));
+        Assert.That(installations[0].FcmToken, Is.EqualTo("token-new"));
+        Assert.That(installations[0].DisabledAt, Is.Null);
+        Assert.That(installations[0].DisabledReason, Is.Null);
     }
 
     [Test]
@@ -462,21 +461,21 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             permissionStatus = "authorized"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-1");
 
-        installation.UserId.Should().Be(user.Id);
-        installation.SessionId.Should().NotBeNull();
-        installation.Platform.Should().Be("android");
-        installation.FcmToken.Should().Be("token-1");
-        installation.AppVersion.Should().Be("1.0.0");
-        installation.Environment.Should().Be("development");
-        installation.PermissionStatus.Should().Be("authorized");
-        installation.DisabledAt.Should().BeNull();
-        installation.DisabledReason.Should().BeNull();
+        Assert.That(installation.UserId, Is.EqualTo(user.Id));
+        Assert.That(installation.SessionId, Is.Not.Null);
+        Assert.That(installation.Platform, Is.EqualTo("android"));
+        Assert.That(installation.FcmToken, Is.EqualTo("token-1"));
+        Assert.That(installation.AppVersion, Is.EqualTo("1.0.0"));
+        Assert.That(installation.Environment, Is.EqualTo("development"));
+        Assert.That(installation.PermissionStatus, Is.EqualTo("authorized"));
+        Assert.That(installation.DisabledAt, Is.Null);
+        Assert.That(installation.DisabledReason, Is.Null);
     }
 
     [Test]
@@ -494,7 +493,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "production",
             permissionStatus = "provisional"
         });
-        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await Task.Delay(10);
 
@@ -507,7 +506,7 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "production",
             permissionStatus = "authorized"
         });
-        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(secondResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -515,11 +514,11 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             .Where(x => x.InstallationId == "device-repeat")
             .ToListAsync();
 
-        installations.Should().HaveCount(1);
-        installations[0].FcmToken.Should().Be("token-new");
-        installations[0].AppVersion.Should().Be("1.1.0");
-        installations[0].PermissionStatus.Should().Be("authorized");
-        installations[0].UpdatedAt.Should().BeAfter(installations[0].CreatedAt);
+        Assert.That(installations, Has.Exactly(1).Items);
+        Assert.That(installations[0].FcmToken, Is.EqualTo("token-new"));
+        Assert.That(installations[0].AppVersion, Is.EqualTo("1.1.0"));
+        Assert.That(installations[0].PermissionStatus, Is.EqualTo("authorized"));
+        Assert.That(installations[0].UpdatedAt, Is.GreaterThan(installations[0].CreatedAt));
     }
 
     [Test]
@@ -542,14 +541,14 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             installationId = "device-unregister"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-unregister");
-        installation.DisabledAt.Should().NotBeNull();
-        installation.DisabledReason.Should().Be("Unregistered");
-        installation.UserId.Should().Be(user.Id);
+        Assert.That(installation.DisabledAt, Is.Not.Null);
+        Assert.That(installation.DisabledReason, Is.EqualTo("Unregistered"));
+        Assert.That(installation.UserId, Is.EqualTo(user.Id));
     }
 
     [Test]
@@ -572,14 +571,14 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             installationId = "device-disassociate"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-disassociate");
-        installation.UserId.Should().BeNull();
-        installation.SessionId.Should().BeNull();
-        installation.DisabledAt.Should().BeNull();
+        Assert.That(installation.UserId, Is.Null);
+        Assert.That(installation.SessionId, Is.Null);
+        Assert.That(installation.DisabledAt, Is.Null);
     }
 
     [Test]
@@ -599,13 +598,13 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
         });
 
         var logoutResponse = await Client.PostAsync("/api/logout", null);
-        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var installation = await db.PushInstallations.SingleAsync(x => x.InstallationId == "device-logout");
-        installation.UserId.Should().BeNull();
-        installation.SessionId.Should().BeNull();
+        Assert.That(installation.UserId, Is.Null);
+        Assert.That(installation.SessionId, Is.Null);
     }
 
     [Test]
@@ -623,37 +622,36 @@ public sealed class PushInstallationApiTests : IntegrationTestBase
             environment = "development"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using (var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
         {
-            body.RootElement.GetProperty("msg").GetString().Should().Be(
-                CompatibilityResourceMessage.InCulture("en", () => Messages.InvalidToken));
-            body.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+            Assert.That(body.RootElement.GetProperty("msg").GetString(), Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.InvalidToken)));
+            Assert.That(body.RootElement.TryGetProperty("message", out _), Is.False);
         }
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.PushInstallations.CountAsync()).Should().Be(0);
+        Assert.That((await db.PushInstallations.CountAsync()), Is.EqualTo(0));
     }
 
     private async Task<LoginResponse> LoginAsync(string name, string password)
     {
         var response = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
+        Assert.That(body, Is.Not.Null);
         return body!;
     }
 
     private static async Task AssertLegacyMessageResponseAsync(HttpResponseMessage response)
     {
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        document.RootElement.TryGetProperty("msg", out var message).Should().BeTrue();
-        message.ValueKind.Should().Be(JsonValueKind.String);
-        document.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        Assert.That(document.RootElement.TryGetProperty("msg", out var message), Is.True);
+        Assert.That(message.ValueKind, Is.EqualTo(JsonValueKind.String));
+        Assert.That(document.RootElement.TryGetProperty("message", out _), Is.False);
     }
 
     private sealed class LoginResponse

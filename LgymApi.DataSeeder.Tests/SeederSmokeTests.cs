@@ -20,7 +20,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.Exercises.CountAsync()).Should().BeGreaterThanOrEqualTo(6);
+        Assert.That((await context.Exercises.CountAsync()), Is.GreaterThanOrEqualTo(6));
     }
 
     [Test]
@@ -33,7 +33,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.Addresses.CountAsync()).Should().Be(2);
+        Assert.That((await context.Addresses.CountAsync()), Is.EqualTo(2));
     }
 
     [Test]
@@ -53,7 +53,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.Gyms.CountAsync()).Should().Be(2);
+        Assert.That((await context.Gyms.CountAsync()), Is.EqualTo(2));
     }
 
     [Test]
@@ -70,8 +70,8 @@ public sealed class SeederSmokeTests
         await context.SaveChangesAsync();
 
         var plan = await context.Plans.SingleAsync();
-        plan.Name.Should().Be("Push Pull Legs");
-        plan.UserId.Should().Be(demoUser.Id);
+        Assert.That(plan.Name, Is.EqualTo("Push Pull Legs"));
+        Assert.That(plan.UserId, Is.EqualTo(demoUser.Id));
     }
 
     [Test]
@@ -88,9 +88,9 @@ public sealed class SeederSmokeTests
         await context.SaveChangesAsync();
 
         var names = await context.PlanDays.Select(day => day.Name).ToListAsync();
-        names.Should().Contain("Push");
-        names.Should().Contain("Pull");
-        names.Should().Contain("Legs");
+        Assert.That(names, Does.Contain("Push"));
+        Assert.That(names, Does.Contain("Pull"));
+        Assert.That(names, Does.Contain("Legs"));
     }
 
     [Test]
@@ -110,7 +110,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.PlanDayExercises.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.PlanDayExercises.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -137,7 +137,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.Trainings.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.Trainings.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -162,7 +162,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.ExerciseScores.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.ExerciseScores.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -185,7 +185,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.TrainingExerciseScores.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.TrainingExerciseScores.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -201,7 +201,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.Measurements.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.Measurements.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -221,7 +221,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.MainRecords.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.MainRecords.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -237,7 +237,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.EloRegistries.CountAsync()).Should().Be(1);
+        Assert.That((await context.EloRegistries.CountAsync()), Is.EqualTo(1));
     }
 
     [Test]
@@ -250,7 +250,7 @@ public sealed class SeederSmokeTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.AppConfigs.CountAsync()).Should().Be(2);
+        Assert.That((await context.AppConfigs.CountAsync()), Is.EqualTo(2));
     }
 
     private static async Task<AppDbContext> CreateContextAsync()

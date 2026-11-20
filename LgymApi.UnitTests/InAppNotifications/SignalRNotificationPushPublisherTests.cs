@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.InAppNotification;
 using LgymApi.Api.Features.InAppNotification.Contracts;
 using LgymApi.Api.Hubs;
@@ -29,22 +28,22 @@ public sealed class SignalRNotificationPushPublisherTests
 
         await InvokePushAsync(publisher, notification);
 
-        clientProxy.SendCalls.Should().Be(1);
-        clientProxy.LastConnectionId.Should().Be("connection-1");
-        clientProxy.LastMethod.Should().Be("ReceiveNotification");
-        clientProxy.LastArgs.Should().NotBeNull();
-        clientProxy.LastArgs![0].Should().BeOfType<InAppNotificationResultDto>();
+        Assert.That(clientProxy.SendCalls, Is.EqualTo(1));
+        Assert.That(clientProxy.LastConnectionId, Is.EqualTo("connection-1"));
+        Assert.That(clientProxy.LastMethod, Is.EqualTo("ReceiveNotification"));
+        Assert.That(clientProxy.LastArgs, Is.Not.Null);
+        Assert.That(clientProxy.LastArgs![0], Is.TypeOf<InAppNotificationResultDto>());
 
         var payload = (InAppNotificationResultDto)clientProxy.LastArgs[0]!;
-        payload.Id.Should().Be(notification.Id.ToString());
-        payload.Message.Should().Be(notification.Message);
-        payload.RedirectUrl.Should().Be(notification.RedirectUrl);
-        payload.IsRead.Should().Be(notification.IsRead);
-        payload.Type.Should().Be(notification.Type.Value);
-        payload.IsSystemNotification.Should().Be(notification.IsSystemNotification);
-        payload.SenderUserId.Should().BeNull();
-        payload.CreatedAt.Should().Be(notification.CreatedAt);
-        logger.WarningCalls.Should().Be(0);
+        Assert.That(payload.Id, Is.EqualTo(notification.Id.ToString()));
+        Assert.That(payload.Message, Is.EqualTo(notification.Message));
+        Assert.That(payload.RedirectUrl, Is.EqualTo(notification.RedirectUrl));
+        Assert.That(payload.IsRead, Is.EqualTo(notification.IsRead));
+        Assert.That(payload.Type, Is.EqualTo(notification.Type.Value));
+        Assert.That(payload.IsSystemNotification, Is.EqualTo(notification.IsSystemNotification));
+        Assert.That(payload.SenderUserId, Is.Null);
+        Assert.That(payload.CreatedAt, Is.EqualTo(notification.CreatedAt));
+        Assert.That(logger.WarningCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -55,7 +54,7 @@ public sealed class SignalRNotificationPushPublisherTests
 
         await InvokePushAsync(publisher, notification);
 
-        logger.WarningCalls.Should().Be(1);
+        Assert.That(logger.WarningCalls, Is.EqualTo(1));
     }
 
     private static (object Publisher, FakeClientProxy ClientProxy, FakeLogger Logger) CreatePublisher(

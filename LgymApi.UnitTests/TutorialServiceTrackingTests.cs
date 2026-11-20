@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -27,9 +26,9 @@ public sealed class TutorialServiceTrackingTests
 
         await InvokeReadAsync(service, user.Id, operation);
 
-        dbContext.Entry(stagedSession).State.Should().Be(EntityState.Added);
-        dbContext.ChangeTracker.Entries<UserTutorialProgress>().Should().BeEmpty();
-        dbContext.ChangeTracker.Entries<UserTutorialStepProgress>().Should().BeEmpty();
+        Assert.That(dbContext.Entry(stagedSession).State, Is.EqualTo(EntityState.Added));
+        Assert.That(dbContext.ChangeTracker.Entries<UserTutorialProgress>(), Is.Empty);
+        Assert.That(dbContext.ChangeTracker.Entries<UserTutorialStepProgress>(), Is.Empty);
     }
 
     [TestCase(TutorialNoOpOperation.InitializeExisting)]
@@ -51,9 +50,9 @@ public sealed class TutorialServiceTrackingTests
 
         await InvokeNoOpAsync(service, user.Id, operation);
 
-        dbContext.Entry(stagedSession).State.Should().Be(EntityState.Added);
-        dbContext.ChangeTracker.Entries<UserTutorialProgress>().Should().BeEmpty();
-        dbContext.ChangeTracker.Entries<UserTutorialStepProgress>().Should().BeEmpty();
+        Assert.That(dbContext.Entry(stagedSession).State, Is.EqualTo(EntityState.Added));
+        Assert.That(dbContext.ChangeTracker.Entries<UserTutorialProgress>(), Is.Empty);
+        Assert.That(dbContext.ChangeTracker.Entries<UserTutorialStepProgress>(), Is.Empty);
     }
 
     [Test]
@@ -67,11 +66,9 @@ public sealed class TutorialServiceTrackingTests
 
         var action = async () => await service.InitializeOnboardingTutorialAsync(user.Id);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
-        dbContext.Entry(stagedSession).State.Should().Be(EntityState.Added);
-        dbContext.ChangeTracker.Entries<UserTutorialProgress>()
-            .Should()
-            .ContainSingle(entry => entry.State == EntityState.Added);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(dbContext.Entry(stagedSession).State, Is.EqualTo(EntityState.Added));
+        Assert.That((dbContext.ChangeTracker.Entries<UserTutorialProgress>()).Where(entry => entry.State == EntityState.Added), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -89,8 +86,8 @@ public sealed class TutorialServiceTrackingTests
             TutorialType.OnboardingDemo,
             cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        dbContext.Entry(stagedSession).State.Should().Be(EntityState.Added);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(dbContext.Entry(stagedSession).State, Is.EqualTo(EntityState.Added));
     }
 
     private static AppDbContext CreateContext()

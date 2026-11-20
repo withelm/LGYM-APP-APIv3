@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Controllers;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Controllers;
@@ -80,7 +79,7 @@ public sealed class AuthenticationControllerContractTests
             ConfirmPassword = "password123"
         });
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await eloRegistryService.Received(1)
             .RegisterUserAsync(Arg.Any<RegisterUserInput>(), false, Arg.Any<CancellationToken>());
     }
@@ -102,7 +101,7 @@ public sealed class AuthenticationControllerContractTests
             ConfirmPassword = "password123"
         });
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await eloRegistryService.Received(1)
             .RegisterUserAsync(Arg.Any<RegisterUserInput>(), true, Arg.Any<CancellationToken>());
     }
@@ -125,14 +124,14 @@ public sealed class AuthenticationControllerContractTests
             });
         mapper.Map<LoginResult, LoginResponseDto>(loginResult).Returns(_ =>
         {
-            userInfo.Elo.Should().Be(1200);
+            Assert.That(userInfo.Elo, Is.EqualTo(1200));
             return new LoginResponseDto();
         });
         var controller = CreateUserController(eloRegistryService, mapper, userCredentialLoginService);
 
         var action = await controller.Login(new LoginRequest { Name = "user", Password = "password123" });
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await eloRegistryService.Received(1).PopulateLatestEloAsync(userInfo, Arg.Any<CancellationToken>());
     }
 
@@ -165,7 +164,7 @@ public sealed class AuthenticationControllerContractTests
 
         var action = await controller.CheckToken();
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await authenticatedAccountApiAdapter.Received(1).CheckTokenAsync(accountId, Arg.Any<CancellationToken>());
         await accountEloApiAdapter.Received(1).PopulateLatestEloAsync(account, Arg.Any<CancellationToken>());
     }
@@ -197,7 +196,7 @@ public sealed class AuthenticationControllerContractTests
 
         var action = await controller.CheckToken();
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -218,14 +217,14 @@ public sealed class AuthenticationControllerContractTests
             });
         mapper.Map<LoginResult, LoginResponseDto>(loginResult).Returns(_ =>
         {
-            userInfo.Elo.Should().Be(1200);
+            Assert.That(userInfo.Elo, Is.EqualTo(1200));
             return new LoginResponseDto();
         });
         var controller = CreateTrainerAuthController(eloRegistryService, mapper, userCredentialLoginService);
 
         var action = await controller.Login(new LoginRequest { Name = "trainer", Password = "password123" });
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await eloRegistryService.Received(1).PopulateLatestEloAsync(userInfo, Arg.Any<CancellationToken>());
     }
 
@@ -258,7 +257,7 @@ public sealed class AuthenticationControllerContractTests
 
         var action = await controller.CheckToken();
 
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         await authenticatedAccountApiAdapter.Received(1).CheckTokenAsync(accountId, Arg.Any<CancellationToken>());
         await accountEloApiAdapter.Received(1).PopulateLatestEloAsync(account, Arg.Any<CancellationToken>());
     }
@@ -302,18 +301,18 @@ public sealed class AuthenticationControllerContractTests
         IReadOnlyCollection<(string ActionName, string Verb, string Template)> routes)
     {
         var routeAttribute = typeof(TController).GetCustomAttribute<RouteAttribute>();
-        routeAttribute.Should().NotBeNull();
-        routeAttribute!.Template.Should().Be(controllerTemplate);
+        Assert.That(routeAttribute, Is.Not.Null);
+        Assert.That(routeAttribute!.Template, Is.EqualTo(controllerTemplate));
 
         foreach (var route in routes)
         {
             var action = typeof(TController).GetMethod(route.ActionName);
-            action.Should().NotBeNull();
+            Assert.That(action, Is.Not.Null);
 
             var httpMethodAttribute = action!.GetCustomAttributes<HttpMethodAttribute>().SingleOrDefault();
-            httpMethodAttribute.Should().NotBeNull();
-            httpMethodAttribute!.HttpMethods.Should().Equal(route.Verb);
-            httpMethodAttribute.Template.Should().Be(route.Template);
+            Assert.That(httpMethodAttribute, Is.Not.Null);
+            Assert.That(httpMethodAttribute!.HttpMethods, Is.EqualTo(new[] { route.Verb }));
+            Assert.That(httpMethodAttribute.Template, Is.EqualTo(route.Template));
         }
     }
 }

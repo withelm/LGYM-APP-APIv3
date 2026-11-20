@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Actions.Contracts;
 using LgymApi.BackgroundWorker.Runtime;
@@ -16,22 +15,20 @@ public sealed class CommandContractRegistryTests
     {
         var registry = CommandContractRegistry.CreateDefault();
 
-        registry.Contracts.Should().HaveCount(19);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(20);
+        Assert.That(registry.Contracts, Has.Exactly(19).Items);
+        Assert.That(registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count), Is.EqualTo(20));
 
         foreach (var legacyContract in LegacyCommandContractManifest.All)
         {
             var contract = registry.Contracts.Single(candidate =>
                 candidate.CanonicalId == legacyContract.CanonicalId);
 
-            contract.RuntimeType.FullName.Should().Be(legacyContract.FutureClrNameReadAlias);
-            contract.ReadAlias.Should().Be(legacyContract.FutureClrNameReadAlias);
-            contract.ExpectedHandlerTypes.Select(type => type.FullName)
-                .Should().Equal(legacyContract.HandlerTypeFullNames);
+            Assert.That(contract.RuntimeType.FullName, Is.EqualTo(legacyContract.FutureClrNameReadAlias));
+            Assert.That(contract.ReadAlias, Is.EqualTo(legacyContract.FutureClrNameReadAlias));
+            Assert.That(contract.ExpectedHandlerTypes.Select(type => type.FullName), Is.EqualTo(legacyContract.HandlerTypeFullNames));
         }
 
-        registry.Contracts.Select(contract => contract.RuntimeType)
-            .Should().Contain(LegacyCommandContractManifest.ExpectedRuntimeTypes);
+        Assert.That(registry.Contracts.Select(contract => contract.RuntimeType), Is.SupersetOf(LegacyCommandContractManifest.ExpectedRuntimeTypes));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -45,11 +42,12 @@ public sealed class CommandContractRegistryTests
         var canonicalReadDescriptor = registry.Resolve(legacyContract.CanonicalId);
         var aliasReadDescriptor = registry.Resolve(legacyContract.FutureClrNameReadAlias);
 
-        writeDescriptor.CanonicalId.Should().Be(legacyContract.CanonicalId)
-            .And.NotBe(legacyContract.FutureClrNameReadAlias);
-        canonicalReadDescriptor.RuntimeType.Should().Be(runtimeType);
-        aliasReadDescriptor.RuntimeType.Should().Be(runtimeType);
-        aliasReadDescriptor.CanonicalId.Should().Be(legacyContract.CanonicalId);
+        var assertedChain35 = writeDescriptor.CanonicalId;
+        Assert.That(assertedChain35, Is.EqualTo(legacyContract.CanonicalId));
+        Assert.That(assertedChain35, Is.Not.EqualTo(legacyContract.FutureClrNameReadAlias));
+        Assert.That(canonicalReadDescriptor.RuntimeType, Is.EqualTo(runtimeType));
+        Assert.That(aliasReadDescriptor.RuntimeType, Is.EqualTo(runtimeType));
+        Assert.That(aliasReadDescriptor.CanonicalId, Is.EqualTo(legacyContract.CanonicalId));
     }
 
     [Test]
@@ -192,8 +190,7 @@ public sealed class CommandContractRegistryTests
 
         var action = () => registry.Resolve("Unknown.Command");
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Unknown durable command identifier 'Unknown.Command'.");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Unknown durable command identifier 'Unknown.Command'.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -206,13 +203,13 @@ public sealed class CommandContractRegistryTests
             .Where(descriptor => descriptor.ServiceType == typeof(CommandContractRegistry))
             .ToArray();
 
-        descriptors.Should().ContainSingle();
-        descriptors[0].Lifetime.Should().Be(ServiceLifetime.Singleton);
+        Assert.That(descriptors, Has.Exactly(1).Items);
+        Assert.That(descriptors[0].Lifetime, Is.EqualTo(ServiceLifetime.Singleton));
 
         using var provider = services.BuildServiceProvider();
         var first = provider.GetRequiredService<CommandContractRegistry>();
         var second = provider.GetRequiredService<CommandContractRegistry>();
-        second.Should().BeSameAs(first);
+        Assert.That(second, Is.SameAs(first));
     }
 
     [Test]
@@ -226,10 +223,9 @@ public sealed class CommandContractRegistryTests
 
         foreach (var runtimeType in runtimeTypes)
         {
-            runtimeType.GetConstructors().Should().ContainSingle();
-            runtimeType.GetConstructors().Single().GetParameters()
-                .Count(parameter => parameter.ParameterType == typeof(CommandContractRegistry))
-                .Should().Be(1);
+            Assert.That(runtimeType.GetConstructors(), Has.Exactly(1).Items);
+            Assert.That(runtimeType.GetConstructors().Single().GetParameters()
+                .Count(parameter => parameter.ParameterType == typeof(CommandContractRegistry)), Is.EqualTo(1));
         }
     }
 
@@ -251,7 +247,7 @@ public sealed class CommandContractRegistryTests
     {
         var action = () => CommandContractRegistry.CreateForTesting(rows);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage(expectedMessage);
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static void AssertInvalidDefault(
@@ -260,7 +256,7 @@ public sealed class CommandContractRegistryTests
     {
         var action = () => CommandContractRegistry.CreateForTesting(rows, requireDefaultContract: true);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage(expectedMessage);
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static CommandContract[] ReplaceFirst(

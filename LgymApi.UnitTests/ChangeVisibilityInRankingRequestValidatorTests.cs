@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Validation;
 
@@ -15,7 +14,7 @@ public sealed class ChangeVisibilityInRankingRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
+        Assert.That(result.IsValid, Is.False);
     }
 
     [Test]
@@ -26,7 +25,7 @@ public sealed class ChangeVisibilityInRankingRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeTrue();
+        Assert.That(result.IsValid, Is.True);
     }
 
     [Test]
@@ -37,6 +36,6 @@ public sealed class ChangeVisibilityInRankingRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeTrue();
+        Assert.That(result.IsValid, Is.True);
     }
 }

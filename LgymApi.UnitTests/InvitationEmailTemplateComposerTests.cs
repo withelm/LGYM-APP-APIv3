@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Options;
@@ -55,14 +54,14 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        message.To.Should().Be("trainee@example.com");
-        message.Subject.Should().Be("Zaproszenie od Coach Mike");
-        message.Body.Should().Contain("Kod: ABC123XYZ789");
-        message.Body.Should().Contain("Akceptuj:");
-        message.Body.Should().Contain("Wygasa:");
-        message.Body.Should().Contain("2026-03-01 11:00");
-        message.Body.Should().Contain($"/accept/{invitationId}");
-        message.Body.Should().Contain($"/reject/{invitationId}");
+        Assert.That(message.To, Is.EqualTo("trainee@example.com"));
+        Assert.That(message.Subject, Is.EqualTo("Zaproszenie od Coach Mike"));
+        Assert.That(message.Body, Does.Contain("Kod: ABC123XYZ789"));
+        Assert.That(message.Body, Does.Contain("Akceptuj:"));
+        Assert.That(message.Body, Does.Contain("Wygasa:"));
+        Assert.That(message.Body, Does.Contain("2026-03-01 11:00"));
+        Assert.That(message.Body, Does.Contain($"/accept/{invitationId}"));
+        Assert.That(message.Body, Does.Contain($"/reject/{invitationId}"));
     }
 
     [Test]
@@ -84,9 +83,9 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        message.Subject.Should().Be("Trainer invitation from Coach Jane");
-        message.Body.Should().Contain("Invitation ZZZ999YYY888");
-        message.Body.Should().Contain("Accept:");
+        Assert.That(message.Subject, Is.EqualTo("Trainer invitation from Coach Jane"));
+        Assert.That(message.Body, Does.Contain("Invitation ZZZ999YYY888"));
+        Assert.That(message.Body, Does.Contain("Accept:"));
     }
 
     [Test]
@@ -107,7 +106,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        message.Body.Should().Contain("Expires: 2026-03-01 10:00");
+        Assert.That(message.Body, Does.Contain("Expires: 2026-03-01 10:00"));
     }
 
     [Test]
@@ -128,7 +127,7 @@ public sealed class InvitationEmailTemplateComposerTests
 
         var message = composer.ComposeTrainerInvitation(payload);
 
-        message.Body.Should().Contain("Expires: 2026-03-01 10:00");
+        Assert.That(message.Body, Does.Contain("Expires: 2026-03-01 10:00"));
     }
 
     private TrainerInvitationEmailTemplateComposer CreateComposer(AppDefaultsOptions? appDefaultsOptions = null)

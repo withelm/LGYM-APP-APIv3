@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Persistence;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Models;
@@ -31,8 +30,8 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TakenAt.Should().Be(winner.TakenAt);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TakenAt, Is.EqualTo(winner.TakenAt));
         await dependencies.Plans.Received(1).FindIntakeLogAsync(
             dependencies.TraineeId,
             item.Id,
@@ -53,10 +52,9 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.Plans.FindIntakeLogAsync(dependencies.TraineeId, item.Id, Monday, Arg.Any<CancellationToken>())
             .Returns((SupplementIntakeLog?)null);
 
-        var thrown = await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)))
-            .Should().ThrowAsync<DbUpdateException>();
+        var thrown = (await Assert.CatchAsync<DbUpdateException>(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)); }))!;
 
-        thrown.Which.Should().BeSameAs(exception);
+        Assert.That(thrown, Is.SameAs(exception));
         await dependencies.Plans.Received(1).FindIntakeLogAsync(
             dependencies.TraineeId,
             item.Id,
@@ -74,10 +72,9 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(exception));
 
-        var thrown = await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)))
-            .Should().ThrowAsync<DbUpdateException>();
+        var thrown = (await Assert.CatchAsync<DbUpdateException>(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)); }))!;
 
-        thrown.Which.Should().BeSameAs(exception);
+        Assert.That(thrown, Is.SameAs(exception));
         await AssertNoWinnerReloadAsync(dependencies);
     }
 
@@ -90,10 +87,9 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(exception));
 
-        var thrown = await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)))
-            .Should().ThrowAsync<DbUpdateException>();
+        var thrown = (await Assert.CatchAsync<DbUpdateException>(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)); }))!;
 
-        thrown.Which.Should().BeSameAs(exception);
+        Assert.That(thrown, Is.SameAs(exception));
         await AssertNoWinnerReloadAsync(dependencies);
     }
 
@@ -107,8 +103,7 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.Plans.FindIntakeLogAsync(dependencies.TraineeId, item.Id, Monday, Arg.Any<CancellationToken>())
             .Returns(Task.FromException<SupplementIntakeLog?>(new InvalidOperationException()));
 
-        await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)))
-            .Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)); }, Throws.InstanceOf<InvalidOperationException>());
 
         dependencies.Plans.DidNotReceive().DetachIntakeLog(Arg.Any<SupplementIntakeLog>());
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -123,10 +118,9 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(exception));
 
-        var thrown = await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)))
-            .Should().ThrowAsync<DbUpdateException>();
+        var thrown = (await Assert.CatchAsync<DbUpdateException>(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id)); }))!;
 
-        thrown.Which.Should().BeSameAs(exception);
+        Assert.That(thrown, Is.SameAs(exception));
         await dependencies.Plans.DidNotReceive().FindIntakeLogAsync(
             Arg.Any<Id<UserEntity>>(),
             Arg.Any<Id<SupplementPlanItem>>(),
@@ -145,10 +139,9 @@ public sealed class CheckOffSupplementIntakePersistenceFailureTests
         dependencies.UnitOfWork.SaveChangesAsync(cancellationSource.Token)
             .Returns(Task.FromCanceled<int>(cancellationSource.Token));
 
-        await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(
+        await Assert.ThatAsync(async () => { await dependencies.CreateUseCase().ExecuteAsync(
                 dependencies.Command(item.Id),
-                cancellationSource.Token))
-            .Should().ThrowAsync<OperationCanceledException>();
+                cancellationSource.Token); }, Throws.InstanceOf<OperationCanceledException>());
         await dependencies.Plans.DidNotReceive().FindIntakeLogAsync(
             Arg.Any<Id<UserEntity>>(),
             Arg.Any<Id<SupplementPlanItem>>(),

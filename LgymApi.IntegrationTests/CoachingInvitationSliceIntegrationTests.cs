@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.Application.Coaching.Invitations.ListPaginated;
 using LgymApi.Application.Pagination;
@@ -43,18 +42,18 @@ public sealed class CoachingInvitationSliceIntegrationTests : IntegrationTestBas
 
             var result = await useCase.ExecuteAsync(new AcceptInvitationCommand(trainee.Id, invitationId));
 
-            result.IsFailure.Should().BeTrue();
+            Assert.That(result.IsFailure, Is.True);
         }
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invitation = await verificationDatabase.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId);
 
-        invitation.Status.Should().Be(TrainerInvitationStatus.Expired);
-        invitation.RespondedAt.Should().NotBeNull();
-        invitation.TraineeId.Should().BeNull();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(candidate => candidate.TraineeId == trainee.Id)).Should().BeFalse();
-        (await verificationDatabase.CommandEnvelopes.CountAsync(candidate => candidate.PayloadJson.Contains(invitationId.ToString()))).Should().Be(0);
+        Assert.That(invitation.Status, Is.EqualTo(TrainerInvitationStatus.Expired));
+        Assert.That(invitation.RespondedAt, Is.Not.Null);
+        Assert.That(invitation.TraineeId, Is.Null);
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(candidate => candidate.TraineeId == trainee.Id)), Is.False);
+        Assert.That((await verificationDatabase.CommandEnvelopes.CountAsync(candidate => candidate.PayloadJson.Contains(invitationId.ToString()))), Is.EqualTo(0));
     }
 
     [Test]
@@ -104,13 +103,13 @@ public sealed class CoachingInvitationSliceIntegrationTests : IntegrationTestBas
             trainer.Id,
             new FilterInput { Page = 1, PageSize = 20 }));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalCount.Should().Be(2);
-        result.Value.Items.Select(item => item.Id).Should().Equal(oldestId, newestId);
-        result.Value.Items[0].TraineeName.Should().Be(trainee.Name);
-        result.Value.Items[0].TraineeEmail.Should().Be(trainee.Email);
-        result.Value.Items[1].TraineeId.Should().BeNull();
-        result.Value.Items[1].TraineeName.Should().BeNull();
-        result.Value.Items[1].TraineeEmail.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(2));
+        Assert.That(result.Value.Items.Select(item => item.Id), Is.EqualTo(new[] { oldestId, newestId }));
+        Assert.That(result.Value.Items[0].TraineeName, Is.EqualTo(trainee.Name));
+        Assert.That(result.Value.Items[0].TraineeEmail, Is.EqualTo(trainee.Email.Value));
+        Assert.That(result.Value.Items[1].TraineeId, Is.Null);
+        Assert.That(result.Value.Items[1].TraineeName, Is.Null);
+        Assert.That(result.Value.Items[1].TraineeEmail, Is.Null);
     }
 }

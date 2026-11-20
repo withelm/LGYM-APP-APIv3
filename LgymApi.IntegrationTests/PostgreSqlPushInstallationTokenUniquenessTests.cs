@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
@@ -73,7 +72,7 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         {
             var migrations = migration.Database.GetMigrations().ToList();
             var targetMigration = migrations.Single(candidate => candidate.EndsWith(MigrationName, StringComparison.Ordinal));
-            migrations.IndexOf(PreviousMigrationId).Should().Be(migrations.IndexOf(targetMigration) - 1);
+            Assert.That(migrations.IndexOf(PreviousMigrationId), Is.EqualTo(migrations.IndexOf(targetMigration) - 1));
             await MigrateAsync(migration, targetMigration);
         }
 
@@ -86,17 +85,17 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         var unrelated = await verification.PushInstallations
             .SingleAsync(installation => installation.InstallationId == "unrelated-device");
 
-        conflicts.Should().HaveCount(2);
-        conflicts.Should().OnlyContain(installation =>
+        Assert.That(conflicts, Has.Exactly(2).Items);
+        Assert.That((conflicts).All(installation =>
             installation.FcmToken == null
             && installation.DisabledAt != null
             && installation.DisabledReason == "DuplicateFcmTokenMigration"
             && installation.IsDeleted
             && installation.UserId == null
-            && installation.SessionId == null);
-        unrelated.FcmToken.Should().Be("unrelated-token");
-        (await IsUniqueFilteredTokenIndexAsync(lease.ConnectionString)).Should().BeTrue();
-        verification.Database.HasPendingModelChanges().Should().BeFalse();
+            && installation.SessionId == null), Is.True);
+        Assert.That(unrelated.FcmToken, Is.EqualTo("unrelated-token"));
+        Assert.That((await IsUniqueFilteredTokenIndexAsync(lease.ConnectionString)), Is.True);
+        Assert.That(verification.Database.HasPendingModelChanges(), Is.False);
     }
 
     [Test]
@@ -124,15 +123,15 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
                 secondSession.Id,
                 new RegisterPushInstallationInput("race-device-b", "ios", "shared-race-token", null, "testing", null)));
 
-        results.Should().ContainSingle(result => result.IsSuccess);
-        results.Should().ContainSingle(result => result.IsFailure && result.Error is ForbiddenError);
+        Assert.That((results).Where(result => result.IsSuccess), Has.Exactly(1).Items);
+        Assert.That((results).Where(result => result.IsFailure && result.Error is ForbiddenError), Has.Exactly(1).Items);
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persisted = await database.PushInstallations.AsNoTracking()
             .Where(installation => installation.FcmToken == "shared-race-token")
             .ToListAsync();
-        persisted.Should().ContainSingle();
-        persisted[0].InstallationId.Should().BeOneOf("race-device-a", "race-device-b");
+        Assert.That(persisted, Has.Exactly(1).Items);
+        Assert.That(persisted[0].InstallationId, Is.AnyOf("race-device-a", "race-device-b"));
     }
 
     [Test]
@@ -167,17 +166,17 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
                 secondSession.Id,
                 new RegisterPushInstallationInput("shared-disassociated-device", "ios", "claim-token-b", null, "testing", null)));
 
-        results.Should().ContainSingle(result => result.IsSuccess);
-        results.Should().ContainSingle(result => result.IsFailure && result.Error is ForbiddenError);
+        Assert.That((results).Where(result => result.IsSuccess), Has.Exactly(1).Items);
+        Assert.That((results).Where(result => result.IsFailure && result.Error is ForbiddenError), Has.Exactly(1).Items);
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var persisted = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
             .PushInstallations
             .AsNoTracking()
             .SingleAsync(installation => installation.InstallationId == "shared-disassociated-device");
-        persisted.UserId.Should().BeOneOf(firstUser.Id, secondUser.Id);
-        persisted.SessionId.Should().BeOneOf(firstSession.Id, secondSession.Id);
-        persisted.FcmToken.Should().BeOneOf("claim-token-a", "claim-token-b");
-        persisted.RegistrationRevision.Should().Be(1);
+        Assert.That(persisted.UserId, Is.AnyOf(firstUser.Id, secondUser.Id));
+        Assert.That(persisted.SessionId, Is.AnyOf(firstSession.Id, secondSession.Id));
+        Assert.That(persisted.FcmToken, Is.AnyOf("claim-token-a", "claim-token-b"));
+        Assert.That(persisted.RegistrationRevision, Is.EqualTo(1));
     }
 
     [Test]
@@ -212,21 +211,15 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
                 environment = "testing"
             }));
 
-        responses.Select(response => response.StatusCode)
-            .Should()
-            .BeEquivalentTo([HttpStatusCode.OK, HttpStatusCode.Forbidden]);
+        Assert.That(responses.Select(response => response.StatusCode), Is.EquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.Forbidden }));
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.PushInstallations.AsNoTracking()
-            .CountAsync(installation => installation.FcmToken == "push-http-shared-token"))
-            .Should()
-            .Be(1);
-        (await database.ApiIdempotencyRecords.AsNoTracking()
+        Assert.That((await database.PushInstallations.AsNoTracking()
+            .CountAsync(installation => installation.FcmToken == "push-http-shared-token")), Is.EqualTo(1));
+        Assert.That((await database.ApiIdempotencyRecords.AsNoTracking()
             .Where(record => record.IdempotencyKey == "push-http-race-a" || record.IdempotencyKey == "push-http-race-b")
             .Select(record => record.ResponseStatusCode)
-            .ToListAsync())
-            .Should()
-            .BeEquivalentTo([(int)HttpStatusCode.OK, (int)HttpStatusCode.Forbidden]);
+            .ToListAsync()), Is.EquivalentTo(new[] { (int)HttpStatusCode.OK, (int)HttpStatusCode.Forbidden }));
     }
 
     [Test]
@@ -288,20 +281,20 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
                 replacementSession.Id,
                 new RegisterPushInstallationInput("delivery-rotation-device", "android", "token-b", null, "testing", "authorized"));
 
-            registration.IsSuccess.Should().BeTrue();
+            Assert.That(registration.IsSuccess, Is.True);
         }
 
         cancellationTokenSource.Cancel();
         sender.ReturnInvalidToken();
 
         Func<Task> awaitDelivery = async () => await deliveryTask;
-        await awaitDelivery.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await awaitDelivery(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
 
-        sender.TokenObservedDuringDelivery.Should().Be("token-a");
-        scheduler.ScheduleRetryCalls.Should().Be(1);
-        unitOfWork.CancellationTokens.Should().HaveCount(3);
-        unitOfWork.CancellationTokens[0].IsCancellationRequested.Should().BeTrue();
-        unitOfWork.CancellationTokens.Skip(1).Should().OnlyContain(token => !token.CanBeCanceled);
+        Assert.That(sender.TokenObservedDuringDelivery, Is.EqualTo("token-a"));
+        Assert.That(scheduler.ScheduleRetryCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.CancellationTokens, Has.Exactly(3).Items);
+        Assert.That(unitOfWork.CancellationTokens[0].IsCancellationRequested, Is.True);
+        Assert.That((unitOfWork.CancellationTokens.Skip(1)).All(token => !token.CanBeCanceled), Is.True);
 
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -310,16 +303,16 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
         var persistedMessage = await assertionDatabase.PushNotificationMessages.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == message.Id);
 
-        persistedInstallation.FcmToken.Should().Be("token-b");
-        persistedInstallation.SessionId.Should().Be(replacementSession.Id);
-        persistedInstallation.RegistrationRevision.Should().Be(1);
-        persistedInstallation.DisabledAt.Should().BeNull();
-        persistedInstallation.DisabledReason.Should().BeNull();
-        persistedMessage.Status.Should().Be(PushNotificationStatus.Failed);
-        persistedMessage.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        persistedMessage.Attempts.Should().Be(1);
-        persistedMessage.SchedulerJobId.Should().Be("delivery-rotation-retry");
-        persistedMessage.NextAttemptAt.Should().NotBeNull();
+        Assert.That(persistedInstallation.FcmToken, Is.EqualTo("token-b"));
+        Assert.That(persistedInstallation.SessionId, Is.EqualTo(replacementSession.Id));
+        Assert.That(persistedInstallation.RegistrationRevision, Is.EqualTo(1));
+        Assert.That(persistedInstallation.DisabledAt, Is.Null);
+        Assert.That(persistedInstallation.DisabledReason, Is.Null);
+        Assert.That(persistedMessage.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(persistedMessage.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(persistedMessage.Attempts, Is.EqualTo(1));
+        Assert.That(persistedMessage.SchedulerJobId, Is.EqualTo("delivery-rotation-retry"));
+        Assert.That(persistedMessage.NextAttemptAt, Is.Not.Null);
     }
 
     private async Task<UserSession> SeedSessionAsync(Id<User> userId)
@@ -358,10 +351,10 @@ public sealed class PostgreSqlPushInstallationTokenUniquenessTests : PostgreSqlI
             name = user.Name,
             password = "password123"
         });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var token = document.RootElement.GetProperty("token").GetString();
-        token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(token), Is.False);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 

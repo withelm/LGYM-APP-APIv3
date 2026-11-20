@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Measurements;
@@ -50,7 +49,7 @@ public sealed class MeasurementsServiceTests
         var accountId = Id<AccountReference>.New();
         _progress.AddMeasurementAsync(accountId, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80, Arg.Any<CancellationToken>()).Returns(Result<Unit, AppError>.Success(Unit.Value));
         var result = await _service.AddMeasurementAsync(Account(accountId), BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80);
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _progress.Received(1).AddMeasurementAsync(accountId, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80, Arg.Any<CancellationToken>());
     }
 
@@ -61,7 +60,7 @@ public sealed class MeasurementsServiceTests
         _accounts.GetByIdAsync(accountId, Arg.Any<CancellationToken>()).Returns(ActiveAccount(accountId));
         _progress.GetMeasurementsListForOwnerAsync(accountId, null, null, Arg.Any<CancellationToken>()).Returns(Result<List<MeasurementReadModel>, AppError>.Success([]));
         var result = await _service.GetMeasurementsListAsync(Account(accountId), accountId, null, null);
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _relationships.DidNotReceiveWithAnyArgs().GetAccessAsync(default, default);
     }
 
@@ -78,7 +77,7 @@ public sealed class MeasurementsServiceTests
 
         var result = await _service.GetMeasurementsHistoryAsync(Account(trainerId), traineeId, null, null);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _relationships.Received(1).GetAccessAsync(trainerId, traineeId, Arg.Any<CancellationToken>());
     }
 
@@ -90,7 +89,7 @@ public sealed class MeasurementsServiceTests
         _accounts.GetByIdAsync(ownerId, Arg.Any<CancellationToken>()).Returns(ActiveAccount(ownerId));
         _accounts.GetByIdAsync(actorId, Arg.Any<CancellationToken>()).Returns(ActiveAccount(actorId));
         var result = await _service.GetMeasurementsTrendsAsync(Account(actorId), ownerId);
-        result.Error.Should().BeOfType<MeasurementForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<MeasurementForbiddenError>());
     }
 
     [Test]
@@ -102,7 +101,7 @@ public sealed class MeasurementsServiceTests
         _progress.GetMeasurementOwnerAsync(measurementId, Arg.Any<CancellationToken>()).Returns(Result<Id<AccountReference>, AppError>.Success(accountId));
         _progress.GetMeasurementDetailForOwnerAsync(accountId, measurementId, Arg.Any<CancellationToken>()).Returns(Result<MeasurementReadModel, AppError>.Success(new(measurementId, accountId, BodyParts.BodyWeight, MeasurementUnits.Kilograms, 80, default, default)));
         var result = await _service.GetMeasurementDetailAsync(Account(accountId), measurementId);
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -114,7 +113,7 @@ public sealed class MeasurementsServiceTests
 
         var result = await _service.GetMeasurementsHistoryAsync(Account(trainerId), traineeId, null, null);
 
-        result.Error.Should().BeOfType<MeasurementNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<MeasurementNotFoundError>());
         await _relationships.DidNotReceiveWithAnyArgs().GetAccessAsync(default, default);
         await _progress.DidNotReceiveWithAnyArgs().GetMeasurementsHistoryForOwnerAsync(default, default, default, default);
     }
@@ -128,7 +127,7 @@ public sealed class MeasurementsServiceTests
 
         var result = await _service.GetMeasurementsListAsync(Account(traineeId), traineeId, null, null);
 
-        result.Error.Should().BeOfType<MeasurementNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<MeasurementNotFoundError>());
         await _relationships.DidNotReceiveWithAnyArgs().GetAccessAsync(default, default);
         await _progress.DidNotReceiveWithAnyArgs().GetMeasurementsListForOwnerAsync(default, default, default, default);
     }
@@ -142,20 +141,20 @@ public sealed class MeasurementsServiceTests
         var scope = new MeasurementReadScope([new MeasurementsRelationshipPeriod(episodeId, start, end)]);
         var accountId = Id<AccountReference>.New();
 
-        scope.Allows(Measurement(accountId, start.AddMinutes(1))).Should().BeTrue();
-        scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(-1))).Should().BeTrue();
-        scope.Allows(Measurement(accountId, start.AddDays(-1))).Should().BeFalse();
-        scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(1))).Should().BeFalse();
-        scope.Allows(Measurement(accountId, end.AddMinutes(1), null, null)).Should().BeFalse();
-        scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(-1)) with
+        Assert.That(scope.Allows(Measurement(accountId, start.AddMinutes(1))), Is.True);
+        Assert.That(scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(-1))), Is.True);
+        Assert.That(scope.Allows(Measurement(accountId, start.AddDays(-1))), Is.False);
+        Assert.That(scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(1))), Is.False);
+        Assert.That(scope.Allows(Measurement(accountId, end.AddMinutes(1), null, null)), Is.False);
+        Assert.That(scope.Allows(Measurement(accountId, end.AddMinutes(1), episodeId, end.AddMinutes(-1)) with
         {
             SourceReportSubmissionId = null,
             SourceReportRequestId = null
-        }).Should().BeFalse("incomplete report provenance must fail closed");
-        scope.Allows(Measurement(accountId, start.AddMinutes(1)) with
+        }), Is.False, "incomplete report provenance must fail closed");
+        Assert.That(scope.Allows(Measurement(accountId, start.AddMinutes(1)) with
         {
             SourceReportSubmissionId = Id<ReportSubmission>.New()
-        }).Should().BeFalse("a partial report source must never be treated as a manual observation");
+        }), Is.False, "a partial report source must never be treated as a manual observation");
     }
 
     private static WorkoutMeasurementPersistenceModel Measurement(

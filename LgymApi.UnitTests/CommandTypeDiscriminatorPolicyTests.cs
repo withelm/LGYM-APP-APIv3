@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Runtime;
 using NUnit.Framework;
 
@@ -12,8 +11,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
     {
         var policy = new CommandTypeDiscriminatorPolicy(CommandContractRegistry.CreateDefault());
 
-        policy.GetDiscriminator(GetApplicationRuntimeType(contract))
-            .Should().Be(contract.CanonicalId);
+        Assert.That(policy.GetDiscriminator(GetApplicationRuntimeType(contract)), Is.EqualTo(contract.CanonicalId));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -21,8 +19,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
     {
         var policy = new CommandTypeDiscriminatorPolicy(CommandContractRegistry.CreateDefault());
 
-        policy.ResolveType(contract.CanonicalId)
-            .Should().Be(GetApplicationRuntimeType(contract));
+        Assert.That(policy.ResolveType(contract.CanonicalId), Is.EqualTo(GetApplicationRuntimeType(contract)));
     }
 
     [Test]
@@ -31,7 +28,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
         var policy = new CommandTypeDiscriminatorPolicy(CommandContractRegistry.CreateDefault());
         var action = () => policy.ResolveType("Fake.Namespace.UnknownCommand");
 
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -39,8 +36,7 @@ public sealed class CommandTypeDiscriminatorPolicyTests
     {
         var policy = new CommandTypeDiscriminatorPolicy(CommandContractRegistry.CreateDefault());
 
-        policy.IsExactMatch(contract.CanonicalId, contract.FutureClrNameReadAlias)
-            .Should().BeTrue();
+        Assert.That(policy.IsExactMatch(contract.CanonicalId, contract.FutureClrNameReadAlias), Is.True);
     }
 
     [Test]
@@ -48,8 +44,8 @@ public sealed class CommandTypeDiscriminatorPolicyTests
     {
         var policy = new CommandTypeDiscriminatorPolicy(CommandContractRegistry.CreateDefault());
 
-        policy.IsExactMatch("Known.Command", "").Should().BeFalse();
-        policy.IsExactMatch("", "Known.Command").Should().BeFalse();
+        Assert.That(policy.IsExactMatch("Known.Command", ""), Is.False);
+        Assert.That(policy.IsExactMatch("", "Known.Command"), Is.False);
     }
 
     private static Type GetApplicationRuntimeType(LegacyCommandContract contract) => contract.CommandType;

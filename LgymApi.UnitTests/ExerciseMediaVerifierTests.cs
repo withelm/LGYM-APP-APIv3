@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using FluentAssertions;
 using ImageMagick;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
 using LgymApi.Infrastructure.Services;
@@ -28,16 +27,18 @@ public sealed class ExerciseMediaVerifierTests
     {
         var original = AnimatedGif();
         var result = await new ExerciseMediaVerifier().VerifyAsync(original, default);
-        result.PublishedSha256.Should().Be(Hash(result.Bytes));
+        Assert.That(result.PublishedSha256, Is.EqualTo(Hash(result.Bytes)));
         using var source = new MagickImageCollection(original); using var published = new MagickImageCollection(result.Bytes);
         source.Coalesce(); published.Coalesce();
-        published.Count.Should().Be(source.Count).And.Be(2);
+        var assertedChain40 = published.Count;
+        Assert.That(assertedChain40, Is.EqualTo(source.Count));
+        Assert.That(assertedChain40, Is.EqualTo(2));
         for (var i = 0; i < source.Count; i++)
         {
-            source[i].AnimationDelay.Should().Be(published[i].AnimationDelay);
-            source[i].AnimationIterations.Should().Be(published[i].AnimationIterations);
+            Assert.That(source[i].AnimationDelay, Is.EqualTo(published[i].AnimationDelay));
+            Assert.That(source[i].AnimationIterations, Is.EqualTo(published[i].AnimationIterations));
             using var a = source[i].GetPixels(); using var b = published[i].GetPixels();
-            a.ToByteArray(PixelMapping.RGBA).Should().Equal(b.ToByteArray(PixelMapping.RGBA)!);
+            Assert.That(a.ToByteArray(PixelMapping.RGBA), Is.EqualTo(b.ToByteArray(PixelMapping.RGBA)!));
         }
     }
 
@@ -53,13 +54,13 @@ public sealed class ExerciseMediaVerifierTests
         image.SetProfile(new XmpProfile(Encoding.UTF8.GetBytes("<x:xmpmeta xmlns:x='adobe:ns:meta/'><private-location>GPS fixture</private-location></x:xmpmeta>")));
         var original = image.ToByteArray(format);
         using var encodedSource = new MagickImage(original);
-        encodedSource.Orientation.Should().Be(Orientation.RightTop, "the fixture must actually carry the orientation being tested");
+        Assert.That(encodedSource.Orientation, Is.EqualTo(Orientation.RightTop), "the fixture must actually carry the orientation being tested");
         var result = await new ExerciseMediaVerifier().VerifyAsync(original, default);
-        result.PublishedSha256.Should().Be(Hash(result.Bytes));
+        Assert.That(result.PublishedSha256, Is.EqualTo(Hash(result.Bytes)));
         using var output = new MagickImage(result.Bytes);
-        output.ProfileNames.Should().BeEmpty();
-        output.Width.Should().Be(3); output.Height.Should().Be(7);
-        Encoding.Latin1.GetString(result.Bytes).Should().NotContain("Private photographer");
+        Assert.That(output.ProfileNames, Is.Empty);
+        Assert.That(output.Width, Is.EqualTo(3)); Assert.That(output.Height, Is.EqualTo(7));
+        Assert.That(Encoding.Latin1.GetString(result.Bytes), Does.Not.Contain("Private photographer"));
     }
 
     [Test]

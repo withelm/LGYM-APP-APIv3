@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
@@ -28,20 +27,20 @@ public sealed class AppConfigTests : IntegrationTestBase
         };
 
         var createResponse = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", createRequest);
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         var getRequest = new { platform = Platforms.Android.ToString() };
         var getResponse = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", getRequest);
 
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await getResponse.Content.ReadFromJsonAsync<AppConfigInfoResponse>();
-        body.Should().NotBeNull();
-        body!.MinRequiredVersion.Should().Be("1.0.0");
-        body.LatestVersion.Should().Be("2.0.0");
-        body.ForceUpdate.Should().BeFalse();
-        body.UpdateUrl.Should().Be("https://play.google.com/store/apps/details?id=com.lgym");
-        body.ReleaseNotes.Should().Be("Bug fixes and improvements");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.MinRequiredVersion, Is.EqualTo("1.0.0"));
+        Assert.That(body.LatestVersion, Is.EqualTo("2.0.0"));
+        Assert.That(body.ForceUpdate, Is.False);
+        Assert.That(body.UpdateUrl, Is.EqualTo("https://play.google.com/store/apps/details?id=com.lgym"));
+        Assert.That(body.ReleaseNotes, Is.EqualTo("Bug fixes and improvements"));
     }
 
     private static IEnumerable<TestCaseData> GetAppVersion_InvalidPlatformCases()
@@ -64,7 +63,7 @@ public sealed class AppConfigTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", requestBody);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -76,7 +75,7 @@ public sealed class AppConfigTests : IntegrationTestBase
         var request = new { platform = Platforms.Ios.ToString() };
         var response = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -98,11 +97,11 @@ public sealed class AppConfigTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
     }
 
     [Test]
@@ -128,7 +127,7 @@ public sealed class AppConfigTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{otherAdmin.Id}", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -147,7 +146,7 @@ public sealed class AppConfigTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{user.Id}", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     private static IEnumerable<TestCaseData> CreateNewAppVersion_InvalidPlatformCases()
@@ -179,7 +178,7 @@ public sealed class AppConfigTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/appConfig/createNewAppVersion/{admin.Id}", requestBody);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -209,13 +208,13 @@ public sealed class AppConfigTests : IntegrationTestBase
         var getRequest = new { platform = Platforms.Android.ToString() };
         var getResponse = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", getRequest);
 
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await getResponse.Content.ReadFromJsonAsync<AppConfigInfoResponse>();
-        body.Should().NotBeNull();
-        body!.LatestVersion.Should().Be("2.0.0");
-        body.MinRequiredVersion.Should().Be("1.5.0");
-        body.ForceUpdate.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.LatestVersion, Is.EqualTo("2.0.0"));
+        Assert.That(body.MinRequiredVersion, Is.EqualTo("1.5.0"));
+        Assert.That(body.ForceUpdate, Is.True);
     }
 
     private sealed class MessageResponse

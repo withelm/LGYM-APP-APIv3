@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Notifications;
 using LgymApi.Infrastructure;
@@ -45,9 +44,8 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider(validateScopes: true);
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<IEmailSender>().Should().BeOfType<SmtpEmailSender>();
-        scope.ServiceProvider.GetServices<IEmailTemplateComposer>().Select(composer => composer.GetType())
-            .Should().BeEquivalentTo(ExpectedComposerTypes);
+        Assert.That(scope.ServiceProvider.GetRequiredService<IEmailSender>(), Is.TypeOf<SmtpEmailSender>());
+        Assert.That(scope.ServiceProvider.GetServices<IEmailTemplateComposer>().Select(composer => composer.GetType()), Is.EquivalentTo(ExpectedComposerTypes).UsingPropertiesComparer());
     }
 
     [Test]
@@ -58,8 +56,7 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
 
         var action = () => AssertEmailDescriptors(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(EmailOptions).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(EmailOptions).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -70,8 +67,7 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
 
         var action = () => AssertEmailDescriptors(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IEmailSender).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IEmailSender).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static ServiceCollection CreateComposedServices()
@@ -91,7 +87,7 @@ public sealed class NotificationsEmailServiceCollectionExtensionsTests
     {
         foreach (var serviceType in GetEmailServiceTypes())
         {
-            services.Should().NotContain(descriptor => descriptor.ServiceType == serviceType);
+            Assert.That((services).Any(descriptor => descriptor.ServiceType == serviceType), Is.False);
         }
     }
 

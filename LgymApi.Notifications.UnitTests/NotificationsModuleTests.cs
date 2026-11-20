@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Authorization;
 using LgymApi.Authorization.Contracts;
@@ -20,12 +19,12 @@ public sealed class NotificationsModuleTests
 
         services.AddNotificationsModule();
 
-        services.Should().ContainSingle(descriptor =>
+        Assert.That((services).Where(descriptor =>
             descriptor.ServiceType == typeof(IAuthorizationPolicy<NotificationOwnershipContext>)
-            && descriptor.ImplementationType == typeof(NotificationOwnershipPolicy));
-        services.Should().ContainSingle(descriptor =>
+            && descriptor.ImplementationType == typeof(NotificationOwnershipPolicy)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor =>
             descriptor.ServiceType == typeof(IAccountAccessOwnerCapabilityExtension)
-            && descriptor.ImplementationType == typeof(NotificationsAccountAccessCapabilityExtension));
+            && descriptor.ImplementationType == typeof(NotificationsAccountAccessCapabilityExtension)), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -36,8 +35,7 @@ public sealed class NotificationsModuleTests
 
         var act = () => services.AddNotificationsModule();
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*NotificationOwnershipContext*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*NotificationOwnershipContext*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -47,9 +45,9 @@ public sealed class NotificationsModuleTests
 
         var capabilities = extension.GetCapabilities(CreateAccountContext());
 
-        extension.Owner.Should().Be(AccountAccessCapabilityOwner.Notifications);
-        extension.GetAvailability().Should().Be(new AccountAccessOwnerCapabilities(true));
-        capabilities.Should().Be(new NotificationsAccountAccessOwnerCapabilities(true, true, true, true));
+        Assert.That(extension.Owner, Is.EqualTo(AccountAccessCapabilityOwner.Notifications));
+        Assert.That(extension.GetAvailability(), Is.EqualTo(new AccountAccessOwnerCapabilities(true)));
+        Assert.That(capabilities, Is.EqualTo(new NotificationsAccountAccessOwnerCapabilities(true, true, true, true)));
     }
 
     [TestCase(true, false)]
@@ -60,7 +58,7 @@ public sealed class NotificationsModuleTests
 
         var capabilities = extension.GetCapabilities(CreateAccountContext(isBlocked: isBlocked, isDeleted: isDeleted));
 
-        capabilities.Should().Be(new NotificationsAccountAccessOwnerCapabilities(true, false, false, false));
+        Assert.That(capabilities, Is.EqualTo(new NotificationsAccountAccessOwnerCapabilities(true, false, false, false)));
     }
 
     [Test]
@@ -70,7 +68,7 @@ public sealed class NotificationsModuleTests
 
         var capabilities = extension.GetCapabilities(CreateAccountContext(hasSession: false));
 
-        capabilities.Should().Be(new NotificationsAccountAccessOwnerCapabilities(true, false, false, false));
+        Assert.That(capabilities, Is.EqualTo(new NotificationsAccountAccessOwnerCapabilities(true, false, false, false)));
     }
 
     private static AuthenticatedAccountContext CreateAccountContext(

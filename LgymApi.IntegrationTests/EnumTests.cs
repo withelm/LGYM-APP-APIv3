@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.IntegrationTests;
@@ -22,9 +21,9 @@ public sealed class EnumTests : IntegrationTestBase
         using var all = await Client.GetAsync("/api/enums/all");
         using var bodyParts = await Client.GetAsync("/api/enums/BodyParts");
 
-        types.StatusCode.Should().Be(HttpStatusCode.OK);
-        all.StatusCode.Should().Be(HttpStatusCode.OK);
-        bodyParts.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(types.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(all.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(bodyParts.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -38,13 +37,12 @@ public sealed class EnumTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/enums/BodyParts");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
-        body.Should().NotBeNull();
-        body!.Values.Select(value => value.Id).Should().Equal(
-            System.Enum.GetNames<BodyParts>().Where(name => name != "Unknown"));
-        body.Values.Should().NotContain(value => value.Id == "Unknown" || value.Name == "Unknown");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Values.Select(value => value.Id), Is.EqualTo(System.Enum.GetNames<BodyParts>().Where(name => name != "Unknown")));
+        Assert.That((body.Values).Any(value => value.Id == "Unknown" || value.Name == "Unknown"), Is.False);
     }
 
     [TestCase("en", "enumuser3en", "enum3-en@example.com", "Pull-up weighted")]
@@ -65,14 +63,14 @@ public sealed class EnumTests : IntegrationTestBase
         request.Headers.AcceptLanguage.ParseAdd(culture);
         var response = await Client.SendAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
-        body.Should().NotBeNull();
+        Assert.That(body, Is.Not.Null);
         var pullupWeighted = body!.Values.Single(value => value.Id == "PullupWeighted");
-        pullupWeighted.Id.Should().Be("PullupWeighted");
-        pullupWeighted.Name.Should().Be(expectedLabel);
-        pullupWeighted.DisplayName.Should().Be(expectedLabel);
+        Assert.That(pullupWeighted.Id, Is.EqualTo("PullupWeighted"));
+        Assert.That(pullupWeighted.Name, Is.EqualTo(expectedLabel));
+        Assert.That(pullupWeighted.DisplayName, Is.EqualTo(expectedLabel));
     }
 
     [Test]
@@ -86,11 +84,11 @@ public sealed class EnumTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/enums/eXeRcIsEeLoFoRmUlA");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<EnumLookupResponse>();
-        body.Should().NotBeNull();
-        body!.EnumType.Should().Be(nameof(ExerciseEloFormula));
-        body.Values.Select(value => value.Id).Should().Contain("PullupWeighted");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.EnumType, Is.EqualTo(nameof(ExerciseEloFormula)));
+        Assert.That(body.Values.Select(value => value.Id), Does.Contain("PullupWeighted"));
     }
 
     [Test]
@@ -104,12 +102,11 @@ public sealed class EnumTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/enums/all");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<EnumLookupResponse>>();
-        body.Should().NotBeNull();
-        body!.SelectMany(lookup => lookup.Values)
-            .Should().NotContain(value => value.Id == "Unknown" || value.Name == "Unknown");
+        Assert.That(body, Is.Not.Null);
+        Assert.That((body!.SelectMany(lookup => lookup.Values)).Any(value => value.Id == "Unknown" || value.Name == "Unknown"), Is.False);
     }
 
     private sealed class EnumLookupResponse

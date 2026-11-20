@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
@@ -30,10 +28,8 @@ public sealed class ExerciseTests : IntegrationTestBase
                 string.Equals(candidate.RoutePattern.RawText, route, StringComparison.Ordinal)
                 && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("POST", StringComparer.Ordinal) == true);
 
-        endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
-            .Select(metadata => metadata.Policy)
-            .Should()
-            .Equal(AuthConstants.Policies.ManageGlobalExercises);
+        Assert.That(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
+            .Select(metadata => metadata.Policy), Is.EqualTo(new[] { AuthConstants.Policies.ManageGlobalExercises }));
     }
 
     [Test]
@@ -52,20 +48,20 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Bench Press" && e.UserId == null);
-        exercise.Should().NotBeNull();
-        exercise!.BodyPart.ToString().Should().Be("Chest");
-        exercise.EloFormula.Should().Be(ExerciseEloFormula.Standard);
-        exercise.IsDeleted.Should().BeFalse();
+        Assert.That(exercise, Is.Not.Null);
+        Assert.That(exercise!.BodyPart.ToString(), Is.EqualTo("Chest"));
+        Assert.That(exercise.EloFormula, Is.EqualTo(ExerciseEloFormula.Standard));
+        Assert.That(exercise.IsDeleted, Is.False);
     }
 
     [Test]
@@ -85,14 +81,14 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/addExerciseWithFormula", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Weighted Pullup" && e.UserId == null);
-        exercise.Should().NotBeNull();
-        exercise!.EloFormula.Should().Be(ExerciseEloFormula.StrengthWeighted);
+        Assert.That(exercise, Is.Not.Null);
+        Assert.That(exercise!.EloFormula, Is.EqualTo(ExerciseEloFormula.StrengthWeighted));
     }
 
     [TestCase("/api/exercise/addExercise", false)]
@@ -130,10 +126,10 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .AnyAsync(exercise => exercise.Name == attemptedExerciseName);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            exerciseExists.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(exerciseExists, Is.False);
         }
     }
 
@@ -154,14 +150,14 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExerciseWithFormula", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Weighted Pullup User" && e.UserId == user.Id);
-        exercise.Should().NotBeNull();
-        exercise!.EloFormula.Should().Be(ExerciseEloFormula.VolumeWeighted);
+        Assert.That(exercise, Is.Not.Null);
+        Assert.That(exercise!.EloFormula, Is.EqualTo(ExerciseEloFormula.VolumeWeighted));
     }
 
     [Test]
@@ -180,14 +176,14 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{user.Id}/addUserExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var exercise = await db.Exercises.FirstOrDefaultAsync(e => e.Name == "Custom Squat" && e.UserId == user.Id);
-        exercise.Should().NotBeNull();
-        exercise!.BodyPart.ToString().Should().Be("Quads");
+        Assert.That(exercise, Is.Not.Null);
+        Assert.That(exercise!.BodyPart.ToString(), Is.EqualTo("Quads"));
     }
 
     [Test]
@@ -204,7 +200,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -221,7 +217,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/exercise/addExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -240,7 +236,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/deleteExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -248,8 +244,8 @@ public sealed class ExerciseTests : IntegrationTestBase
         var deletedExercise = await db.Exercises
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == exercise.Id);
-        deletedExercise.Should().NotBeNull();
-        deletedExercise!.IsDeleted.Should().BeTrue();
+        Assert.That(deletedExercise, Is.Not.Null);
+        Assert.That(deletedExercise!.IsDeleted, Is.True);
     }
 
     [Test]
@@ -266,7 +262,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/exercise/{admin.Id}/deleteExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -274,7 +270,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var deletedExercise = await db.Exercises
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == exercise.Id);
-        deletedExercise!.IsDeleted.Should().BeTrue();
+        Assert.That(deletedExercise!.IsDeleted, Is.True);
     }
 
     [Test]
@@ -289,10 +285,10 @@ public sealed class ExerciseTests : IntegrationTestBase
             $"/api/exercise/{manager.Id}/deleteExercise",
             new Dictionary<string, string> { ["id"] = exercise.Id.ToString() });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.Exercises.IgnoreQueryFilters().SingleAsync(item => item.Id == exercise.Id)).IsDeleted.Should().BeTrue();
+        Assert.That((await db.Exercises.IgnoreQueryFilters().SingleAsync(item => item.Id == exercise.Id)).IsDeleted, Is.True);
     }
 
     [Test]
@@ -315,11 +311,11 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(item => item.Id == exercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -348,14 +344,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(item => item.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -378,17 +374,17 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var updatedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
-        updatedExercise.Should().NotBeNull();
-        updatedExercise!.Name.Should().Be("New Name");
-        updatedExercise.BodyPart.ToString().Should().Be("Back");
-        updatedExercise.Description.Should().Be("Updated description");
-        updatedExercise.EloFormula.Should().Be(ExerciseEloFormula.Standard);
+        Assert.That(updatedExercise, Is.Not.Null);
+        Assert.That(updatedExercise!.Name, Is.EqualTo("New Name"));
+        Assert.That(updatedExercise.BodyPart.ToString(), Is.EqualTo("Back"));
+        Assert.That(updatedExercise.Description, Is.EqualTo("Updated description"));
+        Assert.That(updatedExercise.EloFormula, Is.EqualTo(ExerciseEloFormula.Standard));
     }
 
     [Test]
@@ -407,15 +403,15 @@ public sealed class ExerciseTests : IntegrationTestBase
             description = "Owned by manager"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var updatedExercise = await db.Exercises.SingleAsync(item => item.Id == exercise.Id);
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            updatedExercise.UserId.Should().Be(manager.Id);
-            updatedExercise.Name.Should().Be("Manager Custom Updated");
-            updatedExercise.BodyPart.Should().Be(BodyParts.Back);
+            Assert.That(updatedExercise.UserId, Is.EqualTo(manager.Id));
+            Assert.That(updatedExercise.Name, Is.EqualTo("Manager Custom Updated"));
+            Assert.That(updatedExercise.BodyPart, Is.EqualTo(BodyParts.Back));
         }
     }
 
@@ -438,16 +434,16 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/exercise/updateExerciseWithFormula", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var updatedExercise = await db.Exercises.FirstOrDefaultAsync(e => e.Id == exercise.Id);
-        updatedExercise.Should().NotBeNull();
-        updatedExercise!.EloFormula.Should().Be(ExerciseEloFormula.StrengthWeighted);
-        updatedExercise.BodyPart.ToString().Should().Be("Back");
-        updatedExercise.Description.Should().Be("Updated with formula");
+        Assert.That(updatedExercise, Is.Not.Null);
+        Assert.That(updatedExercise!.EloFormula, Is.EqualTo(ExerciseEloFormula.StrengthWeighted));
+        Assert.That(updatedExercise.BodyPart.ToString(), Is.EqualTo("Back"));
+        Assert.That(updatedExercise.Description, Is.EqualTo("Updated with formula"));
     }
 
     [Test]
@@ -478,16 +474,16 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(item => item.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.BodyPart.Should().Be(BodyParts.Chest);
-            persistedExercise.Description.Should().BeNull();
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.BodyPart, Is.EqualTo(BodyParts.Chest));
+            Assert.That(persistedExercise.Description, Is.Null);
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -504,12 +500,12 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/exercise/getAllGlobalExercises");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(e => e.Name).Should().Contain(new[] { "Global Exercise 1", "Global Exercise 2" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(e => e.Name), Is.SupersetOf(new[] { "Global Exercise 1", "Global Exercise 2" }));
     }
 
     [Test]
@@ -524,12 +520,12 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(e => e.Name).Should().Contain(new[] { "User Exercise 1", "User Exercise 2" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(e => e.Name), Is.SupersetOf(new[] { "User Exercise 1", "User Exercise 2" }));
     }
 
     [Test]
@@ -543,12 +539,12 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllExercises");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(e => e.Name).Should().Contain(new[] { "Global Exercise", "User Exercise" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(e => e.Name), Is.SupersetOf(new[] { "Global Exercise", "User Exercise" }));
     }
 
     [Test]
@@ -564,12 +560,12 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("Chest Exercise");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("Chest Exercise"));
     }
 
     [Test]
@@ -581,7 +577,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var request = new { bodyPart = "ChestAlias" };
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -593,7 +589,7 @@ public sealed class ExerciseTests : IntegrationTestBase
         var request = new { bodyPart = 1 };
         var response = await Client.PostAsJsonAsync($"/api/exercise/{user.Id}/getExerciseByBodyPart", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -616,17 +612,17 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/exercise/{exercise.Id}/getExercise");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<ExerciseResponse>();
-        body.Should().NotBeNull();
-        body!.Name.Should().Be("Test Exercise");
-        body.BodyPart.Should().NotBeNull();
-        body.BodyPart!.Name.Should().Be("Chest");
-        body.Description.Should().Be("Detailed description");
-        body.Image.Should().Be("https://cdn.example.com/exercise.png");
-        body.EloFormula.Should().NotBeNull();
-        body.EloFormula!.Id.Should().Be(ExerciseEloFormula.StrengthWeighted.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Name, Is.EqualTo("Test Exercise"));
+        Assert.That(body.BodyPart, Is.Not.Null);
+        Assert.That(body.BodyPart!.Name, Is.EqualTo("Chest"));
+        Assert.That(body.Description, Is.EqualTo("Detailed description"));
+        Assert.That(body.Image, Is.EqualTo("https://cdn.example.com/exercise.png"));
+        Assert.That(body.EloFormula, Is.Not.Null);
+        Assert.That(body.EloFormula!.Id, Is.EqualTo(ExerciseEloFormula.StrengthWeighted.ToString()));
     }
 
     [Test]
@@ -650,14 +646,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(exercise => exercise.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victimExercise.UserId);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victimExercise.UserId));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -680,13 +676,13 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(item => item.Id == exercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            responseBody.Should().NotContain(exercise.Name);
-            responseBody.Should().NotContain(exercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -724,20 +720,16 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         if (attemptedExercise is not null)
         {
-            attemptedExercise.UserId.Should().Be(victim.Id);
+            Assert.That(attemptedExercise.UserId, Is.EqualTo(victim.Id));
         }
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(victimExercise.Name);
-            attemptedExerciseExists.Should().BeFalse(
-                "an attacker must not create exercise '{0}' for victim {1}; the persisted owner was {2}",
-                attemptedExerciseName,
-                victim.Id,
-                attemptedExercise?.UserId);
-            persistedVictimExercise.UserId.Should().Be(victim.Id);
-            persistedVictimExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(attemptedExerciseExists, Is.False, string.Format(System.Globalization.CultureInfo.InvariantCulture, "an attacker must not create exercise '{0}' for victim {1}; the persisted owner was {2}", attemptedExerciseName, victim.Id, attemptedExercise?.UserId));
+            Assert.That(persistedVictimExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedVictimExercise.IsDeleted, Is.False);
         }
     }
 
@@ -761,14 +753,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(exercise => exercise.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -792,14 +784,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(exercise => exercise.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -824,14 +816,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(exercise => exercise.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(victimExercise.Name);
-            responseBody.Should().NotContain(victimExercise.Id.ToString());
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Id.ToString()));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -858,13 +850,13 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(exercise => exercise.Id == victimExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(victimExercise.Name);
-            persistedExercise.UserId.Should().Be(victim.Id);
-            persistedExercise.Name.Should().Be(victimExercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(victimExercise.Name));
+            Assert.That(persistedExercise.UserId, Is.EqualTo(victim.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(victimExercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -978,11 +970,11 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Updated");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -1000,10 +992,10 @@ public sealed class ExerciseTests : IntegrationTestBase
             eloFormula = ExerciseEloFormula.Standard.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Exercises.AnyAsync(exercise => exercise.Name == "Unauthorized Formula Exercise")).Should().BeFalse();
+        Assert.That((await database.Exercises.AnyAsync(exercise => exercise.Name == "Unauthorized Formula Exercise")), Is.False);
     }
 
     [Test]
@@ -1030,14 +1022,14 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AnyAsync(translation => translation.ExerciseId == exercise.Id && translation.Culture == "pl");
         var persistedExercise = await db.Exercises.AsNoTracking().SingleAsync(item => item.Id == exercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(exercise.Name);
-            responseBody.Should().NotContain(exercise.Id.ToString());
-            translationExists.Should().BeFalse();
-            persistedExercise.Name.Should().Be(exercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Id.ToString()));
+            Assert.That(translationExists, Is.False);
+            Assert.That(persistedExercise.Name, Is.EqualTo(exercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -1066,15 +1058,15 @@ public sealed class ExerciseTests : IntegrationTestBase
             .AnyAsync(translation => translation.ExerciseId == exercise.Id);
         var persistedExercise = await db.Exercises.AsNoTracking().SingleAsync(item => item.Id == exercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            responseBody.Should().NotContain(exercise.Name);
-            responseBody.Should().NotContain(exercise.Id.ToString());
-            translationExists.Should().BeFalse();
-            persistedExercise.UserId.Should().Be(admin.Id);
-            persistedExercise.Name.Should().Be(exercise.Name);
-            persistedExercise.IsDeleted.Should().BeFalse();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Name));
+            Assert.That(responseBody, Does.Not.Contain(exercise.Id.ToString()));
+            Assert.That(translationExists, Is.False);
+            Assert.That(persistedExercise.UserId, Is.EqualTo(admin.Id));
+            Assert.That(persistedExercise.Name, Is.EqualTo(exercise.Name));
+            Assert.That(persistedExercise.IsDeleted, Is.False);
         }
     }
 
@@ -1093,7 +1085,7 @@ public sealed class ExerciseTests : IntegrationTestBase
             name = "Obce cwiczenie"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -1113,7 +1105,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -1131,7 +1123,7 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -1150,6 +1142,6 @@ public sealed class ExerciseTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }

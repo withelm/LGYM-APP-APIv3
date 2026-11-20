@@ -1,6 +1,5 @@
 using System.Data.Common;
 using System.Text.RegularExpressions;
-using FluentAssertions;
 using LgymApi.Application.Coaching.ManagedPlans.Assign;
 using LgymApi.Application.Coaching.ManagedPlans.Unassign;
 using LgymApi.Application.TrainingPlanning.Plan.CreatePlan;
@@ -86,7 +85,7 @@ public sealed class PostgreSqlPlanSelectionRaceTests : PostgreSqlIntegrationTest
                         ownerAccount, ownerAccount, "New private plan", PlanPurpose.Unclassified), ct)
                     : await ownerScope.ServiceProvider.GetRequiredService<ISetActivePlanUseCase>().ExecuteAsync(new SetActivePlanCommand(
                         ownerAccount, ownerAccount, privateId.Rebind<PlanReference>()), ct);
-                selected.IsSuccess.Should().BeTrue();
+                Assert.That(selected.IsSuccess, Is.True);
             }
             gate.Release.TrySetResult();
             try
@@ -95,16 +94,16 @@ public sealed class PostgreSqlPlanSelectionRaceTests : PostgreSqlIntegrationTest
             }
             catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.SerializationFailure)
             {
-                exception.SqlState.Should().Be(PostgresErrorCodes.SerializationFailure);
+                Assert.That(exception.SqlState, Is.EqualTo(PostgresErrorCodes.SerializationFailure));
             }
             catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
             {
-                exception.InnerException.Should().BeOfType<PostgresException>();
+                Assert.That(exception.InnerException, Is.TypeOf<PostgresException>());
             }
             catch (InvalidOperationException exception) when (exception.InnerException is DbUpdateException
                 { InnerException: PostgresException { SqlState: PostgresErrorCodes.SerializationFailure } })
             {
-                exception.GetBaseException().Should().BeOfType<PostgresException>();
+                Assert.That(exception.GetBaseException(), Is.TypeOf<PostgresException>());
             }
         }
         finally
@@ -115,11 +114,11 @@ public sealed class PostgreSqlPlanSelectionRaceTests : PostgreSqlIntegrationTest
         await using var verification = Factory.Services.CreateAsyncScope();
         var database = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var activePlans = await database.Plans.AsNoTracking().Where(plan => plan.UserId == ownerId && plan.IsActive).ToListAsync(ct);
-        activePlans.Should().ContainSingle();
-        activePlans[0].Name.Should().Be("New private plan");
-        activePlans[0].Purpose.Should().Be(PlanPurpose.Unclassified);
-        (await database.Plans.AsNoTracking().SingleAsync(plan => plan.Id == personalId, ct)).IsActive.Should().BeFalse();
-        (await database.Plans.CountAsync(plan => plan.UserId == ownerId, ct)).Should().Be(2);
+        Assert.That(activePlans, Has.Exactly(1).Items);
+        Assert.That(activePlans[0].Name, Is.EqualTo("New private plan"));
+        Assert.That(activePlans[0].Purpose, Is.EqualTo(PlanPurpose.Unclassified));
+        Assert.That((await database.Plans.AsNoTracking().SingleAsync(plan => plan.Id == personalId, ct)).IsActive, Is.False);
+        Assert.That((await database.Plans.CountAsync(plan => plan.UserId == ownerId, ct)), Is.EqualTo(2));
     }
 
     private sealed class ActivePlanReadGate : DbCommandInterceptor

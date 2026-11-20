@@ -21,70 +21,69 @@ public sealed partial class ReportingPhotoTypesMigrationTests
 
         var dryRun = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
 
-        dryRun.Applied.Should().BeFalse();
-        dryRun.Counters.RequestsPlanned.Should().Be(1);
-        dryRun.Counters.DefaultsPlanned.Should().Be(1);
-        dryRun.Counters.PhotoMappingsPlanned.Should().Be(1);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
-        (await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId.Should().BeNull();
+        Assert.That(dryRun.Applied, Is.False);
+        Assert.That(dryRun.Counters.RequestsPlanned, Is.EqualTo(1));
+        Assert.That(dryRun.Counters.DefaultsPlanned, Is.EqualTo(1));
+        Assert.That(dryRun.Counters.PhotoMappingsPlanned, Is.EqualTo(1));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
+        Assert.That((await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId, Is.Null);
         await fixture.AssertPreservedValuesAsync(original);
 
         var apply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint),
             CancellationToken.None);
 
-        apply.Applied.Should().BeTrue();
-        apply.HasGlobalBlockers.Should().BeFalse();
-        apply.HasUnresolvedRequests.Should().BeFalse();
-        apply.Counters.SnapshotsWritten.Should().Be(1);
-        apply.Counters.PhotosMapped.Should().Be(1);
-        apply.Counters.DefaultsWritten.Should().Be(1);
+        Assert.That(apply.Applied, Is.True);
+        Assert.That(apply.HasGlobalBlockers, Is.False);
+        Assert.That(apply.HasUnresolvedRequests, Is.False);
+        Assert.That(apply.Counters.SnapshotsWritten, Is.EqualTo(1));
+        Assert.That(apply.Counters.PhotosMapped, Is.EqualTo(1));
+        Assert.That(apply.Counters.DefaultsWritten, Is.EqualTo(1));
         var snapshot = await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync();
-        snapshot.Provenance.Should().Be("MigrationCapture");
-        snapshot.SourceTemplateId.Should().Be(fixture.Template.Id);
+        Assert.That(snapshot.Provenance, Is.EqualTo("MigrationCapture"));
+        Assert.That(snapshot.SourceTemplateId, Is.EqualTo(fixture.Template.Id));
         var runtimeType = System.Reflection.Assembly.Load("LgymApi.Reporting")
             .GetType("LgymApi.Application.Features.Reporting.Models.ReportTemplateSnapshotDocument", throwOnError: true)!;
         var runtimeReader = runtimeType.Assembly.GetType("LgymApi.Application.Features.Reporting.ReportTemplateSnapshotFactory", throwOnError: true)!
             .GetMethod("Deserialize", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
         var runtimeDocument = runtimeReader.Invoke(null, [snapshot.DefinitionJson]);
-        runtimeDocument.Should().NotBeNull();
-        runtimeType.GetProperty("Provenance")!.GetValue(runtimeDocument).Should().Be("MigrationCapture");
-        runtimeType.GetProperty("SchemaVersion")!.GetValue(runtimeDocument).Should().Be(2);
+        Assert.That(runtimeDocument, Is.Not.Null);
+        Assert.That(runtimeType.GetProperty("Provenance")!.GetValue(runtimeDocument), Is.EqualTo("MigrationCapture"));
+        Assert.That(runtimeType.GetProperty("SchemaVersion")!.GetValue(runtimeDocument), Is.EqualTo(2));
         using var serializedSnapshot = JsonDocument.Parse(snapshot.DefinitionJson);
         var photoConfig = serializedSnapshot.RootElement.GetProperty("fields")[0].GetProperty("moduleConfig");
-        photoConfig.GetProperty("schemaVersion").GetInt32().Should().Be(2);
+        Assert.That(photoConfig.GetProperty("schemaVersion").GetInt32(), Is.EqualTo(2));
         var frozenTypes = photoConfig.GetProperty("photoTypes").EnumerateArray().ToList();
-        frozenTypes.Should().HaveCount(2);
-        frozenTypes[0].GetProperty("labels").GetProperty("en").GetString().Should().Be("Front");
-        frozenTypes[0].GetProperty("labels").GetProperty("pl").GetString().Should().Be("Przód");
+        Assert.That(frozenTypes, Has.Exactly(2).Items);
+        Assert.That(frozenTypes[0].GetProperty("labels").GetProperty("en").GetString(), Is.EqualTo("Front"));
+        Assert.That(frozenTypes[0].GetProperty("labels").GetProperty("pl").GetString(), Is.EqualTo("Przód"));
 
         var frontType = await fixture.Context.TrainerPhotoTypes
             .IgnoreQueryFilters()
             .SingleAsync(photoType => photoType.Id == fixture.ExistingFrontType.Id);
-        frontType.Name.Should().Be("Coach check-in front");
-        frontType.NameMode.Should().Be(PhotoTypeNameMode.TrainerProvided);
-        frontType.IsArchived.Should().BeTrue();
+        Assert.That(frontType.Name, Is.EqualTo("Coach check-in front"));
+        Assert.That(frontType.NameMode, Is.EqualTo(PhotoTypeNameMode.TrainerProvided));
+        Assert.That(frontType.IsArchived, Is.True);
         var backType = await fixture.Context.TrainerPhotoTypes.SingleAsync(photoType => photoType.SystemKey == "Back");
-        backType.IsArchived.Should().BeFalse();
+        Assert.That(backType.IsArchived, Is.False);
         var migratedPhoto = await fixture.Context.Photos.AsNoTracking().SingleAsync();
-        migratedPhoto.SourcePhotoTypeId.Should().Be(fixture.ExistingFrontType.Id);
-        migratedPhoto.ReportPhotoSlotId.Should().NotBeNullOrWhiteSpace();
+        Assert.That(migratedPhoto.SourcePhotoTypeId, Is.EqualTo(fixture.ExistingFrontType.Id));
+        Assert.That(string.IsNullOrWhiteSpace(migratedPhoto.ReportPhotoSlotId), Is.False);
         await fixture.AssertPreservedValuesAsync(original);
 
         var firstSnapshotBytes = snapshot.DefinitionJson;
         var secondDryRun = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
-        secondDryRun.Fingerprint.Should().NotBe(dryRun.Fingerprint);
+        Assert.That(secondDryRun.Fingerprint, Is.Not.EqualTo(dryRun.Fingerprint));
         var secondApply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, secondDryRun.Fingerprint),
             CancellationToken.None);
 
-        secondApply.Applied.Should().BeTrue();
-        secondApply.Counters.SnapshotsWritten.Should().Be(0);
-        secondApply.Counters.PhotosMapped.Should().Be(0);
-        secondApply.Counters.DefaultsWritten.Should().Be(0);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson
-            .Should().Be(firstSnapshotBytes);
-        (await fixture.Context.TrainerPhotoTypes.CountAsync()).Should().Be(2);
+        Assert.That(secondApply.Applied, Is.True);
+        Assert.That(secondApply.Counters.SnapshotsWritten, Is.EqualTo(0));
+        Assert.That(secondApply.Counters.PhotosMapped, Is.EqualTo(0));
+        Assert.That(secondApply.Counters.DefaultsWritten, Is.EqualTo(0));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson, Is.EqualTo(firstSnapshotBytes));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.CountAsync()), Is.EqualTo(2));
         await fixture.AssertPreservedValuesAsync(original);
     }
 
@@ -102,10 +101,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint),
             CancellationToken.None);
 
-        apply.Applied.Should().BeFalse();
-        apply.Exceptions.Should().Contain(issue => issue.Code == "FINGERPRINT_CHANGED");
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
-        (await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId.Should().BeNull();
+        Assert.That(apply.Applied, Is.False);
+        Assert.That((apply.Exceptions).Any(issue => issue.Code == "FINGERPRINT_CHANGED"), Is.True);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
+        Assert.That((await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId, Is.Null);
     }
 
     [Test]
@@ -131,10 +130,9 @@ public sealed partial class ReportingPhotoTypesMigrationTests
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint),
             CancellationToken.None);
 
-        apply.Counters.SnapshotsWritten.Should().Be(0);
-        apply.Counters.ExistingSnapshotsPreserved.Should().BeGreaterThan(0);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson
-            .Should().Be(originalBytes);
+        Assert.That(apply.Counters.SnapshotsWritten, Is.EqualTo(0));
+        Assert.That(apply.Counters.ExistingSnapshotsPreserved, Is.GreaterThan(0));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson, Is.EqualTo(originalBytes));
     }
 
     [Test]
@@ -144,17 +142,17 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var runner = new ReportingPhotoTypesMigrationRunner(fixture.Context);
         var dryRun = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
 
-        dryRun.Exceptions.Should().Contain(issue => issue.Code == "PHOTO_VIEW_UNKNOWN");
-        dryRun.Counters.RequestsUnsafe.Should().Be(1);
+        Assert.That((dryRun.Exceptions).Any(issue => issue.Code == "PHOTO_VIEW_UNKNOWN"), Is.True);
+        Assert.That(dryRun.Counters.RequestsUnsafe, Is.EqualTo(1));
         var apply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint),
             CancellationToken.None);
 
-        apply.HasUnresolvedRequests.Should().BeTrue();
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
+        Assert.That(apply.HasUnresolvedRequests, Is.True);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
         var photo = await fixture.Context.Photos.AsNoTracking().SingleAsync();
-        photo.SourcePhotoTypeId.Should().BeNull();
-        photo.ReportPhotoSlotId.Should().BeNull();
+        Assert.That(photo.SourcePhotoTypeId, Is.Null);
+        Assert.That(photo.ReportPhotoSlotId, Is.Null);
     }
 
     [Test]
@@ -164,17 +162,17 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var runner = new ReportingPhotoTypesMigrationRunner(fixture.Context);
         var dryRun = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
 
-        dryRun.Exceptions.Should().Contain(issue => issue.Code == "PENDING_LEGACY_UPLOAD");
+        Assert.That((dryRun.Exceptions).Any(issue => issue.Code == "PENDING_LEGACY_UPLOAD"), Is.True);
         var apply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint),
             CancellationToken.None);
 
-        apply.Applied.Should().BeFalse();
-        apply.Counters.BatchesCommitted.Should().Be(0);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
+        Assert.That(apply.Applied, Is.False);
+        Assert.That(apply.Counters.BatchesCommitted, Is.EqualTo(0));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
         var session = await fixture.Context.PhotoUploadSessions.AsNoTracking().SingleAsync();
-        session.SourcePhotoTypeId.Should().BeNull();
-        session.ReportPhotoSlotId.Should().BeNull();
+        Assert.That(session.SourcePhotoTypeId, Is.Null);
+        Assert.That(session.ReportPhotoSlotId, Is.Null);
     }
 
     [Test]
@@ -189,15 +187,15 @@ public sealed partial class ReportingPhotoTypesMigrationTests
             Options(ReportingPhotoTypesMigrationMode.DryRun, allowRetainedDeletedOwners: true),
             CancellationToken.None);
 
-        dryRun.Exceptions.Should().Contain(issue => issue.Code == "PENDING_UPLOAD_OWNER_UNAVAILABLE");
-        dryRun.Exceptions.Should().NotContain(issue => issue.Code == "PENDING_LEGACY_UPLOAD");
+        Assert.That((dryRun.Exceptions).Any(issue => issue.Code == "PENDING_UPLOAD_OWNER_UNAVAILABLE"), Is.True);
+        Assert.That((dryRun.Exceptions).Any(issue => issue.Code == "PENDING_LEGACY_UPLOAD"), Is.False);
         var apply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, dryRun.Fingerprint, true),
             CancellationToken.None);
 
-        apply.Applied.Should().BeFalse();
-        apply.Counters.BatchesCommitted.Should().Be(0);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
+        Assert.That(apply.Applied, Is.False);
+        Assert.That(apply.Counters.BatchesCommitted, Is.EqualTo(0));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -207,11 +205,11 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var runner = new ReportingPhotoTypesMigrationRunner(fixture.Context);
         var blockedDryRun = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
 
-        blockedDryRun.Exceptions.Should().Contain(issue => issue.Code == "RETENTION_APPROVAL_REQUIRED");
+        Assert.That((blockedDryRun.Exceptions).Any(issue => issue.Code == "RETENTION_APPROVAL_REQUIRED"), Is.True);
         var blockedApply = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, blockedDryRun.Fingerprint),
             CancellationToken.None);
-        blockedApply.Applied.Should().BeFalse();
+        Assert.That(blockedApply.Applied, Is.False);
 
         var approvedDryRun = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.DryRun, allowRetainedDeletedOwners: true),
@@ -220,13 +218,13 @@ public sealed partial class ReportingPhotoTypesMigrationTests
             Options(ReportingPhotoTypesMigrationMode.Apply, approvedDryRun.Fingerprint, true),
             CancellationToken.None);
 
-        approvedApply.Applied.Should().BeTrue();
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(1);
+        Assert.That(approvedApply.Applied, Is.True);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(1));
         var trainee = await fixture.Context.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == fixture.Trainee.Id);
-        trainee.IsDeleted.Should().BeTrue();
-        trainee.Name.Should().StartWith("anonymized_user_");
-        (await fixture.Context.TrainerPhotoTypes.SingleAsync(photoType => photoType.SystemKey == "Back"))
-            .IsArchived.Should().BeFalse("the surviving trainer still references this type in a live template");
+        Assert.That(trainee.IsDeleted, Is.True);
+        Assert.That(trainee.Name, Does.StartWith("anonymized_user_"));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.SingleAsync(photoType => photoType.SystemKey == "Back"))
+            .IsArchived, Is.False, "the surviving trainer still references this type in a live template");
     }
 
     private static ReportingPhotoTypesMigrationOptions Options(
@@ -413,18 +411,18 @@ public sealed partial class ReportingPhotoTypesMigrationTests
             var request = await Context.ReportRequests.AsNoTracking().SingleAsync();
             var submission = await Context.ReportSubmissions.AsNoTracking().SingleAsync();
             var photo = await Context.Photos.AsNoTracking().SingleAsync();
-            request.Id.Should().Be(expected.RequestId);
-            request.CreatedAt.Should().Be(expected.RequestCreatedAt);
-            request.UpdatedAt.Should().Be(expected.RequestUpdatedAt);
-            request.DueAt.Should().Be(expected.DueAt);
-            request.SubmittedAt.Should().Be(expected.SubmittedAt);
-            request.Note.Should().Be(expected.Note);
-            submission.PayloadJson.Should().Be(expected.PayloadJson);
-            photo.Id.Should().Be(expected.PhotoId);
-            photo.StorageKey.Should().Be(expected.StorageKey);
-            photo.CreatedAt.Should().Be(expected.PhotoCreatedAt);
-            photo.UpdatedAt.Should().Be(expected.PhotoUpdatedAt);
-            photo.ViewType.Should().Be(expected.ViewType);
+            Assert.That(request.Id, Is.EqualTo(expected.RequestId));
+            Assert.That(request.CreatedAt, Is.EqualTo(expected.RequestCreatedAt));
+            Assert.That(request.UpdatedAt, Is.EqualTo(expected.RequestUpdatedAt));
+            Assert.That(request.DueAt, Is.EqualTo(expected.DueAt));
+            Assert.That(request.SubmittedAt, Is.EqualTo(expected.SubmittedAt));
+            Assert.That(request.Note, Is.EqualTo(expected.Note));
+            Assert.That(submission.PayloadJson, Is.EqualTo(expected.PayloadJson));
+            Assert.That(photo.Id, Is.EqualTo(expected.PhotoId));
+            Assert.That(photo.StorageKey, Is.EqualTo(expected.StorageKey));
+            Assert.That(photo.CreatedAt, Is.EqualTo(expected.PhotoCreatedAt));
+            Assert.That(photo.UpdatedAt, Is.EqualTo(expected.PhotoUpdatedAt));
+            Assert.That(photo.ViewType, Is.EqualTo(expected.ViewType));
         }
 
         public async ValueTask DisposeAsync()

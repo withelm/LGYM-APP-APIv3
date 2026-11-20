@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
@@ -55,10 +54,10 @@ public sealed class PhotoCompleteUploadServiceTests
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), reportingRepository: repo, photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/new-photo.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "newchecksum" });
 
-        result.IsSuccess.Should().BeTrue();
-        savedPhoto.Should().NotBeNull();
-        savedPhoto!.ViewType.Should().Be(PhotoViewType.Front.ToString());
-        savedPhoto.Checksum.Should().Be("newchecksum");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(savedPhoto, Is.Not.Null);
+        Assert.That(savedPhoto!.ViewType, Is.EqualTo(PhotoViewType.Front.ToString()));
+        Assert.That(savedPhoto.Checksum, Is.EqualTo("newchecksum"));
     }
 
     [Test]
@@ -82,9 +81,9 @@ public sealed class PhotoCompleteUploadServiceTests
             unitOfWork: unitOfWork);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("size");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("size"));
         await storageProvider.Received(1).GetMetadataAsync(pendingUpload.StorageKey, Arg.Any<CancellationToken>());
         await storageProvider.Received(1).DeleteAsync(pendingUpload.StorageKey, Arg.Any<CancellationToken>());
         await repo.Received(1).MarkUploadFailedAsync(pendingUpload.StorageKey, Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -103,9 +102,9 @@ public sealed class PhotoCompleteUploadServiceTests
 
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("Upload session");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("Upload session"));
     }
 
     [Test]
@@ -158,9 +157,9 @@ public sealed class PhotoCompleteUploadServiceTests
             ReportPhotoSlotId = slotId
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("original upload-init");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("original upload-init"));
     }
 
     [Test]
@@ -174,9 +173,9 @@ public sealed class PhotoCompleteUploadServiceTests
 
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "999", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("Invalid view type");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("Invalid view type"));
     }
 
     [Test]
@@ -193,9 +192,9 @@ public sealed class PhotoCompleteUploadServiceTests
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), photoStorageProvider: storageProvider, pendingUpload: pendingUpload);
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("size");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("size"));
     }
 
     [Test]
@@ -210,9 +209,9 @@ public sealed class PhotoCompleteUploadServiceTests
 
         var result = await service.CompletePhotoUploadAsync(currentUser, new CompletePhotoUploadCommand { ReportRequestId = requestId, ViewType = "Front", StorageKey = $"photos/{traineeId}/{requestId}/Front/test.jpg", MimeType = "image/jpeg", SizeBytes = 2048, Checksum = "etag" });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(LgymApi.Resources.Messages.ReportRequestNotPending);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(LgymApi.Resources.Messages.ReportRequestNotPending));
     }
 
     [Test]
@@ -245,8 +244,8 @@ public sealed class PhotoCompleteUploadServiceTests
                 Checksum = "etag"
             });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GetMetadataAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await storageProvider.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await repository.DidNotReceive().SaveAsync(Arg.Any<NewReportPhotoPersistenceModel>(), Arg.Any<CancellationToken>());

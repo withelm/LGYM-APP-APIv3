@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection;
@@ -16,8 +15,9 @@ public sealed class PasswordRecoveryContractGuardTests
     public void PasswordRecoveryEmailRequest_HasExactlySevenOrderedValues()
     {
         var requestType = GetApplicationType(RequestTypeName);
-        var constructor = requestType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .Should().ContainSingle().Subject;
+        var assertedValue4 = (requestType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)).ToArray();
+        Assert.That(assertedValue4, Has.Exactly(1).Items);
+        var constructor = assertedValue4.Single();
         var expectedTypes = new[]
         {
             "LgymApi.Domain.ValueObjects.Id`1[LgymApi.Domain.Entities.User]",
@@ -39,14 +39,14 @@ public sealed class PasswordRecoveryContractGuardTests
             "CultureName"
         };
 
-        requestType.IsPublic.Should().BeTrue();
-        requestType.IsSealed.Should().BeTrue();
-        constructor.GetParameters().Select(parameter => parameter.Name).Should().Equal(expectedNames);
-        constructor.GetParameters().Select(parameter => parameter.ParameterType.ToString()).Should().Equal(expectedTypes);
+        Assert.That(requestType.IsPublic, Is.True);
+        Assert.That(requestType.IsSealed, Is.True);
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.Name), Is.EqualTo(expectedNames));
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.ParameterType.ToString()), Is.EqualTo(expectedTypes));
 
         var properties = requestType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        properties.Select(property => property.Name).Should().Equal(expectedNames);
-        properties.Select(property => property.PropertyType.ToString()).Should().Equal(expectedTypes);
+        Assert.That(properties.Select(property => property.Name), Is.EqualTo(expectedNames));
+        Assert.That(properties.Select(property => property.PropertyType.ToString()), Is.EqualTo(expectedTypes));
     }
 
     [Test]
@@ -54,28 +54,27 @@ public sealed class PasswordRecoveryContractGuardTests
     {
         var requestType = GetApplicationType(RequestTypeName);
         var schedulerType = GetApplicationType(SchedulerTypeName);
-        var method = schedulerType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Should().ContainSingle().Subject;
+        var assertedValue5 = (schedulerType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)).ToArray();
+        Assert.That(assertedValue5, Has.Exactly(1).Items);
+        var method = assertedValue5.Single();
 
-        schedulerType.IsPublic.Should().BeTrue();
-        schedulerType.IsInterface.Should().BeTrue();
-        schedulerType.IsGenericType.Should().BeFalse();
-        schedulerType.GetInterfaces().Should().BeEmpty();
-        schedulerType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Should().BeEmpty();
-        schedulerType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Should().BeEmpty();
+        Assert.That(schedulerType.IsPublic, Is.True);
+        Assert.That(schedulerType.IsInterface, Is.True);
+        Assert.That(schedulerType.IsGenericType, Is.False);
+        Assert.That(schedulerType.GetInterfaces(), Is.Empty);
+        Assert.That(schedulerType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
+        Assert.That(schedulerType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
 
-        method.Name.Should().Be("ScheduleAsync");
-        method.IsGenericMethod.Should().BeFalse();
-        method.ReturnType.Should().Be(typeof(Task));
+        Assert.That(method.Name, Is.EqualTo("ScheduleAsync"));
+        Assert.That(method.IsGenericMethod, Is.False);
+        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task)));
 
         var parameters = method.GetParameters();
-        parameters.Select(parameter => parameter.Name).Should().Equal("request", "cancellationToken");
-        parameters.Select(parameter => parameter.ParameterType).Should().Equal(requestType, typeof(CancellationToken));
-        parameters[0].IsOptional.Should().BeFalse();
-        parameters[1].IsOptional.Should().BeTrue();
-        parameters[1].HasDefaultValue.Should().BeTrue();
+        Assert.That(parameters.Select(parameter => parameter.Name), Is.EqualTo(new[] { "request", "cancellationToken" }));
+        Assert.That(parameters.Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { requestType, typeof(CancellationToken) }));
+        Assert.That(parameters[0].IsOptional, Is.False);
+        Assert.That(parameters[1].IsOptional, Is.True);
+        Assert.That(parameters[1].HasDefaultValue, Is.True);
     }
 
     [Test]
@@ -88,20 +87,18 @@ public sealed class PasswordRecoveryContractGuardTests
             .OrderBy(tree => tree.FilePath, StringComparer.Ordinal)
             .ToArray();
 
-        contractTrees.Select(tree => Path.GetFileName(tree.FilePath)).Should().Equal(
-            "IPasswordRecoveryEmailScheduler.cs",
-            "PasswordRecoveryEmailRequest.cs");
+        Assert.That(contractTrees.Select(tree => Path.GetFileName(tree.FilePath)), Is.EqualTo(new[] { "IPasswordRecoveryEmailScheduler.cs", "PasswordRecoveryEmailRequest.cs" }));
 
         var exposedTypeNames = contractTrees
             .SelectMany(tree => GetReferencedTypeNames(compilation, tree))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        exposedTypeNames.Should().NotContain(typeName =>
+        Assert.That((exposedTypeNames).Any(typeName =>
             typeName.Contains("LgymApi.BackgroundWorker", StringComparison.Ordinal)
             || typeName.Contains("LgymApi.Application.Notifications", StringComparison.Ordinal)
             || typeName.Contains("LgymApi.Infrastructure", StringComparison.Ordinal)
-            || typeName.Contains("Hangfire", StringComparison.Ordinal));
+            || typeName.Contains("Hangfire", StringComparison.Ordinal)), Is.False);
     }
 
     private static IEnumerable<string> GetReferencedTypeNames(Compilation compilation, SyntaxTree tree)
@@ -120,7 +117,7 @@ public sealed class PasswordRecoveryContractGuardTests
     private static Type GetApplicationType(string metadataName)
     {
         var type = typeof(LgymApi.Identity.IdentityModule).Assembly.GetType(metadataName);
-        type.Should().NotBeNull($"{metadataName} must be defined by the Identity assembly");
+        Assert.That(type, Is.Not.Null, $"{metadataName} must be defined by the Identity assembly");
         return type!;
     }
 }

@@ -3,8 +3,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Api.Authorization;
 using LgymApi.Api.Extensions;
 using LgymApi.Application.Platform.Contracts.Serialization;
@@ -83,27 +81,22 @@ public sealed class ApiHostConfigurationCharacterizationTests
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            using (new AssertionScope(optionSetName))
+            TestContext.WriteLine(optionSetName);
+            using (Assert.EnterMultipleScope())
             {
-                root.EnumerateObject().Select(property => property.Name).Should().Equal(
-                    "displayName",
-                    "lookup",
-                    "entityId",
-                    "mode");
-                root.GetProperty("displayName").GetString().Should().Be("visible");
-                root.TryGetProperty("omittedValue", out _).Should().BeFalse();
-                root.GetProperty("lookup").EnumerateObject().Select(property => property.Name).Should().Equal("pascalKey");
-                root.GetProperty("entityId").GetString().Should().Be(typedId.ToString());
-                root.GetProperty("mode").GetString().Should().Be(nameof(JsonContractMode.ExactName));
-                options.Converters.OfType<TypedIdJsonConverterFactory>().Should().ContainSingle();
-                options.Converters.OfType<JsonStringEnumConverter>().Should().ContainSingle();
-                options.Invoking(current => JsonSerializer.Deserialize<JsonContractMode>("0", current))
-                    .Should().Throw<JsonException>();
+                Assert.That(root.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "displayName", "lookup", "entityId", "mode" }));
+                Assert.That(root.GetProperty("displayName").GetString(), Is.EqualTo("visible"));
+                Assert.That(root.TryGetProperty("omittedValue", out _), Is.False);
+                Assert.That(root.GetProperty("lookup").EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "pascalKey" }));
+                Assert.That(root.GetProperty("entityId").GetString(), Is.EqualTo(typedId.ToString()));
+                Assert.That(root.GetProperty("mode").GetString(), Is.EqualTo(nameof(JsonContractMode.ExactName)));
+                Assert.That(options.Converters.OfType<TypedIdJsonConverterFactory>(), Has.Exactly(1).Items);
+                Assert.That(options.Converters.OfType<JsonStringEnumConverter>(), Has.Exactly(1).Items);
+                Assert.That(() => { JsonSerializer.Deserialize<JsonContractMode>("0", (options)); }, Throws.InstanceOf<JsonException>());
             }
         }
 
-        JsonSerializer.Deserialize<JsonContractMode>("0", SharedSerializationOptions.Current)
-            .Should().Be(JsonContractMode.ExactName);
+        Assert.That(JsonSerializer.Deserialize<JsonContractMode>("0", SharedSerializationOptions.Current), Is.EqualTo(JsonContractMode.ExactName));
     }
 
     [Test]
@@ -130,11 +123,11 @@ public sealed class ApiHostConfigurationCharacterizationTests
 
         Assert.Multiple(() =>
         {
-            mvcJson.Should().Be("{\"displayName\":\"visible\",\"lookup\":{\"pascalKey\":\"entry\"},\"entityId\":\"" + typedId + "\",\"mode\":\"ExactName\"}");
-            httpJson.Should().Be(mvcJson);
-            deserializeMvcNumericEnum.Should().Throw<JsonException>();
-            deserializeHttpNumericEnum.Should().Throw<JsonException>();
-            persistedEnum.Should().Be(JsonContractMode.ExactName);
+            Assert.That(mvcJson, Is.EqualTo("{\"displayName\":\"visible\",\"lookup\":{\"pascalKey\":\"entry\"},\"entityId\":\"" + typedId + "\",\"mode\":\"ExactName\"}"));
+            Assert.That(httpJson, Is.EqualTo(mvcJson));
+            Assert.That(() => { deserializeMvcNumericEnum(); }, Throws.InstanceOf<JsonException>());
+            Assert.That(() => { deserializeHttpNumericEnum(); }, Throws.InstanceOf<JsonException>());
+            Assert.That(persistedEnum, Is.EqualTo(JsonContractMode.ExactName));
         });
     }
 
@@ -144,25 +137,26 @@ public sealed class ApiHostConfigurationCharacterizationTests
         var options = GetJwtBearerOptions();
         var validation = options.TokenValidationParameters;
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            validation.ValidateIssuer.Should().BeFalse();
-            validation.ValidateAudience.Should().BeFalse();
-            validation.ValidateIssuerSigningKey.Should().BeTrue();
-            validation.ClockSkew.Should().Be(TimeSpan.Zero);
-            validation.IssuerSigningKey.Should().BeOfType<SymmetricSecurityKey>()
-                .Which.Key.Should().Equal(Encoding.UTF8.GetBytes(ApiHostFactory.JwtSigningKey));
+            Assert.That(validation.ValidateIssuer, Is.False);
+            Assert.That(validation.ValidateAudience, Is.False);
+            Assert.That(validation.ValidateIssuerSigningKey, Is.True);
+            Assert.That(validation.ClockSkew, Is.EqualTo(TimeSpan.Zero));
+            var assertedValue7 = validation.IssuerSigningKey;
+            Assert.That(assertedValue7, Is.TypeOf<SymmetricSecurityKey>());
+            Assert.That(((SymmetricSecurityKey)assertedValue7).Key, Is.EqualTo(Encoding.UTF8.GetBytes(ApiHostFactory.JwtSigningKey)));
         }
 
         var hubHttpContext = CreateHttpContext("/hubs/notifications", "?access_token=hub-token");
         var hubContext = new MessageReceivedContext(hubHttpContext, BearerScheme, options);
         await options.Events.MessageReceived(hubContext);
-        hubContext.Token.Should().Be("hub-token");
+        Assert.That(hubContext.Token, Is.EqualTo("hub-token"));
 
         var apiHttpContext = CreateHttpContext("/api/users", "?access_token=api-token");
         var apiContext = new MessageReceivedContext(apiHttpContext, BearerScheme, options);
         await options.Events.MessageReceived(apiContext);
-        apiContext.Token.Should().BeNull();
+        Assert.That(apiContext.Token, Is.Null);
     }
 
     [Test]
@@ -184,8 +178,8 @@ public sealed class ApiHostConfigurationCharacterizationTests
             Exception = new SecurityTokenInvalidSignatureException()
         };
         await options.Events.AuthenticationFailed(invalidContext);
-        invalidHttpContext.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
-        invalidHttpContext.Response.Body.Length.Should().Be(0);
+        Assert.That(invalidHttpContext.Response.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
+        Assert.That(invalidHttpContext.Response.Body.Length, Is.EqualTo(0));
 
         var challengeHttpContext = CreateHttpContext("/api/protected");
         var challengeContext = new JwtBearerChallengeContext(
@@ -194,7 +188,7 @@ public sealed class ApiHostConfigurationCharacterizationTests
             options,
             new AuthenticationProperties());
         await options.Events.Challenge(challengeContext);
-        challengeContext.Handled.Should().BeTrue();
+        Assert.That(challengeContext.Handled, Is.True);
         await AssertErrorResponseAsync(challengeHttpContext, StatusCodes.Status401Unauthorized, Messages.InvalidToken);
 
         var forbiddenHttpContext = CreateHttpContext("/api/protected");
@@ -209,18 +203,19 @@ public sealed class ApiHostConfigurationCharacterizationTests
         var policyProvider = _factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
         var missingPolicies = await FindMissingPoliciesAsync(policyProvider);
 
-        missingPolicies.Should().BeEmpty();
-        ExpectedPolicies.Should().HaveCount(5);
+        Assert.That(missingPolicies, Is.Empty);
+        Assert.That(ExpectedPolicies, Has.Exactly(5).Items);
 
         foreach (var (policyName, permission) in ExpectedPolicies)
         {
             var policy = await policyProvider.GetPolicyAsync(policyName);
-            policy.Should().NotBeNull();
-            policy!.AuthenticationSchemes.Should().BeEmpty();
-            var permissionRequirement = policy.Requirements
-                .OfType<CurrentPermissionRequirement>()
-                .Should().ContainSingle().Subject;
-            permissionRequirement.Permission.Should().Be(permission);
+            Assert.That(policy, Is.Not.Null);
+            Assert.That(policy!.AuthenticationSchemes, Is.Empty);
+            var assertedValue8 = (policy.Requirements
+                            .OfType<CurrentPermissionRequirement>()).ToArray();
+            Assert.That(assertedValue8, Has.Exactly(1).Items);
+            var permissionRequirement = assertedValue8.Single();
+            Assert.That(permissionRequirement.Permission, Is.EqualTo(permission));
         }
     }
 
@@ -241,7 +236,7 @@ public sealed class ApiHostConfigurationCharacterizationTests
 
         var missingPolicies = await FindMissingPoliciesAsync(policyProvider);
 
-        missingPolicies.Should().Equal(AuthConstants.Policies.TrainerAccess);
+        Assert.That(missingPolicies, Is.EqualTo(new[] { AuthConstants.Policies.TrainerAccess }));
     }
 
     [Test]
@@ -249,17 +244,15 @@ public sealed class ApiHostConfigurationCharacterizationTests
     {
         var englishMessage = GetMessageForCulture("en", () => Messages.InvalidToken);
         var polishMessage = GetMessageForCulture("pl", () => Messages.InvalidToken);
-        englishMessage.Should().NotBe(polishMessage);
+        Assert.That(englishMessage, Is.Not.EqualTo(polishMessage));
 
-        (await GetChallengeMessageAsync()).Should().Be(englishMessage);
-        (await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("pl"))).Should().Be(polishMessage);
-        (await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("de"))).Should().Be(englishMessage);
-        (await GetChallengeMessageAsync(request => request.RequestUri = new Uri("/api/admin/users/not-a-guid?culture=pl", UriKind.Relative)))
-            .Should().Be(englishMessage);
-        (await GetChallengeMessageAsync(request => request.Headers.TryAddWithoutValidation(
+        Assert.That((await GetChallengeMessageAsync()), Is.EqualTo(englishMessage));
+        Assert.That((await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("pl"))), Is.EqualTo(polishMessage));
+        Assert.That((await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("de"))), Is.EqualTo(englishMessage));
+        Assert.That((await GetChallengeMessageAsync(request => request.RequestUri = new Uri("/api/admin/users/not-a-guid?culture=pl", UriKind.Relative))), Is.EqualTo(englishMessage));
+        Assert.That((await GetChallengeMessageAsync(request => request.Headers.TryAddWithoutValidation(
                 "Cookie",
-                ".AspNetCore.Culture=c%3Dpl%7Cuic%3Dpl")))
-            .Should().Be(englishMessage);
+                ".AspNetCore.Culture=c%3Dpl%7Cuic%3Dpl"))), Is.EqualTo(englishMessage));
     }
 
     private JwtBearerOptions GetJwtBearerOptions()
@@ -283,11 +276,11 @@ public sealed class ApiHostConfigurationCharacterizationTests
 
     private static async Task AssertErrorResponseAsync(HttpContext context, int statusCode, string message)
     {
-        context.Response.StatusCode.Should().Be(statusCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(statusCode));
         context.Response.Body.Position = 0;
         using var body = await JsonDocument.ParseAsync(context.Response.Body);
-        body.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal("msg");
-        body.RootElement.GetProperty("msg").GetString().Should().Be(message);
+        Assert.That(body.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "msg" }));
+        Assert.That(body.RootElement.GetProperty("msg").GetString(), Is.EqualTo(message));
     }
 
     private static async Task<IReadOnlyList<string>> FindMissingPoliciesAsync(IAuthorizationPolicyProvider policyProvider)
@@ -309,7 +302,7 @@ public sealed class ApiHostConfigurationCharacterizationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/admin/users/not-a-guid");
         configure?.Invoke(request);
         using var response = await _client.SendAsync(request);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return body.RootElement.GetProperty("msg").GetString()!;
     }

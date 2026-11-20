@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.Features.Tutorial;
@@ -74,31 +73,29 @@ public sealed class UserServiceProfileTests
 
         var result = await _profileService.CheckTokenAsync(user, cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Id.Should().Be(user.Id);
-        result.Value.Name.Should().Be(user.Name);
-        result.Value.Email.Should().Be(user.Email);
-        result.Value.Avatar.Should().Be(user.Avatar);
-        result.Value.ProfileRank.Should().Be(user.ProfileRank);
-        result.Value.Roles.Should().Equal("User", "Trainer");
-        result.Value.TrainerApprovalStatus.Should().Be(TrainerApprovalStatus.Approved);
-        result.Value.PermissionClaims.Should().Equal("users.read");
-        result.Value.HasActiveTutorials.Should().BeTrue();
-        result.Value.PreferredTimeZone.Should().Be("UTC");
-        result.Value.Elo.Should().Be(1000);
-        result.Value.NextRank.Should().BeEquivalentTo(new RankInfo { Name = "Senior 1", NeedElo = 1500 });
-        result.Value.CreatedAt.Should().Be(user.CreatedAt.UtcDateTime);
-        result.Value.UpdatedAt.Should().Be(user.UpdatedAt.UtcDateTime);
-        result.Value.IsDeleted.Should().Be(user.IsDeleted);
-        result.Value.IsVisibleInRanking.Should().Be(user.IsVisibleInRanking);
-        _roleRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Id, Is.EqualTo(user.Id));
+        Assert.That(result.Value.Name, Is.EqualTo(user.Name));
+        Assert.That(result.Value.Email, Is.EqualTo((string)user.Email));
+        Assert.That(result.Value.Avatar, Is.EqualTo(user.Avatar));
+        Assert.That(result.Value.ProfileRank, Is.EqualTo(user.ProfileRank));
+        Assert.That(result.Value.Roles, Is.EqualTo(new[] { "User", "Trainer" }));
+        Assert.That(result.Value.TrainerApprovalStatus, Is.EqualTo(TrainerApprovalStatus.Approved));
+        Assert.That(result.Value.PermissionClaims, Is.EqualTo(new[] { "users.read" }));
+        Assert.That(result.Value.HasActiveTutorials, Is.True);
+        Assert.That(result.Value.PreferredTimeZone, Is.EqualTo("UTC"));
+        Assert.That(result.Value.Elo, Is.EqualTo(1000));
+        Assert.That(result.Value.NextRank, Is.EqualTo(new RankInfo { Name = "Senior 1", NeedElo = 1500 }).UsingPropertiesComparer());
+        Assert.That(result.Value.CreatedAt, Is.EqualTo(user.CreatedAt.UtcDateTime));
+        Assert.That(result.Value.UpdatedAt, Is.EqualTo(user.UpdatedAt.UtcDateTime));
+        Assert.That(result.Value.IsDeleted, Is.EqualTo(user.IsDeleted));
+        Assert.That(result.Value.IsVisibleInRanking, Is.EqualTo(user.IsVisibleInRanking));
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.GetRoleNamesByUserIdAsync)
                 && call.Argument is Id<User> id
                 && id == user.Id
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -110,10 +107,10 @@ public sealed class UserServiceProfileTests
 
         var result = await _profileService.DeleteAccountAsync(user, cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        user.IsDeleted.Should().BeFalse();
-        user.Name.Should().Be("user");
-        user.Email.Value.Should().Be("user@example.com");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.IsDeleted, Is.False);
+        Assert.That(user.Name, Is.EqualTo("user"));
+        Assert.That(user.Email.Value, Is.EqualTo("user@example.com"));
         await _accountDeletionService.Received(1).RequestAsync(user.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(), cancellationToken);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(cancellationToken);
     }
@@ -132,8 +129,8 @@ public sealed class UserServiceProfileTests
 
         var action = () => _profileService.DeleteAccountAsync(user, cancellationToken);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        user.Name.Should().Be("user");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(user.Name, Is.EqualTo("user"));
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -144,9 +141,9 @@ public sealed class UserServiceProfileTests
 
         var result = await _profileService.UpdateTimeZoneAsync(user, "Not/ARealTimeZone");
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        _userRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserRepository.UpdateAsync));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
+        Assert.That((_userRepository.Calls).Any(call => call.Method == nameof(IUserRepository.UpdateAsync)), Is.False);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

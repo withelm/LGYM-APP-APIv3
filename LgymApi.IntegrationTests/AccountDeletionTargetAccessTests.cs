@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Idempotency;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -39,11 +38,11 @@ public sealed class AccountDeletionTargetAccessTests : IntegrationTestBase
         }
         request.Add(pascalCase ? "TraineeId" : "traineeId", trainee.Id.ToString());
         var accepted = await Client.PostAsJsonAsync("/api/trainer/invitations", request);
-        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(accepted.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var acceptedBody = await accepted.Content.ReadAsStringAsync();
         var initialReplay = await Client.PostAsJsonAsync("/api/trainer/invitations", request);
-        initialReplay.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await initialReplay.Content.ReadAsStringAsync()).Should().Be(acceptedBody);
+        Assert.That(initialReplay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await initialReplay.Content.ReadAsStringAsync()), Is.EqualTo(acceptedBody));
         Client.DefaultRequestHeaders.Remove(ApiIdempotencyHeaders.IdempotencyKey);
         SetAuthorizationHeader(trainee.Id);
         (await Client.GetAsync("/api/deleteAccount")).EnsureSuccessStatusCode();
@@ -52,8 +51,8 @@ public sealed class AccountDeletionTargetAccessTests : IntegrationTestBase
 
         var denied = await Client.PostAsJsonAsync("/api/trainer/invitations", request);
 
-        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await denied.Content.ReadAsStringAsync()).Should().NotContain(trainee.Id.ToString());
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await denied.Content.ReadAsStringAsync()), Does.Not.Contain(trainee.Id.ToString()));
         Client.DefaultRequestHeaders.Remove(ApiIdempotencyHeaders.IdempotencyKey);
         ClearAuthorizationHeader();
         var recovery = await Client.PostAsJsonAsync("/api/account-deletion/recovery/login", new { name = trainee.Name, password = "password123" });
@@ -63,11 +62,11 @@ public sealed class AccountDeletionTargetAccessTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = trainerToken;
         Client.DefaultRequestHeaders.Add(ApiIdempotencyHeaders.IdempotencyKey, "deletion-subject-replay");
         var restored = await Client.PostAsJsonAsync("/api/trainer/invitations", request);
-        restored.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await restored.Content.ReadAsStringAsync()).Should().Be(acceptedBody);
+        Assert.That(restored.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await restored.Content.ReadAsStringAsync()), Is.EqualTo(acceptedBody));
         using var verify = Factory.Services.CreateScope();
-        (await verify.ServiceProvider.GetRequiredService<AppDbContext>().TrainerInvitations
-            .CountAsync(invitation => invitation.TrainerId == trainer.Id && invitation.TraineeId == trainee.Id)).Should().Be(1);
+        Assert.That((await verify.ServiceProvider.GetRequiredService<AppDbContext>().TrainerInvitations
+            .CountAsync(invitation => invitation.TrainerId == trainer.Id && invitation.TraineeId == trainee.Id)), Is.EqualTo(1));
     }
 
     [Test]
@@ -87,9 +86,9 @@ public sealed class AccountDeletionTargetAccessTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations/by-email", new { email = trainee.Email.Value });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verify = Factory.Services.CreateScope();
-        (await verify.ServiceProvider.GetRequiredService<AppDbContext>().TrainerInvitations.AnyAsync()).Should().BeFalse();
+        Assert.That((await verify.ServiceProvider.GetRequiredService<AppDbContext>().TrainerInvitations.AnyAsync()), Is.False);
     }
 
     [TestCase(false, false)]
@@ -117,17 +116,17 @@ public sealed class AccountDeletionTargetAccessTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var trainerToken = Client.DefaultRequestHeaders.Authorization;
         var path = $"/api/trainer/trainees/{trainee.Id}/notes/{noteId}";
-        (await Client.GetAsync(path + "/history")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.GetAsync(path + "/history")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(trainee.Id);
         (await Client.GetAsync("/api/deleteAccount")).EnsureSuccessStatusCode();
         Client.DefaultRequestHeaders.Authorization = trainerToken;
 
-        (await Client.GetAsync(path + "/history")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await Client.PostAsJsonAsync(path + "/update", new { content = "changed", title = "changed", visibleToTrainee = true, isPinned = false }))
-            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That((await Client.GetAsync(path + "/history")).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await Client.PostAsJsonAsync(path + "/update", new { content = "changed", title = "changed", visibleToTrainee = true, isPinned = false }))
+            .StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var verify = Factory.Services.CreateScope();
-        (await verify.ServiceProvider.GetRequiredService<AppDbContext>().TraineeNotes.SingleAsync(note => note.Id == noteId))
-            .Content.Should().Be("preserve this private note");
+        Assert.That((await verify.ServiceProvider.GetRequiredService<AppDbContext>().TraineeNotes.SingleAsync(note => note.Id == noteId))
+            .Content, Is.EqualTo("preserve this private note"));
     }
 }

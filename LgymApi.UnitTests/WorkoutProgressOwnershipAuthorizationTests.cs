@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.WorkoutProgress.Authorization;
 using LgymApi.Application.WorkoutProgress;
 using LgymApi.Domain.ValueObjects;
@@ -18,7 +17,7 @@ public sealed class WorkoutProgressOwnershipAuthorizationTests
         using var scope = provider.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<IWorkoutProgressOwnershipAuthorizationService>();
 
-        service.IsOwner(ownerId, ownerId).Should().BeTrue();
+        Assert.That(service.IsOwner(ownerId, ownerId), Is.True);
     }
 
     [Test]
@@ -29,9 +28,9 @@ public sealed class WorkoutProgressOwnershipAuthorizationTests
         using var scope = provider.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<IWorkoutProgressOwnershipAuthorizationService>();
 
-        service.IsOwner(Id<AccountReference>.New(), ownerId).Should().BeFalse();
-        service.IsOwner(Id<AccountReference>.Empty, ownerId).Should().BeFalse();
-        service.IsOwner(ownerId, Id<AccountReference>.Empty).Should().BeFalse();
+        Assert.That(service.IsOwner(Id<AccountReference>.New(), ownerId), Is.False);
+        Assert.That(service.IsOwner(Id<AccountReference>.Empty, ownerId), Is.False);
+        Assert.That(service.IsOwner(ownerId, Id<AccountReference>.Empty), Is.False);
     }
 
     private static ServiceProvider CreateProvider()

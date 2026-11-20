@@ -41,10 +41,10 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             target => target.CleanupAsync(),
             CancellationToken.None);
 
-        var exception = await action.Should().ThrowExactlyAsync<FactoryInitializationProbeException>();
+        var exception = (await Assert.ThrowsAsync<FactoryInitializationProbeException>(async () => { await action(); }))!;
 
-        exception.Which.Should().BeSameAs(rootException);
-        probe.CleanupAttempts.Should().Be(1);
+        Assert.That(exception, Is.SameAs(rootException));
+        Assert.That(probe.CleanupAttempts, Is.EqualTo(1));
     }
 
     [Test]
@@ -60,14 +60,14 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             target => target.CleanupAsync(),
             CancellationToken.None);
 
-        var exception = await action.Should().ThrowExactlyAsync<PostgreSqlFactoryInitializationException>();
+        var exception = (await Assert.ThrowsAsync<PostgreSqlFactoryInitializationException>(async () => { await action(); }))!;
 
-        exception.Which.InnerException.Should().BeSameAs(rootException);
-        exception.Which.CleanupException.Should().BeSameAs(cleanupException);
-        exception.Which.Message.Should().Contain("connection value is redacted");
-        exception.Which.Message.Should().NotContain("root-sentinel");
-        exception.Which.Message.Should().NotContain("cleanup-sentinel");
-        probe.CleanupAttempts.Should().Be(1);
+        Assert.That(exception.InnerException, Is.SameAs(rootException));
+        Assert.That(exception.CleanupException, Is.SameAs(cleanupException));
+        Assert.That(exception.Message, Does.Contain("connection value is redacted"));
+        Assert.That(exception.Message, Does.Not.Contain("root-sentinel"));
+        Assert.That(exception.Message, Does.Not.Contain("cleanup-sentinel"));
+        Assert.That(probe.CleanupAttempts, Is.EqualTo(1));
     }
 
     [Test]
@@ -84,11 +84,11 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             target => target.CleanupAsync(),
             cancellationSource.Token);
 
-        var exception = await action.Should().ThrowExactlyAsync<OperationCanceledException>();
+        var exception = (await Assert.ThrowsAsync<OperationCanceledException>(async () => { await action(); }))!;
 
-        exception.Which.Should().BeSameAs(cancellationException);
-        exception.Which.CancellationToken.Should().Be(cancellationSource.Token);
-        probe.CleanupAttempts.Should().Be(1);
+        Assert.That(exception, Is.SameAs(cancellationException));
+        Assert.That(exception.CancellationToken, Is.EqualTo(cancellationSource.Token));
+        Assert.That(probe.CleanupAttempts, Is.EqualTo(1));
     }
 
     [Test]
@@ -106,14 +106,14 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             target => target.CleanupAsync(),
             cancellationSource.Token);
 
-        var exception = await action.Should().ThrowExactlyAsync<PostgreSqlFactoryInitializationCanceledException>();
+        var exception = (await Assert.ThrowsAsync<PostgreSqlFactoryInitializationCanceledException>(async () => { await action(); }))!;
 
-        exception.Which.InnerException.Should().BeSameAs(cancellationException);
-        exception.Which.CleanupException.Should().BeSameAs(cleanupException);
-        exception.Which.CancellationToken.Should().Be(cancellationSource.Token);
-        exception.Which.Message.Should().Contain("connection value is redacted");
-        exception.Which.Message.Should().NotContain("cleanup-sentinel");
-        probe.CleanupAttempts.Should().Be(1);
+        Assert.That(exception.InnerException, Is.SameAs(cancellationException));
+        Assert.That(exception.CleanupException, Is.SameAs(cleanupException));
+        Assert.That(exception.CancellationToken, Is.EqualTo(cancellationSource.Token));
+        Assert.That(exception.Message, Does.Contain("connection value is redacted"));
+        Assert.That(exception.Message, Does.Not.Contain("cleanup-sentinel"));
+        Assert.That(probe.CleanupAttempts, Is.EqualTo(1));
     }
 
     [Test]
@@ -125,9 +125,9 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             () => ValueTask.FromException(baseException),
             static () => ValueTask.CompletedTask);
 
-        var exception = await action.Should().ThrowExactlyAsync<FactoryBaseDisposalProbeException>();
+        var exception = (await Assert.ThrowsAsync<FactoryBaseDisposalProbeException>(async () => { await action(); }))!;
 
-        exception.Which.Should().BeSameAs(baseException);
+        Assert.That(exception, Is.SameAs(baseException));
     }
 
     [Test]
@@ -139,9 +139,9 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             static () => ValueTask.CompletedTask,
             () => ValueTask.FromException(leaseException));
 
-        var exception = await action.Should().ThrowExactlyAsync<FactoryLeaseDisposalProbeException>();
+        var exception = (await Assert.ThrowsAsync<FactoryLeaseDisposalProbeException>(async () => { await action(); }))!;
 
-        exception.Which.Should().BeSameAs(leaseException);
+        Assert.That(exception, Is.SameAs(leaseException));
     }
 
     [Test]
@@ -154,13 +154,13 @@ public sealed class PostgreSqlWebApplicationFactoryTests
             () => ValueTask.FromException(baseException),
             () => ValueTask.FromException(leaseException));
 
-        var exception = await action.Should().ThrowExactlyAsync<PostgreSqlFactoryDisposalException>();
+        var exception = (await Assert.ThrowsAsync<PostgreSqlFactoryDisposalException>(async () => { await action(); }))!;
 
-        exception.Which.InnerException.Should().BeSameAs(baseException);
-        exception.Which.LeaseCleanupException.Should().BeSameAs(leaseException);
-        exception.Which.Message.Should().Contain("connection value is redacted");
-        exception.Which.Message.Should().NotContain("base-sentinel");
-        exception.Which.Message.Should().NotContain("lease-sentinel");
+        Assert.That(exception.InnerException, Is.SameAs(baseException));
+        Assert.That(exception.LeaseCleanupException, Is.SameAs(leaseException));
+        Assert.That(exception.Message, Does.Contain("connection value is redacted"));
+        Assert.That(exception.Message, Does.Not.Contain("base-sentinel"));
+        Assert.That(exception.Message, Does.Not.Contain("lease-sentinel"));
     }
 
     private sealed class FactoryLifecycleProbe

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Training;
@@ -40,7 +39,7 @@ public sealed class TrainingServiceFacadeTests
 
         var result = await service.AddTrainingAsync(userId, input);
 
-        result.Value.Should().BeSameAs(expected);
+        Assert.That(result.Value, Is.SameAs(expected));
         await completionUseCase.Received(1).AddTrainingAsync(
             userId,
             Arg.Is<CompleteTrainingInput>(mapped =>
@@ -88,7 +87,9 @@ public sealed class TrainingServiceFacadeTests
         await historyReadService.Received(1).GetLastTrainingAsync(userId, Arg.Any<CancellationToken>());
         await historyReadService.Received(1).GetTrainingByDateAsync(userId, dateRange, Arg.Any<CancellationToken>());
         await historyReadService.Received(1).GetTrainingDatesAsync(userId, Arg.Any<CancellationToken>());
-        byDate.Value.Trainings.Should().ContainSingle().Which.Should().BeSameAs(training);
-        byDate.Value.Translations.Should().BeSameAs(translations);
+        var assertedValue174 = (byDate.Value.Trainings).ToArray();
+        Assert.That(assertedValue174, Has.Exactly(1).Items);
+        Assert.That(assertedValue174.Single(), Is.SameAs(training));
+        Assert.That(byDate.Value.Translations, Is.SameAs(translations));
     }
 }

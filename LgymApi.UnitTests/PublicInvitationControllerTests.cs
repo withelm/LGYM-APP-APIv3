@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Public.Contracts;
 using LgymApi.Api.Features.Public.Controllers;
@@ -31,7 +30,7 @@ public sealed class PublicInvitationControllerTests
 
         var result = await controller.GetInvitationStatus(Id<TrainerInvitation>.New().ToString(), code);
 
-        result.Should().BeOfType<NotFoundResult>();
+        Assert.That(result, Is.TypeOf<NotFoundResult>());
         await useCase.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
     }
 
@@ -43,7 +42,7 @@ public sealed class PublicInvitationControllerTests
 
         var result = await controller.GetInvitationStatus("not-a-guid", "exact-code");
 
-        result.Should().BeOfType<NotFoundResult>();
+        Assert.That(result, Is.TypeOf<NotFoundResult>());
         await useCase.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
     }
 
@@ -60,12 +59,14 @@ public sealed class PublicInvitationControllerTests
 
         var result = await controller.GetInvitationStatus(invitationId.ToString(), "exact-code", cancellation.Token);
 
-        var response = result.Should().BeOfType<OkObjectResult>().Subject;
-        response.Value.Should().BeEquivalentTo(new PublicInvitationStatusDto
+        var assertedValue142 = result;
+        Assert.That(assertedValue142, Is.TypeOf<OkObjectResult>());
+        var response = ((OkObjectResult)assertedValue142);
+        Assert.That(response.Value, Is.EqualTo(new PublicInvitationStatusDto
         {
             Status = "Accepted",
             UserExists = true
-        });
+        }).UsingPropertiesComparer());
         await useCase.Received(1).ExecuteAsync(
             Arg.Is<PublicInvitationStatusQuery>(query => query.InvitationId == invitationId && query.Code == "exact-code"),
             cancellation.Token);
@@ -82,7 +83,7 @@ public sealed class PublicInvitationControllerTests
 
         var result = await controller.GetInvitationStatus(Id<TrainerInvitation>.New().ToString(), "wrong-code");
 
-        result.Should().BeOfType<NotFoundResult>();
+        Assert.That(result, Is.TypeOf<NotFoundResult>());
     }
 
     private static PublicInvitationController CreateController(IPublicInvitationStatusUseCase useCase)

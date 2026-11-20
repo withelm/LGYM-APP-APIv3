@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -82,9 +81,9 @@ internal sealed class PostgreSqlAccountDeletionRaceTests : PostgreSqlIntegration
         }
         await using var verify = Factory.Services.CreateAsyncScope();
         var persisted = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Users.IgnoreQueryFilters().SingleAsync(account => account.Id == user.Id);
-        persisted.DeletionState.Should().Be(AccountDeletionState.Active);
-        persisted.Name.Should().Be(user.Name);
-        persisted.DeletionGeneration.Should().BeNull();
+        Assert.That(persisted.DeletionState, Is.EqualTo(AccountDeletionState.Active));
+        Assert.That(persisted.Name, Is.EqualTo(user.Name));
+        Assert.That(persisted.DeletionGeneration, Is.Null);
     }
 
     private sealed class RecoveryClock(DateTimeOffset now) : TimeProvider

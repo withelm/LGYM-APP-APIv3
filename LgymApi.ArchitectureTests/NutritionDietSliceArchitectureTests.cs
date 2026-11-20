@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Nutrition;
 using LgymApi.Application.Nutrition.DietPlans;
 using LgymApi.Application.Nutrition.DietPlans.ActivateTraineePlan;
@@ -48,9 +47,9 @@ public sealed class NutritionDietSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -66,7 +65,7 @@ public sealed class NutritionDietSliceArchitectureTests
             typeof(GetCurrentDietPlanQuery), typeof(UpdateOwnDietPlanCommand)
         };
 
-        models.Should().OnlyContain(model => model.IsSealed && model.GetProperties().All(property => IsAllowed(property.PropertyType)));
+        Assert.That((models).All(model => model.IsSealed && model.GetProperties().All(property => IsAllowed(property.PropertyType))), Is.True);
     }
 
     [Test]
@@ -74,7 +73,7 @@ public sealed class NutritionDietSliceArchitectureTests
     {
         foreach (var (contract, _) in Slices)
         {
-            contract.GetMethods().Single().GetParameters().Should().Contain(parameter => parameter.ParameterType == typeof(CancellationToken));
+            Assert.That((contract.GetMethods().Single().GetParameters()).Any(parameter => parameter.ParameterType == typeof(CancellationToken)), Is.True);
         }
     }
 
@@ -86,11 +85,11 @@ public sealed class NutritionDietSliceArchitectureTests
 
         foreach (var (contract, _) in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == contract), Is.EqualTo(1));
         }
 
-        services.Count(descriptor => descriptor.ServiceType.FullName ==
-            "LgymApi.Application.Nutrition.DietPlans.DietPlanHistorySnapshotFactory").Should().Be(1);
+        Assert.That(services.Count(descriptor => descriptor.ServiceType.FullName ==
+            "LgymApi.Application.Nutrition.DietPlans.DietPlanHistorySnapshotFactory"), Is.EqualTo(1));
     }
 
     private static bool IsAllowed(Type type)

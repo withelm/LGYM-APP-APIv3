@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -28,15 +27,19 @@ public sealed class NotificationRetentionCleanupServiceTests
 
         var removed = await service.CleanupAsync();
 
-        removed.Should().Be(0);
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        logger.Entries.Should().HaveCount(2);
-        var start = logger.Entries.Should().ContainSingle(entry => entry.Message.Contains("started", StringComparison.Ordinal)).Subject;
-        start.Properties.Keys.Should().Contain(["Operation", "CutoffUtc", "BatchSize"]);
-        var success = logger.Entries.Should().ContainSingle(entry => entry.Message.Contains("completed", StringComparison.Ordinal)).Subject;
-        success.Properties.Keys.Should().Contain(["Operation", "CutoffUtc", "DeletedCount", "BatchCount", "Duration"]);
-        success.Properties["DeletedCount"].Should().Be(0);
-        success.Properties["BatchCount"].Should().Be(0);
+        Assert.That(removed, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(logger.Entries, Has.Exactly(2).Items);
+        var assertedValue131 = (logger.Entries).Where(entry => entry.Message.Contains("started", StringComparison.Ordinal)).ToArray();
+        Assert.That(assertedValue131, Has.Exactly(1).Items);
+        var start = assertedValue131.Single();
+        Assert.That(start.Properties.Keys, Is.SupersetOf(new[] { "Operation", "CutoffUtc", "BatchSize" }));
+        var assertedValue132 = (logger.Entries).Where(entry => entry.Message.Contains("completed", StringComparison.Ordinal)).ToArray();
+        Assert.That(assertedValue132, Has.Exactly(1).Items);
+        var success = assertedValue132.Single();
+        Assert.That(success.Properties.Keys, Is.SupersetOf(new[] { "Operation", "CutoffUtc", "DeletedCount", "BatchCount", "Duration" }));
+        Assert.That(success.Properties["DeletedCount"], Is.EqualTo(0));
+        Assert.That(success.Properties["BatchCount"], Is.EqualTo(0));
     }
 
     [Test]
@@ -52,14 +55,16 @@ public sealed class NotificationRetentionCleanupServiceTests
 
         var removed = await service.CleanupAsync();
 
-        removed.Should().Be(2);
-        unitOfWork.SaveChangesCalls.Should().Be(2);
-        (await database.PushNotificationMessages.AsNoTracking().CountAsync()).Should().Be(0);
-        logger.Entries.Should().HaveCount(2);
-        logger.Entries.Select(entry => entry.Message).Should().NotContain(message => message.Contains("retention-secret-payload", StringComparison.Ordinal));
-        var success = logger.Entries.Should().ContainSingle(entry => entry.Message.Contains("completed", StringComparison.Ordinal)).Subject;
-        success.Properties["DeletedCount"].Should().Be(2);
-        success.Properties["BatchCount"].Should().Be(2);
+        Assert.That(removed, Is.EqualTo(2));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(2));
+        Assert.That((await database.PushNotificationMessages.AsNoTracking().CountAsync()), Is.EqualTo(0));
+        Assert.That(logger.Entries, Has.Exactly(2).Items);
+        Assert.That((logger.Entries.Select(entry => entry.Message)).Any(message => message.Contains("retention-secret-payload", StringComparison.Ordinal)), Is.False);
+        var assertedValue133 = (logger.Entries).Where(entry => entry.Message.Contains("completed", StringComparison.Ordinal)).ToArray();
+        Assert.That(assertedValue133, Has.Exactly(1).Items);
+        var success = assertedValue133.Single();
+        Assert.That(success.Properties["DeletedCount"], Is.EqualTo(2));
+        Assert.That(success.Properties["BatchCount"], Is.EqualTo(2));
     }
 
     [Test]
@@ -76,12 +81,12 @@ public sealed class NotificationRetentionCleanupServiceTests
         var firstRunRemoved = await service.CleanupAsync();
         var secondRunRemoved = await service.CleanupAsync();
 
-        firstRunRemoved.Should().Be(1);
-        secondRunRemoved.Should().Be(0);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        (await database.PushInstallations.AsNoTracking().CountAsync()).Should().Be(0);
-        logger.Entries.Should().HaveCount(4);
-        logger.Entries.Select(entry => entry.Message).Should().NotContain(message => message.Contains("retention-secret-token", StringComparison.Ordinal));
+        Assert.That(firstRunRemoved, Is.EqualTo(1));
+        Assert.That(secondRunRemoved, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That((await database.PushInstallations.AsNoTracking().CountAsync()), Is.EqualTo(0));
+        Assert.That(logger.Entries, Has.Exactly(4).Items);
+        Assert.That((logger.Entries.Select(entry => entry.Message)).Any(message => message.Contains("retention-secret-token", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -97,16 +102,18 @@ public sealed class NotificationRetentionCleanupServiceTests
 
         var action = async () => await service.CleanupAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("retention commit failed");
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        (await database.InAppNotifications.AsNoTracking().CountAsync()).Should().Be(1);
-        logger.Entries.Should().HaveCount(2);
-        var failure = logger.Entries.Should().ContainSingle(entry => entry.LogLevel == LogLevel.Error).Subject;
-        failure.Exception.Should().BeOfType<InvalidOperationException>();
-        failure.Properties.Keys.Should().Contain(["Operation", "CutoffUtc", "DeletedCount", "BatchCount", "Duration"]);
-        failure.Properties["DeletedCount"].Should().Be(0);
-        failure.Properties["BatchCount"].Should().Be(0);
-        failure.Message.Should().NotContain("retention-secret-message");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("retention commit failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That((await database.InAppNotifications.AsNoTracking().CountAsync()), Is.EqualTo(1));
+        Assert.That(logger.Entries, Has.Exactly(2).Items);
+        var assertedValue134 = (logger.Entries).Where(entry => entry.LogLevel == LogLevel.Error).ToArray();
+        Assert.That(assertedValue134, Has.Exactly(1).Items);
+        var failure = assertedValue134.Single();
+        Assert.That(failure.Exception, Is.TypeOf<InvalidOperationException>());
+        Assert.That(failure.Properties.Keys, Is.SupersetOf(new[] { "Operation", "CutoffUtc", "DeletedCount", "BatchCount", "Duration" }));
+        Assert.That(failure.Properties["DeletedCount"], Is.EqualTo(0));
+        Assert.That(failure.Properties["BatchCount"], Is.EqualTo(0));
+        Assert.That(failure.Message, Does.Not.Contain("retention-secret-message"));
     }
 
     private static AppDbContext CreateDatabase()

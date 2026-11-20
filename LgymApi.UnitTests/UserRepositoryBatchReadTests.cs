@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -25,8 +24,8 @@ public sealed class UserRepositoryBatchReadTests
 
         var users = await repository.GetByIdsAsync([deletedUser.Id, missingUserId, activeUser.Id]);
 
-        users.Select(user => user.Id).Should().Equal(activeUser.Id);
-        dbContext.ChangeTracker.Entries<User>().Should().BeEmpty();
+        Assert.That(users.Select(user => user.Id), Is.EqualTo(new[] { activeUser.Id }));
+        Assert.That(dbContext.ChangeTracker.Entries<User>(), Is.Empty);
     }
 
     [Test]
@@ -42,7 +41,7 @@ public sealed class UserRepositoryBatchReadTests
 
         var action = async () => await repository.GetByIdsAsync([user.Id], cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
     }
 
     private static AppDbContext CreateDbContext()

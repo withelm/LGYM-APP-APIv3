@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
 using LgymApi.Application.TrainingPlanning.PlanDay;
@@ -31,8 +30,8 @@ public sealed class PlanPurposeAccessTests
 
         var result = await service.CreateAsync(new CreatePlanDayCommand(coach, plan, input));
 
-        result.IsFailure.Should().BeTrue();
-        persistence.Created.Should().BeFalse();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(persistence.Created, Is.False);
         await uow.DidNotReceiveWithAnyArgs().SaveChangesAsync();
     }
 

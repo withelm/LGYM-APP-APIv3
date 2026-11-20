@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Pagination;
@@ -31,9 +30,9 @@ public sealed class QueryPaginationServiceTests
 
         var result = await service.ExecuteAsync(() => query, new FilterInput { Page = 1, PageSize = 10 }, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().HaveCount(1);
-        result.Value.Items[0].Name.Should().Be("Alpha");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Items, Has.Exactly(1).Items);
+        Assert.That(result.Value.Items[0].Name, Is.EqualTo("Alpha"));
     }
 
     [Test]
@@ -45,9 +44,9 @@ public sealed class QueryPaginationServiceTests
 
         var result = await service.ExecuteAsync(() => query, new FilterInput { Page = 1, PageSize = 10 }, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Contain("Sort field 'unknown' is not allowed");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Does.Contain("Sort field 'unknown' is not allowed"));
     }
 
     [Test]
@@ -58,9 +57,9 @@ public sealed class QueryPaginationServiceTests
 
         var result = await service.ExecuteAsync(() => query, new FilterInput { Page = 1, PageSize = 10 }, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InternalServerError>();
-        result.Error.Message.Should().Be("Pagination failed.");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InternalServerError>());
+        Assert.That(result.Error.Message, Is.EqualTo("Pagination failed."));
     }
 
     [Test]
@@ -81,8 +80,8 @@ public sealed class QueryPaginationServiceTests
             new FilterInput { Page = 1, PageSize = 10 },
             CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        invocationCount.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(invocationCount, Is.EqualTo(1));
     }
 
     private static PaginationFacade CreateService(GridifyExecutionServiceContract gridifyExecutionService)

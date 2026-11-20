@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -27,7 +26,7 @@ public sealed class PlanDayServiceAccessTests
 
         var result = await CreateAsync(harness.Service, ownerId, harness.PlanId);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await harness.RelationshipAccess.DidNotReceiveWithAnyArgs().AuthorizeWriteAsync(default, default);
         await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
@@ -48,7 +47,7 @@ public sealed class PlanDayServiceAccessTests
 
         var result = await CreateAsync(harness.Service, trainerId, harness.PlanId, cancellation.Token);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await harness.RelationshipAccess.Received(1).AuthorizeWriteAsync(trainerId, ownerId, cancellation.Token);
         await harness.ExerciseCatalog.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyCollection<Id<PlanExerciseReference>>>(exerciseIds => exerciseIds.Count == 1),
@@ -68,9 +67,9 @@ public sealed class PlanDayServiceAccessTests
 
         var result = await CreateAsync(harness.Service, actorId, harness.PlanId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanDayForbiddenError>();
-        harness.Persistence.CreateCalls.Should().BeEmpty();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanDayForbiddenError>());
+        Assert.That(harness.Persistence.CreateCalls, Is.Empty);
         await harness.UnitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
 
@@ -86,8 +85,8 @@ public sealed class PlanDayServiceAccessTests
 
         var result = await CreateAsync(harness.Service, trainerId, harness.PlanId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanDayForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanDayForbiddenError>());
         await harness.RelationshipAccess.Received(1).AuthorizeWriteAsync(trainerId, foreignOwnerId, Arg.Any<CancellationToken>());
         await harness.RelationshipAccess.DidNotReceive().AuthorizeWriteAsync(trainerId, linkedOwnerId, Arg.Any<CancellationToken>());
     }
@@ -106,7 +105,7 @@ public sealed class PlanDayServiceAccessTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<IPlanDayService>().Should().NotBeNull();
+        Assert.That(scope.ServiceProvider.GetRequiredService<IPlanDayService>(), Is.Not.Null);
     }
 
     private static Task<Result<Unit, AppError>> CreateAsync(

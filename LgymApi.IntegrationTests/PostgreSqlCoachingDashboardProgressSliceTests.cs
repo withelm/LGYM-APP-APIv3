@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Progress.EloChart;
 using LgymApi.Application.Coaching.Progress.ExerciseScoresChart;
 using LgymApi.Application.Coaching.Progress.MainRecordsHistory;
@@ -55,11 +54,11 @@ internal sealed class PostgreSqlCoachingDashboardProgressSliceTests : PostgreSql
                 Page: 2,
                 PageSize: 1));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalCount.Should().Be(3);
-        result.Value.Items.Should().ContainSingle(item =>
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(3));
+        Assert.That((result.Value.Items).Where(item =>
             item.Id == pending.Id
-            && item.Status == TrainerDashboardTraineeStatus.InvitationPending);
+            && item.Status == TrainerDashboardTraineeStatus.InvitationPending), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -141,16 +140,16 @@ internal sealed class PostgreSqlCoachingDashboardProgressSliceTests : PostgreSql
         var records = await actionScope.ServiceProvider.GetRequiredService<IGetMainRecordsHistoryUseCase>()
             .ExecuteAsync(new GetMainRecordsHistoryQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>()));
 
-        dates.IsSuccess.Should().BeTrue();
-        dates.Value.Should().ContainSingle();
-        byDate.IsSuccess.Should().BeTrue();
-        byDate.Value.Trainings.Should().ContainSingle();
-        scores.IsSuccess.Should().BeTrue();
-        scores.Value.Should().ContainSingle();
-        elo.IsSuccess.Should().BeTrue();
-        elo.Value.Should().Contain(item => item.Value == 1010);
-        records.IsSuccess.Should().BeTrue();
-        records.Value.Should().ContainSingle(item => item.Weight == 100);
+        Assert.That(dates.IsSuccess, Is.True);
+        Assert.That(dates.Value, Has.Exactly(1).Items);
+        Assert.That(byDate.IsSuccess, Is.True);
+        Assert.That(byDate.Value.Trainings, Has.Exactly(1).Items);
+        Assert.That(scores.IsSuccess, Is.True);
+        Assert.That(scores.Value, Has.Exactly(1).Items);
+        Assert.That(elo.IsSuccess, Is.True);
+        Assert.That((elo.Value).Any(item => item.Value == 1010), Is.True);
+        Assert.That(records.IsSuccess, Is.True);
+        Assert.That((records.Value).Where(item => item.Weight == 100), Has.Exactly(1).Items);
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)

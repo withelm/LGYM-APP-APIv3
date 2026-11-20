@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Api.Configuration;
 using LgymApi.Application.Options;
 using LgymApi.Domain.Entities;
@@ -73,7 +71,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             new StubWebHostEnvironment(isDevelopment: false),
             CancellationToken.None);
 
-        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NotFound>();
+        Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.NotFound>());
     }
 
     [Test]
@@ -91,7 +89,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             new StubWebHostEnvironment(isDevelopment: true),
             CancellationToken.None);
 
-        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NotFound>();
+        Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.NotFound>());
     }
 
     [Test]
@@ -117,8 +115,8 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             new StubWebHostEnvironment(isDevelopment: true),
             CancellationToken.None);
 
-        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NoContent>();
-        (await _store.ReadAsync(storageKey)).Should().Equal(new byte[] { 10, 20, 30 });
+        Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.NoContent>());
+        Assert.That((await _store.ReadAsync(storageKey)), Is.EqualTo(new byte[] { 10, 20, 30 }));
     }
 
     [Test]
@@ -139,7 +137,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             new StubWebHostEnvironment(isDevelopment: true),
             CancellationToken.None);
 
-        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NotFound>();
+        Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.NotFound>());
     }
 
     [Test]
@@ -165,10 +163,10 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             new StubWebHostEnvironment(isDevelopment: true),
             CancellationToken.None);
 
-        result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult>();
+        Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult>());
         var fileResult = (Microsoft.AspNetCore.Http.HttpResults.FileContentHttpResult)result.Result!;
-        fileResult.ContentType.Should().Be("image/png");
-        fileResult.FileContents.Should().Equal(new byte[] { 7, 8, 9 });
+        Assert.That(fileResult.ContentType, Is.EqualTo("image/png"));
+        Assert.That(fileResult.FileContents.ToArray(), Is.EqualTo(new byte[] { 7, 8, 9 }));
     }
 
     [Test]
@@ -182,8 +180,8 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.PutAsync(capabilityUrl, content);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await _store.ReadAsync(storageKey)).Should().Equal(new byte[] { 4, 5, 6 });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        Assert.That((await _store.ReadAsync(storageKey)), Is.EqualTo(new byte[] { 4, 5, 6 }));
     }
 
     [Test]
@@ -196,11 +194,11 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
         using var response = await _host.Client.GetAsync(capabilityUrl);
         var responseBytes = await response.Content.ReadAsByteArrayAsync();
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            response.Content.Headers.ContentType!.MediaType.Should().Be("image/png");
-            responseBytes.Should().Equal(new byte[] { 7, 8, 9 });
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(response.Content.Headers.ContentType!.MediaType, Is.EqualTo("image/png"));
+            Assert.That(responseBytes, Is.EqualTo(new byte[] { 7, 8, 9 }));
         }
     }
 
@@ -214,7 +212,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.GetAsync(capabilityUrl);
 
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
     }
 
     [TestCase("sig")]
@@ -302,7 +300,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             otherStorageKey);
 
         await AssertReadRejectedBeforeStoreAccessAsync(capabilityUrl, otherStorageKey);
-        (await _store.ReadAsync(otherStorageKey)).Should().Equal(new byte[] { 9 });
+        Assert.That((await _store.ReadAsync(otherStorageKey)), Is.EqualTo(new byte[] { 9 }));
     }
 
     [Test]
@@ -326,7 +324,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.SendAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -352,7 +350,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.GetAsync(capabilityUrl);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -367,9 +365,9 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.PutAsync(capabilityUrl, content);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             AssertNoFilesRemain();
         }
     }
@@ -446,9 +444,9 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.PutAsync(capabilityUrl, content);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             AssertNoFilesRemain();
         }
     }
@@ -501,13 +499,15 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             .EnumerateFiles(_store.ResolvePath(_testPrefix), "*", SearchOption.AllDirectories)
             .ToArray();
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            finalExistedDuringUpload.Should().BeFalse();
-            filesDuringUpload.Should().NotContain(finalPath);
-            result.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.NoContent>();
-            finalBytes.Should().Equal(new byte[] { 1, 2, 3 });
-            filesAfterUpload.Should().ContainSingle().Which.Should().Be(finalPath);
+            Assert.That(finalExistedDuringUpload, Is.False);
+            Assert.That(filesDuringUpload, Does.Not.Contain(finalPath));
+            Assert.That(result.Result, Is.TypeOf<Microsoft.AspNetCore.Http.HttpResults.NoContent>());
+            Assert.That(finalBytes, Is.EqualTo(new byte[] { 1, 2, 3 }));
+            var assertedValue119 = (filesAfterUpload).ToArray();
+            Assert.That(assertedValue119, Has.Exactly(1).Items);
+            Assert.That(assertedValue119.Single(), Is.EqualTo(finalPath));
         }
     }
 
@@ -544,10 +544,10 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
 
         using var response = await _host.Client.GetAsync(capabilityUrl);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            targetLock.CanRead.Should().BeTrue();
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(targetLock.CanRead, Is.True);
         }
     }
 
@@ -567,11 +567,11 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
             lockRemainedOpen = targetLock.CanWrite;
         }
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            statusCode.Should().Be(HttpStatusCode.NotFound);
-            lockRemainedOpen.Should().BeTrue();
-            (await _store.ReadAsync(storageKey)).Should().Equal(originalBytes!);
+            Assert.That(statusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(lockRemainedOpen, Is.True);
+            Assert.That((await _store.ReadAsync(storageKey)), Is.EqualTo(originalBytes!));
         }
     }
 
@@ -591,7 +591,7 @@ public sealed class LocalPhotoDevelopmentEndpointsTests
         var rootPath = _store.ResolvePath(_testPrefix);
         if (Directory.Exists(rootPath))
         {
-            Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories).Should().BeEmpty();
+            Assert.That(Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories), Is.Empty);
         }
     }
 

@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -45,7 +44,7 @@ public sealed class CoachingBoundaryDocumentationTests
 
         ValidateOwners(ownerRows);
         ValidateActions(actionRows);
-        contractRows.Values.Should().OnlyContain(row => row.GetField("Status").StartsWith("Implemented", StringComparison.Ordinal));
+        Assert.That((contractRows.Values).All(row => row.GetField("Status").StartsWith("Implemented", StringComparison.Ordinal)), Is.True);
         ValidateSharedPersistenceTopology(ValidateStableIds(
             rows,
             "coaching.persistence.",
@@ -60,8 +59,7 @@ public sealed class CoachingBoundaryDocumentationTests
             "coaching.owner.",
             OwnerIds);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Duplicate stable row IDs*coaching.owner.trainer-invitation*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate stable row IDs*coaching.owner.trainer-invitation*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -72,8 +70,7 @@ public sealed class CoachingBoundaryDocumentationTests
             "coaching.owner.",
             OwnerIds);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Missing stable row IDs*coaching.owner.trainer-invitation*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Missing stable row IDs*coaching.owner.trainer-invitation*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -88,8 +85,7 @@ public sealed class CoachingBoundaryDocumentationTests
             "coaching.persistence.",
             ["coaching.persistence.shared-topology"]));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*exactly one AppDbContext*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*exactly one AppDbContext*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static IReadOnlyList<DocumentationRow> ParseBoundaryRows()
@@ -179,19 +175,19 @@ public sealed class CoachingBoundaryDocumentationTests
             .ToList();
         var documentedNames = ownerRows.Values.Select(row => row.GetField("Entity name")).ToHashSet(StringComparer.Ordinal);
 
-        catalogEntries.Should().HaveCount(5);
-        documentedNames.Should().BeEquivalentTo(catalogEntries.Select(entry => entry.EntityType.Name));
+        Assert.That(catalogEntries, Has.Exactly(5).Items);
+        Assert.That(documentedNames, Is.EquivalentTo(catalogEntries.Select(entry => entry.EntityType.Name)).UsingPropertiesComparer());
         foreach (var row in ownerRows.Values)
         {
-            row.GetField("Owner").Should().Be(PersistedEntityOwnershipCatalog.CoachingModuleName);
+            Assert.That(row.GetField("Owner"), Is.EqualTo(PersistedEntityOwnershipCatalog.CoachingModuleName));
         }
     }
 
     private static void ValidateActions(IReadOnlyDictionary<string, DocumentationRow> actionRows)
     {
-        actionRows.Values.Count(row => row.GetField("Surface") == "HTTP").Should().Be(30);
-        actionRows["coaching.action.get-trainer-invitations"].GetField("Surface").Should().Be("Application only");
-        actionRows["coaching.action.get-trainer-invitations"].GetField("Application action").Should().Be("GetTrainerInvitationsAsync");
+        Assert.That(actionRows.Values.Count(row => row.GetField("Surface") == "HTTP"), Is.EqualTo(30));
+        Assert.That(actionRows["coaching.action.get-trainer-invitations"].GetField("Surface"), Is.EqualTo("Application only"));
+        Assert.That(actionRows["coaching.action.get-trainer-invitations"].GetField("Application action"), Is.EqualTo("GetTrainerInvitationsAsync"));
     }
 
     private static void ValidateSharedPersistenceTopology(IReadOnlyDictionary<string, DocumentationRow> rows)

@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using NUnit.Framework;
-using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -32,7 +31,7 @@ public sealed class TypedIdTests
         var id1 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
         var id2 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
 
-        id1.Should().Be(id2);
+        Assert.That(id1, Is.EqualTo(id2));
     }
 
     [Test]
@@ -41,7 +40,7 @@ public sealed class TypedIdTests
         var id1 = ParseTestId<User>("00000000-0000-0000-0000-000000000001");
         var id2 = ParseTestId<User>("00000000-0000-0000-0000-000000000002");
 
-        id1.Should().NotBe(id2);
+        Assert.That(id1, Is.Not.EqualTo(id2));
     }
 
     [Test]
@@ -49,8 +48,8 @@ public sealed class TypedIdTests
     {
         var empty = Id<User>.Empty;
 
-        empty.IsEmpty.Should().BeTrue();
-        empty.Should().Be(default(Id<User>));
+        Assert.That(empty.IsEmpty, Is.True);
+        Assert.That(empty, Is.EqualTo(default(Id<User>)));
     }
 
     [Test]
@@ -58,8 +57,8 @@ public sealed class TypedIdTests
     {
         Id<User> id = default;
 
-        id.IsEmpty.Should().BeTrue();
-        id.Should().Be(Id<User>.Empty);
+        Assert.That(id.IsEmpty, Is.True);
+        Assert.That(id, Is.EqualTo(Id<User>.Empty));
     }
 
     [Test]
@@ -67,7 +66,7 @@ public sealed class TypedIdTests
     {
         Id<User>? id = null;
 
-        id.Should().BeNull();
+        Assert.That(id, Is.Null);
     }
 
     [Test]
@@ -76,8 +75,8 @@ public sealed class TypedIdTests
         var id = Id<User>.New();
         Id<User>? nullableId = id;
 
-        nullableId.Should().NotBeNull();
-        nullableId.Value.Should().Be(id);
+        Assert.That(nullableId, Is.Not.Null);
+        Assert.That(nullableId.Value, Is.EqualTo(id));
     }
 
     [Test]
@@ -87,11 +86,11 @@ public sealed class TypedIdTests
         var same = ParseTestId<User>("00000000-0000-0000-0000-000000000003");
         Id<User>? missing = null;
 
-        first.Should().Be(same);
-        first.GetHashCode().Should().Be(same.GetHashCode());
-        missing.Should().BeNull();
-        JsonSerializer.Serialize(missing, _serializerOptions).Should().Be("null");
-        JsonSerializer.Deserialize<Id<User>?>("null", _serializerOptions).Should().BeNull();
+        Assert.That(first, Is.EqualTo(same));
+        Assert.That(first.GetHashCode(), Is.EqualTo(same.GetHashCode()));
+        Assert.That(missing, Is.Null);
+        Assert.That(JsonSerializer.Serialize(missing, _serializerOptions), Is.EqualTo("null"));
+        Assert.That(JsonSerializer.Deserialize<Id<User>?>("null", _serializerOptions), Is.Null);
     }
 
     #endregion
@@ -103,8 +102,8 @@ public sealed class TypedIdTests
     {
         var id = Id<User>.New();
 
-        id.IsEmpty.Should().BeFalse();
-        id.Should().NotBe(Id<User>.Empty);
+        Assert.That(id.IsEmpty, Is.False);
+        Assert.That(id, Is.Not.EqualTo(Id<User>.Empty));
     }
 
     [Test]
@@ -113,7 +112,7 @@ public sealed class TypedIdTests
         var id1 = Id<User>.New();
         var id2 = Id<User>.New();
 
-        id1.Should().NotBe(id2);
+        Assert.That(id1, Is.Not.EqualTo(id2));
     }
 
     #endregion
@@ -126,7 +125,7 @@ public sealed class TypedIdTests
         var id = ParseTestId<User>("00000000-0000-0000-0000-000000000099");
         var unwrapped = id.GetValue();
 
-        unwrapped.ToString().Should().Be("00000000-0000-0000-0000-000000000099");
+        Assert.That(unwrapped.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000099"));
     }
 
     [Test]
@@ -134,7 +133,7 @@ public sealed class TypedIdTests
     {
         var id = ParseTestId<User>("00000000-0000-0000-0000-000000000099");
 
-        id.ToString().Should().Be("00000000-0000-0000-0000-000000000099");
+        Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000099"));
     }
 
     [Test]
@@ -149,7 +148,7 @@ public sealed class TypedIdTests
         // Id<User> id2 = id.GetValue(); // This should NOT compile
 #pragma warning restore CS0219
 
-        typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit").Should().BeFalse();
+        Assert.That(typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit"), Is.False);
     }
 
     [Test]
@@ -164,7 +163,7 @@ public sealed class TypedIdTests
         // var unwrapped = id; // Cannot assign Id<T> to Guid implicitly
 #pragma warning restore CS0219
 
-        typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit").Should().BeFalse();
+        Assert.That(typeof(Id<User>).GetMethods().Any(method => method.Name == "op_Implicit"), Is.False);
     }
 
     #endregion
@@ -179,11 +178,11 @@ public sealed class TypedIdTests
 
         // userId and planId have different types at compile time
         // This test documents that intent even though runtime equates them if underlying value is same
-        userId.GetType().Name.Should().Be("Id`1");
-        planId.GetType().Name.Should().Be("Id`1");
+        Assert.That(userId.GetType().Name, Is.EqualTo("Id`1"));
+        Assert.That(planId.GetType().Name, Is.EqualTo("Id`1"));
 
         // At runtime they are technically different types (generic instantiation)
-        typeof(Id<User>).Should().NotBe(typeof(Id<Plan>));
+        Assert.That(typeof(Id<User>), Is.Not.EqualTo(typeof(Id<Plan>)));
     }
 
     #endregion
@@ -195,7 +194,7 @@ public sealed class TypedIdTests
     {
         var id = ParseTestId<User>("00000000-0000-0000-0000-000000000077");
 
-        id.ToString().Should().Be("00000000-0000-0000-0000-000000000077");
+        Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000077"));
     }
 
     #endregion
@@ -208,7 +207,7 @@ public sealed class TypedIdTests
         var id = Id<User>.New();
         var value = id.GetValue();
 
-        value.ToString().Length.Should().Be(36); // Standard UUID format
+        Assert.That(value.ToString().Length, Is.EqualTo(36)); // Standard UUID format
     }
 
     #endregion
@@ -220,7 +219,7 @@ public sealed class TypedIdTests
     {
         var id = Id<User>.Empty;
 
-        id.IsEmpty.Should().BeTrue();
+        Assert.That(id.IsEmpty, Is.True);
     }
 
     [Test]
@@ -228,7 +227,7 @@ public sealed class TypedIdTests
     {
         var id = Id<User>.New();
 
-        id.IsEmpty.Should().BeFalse();
+        Assert.That(id.IsEmpty, Is.False);
     }
 
     #endregion
@@ -249,9 +248,9 @@ public sealed class TypedIdTests
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
 
-        json.Should().Contain("00000000-0000-0000-0000-000000000042");
+        Assert.That(json, Does.Contain("00000000-0000-0000-0000-000000000042"));
         // JSON string is quoted
-        json.Should().Be("\"00000000-0000-0000-0000-000000000042\"");
+        Assert.That(json, Is.EqualTo("\"00000000-0000-0000-0000-000000000042\""));
     }
 
     [Test]
@@ -261,7 +260,7 @@ public sealed class TypedIdTests
 
         var id = JsonSerializer.Deserialize<Id<User>>(guidString, _serializerOptions);
 
-        id.ToString().Should().Be("00000000-0000-0000-0000-000000000043");
+        Assert.That(id.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000043"));
     }
 
     [Test]
@@ -272,7 +271,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(originalId, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<Id<User>>(json, _serializerOptions);
 
-        deserialized.Should().Be(originalId);
+        Assert.That(deserialized, Is.EqualTo(originalId));
     }
 
     [Test]
@@ -284,7 +283,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(original, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<UserDto>(json, _serializerOptions);
 
-        deserialized!.Id.Should().Be(userId);
+        Assert.That(deserialized!.Id, Is.EqualTo(userId));
     }
 
     [Test]
@@ -292,10 +291,9 @@ public sealed class TypedIdTests
     {
         var invalidJson = "\"not-a-uuid\"";
 
-        var ex = FluentActions.Invoking(() =>
-            JsonSerializer.Deserialize<Id<User>>(invalidJson, _serializerOptions)).Should().Throw<JsonException>().Which;
+        var ex = Assert.Catch<JsonException>(() => { JsonSerializer.Deserialize<Id<User>>(invalidJson, _serializerOptions); })!;
 
-        ex.Message.Should().Contain("Invalid GUID format");
+        Assert.That(ex.Message, Does.Contain("Invalid GUID format"));
     }
 
     [Test]
@@ -303,10 +301,9 @@ public sealed class TypedIdTests
     {
         var emptyJson = "\"\"";
 
-        var ex = FluentActions.Invoking(() =>
-            JsonSerializer.Deserialize<Id<User>>(emptyJson, _serializerOptions)).Should().Throw<JsonException>().Which;
+        var ex = Assert.Catch<JsonException>(() => { JsonSerializer.Deserialize<Id<User>>(emptyJson, _serializerOptions); })!;
 
-        ex.Message.Should().Contain("cannot be empty");
+        Assert.That(ex.Message, Does.Contain("cannot be empty"));
     }
 
     [Test]
@@ -314,10 +311,9 @@ public sealed class TypedIdTests
     {
         var nullJson = "null";
 
-        var ex = FluentActions.Invoking(() =>
-            JsonSerializer.Deserialize<Id<User>>(nullJson, _serializerOptions)).Should().Throw<JsonException>().Which;
+        var ex = Assert.Catch<JsonException>(() => { JsonSerializer.Deserialize<Id<User>>(nullJson, _serializerOptions); })!;
 
-        ex.Message.Should().Contain("cannot be null");
+        Assert.That(ex.Message, Does.Contain("cannot be null"));
     }
 
     [Test]
@@ -325,10 +321,9 @@ public sealed class TypedIdTests
     {
         var numberJson = "123";
 
-        var ex = FluentActions.Invoking(() =>
-            JsonSerializer.Deserialize<Id<User>>(numberJson, _serializerOptions)).Should().Throw<JsonException>().Which;
+        var ex = Assert.Catch<JsonException>(() => { JsonSerializer.Deserialize<Id<User>>(numberJson, _serializerOptions); })!;
 
-        ex.Message.Should().Contain("Expected string token");
+        Assert.That(ex.Message, Does.Contain("Expected string token"));
     }
 
     #endregion
@@ -342,7 +337,7 @@ public sealed class TypedIdTests
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
 
-        json.Should().Be("\"00000000-0000-0000-0000-000000000044\"");
+        Assert.That(json, Is.EqualTo("\"00000000-0000-0000-0000-000000000044\""));
     }
 
     [Test]
@@ -352,7 +347,7 @@ public sealed class TypedIdTests
 
         var json = JsonSerializer.Serialize(id, _serializerOptions);
 
-        json.Should().Be("null");
+        Assert.That(json, Is.EqualTo("null"));
     }
 
     [Test]
@@ -362,8 +357,8 @@ public sealed class TypedIdTests
 
         var id = JsonSerializer.Deserialize<Id<User>?>(guidJson, _serializerOptions);
 
-        id.Should().NotBeNull();
-        id!.Value.ToString().Should().Be("00000000-0000-0000-0000-000000000045");
+        Assert.That(id, Is.Not.Null);
+        Assert.That(id!.Value.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000045"));
     }
 
     [Test]
@@ -373,7 +368,7 @@ public sealed class TypedIdTests
 
         var id = JsonSerializer.Deserialize<Id<User>?>(nullJson, _serializerOptions);
 
-        id.Should().BeNull();
+        Assert.That(id, Is.Null);
     }
 
     [Test]
@@ -385,8 +380,8 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(id, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<Id<User>?>(json, _serializerOptions);
 
-        deserialized.Should().NotBeNull();
-        deserialized!.Value.Should().Be(originalId);
+        Assert.That(deserialized, Is.Not.Null);
+        Assert.That(deserialized!.Value, Is.EqualTo(originalId));
     }
 
     [Test]
@@ -397,7 +392,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(id, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<Id<User>?>(json, _serializerOptions);
 
-        deserialized.Should().BeNull();
+        Assert.That(deserialized, Is.Null);
     }
 
     [Test]
@@ -408,7 +403,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(original, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<UserWithOptionalIdDto>(json, _serializerOptions);
 
-        deserialized!.Id.Should().BeNull();
+        Assert.That(deserialized!.Id, Is.Null);
     }
 
     [Test]
@@ -420,8 +415,8 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(original, _serializerOptions);
         var deserialized = JsonSerializer.Deserialize<UserWithOptionalIdDto>(json, _serializerOptions);
 
-        deserialized!.Id.Should().NotBeNull();
-        deserialized.Id!.Value.Should().Be(userId);
+        Assert.That(deserialized!.Id, Is.Not.Null);
+        Assert.That(deserialized.Id!.Value, Is.EqualTo(userId));
     }
 
     #endregion
@@ -436,7 +431,7 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(id, SharedSerializationOptions.Current);
         var deserialized = JsonSerializer.Deserialize<Id<User>>(json, SharedSerializationOptions.Current);
 
-        deserialized.Should().Be(id);
+        Assert.That(deserialized, Is.EqualTo(id));
     }
 
     [Test]
@@ -447,8 +442,8 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(id, SharedSerializationOptions.Current);
         var deserialized = JsonSerializer.Deserialize<Id<User>?>(json, SharedSerializationOptions.Current);
 
-        deserialized.Should().NotBeNull();
-        deserialized!.Value.Should().Be(id!.Value);
+        Assert.That(deserialized, Is.Not.Null);
+        Assert.That(deserialized!.Value, Is.EqualTo(id!.Value));
     }
 
     #endregion
@@ -463,9 +458,9 @@ public sealed class TypedIdTests
 
         var deserialized = JsonSerializer.Deserialize<CreatePlanRequest>(requestJson, _serializerOptions);
 
-        deserialized.Should().NotBeNull();
-        deserialized!.UserId.ToString().Should().Be("00000000-0000-0000-0000-000000000050");
-        deserialized.PlanId.ToString().Should().Be("00000000-0000-0000-0000-000000000051");
+        Assert.That(deserialized, Is.Not.Null);
+        Assert.That(deserialized!.UserId.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000050"));
+        Assert.That(deserialized.PlanId.ToString(), Is.EqualTo("00000000-0000-0000-0000-000000000051"));
     }
 
     [Test]
@@ -477,7 +472,7 @@ public sealed class TypedIdTests
 
         var json = JsonSerializer.Serialize(response, _serializerOptions);
 
-        json.Should().Contain("\"00000000-0000-0000-0000-000000000052\"");
+        Assert.That(json, Does.Contain("\"00000000-0000-0000-0000-000000000052\""));
     }
 
     [Test]
@@ -499,8 +494,8 @@ public sealed class TypedIdTests
         var json = JsonSerializer.Serialize(request, options);
         var parsed = JsonSerializer.Deserialize<CreatePlanRequest>(json, options);
 
-        parsed!.UserId.Should().Be(request.UserId);
-        parsed.PlanId.Should().Be(request.PlanId);
+        Assert.That(parsed!.UserId, Is.EqualTo(request.UserId));
+        Assert.That(parsed.PlanId, Is.EqualTo(request.PlanId));
     }
 
     #endregion

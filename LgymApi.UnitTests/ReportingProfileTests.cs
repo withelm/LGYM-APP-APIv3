@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using System.Reflection;
@@ -33,7 +32,7 @@ public sealed class ReportingProfileTests
         };
 
         var templateDto = mapper.Map<ReportTemplateResult, ReportTemplateDto>(templateResult);
-        templateDto.Fields.Should().HaveCount(1);
+        Assert.That(templateDto.Fields, Has.Exactly(1).Items);
 
         var requestResult = new ReportRequestResult
         {
@@ -46,7 +45,7 @@ public sealed class ReportingProfileTests
         };
 
         var requestDto = mapper.Map<ReportRequestResult, ReportRequestDto>(requestResult);
-        requestDto.Template.Should().NotBeNull();
+        Assert.That(requestDto.Template, Is.Not.Null);
 
         var submissionResult = new ReportSubmissionResult
         {
@@ -60,10 +59,10 @@ public sealed class ReportingProfileTests
         };
 
         var submissionDto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
-        submissionDto.Answers.Should().BeEmpty();
-        submissionDto.Request.Should().NotBeNull();
-        submissionDto.TrainerOverallComment.Should().Be("Overall coach feedback");
-        submissionDto.TrainerFieldComments["weight"].Should().Be("Add more context");
+        Assert.That(submissionDto.Answers, Is.Empty);
+        Assert.That(submissionDto.Request, Is.Not.Null);
+        Assert.That(submissionDto.TrainerOverallComment, Is.EqualTo("Overall coach feedback"));
+        Assert.That(submissionDto.TrainerFieldComments["weight"], Is.EqualTo("Add more context"));
     }
 
     [Test]
@@ -92,7 +91,7 @@ public sealed class ReportingProfileTests
         };
 
         var dto = mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(submissionResult);
-        dto.Answers.ContainsKey("Weight").Should().BeTrue();
+        Assert.That(dto.Answers.ContainsKey("Weight"), Is.True);
     }
 
     [Test]
@@ -106,7 +105,7 @@ public sealed class ReportingProfileTests
             Template = new ReportTemplateResult()
         });
 
-        dto.Status.Should().Be(ReportRequestStatus.Submitted);
+        Assert.That(dto.Status, Is.EqualTo(ReportRequestStatus.Submitted));
     }
 
     [Test]
@@ -120,14 +119,14 @@ public sealed class ReportingProfileTests
             StorageKey = "photos/key.jpg",
             ExpiresAt = DateTimeOffset.UtcNow
         });
-        uploadDto.UploadUrl.Should().Be("https://upload.example.com");
+        Assert.That(uploadDto.UploadUrl, Is.EqualTo("https://upload.example.com"));
 
         var readDto = mapper.Map<SignedReadUrlResult, GetSignedReadUrlResponse>(new SignedReadUrlResult
         {
             ReadUrl = "https://read.example.com",
             ExpiresAt = DateTimeOffset.UtcNow
         });
-        readDto.ReadUrl.Should().Be("https://read.example.com");
+        Assert.That(readDto.ReadUrl, Is.EqualTo("https://read.example.com"));
 
         var photoHistoryDto = mapper.Map<PhotoHistoryItemResult, PhotoHistoryItemResponse>(new PhotoHistoryItemResult
         {
@@ -139,11 +138,11 @@ public sealed class ReportingProfileTests
             ReportRequestId = Id<ReportRequest>.New(),
             UploadedAt = DateTimeOffset.UtcNow
         });
-        photoHistoryDto.ViewType.Should().Be("Front");
+        Assert.That(photoHistoryDto.ViewType, Is.EqualTo("Front"));
 
-        mapper.Map<ReportTemplateResult, ReportTemplateDto>(new ReportTemplateResult()).Should().NotBeNull();
-        mapper.Map<ReportRequestResult, ReportRequestDto>(new ReportRequestResult()).Should().NotBeNull();
-        mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(new ReportSubmissionResult()).Should().NotBeNull();
+        Assert.That(mapper.Map<ReportTemplateResult, ReportTemplateDto>(new ReportTemplateResult()), Is.Not.Null);
+        Assert.That(mapper.Map<ReportRequestResult, ReportRequestDto>(new ReportRequestResult()), Is.Not.Null);
+        Assert.That(mapper.Map<ReportSubmissionResult, ReportSubmissionDto>(new ReportSubmissionResult()), Is.Not.Null);
     }
 
     [Test]
@@ -163,11 +162,9 @@ public sealed class ReportingProfileTests
 
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(dto, options));
 
-        json.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal(
-            "_id", "systemKey", "name", "nameMode", "isArchived", "displayName", "labels");
-        json.RootElement.GetProperty("labels").EnumerateObject().Select(property => property.Name)
-            .Should().Equal("pl", "en");
-        json.RootElement.GetProperty("nameMode").GetString().Should().Be("SystemLocalized");
+        Assert.That(json.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "_id", "systemKey", "name", "nameMode", "isArchived", "displayName", "labels" }));
+        Assert.That(json.RootElement.GetProperty("labels").EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "pl", "en" }));
+        Assert.That(json.RootElement.GetProperty("nameMode").GetString(), Is.EqualTo("SystemLocalized"));
     }
 
     private static IMapper CreateMapper(params IMappingProfile[] profiles)

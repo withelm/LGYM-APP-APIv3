@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -12,17 +11,17 @@ public sealed class ApiAuthenticationRegistrationExtractionTests
         var programSource = File.ReadAllText(Path.Combine(repositoryRoot, "LgymApi.Api", "Program.cs"));
         var extensionPath = Path.Combine(repositoryRoot, "LgymApi.Api", "Configuration", "ApiAuthenticationExtensions.cs");
 
-        File.Exists(extensionPath).Should().BeTrue();
-        programSource.Should().Contain("builder.Services.AddApiAuthentication(builder.Configuration);");
-        programSource.Should().NotContain("AddAuthentication(JwtBearerDefaults.AuthenticationScheme)");
-        programSource.Should().NotContain("AddJwtBearer(");
-        programSource.Should().NotContain("new TokenValidationParameters");
-        programSource.Should().NotContain("new JwtBearerEvents");
+        Assert.That(File.Exists(extensionPath), Is.True);
+        Assert.That(programSource, Does.Contain("builder.Services.AddApiAuthentication(builder.Configuration);"));
+        Assert.That(programSource, Does.Not.Contain("AddAuthentication(JwtBearerDefaults.AuthenticationScheme)"));
+        Assert.That(programSource, Does.Not.Contain("AddJwtBearer("));
+        Assert.That(programSource, Does.Not.Contain("new TokenValidationParameters"));
+        Assert.That(programSource, Does.Not.Contain("new JwtBearerEvents"));
 
         var extensionSource = File.ReadAllText(extensionPath);
-        extensionSource.Should().Contain("namespace LgymApi.Api.Configuration;");
-        extensionSource.Should().Contain("AddAuthentication(JwtBearerDefaults.AuthenticationScheme)");
-        extensionSource.Should().Contain("AddJwtBearer(");
+        Assert.That(extensionSource, Does.Contain("namespace LgymApi.Api.Configuration;"));
+        Assert.That(extensionSource, Does.Contain("AddAuthentication(JwtBearerDefaults.AuthenticationScheme)"));
+        Assert.That(extensionSource, Does.Contain("AddJwtBearer("));
     }
 
     private static string FindRepositoryRoot()

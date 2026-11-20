@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Api.Features.User.Validation;
 using NUnit.Framework;
@@ -21,7 +20,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeTrue();
+        Assert.That(result.IsValid, Is.True);
     }
 
     [Test]
@@ -37,8 +36,8 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Token");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "Token"), Is.True);
     }
 
     [Test]
@@ -54,8 +53,8 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "NewPassword");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "NewPassword"), Is.True);
     }
 
     [Test]
@@ -71,8 +70,8 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "ConfirmPassword");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "ConfirmPassword"), Is.True);
     }
 
     [Test]
@@ -88,7 +87,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeTrue();
+        Assert.That(result.IsValid, Is.True);
     }
 
     [Test]
@@ -104,7 +103,7 @@ public sealed class ResetPasswordRequestValidatorTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "NewPassword");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "NewPassword"), Is.True);
     }
 }

@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -42,13 +41,13 @@ public sealed class RoleControllerTests
         });
 
         var ok = action as OkObjectResult;
-        ok.Should().NotBeNull();
+        Assert.That(ok, Is.Not.Null);
         var dto = ok!.Value as RoleDto;
 
-        dto.Should().NotBeNull();
-        dto!.Id.Should().Be($"{roleId:N}");
-        dto.Name.Should().Be("Coach");
-        dto.PermissionClaims.Should().BeEquivalentTo(ManageUserRolesClaim);
+        Assert.That(dto, Is.Not.Null);
+        Assert.That(dto!.Id, Is.EqualTo($"{roleId:N}"));
+        Assert.That(dto.Name, Is.EqualTo("Coach"));
+        Assert.That(dto.PermissionClaims, Is.EquivalentTo(ManageUserRolesClaim).UsingPropertiesComparer());
     }
 
     private static IMapper BuildMapper()
@@ -83,10 +82,10 @@ public sealed class RoleControllerTests
 
         var action = await controller.UpdateUserRoles($"{userId:N}", request, cancellationToken);
 
-        action.Should().BeOfType<OkObjectResult>();
-        observedUserId.Should().Be(userId);
-        observedRoleNames.Should().Equal(request.Roles);
-        observedCancellationToken.Should().Be(cancellationToken);
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        Assert.That(observedUserId, Is.EqualTo(userId));
+        Assert.That(observedRoleNames, Is.EqualTo(request.Roles));
+        Assert.That(observedCancellationToken, Is.EqualTo(cancellationToken));
     }
 
     [Test]
@@ -97,27 +96,27 @@ public sealed class RoleControllerTests
         var delete = type.GetMethod(nameof(RoleController.DeleteRole), BindingFlags.Public | BindingFlags.Instance);
         var updateUserRoles = type.GetMethod(nameof(RoleController.UpdateUserRoles), BindingFlags.Public | BindingFlags.Instance);
 
-        update.Should().NotBeNull();
-        delete.Should().NotBeNull();
-        updateUserRoles.Should().NotBeNull();
+        Assert.That(update, Is.Not.Null);
+        Assert.That(delete, Is.Not.Null);
+        Assert.That(updateUserRoles, Is.Not.Null);
 
         var controllerRoute = type.GetCustomAttribute<RouteAttribute>();
         var updateHttpPost = update!.GetCustomAttribute<HttpPostAttribute>();
         var deleteHttpPost = delete!.GetCustomAttribute<HttpPostAttribute>();
         var updateUserRolesHttpPost = updateUserRoles!.GetCustomAttribute<HttpPostAttribute>();
 
-        controllerRoute.Should().NotBeNull();
-        controllerRoute!.Template.Should().Be("api/roles");
-        updateHttpPost.Should().NotBeNull();
-        updateHttpPost!.Template.Should().Be("{id}/update");
-        deleteHttpPost.Should().NotBeNull();
-        deleteHttpPost!.Template.Should().Be("{id}/delete");
-        updateUserRolesHttpPost.Should().NotBeNull();
-        updateUserRolesHttpPost!.Template.Should().Be("users/{id}/roles");
+        Assert.That(controllerRoute, Is.Not.Null);
+        Assert.That(controllerRoute!.Template, Is.EqualTo("api/roles"));
+        Assert.That(updateHttpPost, Is.Not.Null);
+        Assert.That(updateHttpPost!.Template, Is.EqualTo("{id}/update"));
+        Assert.That(deleteHttpPost, Is.Not.Null);
+        Assert.That(deleteHttpPost!.Template, Is.EqualTo("{id}/delete"));
+        Assert.That(updateUserRolesHttpPost, Is.Not.Null);
+        Assert.That(updateUserRolesHttpPost!.Template, Is.EqualTo("users/{id}/roles"));
 
-        update.GetCustomAttribute<HttpPutAttribute>().Should().BeNull();
-        delete.GetCustomAttribute<HttpDeleteAttribute>().Should().BeNull();
-        updateUserRoles.GetCustomAttribute<HttpPutAttribute>().Should().BeNull();
+        Assert.That(update.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
+        Assert.That(delete.GetCustomAttribute<HttpDeleteAttribute>(), Is.Null);
+        Assert.That(updateUserRoles.GetCustomAttribute<HttpPutAttribute>(), Is.Null);
     }
 
     private sealed class StubRoleService : IRoleManagementApiAdapter

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Persistence;
@@ -74,9 +73,9 @@ public sealed class CoachingDashboardProgressSliceTests
         var result = await Resolve<IGetTrainerDashboardUseCase>(services).ExecuteAsync(
             new GetTrainerDashboardQuery(trainerId, "mixed", "InvitationPending", "status", "asc", 2, 1));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().ContainSingle(item => item.Id == matchingId);
-        result.Value.TotalCount.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That((result.Value.Items).Where(item => item.Id == matchingId), Has.Exactly(1).Items);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(1));
         await facts.Received(1).GetDashboardFactsAsync(trainerId, Arg.Any<CancellationToken>());
         await accounts.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyList<Id<User>>>(ids => ids.SequenceEqual(new[] { matchingId, missingId, revokedId })),
@@ -101,7 +100,7 @@ public sealed class CoachingDashboardProgressSliceTests
         var result = await Resolve<IGetTrainerDashboardUseCase>(services).ExecuteAsync(
             new GetTrainerDashboardQuery(trainerId));
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
         await facts.DidNotReceive().GetDashboardFactsAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
         await accounts.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyList<Id<User>>>(), Arg.Any<CancellationToken>());
         await pagination.DidNotReceiveWithAnyArgs().ExecuteAsync<TrainerDashboardTraineeReadModel>(default!, default!, default);
@@ -130,11 +129,11 @@ public sealed class CoachingDashboardProgressSliceTests
         progress.GetMainRecordHistoryAsync(traineeId, Arg.Any<CancellationToken>())
             .Returns(Result<List<MainRecordReadModel>, AppError>.Success([]));
 
-        (await Resolve<IGetTrainingDatesUseCase>(services).ExecuteAsync(new GetTrainingDatesQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
-        (await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, dateRange, cultures))).IsSuccess.Should().BeTrue();
-        (await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(new GetExerciseScoresChartQuery(trainerId, traineeId, exerciseId))).IsSuccess.Should().BeTrue();
-        (await Resolve<IGetEloChartUseCase>(services).ExecuteAsync(new GetEloChartQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
-        (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).IsSuccess.Should().BeTrue();
+        Assert.That((await Resolve<IGetTrainingDatesUseCase>(services).ExecuteAsync(new GetTrainingDatesQuery(trainerId, traineeId))).IsSuccess, Is.True);
+        Assert.That((await Resolve<IGetTrainingByDateUseCase>(services).ExecuteAsync(new GetTrainingByDateQuery(trainerId, traineeId, dateRange, cultures))).IsSuccess, Is.True);
+        Assert.That((await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(new GetExerciseScoresChartQuery(trainerId, traineeId, exerciseId))).IsSuccess, Is.True);
+        Assert.That((await Resolve<IGetEloChartUseCase>(services).ExecuteAsync(new GetEloChartQuery(trainerId, traineeId))).IsSuccess, Is.True);
+        Assert.That((await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).IsSuccess, Is.True);
 
         await access.Received(5).GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>());
         await progress.Received(1).GetTrainingDatesAsync(traineeId, Arg.Any<CancellationToken>());
@@ -162,7 +161,7 @@ public sealed class CoachingDashboardProgressSliceTests
             (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).Error
         };
 
-        results.Should().OnlyContain(error => error is TrainerRelationshipNotFoundError);
+        Assert.That((results).All(error => error is TrainerRelationshipNotFoundError), Is.True);
         await progress.DidNotReceiveWithAnyArgs().GetTrainingDatesAsync(default, default);
         await progress.DidNotReceiveWithAnyArgs().GetTrainingByDateAsync(default, default!, default!, default);
         await progress.DidNotReceiveWithAnyArgs().GetExerciseScoreChartAsync(default, default!, default);
@@ -197,7 +196,7 @@ public sealed class CoachingDashboardProgressSliceTests
             (await Resolve<IGetMainRecordsHistoryUseCase>(services).ExecuteAsync(new GetMainRecordsHistoryQuery(trainerId, traineeId))).Error
         };
 
-        errors.Should().OnlyContain(error => error is TrainerRelationshipNotFoundError && error.Message == "downstream failure");
+        Assert.That((errors).All(error => error is TrainerRelationshipNotFoundError && error.Message == "downstream failure"), Is.True);
     }
 
     [Test]
@@ -212,7 +211,7 @@ public sealed class CoachingDashboardProgressSliceTests
         var result = await Resolve<IGetExerciseScoresChartUseCase>(services).ExecuteAsync(
             new GetExerciseScoresChartQuery(trainerId, traineeId, Id<Exercise>.Empty));
 
-        result.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
+        Assert.That(result.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
         await progress.DidNotReceiveWithAnyArgs().GetExerciseScoreChartAsync(default, default!, default);
     }
 

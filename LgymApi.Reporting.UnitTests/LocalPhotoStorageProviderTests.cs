@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using FluentAssertions;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
@@ -35,17 +34,19 @@ public sealed class LocalPhotoStorageProviderTests
 
         var result = await provider.GenerateSignedUploadUrlAsync("photos/key one.jpg", "image/jpeg", TimeSpan.FromMinutes(10));
 
-        result.Should().StartWith("https://api.example.com/dev/photos/upload/");
-        result.Should().Contain("photos%2Fkey%20one.jpg");
+        Assert.That(result, Does.StartWith("https://api.example.com/dev/photos/upload/"));
+        Assert.That(result, Does.Contain("photos%2Fkey%20one.jpg"));
 
         var uri = new Uri(result);
         var query = QueryHelpers.ParseQuery(uri.Query);
-        query.Should().HaveCount(3);
-        query.Should().ContainKey("v").WhoseValue.Should().Equal("1");
-        query.Should().ContainKey("expires");
-        long.TryParse(query["expires"].Single(), out var expiresAt).Should().BeTrue();
-        expiresAt.Should().BeGreaterThan(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-        query.Should().ContainKey("sig").WhoseValue.Should().ContainSingle();
+        Assert.That(query, Has.Exactly(3).Items);
+        Assert.That(query, Does.ContainKey("v"));
+        Assert.That(query["v"].ToArray(), Is.EqualTo(new[] { "1" }));
+        Assert.That(query, Does.ContainKey("expires"));
+        Assert.That(long.TryParse(query["expires"].Single(), out var expiresAt), Is.True);
+        Assert.That(expiresAt, Is.GreaterThan(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        Assert.That(query, Does.ContainKey("sig"));
+        Assert.That(query["sig"], Has.Exactly(1).Items);
     }
 
     [Test]
@@ -61,7 +62,7 @@ public sealed class LocalPhotoStorageProviderTests
 
         var result = await provider.GenerateSignedReadUrlAsync("photos/key.jpg", TimeSpan.FromMinutes(5));
 
-        result.Should().StartWith("https://localhost:7025/dev/photos/read/");
+        Assert.That(result, Does.StartWith("https://localhost:7025/dev/photos/read/"));
     }
 
     [Test]
@@ -73,7 +74,7 @@ public sealed class LocalPhotoStorageProviderTests
             "photos/reports/key one.jpg",
             2_000_000_300);
 
-        signature.Should().Be("tmnfGtF-7OmRw3iNHw6nJ29BUNphS2DJjdGgE9ZeVh0");
+        Assert.That(signature, Is.EqualTo("tmnfGtF-7OmRw3iNHw6nJ29BUNphS2DJjdGgE9ZeVh0"));
     }
 
     [TestCase(true, "PUT", "/dev/photos/upload/")]
@@ -96,15 +97,16 @@ public sealed class LocalPhotoStorageProviderTests
 
         var uri = new Uri(result);
         var query = QueryHelpers.ParseQuery(uri.Query);
-        query.Should().ContainKey("v").WhoseValue.Should().Equal("1");
-        query.Should().ContainKey("expires");
-        query["expires"].Should().ContainSingle();
-        long.TryParse(query["expires"].Single(), out var expiresAt).Should().BeTrue();
-        expiresAt.Should().Be(expectedExpiry);
-        query.Should().ContainKey("sig");
-        query["sig"].Should().ContainSingle();
-        query["sig"].Single().Should().Be(expectedSignature);
-        uri.AbsolutePath.Should().Be($"{expectedPathPrefix}{Uri.EscapeDataString(normalizedStorageKey)}");
+        Assert.That(query, Does.ContainKey("v"));
+        Assert.That(query["v"].ToArray(), Is.EqualTo(new[] { "1" }));
+        Assert.That(query, Does.ContainKey("expires"));
+        Assert.That(query["expires"], Has.Exactly(1).Items);
+        Assert.That(long.TryParse(query["expires"].Single(), out var expiresAt), Is.True);
+        Assert.That(expiresAt, Is.EqualTo(expectedExpiry));
+        Assert.That(query, Does.ContainKey("sig"));
+        Assert.That(query["sig"], Has.Exactly(1).Items);
+        Assert.That(query["sig"].Single(), Is.EqualTo(expectedSignature));
+        Assert.That(uri.AbsolutePath, Is.EqualTo($"{expectedPathPrefix}{Uri.EscapeDataString(normalizedStorageKey)}"));
     }
 
     private static ServiceProvider CreateConfiguredServices()

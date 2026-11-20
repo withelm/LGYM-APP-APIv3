@@ -19,9 +19,9 @@ public sealed class PostgreSqlDatabaseLeaseTests
     {
         var databaseNames = await CreateAndDisposeTwoFactoriesAsync();
 
-        databaseNames.First.Should().NotBe(databaseNames.Second);
-        (await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseNames.First)).Should().BeFalse();
-        (await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseNames.Second)).Should().BeFalse();
+        Assert.That(databaseNames.First, Is.Not.EqualTo(databaseNames.Second));
+        Assert.That((await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseNames.First)), Is.False);
+        Assert.That((await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseNames.Second)), Is.False);
     }
 
     [Test]
@@ -41,7 +41,7 @@ public sealed class PostgreSqlDatabaseLeaseTests
         {
         }
 
-        (await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseName)).Should().BeFalse();
+        Assert.That((await PostgreSqlDatabaseLease.DatabaseExistsAsync(databaseName)), Is.False);
     }
 
     [Test]
@@ -51,12 +51,14 @@ public sealed class PostgreSqlDatabaseLeaseTests
         using var scope = factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        database.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
-        (await database.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
-        scope.ServiceProvider.GetServices<IEmailSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(factory.EmailSender);
-        scope.ServiceProvider.GetServices<IPushProviderSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(factory.PushSender);
+        Assert.That(database.Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
+        Assert.That((await database.Database.GetPendingMigrationsAsync()), Is.Empty);
+        var assertedValue55 = (scope.ServiceProvider.GetServices<IEmailSender>()).ToArray();
+        Assert.That(assertedValue55, Has.Exactly(1).Items);
+        Assert.That(assertedValue55.Single(), Is.SameAs(factory.EmailSender));
+        var assertedValue56 = (scope.ServiceProvider.GetServices<IPushProviderSender>()).ToArray();
+        Assert.That(assertedValue56, Has.Exactly(1).Items);
+        Assert.That(assertedValue56.Single(), Is.SameAs(factory.PushSender));
 
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         await using (var transaction = await unitOfWork.BeginTransactionAsync())
@@ -65,11 +67,7 @@ public sealed class PostgreSqlDatabaseLeaseTests
         }
 
         var roleNames = await database.Roles.Select(role => role.Name).ToListAsync();
-        roleNames.Should().Contain(
-            AuthConstants.Roles.User,
-            AuthConstants.Roles.Admin,
-            AuthConstants.Roles.Tester,
-            AuthConstants.Roles.Trainer);
+        Assert.That(roleNames, Does.Contain(AuthConstants.Roles.User), string.Format(System.Globalization.CultureInfo.InvariantCulture, AuthConstants.Roles.Admin, AuthConstants.Roles.Tester, AuthConstants.Roles.Trainer));
     }
 
     [Test]
@@ -79,11 +77,11 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var action = async () => await PostgreSqlDatabaseLease.CreateAsync();
 
-        var exception = await action.Should().ThrowAsync<IgnoreException>();
+        var exception = (await Assert.CatchAsync<IgnoreException>(async () => { await action(); }))!;
 
-        exception.Which.Message.Should().Contain("LGYM_TEST_POSTGRES");
-        exception.Which.Message.Should().Contain("admin PostgreSQL connection");
-        exception.Which.Message.Should().NotContain("Password");
+        Assert.That(exception.Message, Does.Contain("LGYM_TEST_POSTGRES"));
+        Assert.That(exception.Message, Does.Contain("admin PostgreSQL connection"));
+        Assert.That(exception.Message, Does.Not.Contain("Password"));
     }
 
     [Test]
@@ -94,11 +92,11 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var action = async () => await PostgreSqlDatabaseLease.CreateAsync();
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
 
-        exception.Which.Message.Should().Contain("LGYM_TEST_POSTGRES");
-        exception.Which.Message.Should().Contain("could not be parsed");
-        exception.Which.Message.Should().NotContain(password);
+        Assert.That(exception.Message, Does.Contain("LGYM_TEST_POSTGRES"));
+        Assert.That(exception.Message, Does.Contain("could not be parsed"));
+        Assert.That(exception.Message, Does.Not.Contain(password));
     }
 
     [Test]
@@ -115,14 +113,13 @@ public sealed class PostgreSqlDatabaseLeaseTests
             $"Host=test;Password={password}",
             operations);
 
-        var exception = await action.Should().ThrowExactlyAsync<InvalidOperationException>();
+        var exception = (await Assert.ThrowsAsync<InvalidOperationException>(async () => { await action(); }))!;
 
-        exception.Which.Message.Should().Be(
-            "Could not create an isolated PostgreSQL test database from LGYM_TEST_POSTGRES. Verify the admin connection and CREATE DATABASE permission. The connection value is redacted.");
-        exception.Which.InnerException.Should().BeSameAs(npgsqlException);
-        exception.Which.ToString().Should().NotContain(password);
-        operations.DropAttempts.Should().Be(1);
-        operations.DatabaseNames.Should().BeEmpty();
+        Assert.That(exception.Message, Is.EqualTo("Could not create an isolated PostgreSQL test database from LGYM_TEST_POSTGRES. Verify the admin connection and CREATE DATABASE permission. The connection value is redacted."));
+        Assert.That(exception.InnerException, Is.SameAs(npgsqlException));
+        Assert.That(exception.ToString(), Does.Not.Contain(password));
+        Assert.That(operations.DropAttempts, Is.EqualTo(1));
+        Assert.That(operations.DatabaseNames, Is.Empty);
     }
 
     [Test]
@@ -135,10 +132,9 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var action = async () => await PostgreSqlDatabaseLease.CreateAsync("Host=test", operations);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Forced lease construction failure.");
-        operations.DatabaseNames.Should().BeEmpty();
-        operations.DropAttempts.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Forced lease construction failure.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(operations.DatabaseNames, Is.Empty);
+        Assert.That(operations.DropAttempts, Is.EqualTo(1));
     }
 
     [TestCase(false)]
@@ -155,11 +151,11 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var action = async () => await PostgreSqlDatabaseLease.CreateAsync("Host=test", operations);
 
-        var exception = await action.Should().ThrowExactlyAsync<InvalidOperationException>();
+        var exception = (await Assert.ThrowsAsync<InvalidOperationException>(async () => { await action(); }))!;
 
-        exception.Which.Should().BeSameAs(createException);
-        operations.DropAttempts.Should().Be(1);
-        operations.DatabaseNames.Should().BeEmpty();
+        Assert.That(exception, Is.SameAs(createException));
+        Assert.That(operations.DropAttempts, Is.EqualTo(1));
+        Assert.That(operations.DatabaseNames, Is.Empty);
     }
 
     [Test]
@@ -173,16 +169,15 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var firstDispose = async () => await lease.DisposeAsync();
 
-        await firstDispose.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Forced drop failure.");
-        operations.DatabaseNames.Should().ContainSingle(lease.DatabaseName);
+        await Assert.ThatAsync(async () => { await firstDispose(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Forced drop failure.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(operations.DatabaseNames, Has.Exactly(1).Items, lease.DatabaseName);
 
         await lease.DisposeAsync();
-        operations.DatabaseNames.Should().BeEmpty();
-        operations.DropAttempts.Should().Be(2);
+        Assert.That(operations.DatabaseNames, Is.Empty);
+        Assert.That(operations.DropAttempts, Is.EqualTo(2));
 
         await lease.DisposeAsync();
-        operations.DropAttempts.Should().Be(2);
+        Assert.That(operations.DropAttempts, Is.EqualTo(2));
     }
 
     [Test]
@@ -201,16 +196,15 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         var firstDispose = async () => await lease.DisposeAsync();
 
-        var exception = await firstDispose.Should().ThrowExactlyAsync<InvalidOperationException>();
-        exception.Which.Message.Should().Be(
-            $"Could not remove isolated PostgreSQL test database '{lease.DatabaseName}'. The connection value is redacted.");
-        exception.Which.InnerException.Should().BeSameAs(npgsqlException);
-        exception.Which.ToString().Should().NotContain(password);
-        operations.DatabaseNames.Should().ContainSingle(lease.DatabaseName);
+        var exception = (await Assert.ThrowsAsync<InvalidOperationException>(async () => { await firstDispose(); }))!;
+        Assert.That(exception.Message, Is.EqualTo($"Could not remove isolated PostgreSQL test database '{lease.DatabaseName}'. The connection value is redacted."));
+        Assert.That(exception.InnerException, Is.SameAs(npgsqlException));
+        Assert.That(exception.ToString(), Does.Not.Contain(password));
+        Assert.That(operations.DatabaseNames, Has.Exactly(1).Items, lease.DatabaseName);
 
         await lease.DisposeAsync();
-        operations.DropAttempts.Should().Be(2);
-        operations.DatabaseNames.Should().BeEmpty();
+        Assert.That(operations.DropAttempts, Is.EqualTo(2));
+        Assert.That(operations.DatabaseNames, Is.Empty);
     }
 
     [Test]
@@ -228,13 +222,13 @@ public sealed class PostgreSqlDatabaseLeaseTests
             $"Host=test;Password={password}",
             operations);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
 
-        exception.Which.Message.Should().Contain("acquisition and compensating cleanup also failed");
-        exception.Which.InnerException.Should().BeOfType<AggregateException>()
-            .Which.InnerExceptions.Select(error => error.Message)
-            .Should().Equal("Forced lease creation failure.", "Forced drop failure.");
-        exception.Which.ToString().Should().NotContain(password);
+        Assert.That(exception.Message, Does.Contain("acquisition and compensating cleanup also failed"));
+        var assertedValue57 = exception.InnerException;
+        Assert.That(assertedValue57, Is.TypeOf<AggregateException>());
+        Assert.That(((AggregateException)assertedValue57).InnerExceptions.Select(error => error.Message), Is.EqualTo(new[] { "Forced lease creation failure.", "Forced drop failure." }));
+        Assert.That(exception.ToString(), Does.Not.Contain(password));
     }
 
     [Test]
@@ -258,11 +252,11 @@ public sealed class PostgreSqlDatabaseLeaseTests
 
         try
         {
-            var exception = await action.Should().ThrowExactlyAsync<InvalidOperationException>();
+            var exception = (await Assert.ThrowsAsync<InvalidOperationException>(async () => { await action(); }))!;
 
-            exception.Which.Should().BeSameAs(creationException);
-            successfulFactory.DisposalAttempts.Should().Be(1);
-            operations.DatabaseNames.Should().BeEmpty();
+            Assert.That(exception, Is.SameAs(creationException));
+            Assert.That(successfulFactory.DisposalAttempts, Is.EqualTo(1));
+            Assert.That(operations.DatabaseNames, Is.Empty);
         }
         finally
         {
@@ -291,10 +285,10 @@ public sealed class PostgreSqlDatabaseLeaseTests
             () => successfulCreation,
             FailAfterSuccessfulSiblingAsync);
 
-        var exception = await action.Should().ThrowExactlyAsync<AggregateException>();
+        var exception = (await Assert.ThrowsAsync<AggregateException>(async () => { await action(); }))!;
 
-        exception.Which.InnerExceptions.Should().Equal(creationException, cleanupException);
-        successfulFactory.DisposalAttempts.Should().Be(1);
+        Assert.That(exception.InnerExceptions, Is.EqualTo(new[] { creationException, cleanupException }));
+        Assert.That(successfulFactory.DisposalAttempts, Is.EqualTo(1));
     }
 
     private static async Task<(string First, string Second)> CreateAndDisposeTwoFactoriesAsync()
@@ -306,7 +300,7 @@ public sealed class PostgreSqlDatabaseLeaseTests
         await using var first = factories[0];
         await using var second = factories[1];
 
-        first.DatabaseName.Should().NotBe(second.DatabaseName);
+        Assert.That(first.DatabaseName, Is.Not.EqualTo(second.DatabaseName));
         return (first.DatabaseName, second.DatabaseName);
     }
 

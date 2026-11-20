@@ -1,5 +1,4 @@
 using System.Net;
-using FluentAssertions;
 using Hangfire;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Coaching.ApiAdapters;
@@ -88,7 +87,7 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
     [Test]
     public void Worker_Facade_Should_Remain_The_Composition_Entry_Point()
     {
-        typeof(BackgroundWorkerRecurringJobs).Assembly.GetName().Name.Should().Be("LgymApi.BackgroundWorker");
+        Assert.That(typeof(BackgroundWorkerRecurringJobs).Assembly.GetName().Name, Is.EqualTo("LgymApi.BackgroundWorker"));
     }
 
     [Test]
@@ -97,98 +96,125 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var services = scope.ServiceProvider;
 
-        services.GetServices<IAppConfigService>().Should().ContainSingle()
-            .Which.Should().BeOfType<AppConfigService>();
-        services.GetServices<IAppConfigAuthorizationPort>().Should().ContainSingle()
-            .Which.GetType().FullName.Should().Be("LgymApi.Application.Identity.Adapters.AppConfigAuthorizationAdapter");
-        services.GetServices<IEnumService>().Should().ContainSingle()
-            .Which.Should().BeOfType<EnumService>();
-        services.GetServices<IUnitConverter<WeightUnits>>().Should().ContainSingle()
-            .Which.Should().BeOfType<LinearUnitConverter<WeightUnits>>();
-        services.GetServices<IUnitConverter<HeightUnits>>().Should().ContainSingle()
-            .Which.Should().BeOfType<LinearUnitConverter<HeightUnits>>();
-        services.GetServices<IAppConfigRepository>().Should().ContainSingle()
-            .Which.Should().BeOfType<AppConfigRepository>();
-        services.GetServices<ICommittedIntentDispatcher>().Should().ContainSingle()
-            .Which.Should().BeOfType<CommittedIntentDispatcher>();
-        services.GetServices<IUnitOfWork>().Should().ContainSingle()
-            .Which.Should().BeOfType<EfUnitOfWork>();
-        services.GetServices<ICommandEnvelopeRepository>().Should().ContainSingle()
-            .Which.Should().BeOfType<CommandEnvelopeRepository>();
-        services.GetServices<IApiIdempotencyRecordRepository>().Should().ContainSingle()
-            .Which.Should().BeOfType<ApiIdempotencyRecordRepository>();
-        services.GetServices<IEmailNotificationsFeature>().Should().ContainSingle()
-            .Which.Should().BeOfType<EmailNotificationsFeature>();
-        services.GetServices<IEmailMetrics>().Should().ContainSingle()
-            .Which.Should().BeOfType<EmailMetrics>();
-        services.GetServices<IEmailTemplateComposerFactory>().Should().ContainSingle()
-            .Which.Should().BeOfType<EmailTemplateComposerFactory>();
-        services.GetServices<ApplicationMapper>().Should().ContainSingle()
-            .Which.Should().BeOfType<Mapper>();
-        services.GetServices<IMapperRegistry>().Should().ContainSingle()
-            .Which.Should().BeOfType<MapperRegistry>();
-        services.GetServices<IQueryPaginationService>().Should().ContainSingle()
-            .Which.Should().BeOfType<QueryPaginationFacade>();
-        services.GetServices<PaginationPolicy>().Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new PaginationPolicy
+        var assertedValue10 = (services.GetServices<IAppConfigService>()).ToArray();
+        Assert.That(assertedValue10, Has.Exactly(1).Items);
+        Assert.That(assertedValue10.Single(), Is.TypeOf<AppConfigService>());
+        var assertedValue11 = (services.GetServices<IAppConfigAuthorizationPort>()).ToArray();
+        Assert.That(assertedValue11, Has.Exactly(1).Items);
+        Assert.That(assertedValue11.Single().GetType().FullName, Is.EqualTo("LgymApi.Application.Identity.Adapters.AppConfigAuthorizationAdapter"));
+        var assertedValue12 = (services.GetServices<IEnumService>()).ToArray();
+        Assert.That(assertedValue12, Has.Exactly(1).Items);
+        Assert.That(assertedValue12.Single(), Is.TypeOf<EnumService>());
+        var assertedValue13 = (services.GetServices<IUnitConverter<WeightUnits>>()).ToArray();
+        Assert.That(assertedValue13, Has.Exactly(1).Items);
+        Assert.That(assertedValue13.Single(), Is.TypeOf<LinearUnitConverter<WeightUnits>>());
+        var assertedValue14 = (services.GetServices<IUnitConverter<HeightUnits>>()).ToArray();
+        Assert.That(assertedValue14, Has.Exactly(1).Items);
+        Assert.That(assertedValue14.Single(), Is.TypeOf<LinearUnitConverter<HeightUnits>>());
+        var assertedValue15 = (services.GetServices<IAppConfigRepository>()).ToArray();
+        Assert.That(assertedValue15, Has.Exactly(1).Items);
+        Assert.That(assertedValue15.Single(), Is.TypeOf<AppConfigRepository>());
+        var assertedValue16 = (services.GetServices<ICommittedIntentDispatcher>()).ToArray();
+        Assert.That(assertedValue16, Has.Exactly(1).Items);
+        Assert.That(assertedValue16.Single(), Is.TypeOf<CommittedIntentDispatcher>());
+        var assertedValue17 = (services.GetServices<IUnitOfWork>()).ToArray();
+        Assert.That(assertedValue17, Has.Exactly(1).Items);
+        Assert.That(assertedValue17.Single(), Is.TypeOf<EfUnitOfWork>());
+        var assertedValue18 = (services.GetServices<ICommandEnvelopeRepository>()).ToArray();
+        Assert.That(assertedValue18, Has.Exactly(1).Items);
+        Assert.That(assertedValue18.Single(), Is.TypeOf<CommandEnvelopeRepository>());
+        var assertedValue19 = (services.GetServices<IApiIdempotencyRecordRepository>()).ToArray();
+        Assert.That(assertedValue19, Has.Exactly(1).Items);
+        Assert.That(assertedValue19.Single(), Is.TypeOf<ApiIdempotencyRecordRepository>());
+        var assertedValue20 = (services.GetServices<IEmailNotificationsFeature>()).ToArray();
+        Assert.That(assertedValue20, Has.Exactly(1).Items);
+        Assert.That(assertedValue20.Single(), Is.TypeOf<EmailNotificationsFeature>());
+        var assertedValue21 = (services.GetServices<IEmailMetrics>()).ToArray();
+        Assert.That(assertedValue21, Has.Exactly(1).Items);
+        Assert.That(assertedValue21.Single(), Is.TypeOf<EmailMetrics>());
+        var assertedValue22 = (services.GetServices<IEmailTemplateComposerFactory>()).ToArray();
+        Assert.That(assertedValue22, Has.Exactly(1).Items);
+        Assert.That(assertedValue22.Single(), Is.TypeOf<EmailTemplateComposerFactory>());
+        var assertedValue23 = (services.GetServices<ApplicationMapper>()).ToArray();
+        Assert.That(assertedValue23, Has.Exactly(1).Items);
+        Assert.That(assertedValue23.Single(), Is.TypeOf<Mapper>());
+        var assertedValue24 = (services.GetServices<IMapperRegistry>()).ToArray();
+        Assert.That(assertedValue24, Has.Exactly(1).Items);
+        Assert.That(assertedValue24.Single(), Is.TypeOf<MapperRegistry>());
+        var assertedValue25 = (services.GetServices<IQueryPaginationService>()).ToArray();
+        Assert.That(assertedValue25, Has.Exactly(1).Items);
+        Assert.That(assertedValue25.Single(), Is.TypeOf<QueryPaginationFacade>());
+        var assertedValue26 = (services.GetServices<PaginationPolicy>()).ToArray();
+        Assert.That(assertedValue26, Has.Exactly(1).Items);
+        Assert.That(assertedValue26.Single(), Is.EqualTo(new PaginationPolicy
             {
                 MaxPageSize = 100,
                 DefaultPageSize = 20,
                 DefaultSortField = "id",
                 TieBreakerField = "id"
-            });
-        services.GetServices<CommandContractRegistry>().Should().ContainSingle();
-        services.GetServices<ICommandDispatcher>().Should().ContainSingle()
-            .Which.Should().BeOfType<CommandDispatcher>();
-        services.GetServices<IPasswordRecoveryEmailScheduler>().Should().ContainSingle()
-            .Which.Should().BeOfType<PasswordRecoveryEmailSchedulerAdapter>();
-        services.GetServices<ICoachingEmailNotificationFeature>().Should().ContainSingle()
-            .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
-        services.GetServices<ICoachingEmailNotificationScheduler>().Should().ContainSingle()
-            .Which.Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
-        services.GetServices<IPushBackgroundScheduler>().Should().ContainSingle()
-            .Which.Should().BeOfType<NoOpPushBackgroundScheduler>();
-        services.GetServices<IPushProviderSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(Factory.PushSender);
-        services.GetServices<IPhotoStorageProvider>().Should().ContainSingle()
-            .Which.Should().BeOfType<LocalPhotoStorageProvider>();
-        services.GetServices<IReportPhotoPersistence>().Should().ContainSingle()
-            .Which.Should().BeOfType<ReportPhotoPersistenceRepository>();
-        services.GetServices<ITokenService>().Should().ContainSingle()
-            .Which.Should().BeOfType<TokenService>();
-        services.GetServices<IGoogleTokenValidator>().Should().ContainSingle()
-            .Which.Should().BeOfType<GoogleTokenValidator>();
-        services.GetServices<ILegacyPasswordService>().Should().ContainSingle()
-            .Which.Should().BeOfType<LegacyPasswordService>();
-        services.GetServices<IUserSessionStore>().Should().ContainSingle()
-            .Which.Should().BeOfType<UserSessionStore>();
-        services.GetServices<LgymApi.Application.Identity.Contracts.Sessions.IAccountSessionDisassociationPort>()
-            .Should()
-            .ContainSingle()
-            .Which
+            }).UsingPropertiesComparer());
+        Assert.That(services.GetServices<CommandContractRegistry>(), Has.Exactly(1).Items);
+        var assertedValue27 = (services.GetServices<ICommandDispatcher>()).ToArray();
+        Assert.That(assertedValue27, Has.Exactly(1).Items);
+        Assert.That(assertedValue27.Single(), Is.TypeOf<CommandDispatcher>());
+        var assertedValue28 = (services.GetServices<IPasswordRecoveryEmailScheduler>()).ToArray();
+        Assert.That(assertedValue28, Has.Exactly(1).Items);
+        Assert.That(assertedValue28.Single(), Is.TypeOf<PasswordRecoveryEmailSchedulerAdapter>());
+        var assertedValue29 = (services.GetServices<ICoachingEmailNotificationFeature>()).ToArray();
+        Assert.That(assertedValue29, Has.Exactly(1).Items);
+        Assert.That(assertedValue29.Single(), Is.TypeOf<CoachingEmailNotificationSchedulerAdapter>());
+        var assertedValue30 = (services.GetServices<ICoachingEmailNotificationScheduler>()).ToArray();
+        Assert.That(assertedValue30, Has.Exactly(1).Items);
+        Assert.That(assertedValue30.Single(), Is.TypeOf<CoachingEmailNotificationSchedulerAdapter>());
+        var assertedValue31 = (services.GetServices<IPushBackgroundScheduler>()).ToArray();
+        Assert.That(assertedValue31, Has.Exactly(1).Items);
+        Assert.That(assertedValue31.Single(), Is.TypeOf<NoOpPushBackgroundScheduler>());
+        var assertedValue32 = (services.GetServices<IPushProviderSender>()).ToArray();
+        Assert.That(assertedValue32, Has.Exactly(1).Items);
+        Assert.That(assertedValue32.Single(), Is.SameAs(Factory.PushSender));
+        var assertedValue33 = (services.GetServices<IPhotoStorageProvider>()).ToArray();
+        Assert.That(assertedValue33, Has.Exactly(1).Items);
+        Assert.That(assertedValue33.Single(), Is.TypeOf<LocalPhotoStorageProvider>());
+        var assertedValue34 = (services.GetServices<IReportPhotoPersistence>()).ToArray();
+        Assert.That(assertedValue34, Has.Exactly(1).Items);
+        Assert.That(assertedValue34.Single(), Is.TypeOf<ReportPhotoPersistenceRepository>());
+        var assertedValue35 = (services.GetServices<ITokenService>()).ToArray();
+        Assert.That(assertedValue35, Has.Exactly(1).Items);
+        Assert.That(assertedValue35.Single(), Is.TypeOf<TokenService>());
+        var assertedValue36 = (services.GetServices<IGoogleTokenValidator>()).ToArray();
+        Assert.That(assertedValue36, Has.Exactly(1).Items);
+        Assert.That(assertedValue36.Single(), Is.TypeOf<GoogleTokenValidator>());
+        var assertedValue37 = (services.GetServices<ILegacyPasswordService>()).ToArray();
+        Assert.That(assertedValue37, Has.Exactly(1).Items);
+        Assert.That(assertedValue37.Single(), Is.TypeOf<LegacyPasswordService>());
+        var assertedValue38 = (services.GetServices<IUserSessionStore>()).ToArray();
+        Assert.That(assertedValue38, Has.Exactly(1).Items);
+        Assert.That(assertedValue38.Single(), Is.TypeOf<UserSessionStore>());
+        var assertedValue39 = (services.GetServices<LgymApi.Application.Identity.Contracts.Sessions.IAccountSessionDisassociationPort>()).ToArray();
+        Assert.That(assertedValue39, Has.Exactly(1).Items);
+        Assert.That(assertedValue39.Single()
             .GetType()
-            .FullName
-            .Should()
-            .Be("LgymApi.Application.Notifications.Adapters.PushInstallationSessionDisassociationAdapter");
-        services.GetServices<IEmailSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(Factory.EmailSender);
+            .FullName, Is.EqualTo("LgymApi.Application.Notifications.Adapters.PushInstallationSessionDisassociationAdapter"));
+        var assertedValue40 = (services.GetServices<IEmailSender>()).ToArray();
+        Assert.That(assertedValue40, Has.Exactly(1).Items);
+        Assert.That(assertedValue40.Single(), Is.SameAs(Factory.EmailSender));
         var emailTemplateComposers = services.GetServices<IEmailTemplateComposer>().ToArray();
-        emailTemplateComposers.Should().HaveCount(7);
-        emailTemplateComposers.Select(composer => composer.GetType()).Should().OnlyHaveUniqueItems();
+        Assert.That(emailTemplateComposers, Has.Exactly(7).Items);
+        Assert.That(emailTemplateComposers.Select(composer => composer.GetType()), Is.Unique);
         var mappingProfiles = services.GetServices<IMappingProfile>().ToArray();
-        mappingProfiles.Should().HaveCount(49);
-        mappingProfiles.Select(profile => profile.GetType()).Should().OnlyHaveUniqueItems();
-        mappingProfiles.OfType<EnumLookupMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<PlanExerciseWorkoutAdapterMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<ManagedPlanCollaborationMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<IdentityApiAdapterMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<NutritionApiAdapterMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<PlanApiAdapterMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<CoachingApiAdapterMappingProfile>().Should().ContainSingle();
-        mappingProfiles.OfType<ReportingApiAdapterMappingProfile>().Should().ContainSingle();
+        Assert.That(mappingProfiles, Has.Exactly(49).Items);
+        Assert.That(mappingProfiles.Select(profile => profile.GetType()), Is.Unique);
+        Assert.That(mappingProfiles.OfType<EnumLookupMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<PlanExerciseWorkoutAdapterMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<ManagedPlanCollaborationMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<IdentityApiAdapterMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<NutritionApiAdapterMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<PlanApiAdapterMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<CoachingApiAdapterMappingProfile>(), Has.Exactly(1).Items);
+        Assert.That(mappingProfiles.OfType<ReportingApiAdapterMappingProfile>(), Has.Exactly(1).Items);
         AssertApiAdapterContractsResolveExactlyOnce(services, ApplicationApiAdapterContracts, expectedCount: 25);
         AssertApiAdapterContractsResolveExactlyOnce(services, NotificationsApiAdapterContracts, expectedCount: 3);
-        services.GetService<JobStorage>().Should().BeNull();
+        Assert.That(services.GetService<JobStorage>(), Is.Null);
     }
 
     [Test]
@@ -210,15 +236,19 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
 
         response.EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope();
-        scope.ServiceProvider.GetServices<IEmailSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(baseFactory.EmailSender);
-        scope.ServiceProvider.GetServices<IPhotoStorageProvider>().Should().ContainSingle()
-            .Which.Should().BeOfType<CloudflareR2PhotoStorageProvider>();
-        scope.ServiceProvider.GetServices<IPushBackgroundScheduler>().Should().ContainSingle()
-            .Which.Should().BeOfType<NoOpPushBackgroundScheduler>();
-        scope.ServiceProvider.GetServices<IPushProviderSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(baseFactory.PushSender);
-        scope.ServiceProvider.GetService<JobStorage>().Should().BeNull();
+        var assertedValue41 = (scope.ServiceProvider.GetServices<IEmailSender>()).ToArray();
+        Assert.That(assertedValue41, Has.Exactly(1).Items);
+        Assert.That(assertedValue41.Single(), Is.SameAs(baseFactory.EmailSender));
+        var assertedValue42 = (scope.ServiceProvider.GetServices<IPhotoStorageProvider>()).ToArray();
+        Assert.That(assertedValue42, Has.Exactly(1).Items);
+        Assert.That(assertedValue42.Single(), Is.TypeOf<CloudflareR2PhotoStorageProvider>());
+        var assertedValue43 = (scope.ServiceProvider.GetServices<IPushBackgroundScheduler>()).ToArray();
+        Assert.That(assertedValue43, Has.Exactly(1).Items);
+        Assert.That(assertedValue43.Single(), Is.TypeOf<NoOpPushBackgroundScheduler>());
+        var assertedValue44 = (scope.ServiceProvider.GetServices<IPushProviderSender>()).ToArray();
+        Assert.That(assertedValue44, Has.Exactly(1).Items);
+        Assert.That(assertedValue44.Single(), Is.SameAs(baseFactory.PushSender));
+        Assert.That(scope.ServiceProvider.GetService<JobStorage>(), Is.Null);
     }
 
     [Test]
@@ -230,7 +260,7 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         foreach (var path in new[] { "/swagger/v1/swagger.json", "/swagger/index.html", "/hangfire" })
         {
             using var response = await Client.GetAsync(path);
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound, $"{path} is not part of the Testing host");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound), $"{path} is not part of the Testing host");
         }
     }
 
@@ -250,8 +280,7 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
             using var client = factory.CreateClient();
         };
 
-        action.Should().Throw<Exception>()
-            .Which.ToString().Should().Contain(expectedMessage);
+        Assert.That(Assert.Catch<Exception>(() => { action(); })!.ToString(), Does.Contain(expectedMessage));
     }
 
     private static void AssertApiAdapterContractsResolveExactlyOnce(
@@ -259,13 +288,14 @@ public sealed class CompositionRootStartupTests : IntegrationTestBase
         IReadOnlyCollection<Type> contracts,
         int expectedCount)
     {
-        contracts.Should().HaveCount(expectedCount);
-        contracts.Should().OnlyHaveUniqueItems();
+        Assert.That(contracts, Has.Exactly(expectedCount).Items);
+        Assert.That(contracts, Is.Unique);
 
         foreach (var contract in contracts)
         {
-            services.GetServices(contract).Should().ContainSingle(contract.FullName)
-                .Which.Should().NotBeNull(contract.FullName);
+            var instances = services.GetServices(contract).ToArray();
+            Assert.That(instances, Has.Exactly(1).Items, contract.FullName);
+            Assert.That(instances.Single(), Is.Not.Null, contract.FullName);
         }
     }
 }

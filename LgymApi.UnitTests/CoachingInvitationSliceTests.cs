@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Coaching.Invitations.Create;
@@ -41,8 +40,8 @@ public sealed class CoachingInvitationSliceTests
 
         var result = await Resolve<ICreateInvitationUseCase>(services).ExecuteAsync(new CreateInvitationCommand(trainerId, traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Id.Should().Be(invitation.Id);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Id, Is.EqualTo(invitation.Id));
         await invitations.DidNotReceive().AddAsync(Arg.Any<CoachingInvitationWriteModel>(), Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -63,7 +62,7 @@ public sealed class CoachingInvitationSliceTests
         var result = await Resolve<ICreateInvitationByEmailUseCase>(services).ExecuteAsync(
             new CreateInvitationByEmailCommand(trainerId, " Trainee@Example.Test ", "pl", "Europe/Warsaw"));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await invitations.Received(1).AddAsync(
             Arg.Is<CoachingInvitationWriteModel>(value => value.InviteeEmail == "trainee@example.test" && value.TraineeId == traineeId),
             Arg.Any<CancellationToken>());
@@ -85,9 +84,9 @@ public sealed class CoachingInvitationSliceTests
 
         var result = await Resolve<IListInvitationsUseCase>(services).ExecuteAsync(new ListInvitationsQuery(trainerId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(value => value.Id).Should().Equal(current.Id, expired.Id);
-        result.Value.Single(value => value.Id == expired.Id).Status.Should().Be(TrainerInvitationStatus.Expired);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(value => value.Id), Is.EqualTo(new[] { current.Id, expired.Id }));
+        Assert.That(result.Value.Single(value => value.Id == expired.Id).Status, Is.EqualTo(TrainerInvitationStatus.Expired));
         await invitations.Received(1).ExpireAsync(expired.Id, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -117,9 +116,9 @@ public sealed class CoachingInvitationSliceTests
         var result = await Resolve<IListPaginatedInvitationsUseCase>(services).ExecuteAsync(
             new ListPaginatedInvitationsQuery(trainerId, new FilterInput()));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalCount.Should().Be(2);
-        result.Value.Items.Select(value => value.Id).Should().BeEquivalentTo([active.Id, emailOnly.Id]);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(2));
+        Assert.That(result.Value.Items.Select(value => value.Id), Is.EquivalentTo(new[] { active.Id, emailOnly.Id }));
         await accounts.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyList<Id<User>>>(ids => ids.SequenceEqual(new[] { activeTraineeId, missingTraineeId })),
             Arg.Any<CancellationToken>());
@@ -138,9 +137,9 @@ public sealed class CoachingInvitationSliceTests
         var result = await Resolve<IPublicInvitationStatusUseCase>(services).ExecuteAsync(
             new PublicInvitationStatusQuery(invitationId, "exact-code"));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Status.Should().Be(TrainerInvitationStatus.Pending);
-        result.Value.UserExists.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Status, Is.EqualTo(TrainerInvitationStatus.Pending));
+        Assert.That(result.Value.UserExists, Is.True);
     }
 
     private static ServiceCollection CreateServices(

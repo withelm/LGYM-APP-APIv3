@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
@@ -61,19 +60,18 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
                 scenario.RequestId,
                 CreateMeasurementSubmissionCommand());
 
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         var persisted = await ReadSubmissionStateAsync(scenario.RequestId);
 
         Assert.Multiple(() =>
         {
-            persisted.Submission.Should().NotBeNull();
-            persisted.RequestStatus.Should().Be(ReportRequestStatus.Submitted);
-            persisted.AcceptedProgressEnvelopes.Should().ContainSingle(
-                "the accepted-progress command must be staged before the Reporting unit of work commits");
-            persisted.AcceptedProgressEnvelopes[0].CommandTypeFullName.Should().Be(AcceptedProgressCommandId);
-            persisted.AcceptedProgressEnvelopes[0].PayloadJson.Should().Contain(persisted.Submission!.Id.ToString());
+            Assert.That(persisted.Submission, Is.Not.Null);
+            Assert.That(persisted.RequestStatus, Is.EqualTo(ReportRequestStatus.Submitted));
+            Assert.That(persisted.AcceptedProgressEnvelopes, Has.Exactly(1).Items, "the accepted-progress command must be staged before the Reporting unit of work commits");
+            Assert.That(persisted.AcceptedProgressEnvelopes[0].CommandTypeFullName, Is.EqualTo(AcceptedProgressCommandId));
+            Assert.That(persisted.AcceptedProgressEnvelopes[0].PayloadJson, Does.Contain(persisted.Submission!.Id.ToString()));
         });
     }
 
@@ -93,12 +91,12 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
 
             Assert.Multiple(() =>
             {
-                first.IsSuccess.Should().BeTrue();
-                envelopeCountAfterFirstSubmission.Should().Be(1);
-                second.IsFailure.Should().BeTrue();
-                second.Error.Should().BeOfType<InvalidReportingError>();
-                second.Error.Message.Should().Be(Messages.ReportRequestNotPending);
-                envelopeCountAfterDuplicate.Should().Be(envelopeCountAfterFirstSubmission);
+                Assert.That(first.IsSuccess, Is.True);
+                Assert.That(envelopeCountAfterFirstSubmission, Is.EqualTo(1));
+                Assert.That(second.IsFailure, Is.True);
+                Assert.That(second.Error, Is.TypeOf<InvalidReportingError>());
+                Assert.That(second.Error.Message, Is.EqualTo(Messages.ReportRequestNotPending));
+                Assert.That(envelopeCountAfterDuplicate, Is.EqualTo(envelopeCountAfterFirstSubmission));
             });
         }
     }
@@ -116,14 +114,13 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
                 scenario.RequestId,
                 CreateMeasurementSubmissionCommand());
 
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
-        var stagedEnvelope = (await ReadSubmissionStateAsync(scenario.RequestId))
-            .AcceptedProgressEnvelopes
-            .Should()
-            .ContainSingle()
-            .Subject;
+        var assertedValue59 = ((await ReadSubmissionStateAsync(scenario.RequestId))
+                    .AcceptedProgressEnvelopes).ToArray();
+        Assert.That(assertedValue59, Has.Exactly(1).Items);
+        var stagedEnvelope = assertedValue59.Single();
 
         await using (var dispatchScope = Factory.Services.CreateAsyncScope())
         {
@@ -134,11 +131,9 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var dispatchedEnvelope = await ReadEnvelopeAsync(stagedEnvelope.Id);
         Assert.Multiple(() =>
         {
-            dispatchedEnvelope.DispatchedAt.Should().NotBeNull("the committed intent must be scheduled after its database commit");
-            dispatchedEnvelope.SchedulerJobId.Should().StartWith(
-                "noop-command-",
-                "Testing uses the registered no-op action scheduler instead of a Hangfire server");
-            dispatchedEnvelope.Status.Should().Be(ActionExecutionStatus.Pending);
+            Assert.That(dispatchedEnvelope.DispatchedAt, Is.Not.Null, "the committed intent must be scheduled after its database commit");
+            Assert.That(dispatchedEnvelope.SchedulerJobId, Does.StartWith("noop-command-"), "Testing uses the registered no-op action scheduler instead of a Hangfire server");
+            Assert.That(dispatchedEnvelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
         });
 
         await using (var deliveryScope = Factory.Services.CreateAsyncScope())
@@ -158,21 +153,21 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var delivery = await ReadDeliveryStateAsync(stagedEnvelope.Id, scenario.Trainee.Id);
         Assert.Multiple(() =>
         {
-            delivery.Envelope.Status.Should().Be(ActionExecutionStatus.Completed);
-            delivery.Measurements.Should().ContainSingle();
-            delivery.Measurements[0].BodyPart.Should().Be(BodyParts.BodyWeight);
-            delivery.Measurements[0].Value.Should().Be(82.4);
-            delivery.Measurements[0].Unit.Should().Be(MeasurementUnits.Kilograms.ToString());
-            delivery.Measurements[0].SourceReportSubmissionId.Should().Be(delivery.Receipts[0].ReportSubmissionId);
-            delivery.Measurements[0].SourceReportRequestId.Should().Be(scenario.RequestId);
-            delivery.Measurements[0].SourceCoachingEpisodeId.Should().Be(scenario.EpisodeId);
-            delivery.Measurements[0].SourceReportAcceptedAt.Should().NotBeNull();
-            delivery.Measurements[0].RecordedAt.Should().BeNull();
-            delivery.Receipts.Should().ContainSingle();
-            delivery.Receipts[0].SourceReportRequestId.Should().Be(scenario.RequestId);
-            delivery.Receipts[0].SourceCoachingEpisodeId.Should().Be(scenario.EpisodeId);
-            delivery.Receipts[0].SourceReportAcceptedAt.Should().Be(delivery.Measurements[0].SourceReportAcceptedAt);
-            stagedEnvelope.PayloadJson.Should().Contain(delivery.Receipts[0].ReportSubmissionId.ToString());
+            Assert.That(delivery.Envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+            Assert.That(delivery.Measurements, Has.Exactly(1).Items);
+            Assert.That(delivery.Measurements[0].BodyPart, Is.EqualTo(BodyParts.BodyWeight));
+            Assert.That(delivery.Measurements[0].Value, Is.EqualTo(82.4));
+            Assert.That(delivery.Measurements[0].Unit, Is.EqualTo(MeasurementUnits.Kilograms.ToString()));
+            Assert.That(delivery.Measurements[0].SourceReportSubmissionId, Is.EqualTo(delivery.Receipts[0].ReportSubmissionId));
+            Assert.That(delivery.Measurements[0].SourceReportRequestId, Is.EqualTo(scenario.RequestId));
+            Assert.That(delivery.Measurements[0].SourceCoachingEpisodeId, Is.EqualTo(scenario.EpisodeId));
+            Assert.That(delivery.Measurements[0].SourceReportAcceptedAt, Is.Not.Null);
+            Assert.That(delivery.Measurements[0].RecordedAt, Is.Null);
+            Assert.That(delivery.Receipts, Has.Exactly(1).Items);
+            Assert.That(delivery.Receipts[0].SourceReportRequestId, Is.EqualTo(scenario.RequestId));
+            Assert.That(delivery.Receipts[0].SourceCoachingEpisodeId, Is.EqualTo(scenario.EpisodeId));
+            Assert.That(delivery.Receipts[0].SourceReportAcceptedAt, Is.EqualTo(delivery.Measurements[0].SourceReportAcceptedAt));
+            Assert.That(stagedEnvelope.PayloadJson, Does.Contain(delivery.Receipts[0].ReportSubmissionId.ToString()));
         });
     }
 
@@ -195,18 +190,18 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
                 }
             });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var responseBody = responseJson.RootElement;
-        ReadRequiredString(responseBody, "_id").Should().NotBeNullOrWhiteSpace();
-        responseBody.TryGetProperty("id", out _).Should().BeFalse("the established submission DTO exposes _id");
-        ReadRequiredString(responseBody, "reportRequestId").Should().Be(scenario.RequestId.ToString());
-        ReadRequiredString(responseBody, "traineeId").Should().Be(scenario.Trainee.Id.ToString());
-        responseBody.TryGetProperty("answers", out var answers).Should().BeTrue();
-        answers.ValueKind.Should().Be(JsonValueKind.Object);
-        answers.TryGetProperty("measurements", out _).Should().BeTrue();
-        responseBody.TryGetProperty("request", out _).Should().BeTrue("the established submission DTO includes its request");
+        Assert.That(string.IsNullOrWhiteSpace(ReadRequiredString(responseBody, "_id")), Is.False);
+        Assert.That(responseBody.TryGetProperty("id", out _), Is.False, "the established submission DTO exposes _id");
+        Assert.That(ReadRequiredString(responseBody, "reportRequestId"), Is.EqualTo(scenario.RequestId.ToString()));
+        Assert.That(ReadRequiredString(responseBody, "traineeId"), Is.EqualTo(scenario.Trainee.Id.ToString()));
+        Assert.That(responseBody.TryGetProperty("answers", out var answers), Is.True);
+        Assert.That(answers.ValueKind, Is.EqualTo(JsonValueKind.Object));
+        Assert.That(answers.TryGetProperty("measurements", out _), Is.True);
+        Assert.That(responseBody.TryGetProperty("request", out _), Is.True, "the established submission DTO includes its request");
     }
 
     [Test]
@@ -223,7 +218,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             {
                 answers = new { measurements = new { BodyWeight = new { value = 82.4, unit = "Kilograms" } } }
             });
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await using (var dispatchScope = Factory.Services.CreateAsyncScope())
@@ -232,7 +227,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         }
 
         var envelopeIds = await ReadAcceptedEnvelopeIdsAsync();
-        envelopeIds.Should().HaveCount(3);
+        Assert.That(envelopeIds, Has.Exactly(3).Items);
         foreach (var envelopeId in envelopeIds)
         {
             await using var deliveryScope = Factory.Services.CreateAsyncScope();
@@ -279,9 +274,9 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
 
         Assert.Multiple(() =>
         {
-            persisted.Submission.Should().BeNull();
-            persisted.RequestStatus.Should().Be(ReportRequestStatus.Pending);
-            persisted.AcceptedProgressEnvelopes.Should().BeEmpty();
+            Assert.That(persisted.Submission, Is.Null);
+            Assert.That(persisted.RequestStatus, Is.EqualTo(ReportRequestStatus.Pending));
+            Assert.That(persisted.AcceptedProgressEnvelopes, Is.Empty);
         });
     }
 
@@ -313,15 +308,15 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             await using var scope = Factory.Services.CreateAsyncScope();
             var result = await scope.ServiceProvider.GetRequiredService<IReportSubmissionAcceptedProgressConsumer>()
                 .ConsumeAsync(progressEvent);
-            result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+            Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
         }
 
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await assertionDatabase.ReportSubmissionProgressReceipts.CountAsync()).Should().Be(3);
+        Assert.That((await assertionDatabase.ReportSubmissionProgressReceipts.CountAsync()), Is.EqualTo(3));
         var measurements = await assertionDatabase.Measurements.Where(value => value.UserId == trainee.Id).ToArrayAsync();
-        measurements.Should().HaveCount(4, "manual and equal same-day values must not suppress distinct submissions");
-        measurements.Count(value => value.Value == 82.4).Should().Be(4);
+        Assert.That(measurements, Has.Exactly(4).Items, "manual and equal same-day values must not suppress distinct submissions");
+        Assert.That(measurements.Count(value => value.Value == 82.4), Is.EqualTo(4));
     }
 
     [Test]
@@ -371,24 +366,24 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
                 new ReportSubmissionAcceptedMeasurement(testCase.BodyPart, testCase.Value, testCase.Unit));
             var result = await scope.ServiceProvider.GetRequiredService<IReportSubmissionAcceptedProgressConsumer>()
                 .ConsumeAsync(progressEvent);
-            result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+            Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
         }
 
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.ReportSubmissionProgressReceipts.AsNoTracking().CountAsync()).Should().Be(cases.Length);
+        Assert.That((await database.ReportSubmissionProgressReceipts.AsNoTracking().CountAsync()), Is.EqualTo(cases.Length));
         var persisted = await database.Measurements
             .AsNoTracking()
             .Where(measurement => measurement.UserId == trainee.Id)
             .ToArrayAsync();
-        persisted.Should().HaveCount(cases.Length);
+        Assert.That(persisted, Has.Exactly(cases.Length).Items);
         foreach (var expected in cases)
         {
-            persisted.Should().ContainSingle(measurement =>
+            Assert.That((persisted).Where(measurement =>
                 measurement.CreatedAt == expected.ObservedAt.ToUniversalTime()
                 && measurement.BodyPart == expected.BodyPart
                 && measurement.Unit == expected.Unit.ToString()
-                && measurement.Value == expected.Value);
+                && measurement.Value == expected.Value), Has.Exactly(1).Items);
         }
     }
 
@@ -406,16 +401,16 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var firstTask = first.ConsumeAsync(progressEvent);
         var secondTask = second.ConsumeAsync(progressEvent);
         await gate.BothReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        gate.Release.TrySetResult(true).Should().BeTrue();
+        Assert.That(gate.Release.TrySetResult(true), Is.True);
         var outcomes = await Task.WhenAll(CaptureAsync(firstTask), CaptureAsync(secondTask));
 
-        outcomes.Count(outcome => outcome.Outcome == "Applied").Should().Be(1);
+        Assert.That(outcomes.Count(outcome => outcome.Outcome == "Applied"), Is.EqualTo(1));
         var loser = outcomes.Single(outcome => outcome.Error is not null).Error!;
-        loser.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
-        loser.ConstraintName.Should().Be("IX_ReportSubmissionProgressReceipts_ReportSubmissionId");
+        Assert.That(loser.SqlState, Is.EqualTo(PostgresErrorCodes.UniqueViolation));
+        Assert.That(loser.ConstraintName, Is.EqualTo("IX_ReportSubmissionProgressReceipts_ReportSubmissionId"));
         await using var retryScope = Factory.Services.CreateAsyncScope();
         var retry = await retryScope.ServiceProvider.GetRequiredService<IReportSubmissionAcceptedProgressConsumer>().ConsumeAsync(progressEvent);
-        retry.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate);
+        Assert.That(retry.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate));
         await AssertReceiptAndMeasurementCountAsync(trainee.Id, 1, 1);
     }
 
@@ -454,21 +449,23 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var firstTask = CaptureJobAsync(firstScope.ServiceProvider.GetRequiredService<IActionMessageJob>(), firstEnvelopeId);
         var secondTask = CaptureJobAsync(secondScope.ServiceProvider.GetRequiredService<IActionMessageJob>(), secondEnvelopeId);
         await gate.BothReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        gate.Release.TrySetResult(true).Should().BeTrue();
+        Assert.That(gate.Release.TrySetResult(true), Is.True);
         var attempts = await Task.WhenAll(firstTask, secondTask);
 
-        attempts.Count(attempt => attempt.Error is null).Should().Be(1);
-        attempts.Count(attempt => attempt.Error is InvalidOperationException).Should().Be(1);
+        Assert.That(attempts.Count(attempt => attempt.Error is null), Is.EqualTo(1));
+        Assert.That(attempts.Count(attempt => attempt.Error is InvalidOperationException), Is.EqualTo(1));
         var envelopes = await ReadEnvelopesWithLogsAsync(gatedFactory.Services, firstEnvelopeId, secondEnvelopeId);
-        envelopes.Count(envelope => envelope.Status == ActionExecutionStatus.Completed).Should().Be(1);
+        Assert.That(envelopes.Count(envelope => envelope.Status == ActionExecutionStatus.Completed), Is.EqualTo(1));
         var failedEnvelope = envelopes.Single(envelope => envelope.Status == ActionExecutionStatus.Failed);
-        failedEnvelope.LastAttemptAt.Should().NotBeNull();
-        failedEnvelope.NextAttemptAt.Should().NotBeNull().And.BeAfter(failedEnvelope.LastAttemptAt!.Value);
+        Assert.That(failedEnvelope.LastAttemptAt, Is.Not.Null);
+        var assertedChain14 = failedEnvelope.NextAttemptAt;
+        Assert.That(assertedChain14, Is.Not.Null);
+        Assert.That(assertedChain14, Is.GreaterThan(failedEnvelope.LastAttemptAt!.Value));
         var failedHandlerLog = failedEnvelope.ExecutionLogs.Single(log =>
             log.ActionType == ActionExecutionLogType.HandlerExecution
             && log.Status == ActionExecutionStatus.Failed);
-        failedHandlerLog.ErrorDetails.Should().Contain(PostgresErrorCodes.UniqueViolation);
-        failedHandlerLog.ErrorDetails.Should().Contain("IX_ReportSubmissionProgressReceipts_ReportSubmissionId");
+        Assert.That(failedHandlerLog.ErrorDetails, Does.Contain(PostgresErrorCodes.UniqueViolation));
+        Assert.That(failedHandlerLog.ErrorDetails, Does.Contain("IX_ReportSubmissionProgressReceipts_ReportSubmissionId"));
 
         await MakeEnvelopeRetryDueAsync(gatedFactory.Services, failedEnvelope.Id);
         await using (var retryScope = gatedFactory.Services.CreateAsyncScope())
@@ -477,8 +474,8 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         }
 
         var retriedEnvelope = (await ReadEnvelopesWithLogsAsync(gatedFactory.Services, failedEnvelope.Id)).Single();
-        retriedEnvelope.Status.Should().Be(ActionExecutionStatus.Completed);
-        retriedEnvelope.NextAttemptAt.Should().BeNull();
+        Assert.That(retriedEnvelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+        Assert.That(retriedEnvelope.NextAttemptAt, Is.Null);
         await AssertReceiptAndMeasurementsAsync(gatedFactory.Services, trainee.Id, observedAt, measurements);
     }
 
@@ -502,7 +499,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         await AssertReceiptAndMeasurementCountAsync(trainee.Id, 0, 0);
         await using var retryScope = Factory.Services.CreateAsyncScope();
         var retry = await retryScope.ServiceProvider.GetRequiredService<IReportSubmissionAcceptedProgressConsumer>().ConsumeAsync(progressEvent);
-        retry.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
+        Assert.That(retry.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
         await AssertReceiptAndMeasurementCountAsync(trainee.Id, 1, 1);
     }
 
@@ -677,7 +674,7 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             name = user.Name,
             password = "password123"
         });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var loginJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -704,10 +701,10 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
 
     private static string ReadRequiredString(JsonElement element, string propertyName)
     {
-        element.TryGetProperty(propertyName, out var property).Should().BeTrue($"response must contain {propertyName}");
-        property.ValueKind.Should().Be(JsonValueKind.String, $"{propertyName} must remain a JSON string");
+        Assert.That(element.TryGetProperty(propertyName, out var property), Is.True, $"response must contain {propertyName}");
+        Assert.That(property.ValueKind, Is.EqualTo(JsonValueKind.String), $"{propertyName} must remain a JSON string");
         var value = property.GetString();
-        value.Should().NotBeNullOrWhiteSpace($"{propertyName} must not be empty");
+        Assert.That(string.IsNullOrWhiteSpace(value), Is.False, $"{propertyName} must not be empty");
         return value!;
     }
 
@@ -721,21 +718,21 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
         var commandType = applicationAssembly.GetType(AcceptedProgressCommandTypeName);
         var outboxWriterType = typeof(ICommandOutboxWriter).Assembly.GetType(CommandOutboxWriterTypeName);
 
-        commandType.Should().NotBeNull("#386 requires a Reporting-owned accepted-progress command contract");
-        outboxWriterType.Should().NotBeNull("#386 requires a stage-only command outbox writer");
+        Assert.That(commandType, Is.Not.Null, "#386 requires a Reporting-owned accepted-progress command contract");
+        Assert.That(outboxWriterType, Is.Not.Null, "#386 requires a stage-only command outbox writer");
 
         var command = Activator.CreateInstance(commandType!)
             ?? throw new InvalidOperationException($"Could not create {AcceptedProgressCommandTypeName}.");
         var eventProperty = commandType!.GetProperties(BindingFlags.Instance | BindingFlags.Public)
             .SingleOrDefault(property => property.PropertyType == typeof(ReportSubmissionAcceptedProgressPayload));
-        eventProperty.Should().NotBeNull("the accepted-progress command must carry the Reporting-owned payload contract");
+        Assert.That(eventProperty, Is.Not.Null, "the accepted-progress command must carry the Reporting-owned payload contract");
         eventProperty!.SetValue(command, CreateAcceptedProgressEvent(submission, traineeId, requestId));
 
         var outboxWriter = serviceProvider.GetService(outboxWriterType!)
             ?? throw new InvalidOperationException($"No {CommandOutboxWriterTypeName} is registered.");
         var stageMethod = outboxWriterType!.GetMethods(BindingFlags.Instance | BindingFlags.Public)
             .SingleOrDefault(method => method.Name == "StageAsync" && method.IsGenericMethodDefinition);
-        stageMethod.Should().NotBeNull("the stage-only outbox writer must expose StageAsync<TCommand>");
+        Assert.That(stageMethod, Is.Not.Null, "the stage-only outbox writer must expose StageAsync<TCommand>");
 
         var invocation = stageMethod!.MakeGenericMethod(commandType).Invoke(
             outboxWriter,
@@ -813,8 +810,8 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
             AcceptedProgressCommandId,
             JsonSerializer.Serialize(command, SharedSerializationOptions.Current));
         var receipt = await scope.ServiceProvider.GetRequiredService<ICommandEnvelopeRuntime>().PersistAsync(request);
-        receipt.EnvelopeId.Should().NotBeNull();
-        Id<CommandEnvelope>.TryParse(receipt.EnvelopeId!, out var envelopeId).Should().BeTrue();
+        Assert.That(receipt.EnvelopeId, Is.Not.Null);
+        Assert.That(Id<CommandEnvelope>.TryParse(receipt.EnvelopeId!, out var envelopeId), Is.True);
         return envelopeId;
     }
 
@@ -863,19 +860,19 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
     {
         await using var scope = services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.ReportSubmissionProgressReceipts.AsNoTracking().CountAsync()).Should().Be(1);
+        Assert.That((await database.ReportSubmissionProgressReceipts.AsNoTracking().CountAsync()), Is.EqualTo(1));
         var persisted = await database.Measurements
             .AsNoTracking()
             .Where(measurement => measurement.UserId == traineeId)
             .ToArrayAsync();
-        persisted.Should().HaveCount(expectedMeasurements.Count);
+        Assert.That(persisted, Has.Exactly(expectedMeasurements.Count).Items);
         foreach (var expected in expectedMeasurements)
         {
-            persisted.Should().ContainSingle(measurement =>
+            Assert.That((persisted).Where(measurement =>
                 measurement.BodyPart == expected.BodyPart
                 && measurement.Unit == expected.Unit.ToString()
                 && measurement.Value == expected.Value
-                && measurement.CreatedAt == observedAt.ToUniversalTime());
+                && measurement.CreatedAt == observedAt.ToUniversalTime()), Has.Exactly(1).Items);
         }
     }
 
@@ -903,8 +900,8 @@ internal sealed class PostgreSqlReportingProgressOutboxTests : PostgreSqlIntegra
     {
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.ReportSubmissionProgressReceipts.CountAsync()).Should().Be(receipts);
-        (await database.Measurements.CountAsync(value => value.UserId == traineeId)).Should().Be(measurements);
+        Assert.That((await database.ReportSubmissionProgressReceipts.CountAsync()), Is.EqualTo(receipts));
+        Assert.That((await database.Measurements.CountAsync(value => value.UserId == traineeId)), Is.EqualTo(measurements));
     }
 
     private sealed record PendingMeasurementScenario(

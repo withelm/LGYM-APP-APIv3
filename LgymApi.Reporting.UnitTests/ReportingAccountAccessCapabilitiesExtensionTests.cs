@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Identity.Contracts;
@@ -27,7 +26,7 @@ public sealed class ReportingAccountAccessCapabilitiesExtensionTests
         var capabilities = extension.GetCapabilities(account);
 
         var policyDecision = coordinator.CanManageOwnedDefinition(account, account.Id);
-        policyDecision.Should().Be(expected);
-        capabilities.Should().Be(new ReportingAccountAccessOwnerCapabilities(true, true, true, policyDecision, policyDecision));
+        Assert.That(policyDecision, Is.EqualTo(expected));
+        Assert.That(capabilities, Is.EqualTo(new ReportingAccountAccessOwnerCapabilities(true, true, true, policyDecision, policyDecision)));
     }
 }

@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -27,7 +26,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/roles");
 
         // Then
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -38,12 +37,12 @@ public sealed class RoleManagementTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/roles/permission-claims");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<PermissionClaimResponse>>();
-        body.Should().NotBeNull();
-        body!.Select(c => c.ClaimValue).Should().BeEquivalentTo(AuthConstants.Permissions.All);
-        body.Should().OnlyContain(c => c.ClaimType == AuthConstants.PermissionClaimType);
-        body.Should().OnlyContain(c => !string.IsNullOrWhiteSpace(c.DisplayName));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Select(c => c.ClaimValue), Is.EquivalentTo(AuthConstants.Permissions.All).UsingPropertiesComparer());
+        Assert.That((body).All(c => c.ClaimType == AuthConstants.PermissionClaimType), Is.True);
+        Assert.That((body).All(c => !string.IsNullOrWhiteSpace(c.DisplayName)), Is.True);
     }
 
     [Test]
@@ -54,7 +53,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/roles");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -76,19 +75,19 @@ public sealed class RoleManagementTests : IntegrationTestBase
         };
 
         var createResponse = await Client.PostAsJsonAsync("/api/roles", createRequest);
-        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var created = await createResponse.Content.ReadFromJsonAsync<RoleResponse>();
-        created.Should().NotBeNull();
-        created!.Name.Should().Be("Coach");
-        created.PermissionClaims.Should().BeEquivalentTo(createRequest.permissionClaims);
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Name, Is.EqualTo("Coach"));
+        Assert.That(created.PermissionClaims, Is.EquivalentTo(createRequest.permissionClaims).UsingPropertiesComparer());
 
         var getResponse = await Client.GetAsync($"/api/roles/{created.Id}");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var fetched = await getResponse.Content.ReadFromJsonAsync<RoleResponse>();
-        fetched.Should().NotBeNull();
-        fetched!.Name.Should().Be("Coach");
-        fetched.PermissionClaims.Should().BeEquivalentTo(createRequest.permissionClaims);
+        Assert.That(fetched, Is.Not.Null);
+        Assert.That(fetched!.Name, Is.EqualTo("Coach"));
+        Assert.That(fetched.PermissionClaims, Is.EquivalentTo(createRequest.permissionClaims).UsingPropertiesComparer());
     }
 
     [Test]
@@ -112,14 +111,14 @@ public sealed class RoleManagementTests : IntegrationTestBase
             permissionClaims = new[] { AuthConstants.Permissions.ManageGlobalExercises }
         });
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var getUpdatedResponse = await Client.GetAsync($"/api/roles/{created.Id}");
         var updated = await getUpdatedResponse.Content.ReadFromJsonAsync<RoleResponse>();
-        updated.Should().NotBeNull();
-        updated!.Name.Should().Be("Senior Coach");
-        updated.Description.Should().Be("Updated");
-        updated.PermissionClaims.Should().BeEquivalentTo(new[] { AuthConstants.Permissions.ManageGlobalExercises });
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Name, Is.EqualTo("Senior Coach"));
+        Assert.That(updated.Description, Is.EqualTo("Updated"));
+        Assert.That(updated.PermissionClaims, Is.EquivalentTo(new[] { AuthConstants.Permissions.ManageGlobalExercises }));
     }
 
     [Test]
@@ -137,10 +136,10 @@ public sealed class RoleManagementTests : IntegrationTestBase
         var created = await createResponse.Content.ReadFromJsonAsync<RoleResponse>();
 
         var deleteResponse = await Client.PostAsync($"/api/roles/{created!.Id}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var getResponse = await Client.GetAsync($"/api/roles/{created.Id}");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -163,7 +162,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
             roles = new[] { AuthConstants.Roles.User, createdRole!.Name }
         });
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -172,7 +171,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
             .Select(ur => ur.Role.Name)
             .ToListAsync();
 
-        roleNames.Should().BeEquivalentTo(new[] { AuthConstants.Roles.User, "Coach" });
+        Assert.That(roleNames, Is.EquivalentTo(new[] { AuthConstants.Roles.User, "Coach" }));
     }
 
     [Test]
@@ -191,7 +190,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
         {
             roles = new[] { AuthConstants.Roles.User }
         });
-        demotionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(demotionResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", administratorBToken);
 
         // When
@@ -199,10 +198,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
         var responseBody = await response.Content.ReadAsStringAsync();
 
         // Then
-        response.StatusCode.Should().Be(
-            HttpStatusCode.Forbidden,
-            "the demoted administrator reused the pre-issued token and received body {0}",
-            responseBody);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), string.Format(System.Globalization.CultureInfo.InvariantCulture, "the demoted administrator reused the pre-issued token and received body {0}", responseBody));
     }
 
     [Test]
@@ -220,7 +216,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
         {
             roles = new[] { AuthConstants.Roles.User, AuthConstants.Roles.Admin }
         });
-        promotionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(promotionResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", promotedUserToken);
 
         // When
@@ -228,10 +224,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
         var responseBody = await response.Content.ReadAsStringAsync();
 
         // Then
-        response.StatusCode.Should().Be(
-            HttpStatusCode.OK,
-            "the promoted user reused the pre-issued token and received body {0}",
-            responseBody);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), string.Format(System.Globalization.CultureInfo.InvariantCulture, "the promoted user reused the pre-issued token and received body {0}", responseBody));
     }
 
     [Test]
@@ -245,7 +238,7 @@ public sealed class RoleManagementTests : IntegrationTestBase
             roles = UnknownRole
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     private async Task AuthenticateAsAdminAsync()
@@ -257,10 +250,10 @@ public sealed class RoleManagementTests : IntegrationTestBase
     private async Task<string> AuthenticateAsync(string name, string password)
     {
         var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
         return body.Token;

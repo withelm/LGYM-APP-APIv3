@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
@@ -54,12 +53,12 @@ public sealed class ReportingNutritionCommandContractTests
 
         Assert.Multiple(() =>
         {
-            new ReportRequestCreatedInAppNotificationCommand().TemplateName.Should().BeEmpty();
-            new ReportSubmissionCreatedInAppNotificationCommand().TemplateName.Should().BeEmpty();
-            new ReportFeedbackAddedInAppNotificationCommand().TemplateName.Should().BeEmpty();
-            new ReportFeedbackAddedInAppNotificationCommand().TriggeredAt.Should().Be(default);
-            new DietPlanUpdatedInAppNotificationCommand().DietPlanName.Should().BeEmpty();
-            new DietPlanUpdatedInAppNotificationCommand().TriggeredAt.Should().Be(default);
+            Assert.That(new ReportRequestCreatedInAppNotificationCommand().TemplateName, Is.Empty);
+            Assert.That(new ReportSubmissionCreatedInAppNotificationCommand().TemplateName, Is.Empty);
+            Assert.That(new ReportFeedbackAddedInAppNotificationCommand().TemplateName, Is.Empty);
+            Assert.That(new ReportFeedbackAddedInAppNotificationCommand().TriggeredAt, Is.EqualTo(default(System.DateTimeOffset)));
+            Assert.That(new DietPlanUpdatedInAppNotificationCommand().DietPlanName, Is.Empty);
+            Assert.That(new DietPlanUpdatedInAppNotificationCommand().TriggeredAt, Is.EqualTo(default(System.DateTimeOffset)));
         });
     }
 
@@ -101,14 +100,10 @@ public sealed class ReportingNutritionCommandContractTests
 
         Assert.Multiple(() =>
         {
-            JsonSerializer.Serialize(reportRequest, SharedSerializationOptions.Current).Should().Be(
-                "{\"requestId\":\"00000000-0000-0000-0000-000000000101\",\"traineeId\":\"00000000-0000-0000-0000-000000000102\",\"trainerId\":\"00000000-0000-0000-0000-000000000103\",\"templateName\":\"Weekly request\"}");
-            JsonSerializer.Serialize(reportSubmission, SharedSerializationOptions.Current).Should().Be(
-                "{\"submissionId\":\"00000000-0000-0000-0000-000000000201\",\"trainerId\":\"00000000-0000-0000-0000-000000000202\",\"traineeId\":\"00000000-0000-0000-0000-000000000203\",\"templateName\":\"Weekly submission\"}");
-            JsonSerializer.Serialize(reportFeedback, SharedSerializationOptions.Current).Should().Be(
-                "{\"submissionId\":\"00000000-0000-0000-0000-000000000301\",\"traineeId\":\"00000000-0000-0000-0000-000000000302\",\"trainerId\":\"00000000-0000-0000-0000-000000000303\",\"templateName\":\"Coach feedback\",\"triggeredAt\":\"2026-07-18T14:15:16.1234567+02:00\"}");
-            JsonSerializer.Serialize(dietPlan, SharedSerializationOptions.Current).Should().Be(
-                "{\"dietPlanId\":\"00000000-0000-0000-0000-000000000401\",\"traineeId\":\"00000000-0000-0000-0000-000000000402\",\"trainerId\":\"00000000-0000-0000-0000-000000000403\",\"dietPlanName\":\"Competition plan\",\"triggeredAt\":\"2026-07-18T08:09:10-04:00\"}");
+            Assert.That(JsonSerializer.Serialize(reportRequest, SharedSerializationOptions.Current), Is.EqualTo("{\"requestId\":\"00000000-0000-0000-0000-000000000101\",\"traineeId\":\"00000000-0000-0000-0000-000000000102\",\"trainerId\":\"00000000-0000-0000-0000-000000000103\",\"templateName\":\"Weekly request\"}"));
+            Assert.That(JsonSerializer.Serialize(reportSubmission, SharedSerializationOptions.Current), Is.EqualTo("{\"submissionId\":\"00000000-0000-0000-0000-000000000201\",\"trainerId\":\"00000000-0000-0000-0000-000000000202\",\"traineeId\":\"00000000-0000-0000-0000-000000000203\",\"templateName\":\"Weekly submission\"}"));
+            Assert.That(JsonSerializer.Serialize(reportFeedback, SharedSerializationOptions.Current), Is.EqualTo("{\"submissionId\":\"00000000-0000-0000-0000-000000000301\",\"traineeId\":\"00000000-0000-0000-0000-000000000302\",\"trainerId\":\"00000000-0000-0000-0000-000000000303\",\"templateName\":\"Coach feedback\",\"triggeredAt\":\"2026-07-18T14:15:16.1234567+02:00\"}"));
+            Assert.That(JsonSerializer.Serialize(dietPlan, SharedSerializationOptions.Current), Is.EqualTo("{\"dietPlanId\":\"00000000-0000-0000-0000-000000000401\",\"traineeId\":\"00000000-0000-0000-0000-000000000402\",\"trainerId\":\"00000000-0000-0000-0000-000000000403\",\"dietPlanName\":\"Competition plan\",\"triggeredAt\":\"2026-07-18T08:09:10-04:00\"}"));
         });
     }
 
@@ -130,16 +125,15 @@ public sealed class ReportingNutritionCommandContractTests
 
         Assert.Multiple(() =>
         {
-            exposedTypes.Where(type => type.IsGenericType)
-                .All(type => type.GetGenericTypeDefinition() == typeof(Id<>))
-                .Should().BeTrue();
-            exposedTypes.Any(type =>
+            Assert.That(exposedTypes.Where(type => type.IsGenericType)
+                .All(type => type.GetGenericTypeDefinition() == typeof(Id<>)), Is.True);
+            Assert.That(exposedTypes.Any(type =>
             {
                 var typeNamespace = type.Namespace;
                 return typeNamespace == "LgymApi.Domain.Entities"
                     || typeNamespace?.StartsWith("LgymApi.Application.Repositories", StringComparison.Ordinal) == true
                     || typeNamespace?.StartsWith("LgymApi.BackgroundWorker", StringComparison.Ordinal) == true;
-            }).Should().BeFalse();
+            }), Is.False);
         });
     }
 
@@ -157,32 +151,29 @@ public sealed class ReportingNutritionCommandContractTests
 
         Assert.Multiple(() =>
         {
-            commandType.Assembly.GetName().Name.Should().Be(expectedAssembly);
-            commandType.Namespace.Should().Be(expectedNamespace);
-            commandType.IsPublic.Should().BeTrue();
-            commandType.IsSealed.Should().BeTrue();
-            commandType.IsClass.Should().BeTrue();
-            commandType.IsGenericType.Should().BeFalse();
-            commandType.GetInterfaces().Should().Equal(typeof(IActionCommand));
-            properties.Select(property => (property.Name, property.PropertyType))
-                .Should().Equal(expectedProperties);
-            properties.All(property =>
+            Assert.That(commandType.Assembly.GetName().Name, Is.EqualTo(expectedAssembly));
+            Assert.That(commandType.Namespace, Is.EqualTo(expectedNamespace));
+            Assert.That(commandType.IsPublic, Is.True);
+            Assert.That(commandType.IsSealed, Is.True);
+            Assert.That(commandType.IsClass, Is.True);
+            Assert.That(commandType.IsGenericType, Is.False);
+            Assert.That(commandType.GetInterfaces(), Is.EqualTo(new[] { typeof(IActionCommand) }));
+            Assert.That(properties.Select(property => (property.Name, property.PropertyType)), Is.EqualTo(expectedProperties));
+            Assert.That(properties.All(property =>
                     property.GetMethod is { IsPublic: true }
                     && property.SetMethod is { IsPublic: true }
                     && property.SetMethod.ReturnParameter
                         .GetRequiredCustomModifiers()
-                        .Contains(typeof(IsExternalInit)))
-                .Should().BeTrue();
-            properties.All(property =>
-                    nullabilityContext.Create(property).ReadState == NullabilityState.NotNull)
-                .Should().BeTrue();
+                        .Contains(typeof(IsExternalInit))), Is.True);
+            Assert.That(properties.All(property =>
+                    nullabilityContext.Create(property).ReadState == NullabilityState.NotNull), Is.True);
         });
     }
 
     private static Id<TEntity> ParseId<TEntity>(string value)
         where TEntity : class
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 }

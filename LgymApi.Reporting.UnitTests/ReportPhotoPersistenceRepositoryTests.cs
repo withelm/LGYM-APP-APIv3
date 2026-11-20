@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -26,12 +25,12 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         await db.SaveChangesAsync();
         var reloaded = await persistence.FindUploadSessionAsync(pending.StorageKey);
 
-        reloaded.Should().NotBeNull();
-        reloaded!.InitiatedByAccountId.Should().Be(pending.InitiatedByAccountId);
-        reloaded.OwnerAccountId.Should().Be(pending.OwnerAccountId);
-        reloaded.ReportRequestId.Should().Be(pending.ReportRequestId);
-        reloaded.SourcePhotoTypeId.Should().Be(photoTypeId);
-        reloaded.ReportPhotoSlotId.Should().Be(pending.ReportPhotoSlotId);
+        Assert.That(reloaded, Is.Not.Null);
+        Assert.That(reloaded!.InitiatedByAccountId, Is.EqualTo(pending.InitiatedByAccountId));
+        Assert.That(reloaded.OwnerAccountId, Is.EqualTo(pending.OwnerAccountId));
+        Assert.That(reloaded.ReportRequestId, Is.EqualTo(pending.ReportRequestId));
+        Assert.That(reloaded.SourcePhotoTypeId, Is.EqualTo(photoTypeId));
+        Assert.That(reloaded.ReportPhotoSlotId, Is.EqualTo(pending.ReportPhotoSlotId));
     }
 
     [Test]
@@ -52,10 +51,10 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         await persistence.MarkUploadCompletedAsync(pending.StorageKey, photoId, completedAt);
 
         var entity = await db.PhotoUploadSessions.SingleAsync();
-        entity.Status.Should().Be(PhotoUploadSessionStatus.Completed);
-        entity.CompletedPhotoId.Should().Be(photoId);
-        entity.CompletedAtUtc.Should().Be(completedAt);
-        entity.FailureReason.Should().BeNull();
+        Assert.That(entity.Status, Is.EqualTo(PhotoUploadSessionStatus.Completed));
+        Assert.That(entity.CompletedPhotoId, Is.EqualTo(photoId));
+        Assert.That(entity.CompletedAtUtc, Is.EqualTo(completedAt));
+        Assert.That(entity.FailureReason, Is.Null);
     }
 
     [TestCase(AccountDeletionState.Active)]
@@ -81,7 +80,7 @@ public sealed class ReportPhotoPersistenceRepositoryTests
 
         var expected = accountState == AccountDeletionState.Active
             ? new[] { "photos/pending.jpg", "photos/failed.jpg" } : [];
-        candidates.Select(candidate => candidate.StorageKey).Should().Equal(expected);
+        Assert.That(candidates.Select(candidate => candidate.StorageKey), Is.EqualTo(expected));
     }
 
     [Test]
@@ -103,11 +102,11 @@ public sealed class ReportPhotoPersistenceRepositoryTests
         await db.SaveChangesAsync();
 
         var rows = await db.Photos.IgnoreQueryFilters().OrderBy(photo => photo.CreatedAt).ToListAsync();
-        rows.Should().HaveCount(2);
-        rows.Single(photo => photo.Id == first.Id).IsDeleted.Should().BeTrue();
-        rows.Single(photo => photo.Id == replacement.Id).IsDeleted.Should().BeFalse();
-        rows.Single(photo => photo.Id == replacement.Id).SourcePhotoTypeId.Should().Be(photoTypeId);
-        rows.Single(photo => photo.Id == replacement.Id).ReportPhotoSlotId.Should().Be(slotId);
+        Assert.That(rows, Has.Exactly(2).Items);
+        Assert.That(rows.Single(photo => photo.Id == first.Id).IsDeleted, Is.True);
+        Assert.That(rows.Single(photo => photo.Id == replacement.Id).IsDeleted, Is.False);
+        Assert.That(rows.Single(photo => photo.Id == replacement.Id).SourcePhotoTypeId, Is.EqualTo(photoTypeId));
+        Assert.That(rows.Single(photo => photo.Id == replacement.Id).ReportPhotoSlotId, Is.EqualTo(slotId));
     }
 
     [Test]
@@ -128,7 +127,7 @@ public sealed class ReportPhotoPersistenceRepositoryTests
 
         var photos = await persistence.ListByRequestsAsync([firstRequestId, secondRequestId]);
 
-        photos.Select(photo => photo.StorageKey).Should().Equal("photos/first.jpg");
+        Assert.That(photos.Select(photo => photo.StorageKey), Is.EqualTo(new[] { "photos/first.jpg" }));
     }
 
     private static AppDbContext CreateDbContext(string name)

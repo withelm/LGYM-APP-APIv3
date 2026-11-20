@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -38,7 +37,7 @@ public sealed class CoachingEmailNotificationSchedulerAdapterTests
             "CODE123",
             expiresAt), cancellationToken);
 
-        adapter.Enabled.Should().BeTrue();
+        Assert.That(adapter.Enabled, Is.True);
         await createdScheduler.Received(1).ScheduleAsync(
             Arg.Is<InvitationEmailPayload>(payload =>
                 payload.InvitationId == invitationId

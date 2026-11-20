@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -40,12 +39,12 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         await ProcessPendingCommandsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Pending");
-        body.TraineeId.Should().BeEmpty();
-        body.Code.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Status, Is.EqualTo("Pending"));
+        Assert.That(body.TraineeId, Is.Empty);
+        Assert.That(string.IsNullOrWhiteSpace(body.Code), Is.False);
     }
 
     [Test]
@@ -64,11 +63,11 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         await ProcessPendingCommandsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Pending");
-        body.TraineeId.Should().Be(existingUser.Id.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Status, Is.EqualTo("Pending"));
+        Assert.That(body.TraineeId, Is.EqualTo(existingUser.Id.ToString()));
     }
 
     [Test]
@@ -85,7 +84,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             preferredTimeZone = "UTC"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         var responseBody = await response.Content.ReadAsStringAsync();
 
         var originalCulture = CultureInfo.CurrentCulture;
@@ -95,7 +94,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             var expectedMessage = typeof(Messages).GetProperty("InvitationPendingForEmail")!.GetValue(null) as string;
-            responseBody.Should().Contain(expectedMessage!);
+            Assert.That(responseBody, Does.Contain(expectedMessage!));
         }
         finally
         {
@@ -131,7 +130,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             preferredTimeZone = "UTC"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         var responseBody = await response.Content.ReadAsStringAsync();
 
         var originalCulture = CultureInfo.CurrentCulture;
@@ -141,7 +140,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             var expectedMessage = typeof(Messages).GetProperty("EmailAlreadyYourTrainee")!.GetValue(null) as string;
-            responseBody.Should().Contain(expectedMessage!);
+            Assert.That(responseBody, Does.Contain(expectedMessage!));
         }
         finally
         {
@@ -164,7 +163,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             preferredTimeZone = "UTC"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -178,7 +177,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             preferredTimeZone = "UTC"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -194,7 +193,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
             preferredTimeZone = "UTC"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -209,13 +208,13 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         await ProcessPendingCommandsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invitation = await db.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
-        invitation.Status.Should().Be(TrainerInvitationStatus.Revoked);
-        invitation.RespondedAt.Should().NotBeNull();
+        Assert.That(invitation.Status, Is.EqualTo(TrainerInvitationStatus.Revoked));
+        Assert.That(invitation.RespondedAt, Is.Not.Null);
     }
 
     [Test]
@@ -227,7 +226,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/trainer/invitations/{invitationId}/revoke", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -241,7 +240,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/trainer/invitations/{invitationId}/revoke", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -253,12 +252,11 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=CODE001VALID");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.EnumerateObject().Select(property => property.Name)
-            .Should().BeEquivalentTo(["status", "userExists"]);
-        body.RootElement.GetProperty("status").GetString().Should().Be("Pending");
-        body.RootElement.GetProperty("userExists").GetBoolean().Should().BeFalse();
+        Assert.That(body.RootElement.EnumerateObject().Select(property => property.Name), Is.EquivalentTo(new[] { "status", "userExists" }));
+        Assert.That(body.RootElement.GetProperty("status").GetString(), Is.EqualTo("Pending"));
+        Assert.That(body.RootElement.GetProperty("userExists").GetBoolean(), Is.False);
     }
 
     [Test]
@@ -275,11 +273,11 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=BOUND001CODE");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PublicInvitationStatusResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Accepted");
-        body.UserExists.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Status, Is.EqualTo("Accepted"));
+        Assert.That(body.UserExists, Is.True);
     }
 
     [Test]
@@ -291,11 +289,11 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=CODE002VALID");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PublicInvitationStatusResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Pending");
-        body.UserExists.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Status, Is.EqualTo("Pending"));
+        Assert.That(body.UserExists, Is.True);
     }
 
     [Test]
@@ -307,11 +305,11 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=WRONGCODE");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("title").GetString().Should().Be("Not Found");
-        body.RootElement.GetProperty("status").GetInt32().Should().Be((int)HttpStatusCode.NotFound);
-        body.RootElement.TryGetProperty("msg", out _).Should().BeFalse();
+        Assert.That(body.RootElement.GetProperty("title").GetString(), Is.EqualTo("Not Found"));
+        Assert.That(body.RootElement.GetProperty("status").GetInt32(), Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.That(body.RootElement.TryGetProperty("msg", out _), Is.False);
     }
 
     [Test]
@@ -328,7 +326,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=EXPIREDCODE1");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -341,7 +339,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         using var response = await Client.PostAsync($"/api/trainer/invitations/{invitationId}/revoke", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -353,7 +351,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=VALIDCODE002");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -364,10 +362,10 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/invitations/{invitationId}?code=REVOKECODE1");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PublicInvitationStatusResponse>();
-        body.Should().NotBeNull();
-        body!.Status.Should().Be("Revoked");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Status, Is.EqualTo("Revoked"));
     }
 
     [Test]
@@ -383,16 +381,16 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         await ProcessPendingCommandsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
-        link.Should().NotBeNull();
+        Assert.That(link, Is.Not.Null);
 
         var invitation = await db.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
-        invitation.TraineeId.Should().Be(trainee.Id);
-        invitation.Status.Should().Be(TrainerInvitationStatus.Accepted);
+        Assert.That(invitation.TraineeId, Is.EqualTo(trainee.Id));
+        Assert.That(invitation.Status, Is.EqualTo(TrainerInvitationStatus.Accepted));
     }
 
     [Test]
@@ -406,7 +404,7 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/trainee/invitations/{invitationId}/accept", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -419,12 +417,12 @@ public sealed partial class TrainerEmailInvitationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/trainee/invitations/{invitationId}/accept", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invitation = await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId);
-        invitation.Status.Should().Be(TrainerInvitationStatus.Pending);
-        invitation.TraineeId.Should().BeNull();
+        Assert.That(invitation.Status, Is.EqualTo(TrainerInvitationStatus.Pending));
+        Assert.That(invitation.TraineeId, Is.Null);
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email, string preferredLanguage = "en-US")

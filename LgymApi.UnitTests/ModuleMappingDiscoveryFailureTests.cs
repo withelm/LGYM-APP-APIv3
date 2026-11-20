@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,8 +23,7 @@ public sealed class ModuleMappingDiscoveryFailureTests
 
         var action = () => services.AddApplicationMapping(assemblies);
 
-        action.Should().Throw<ArgumentException>()
-            .WithMessage("Mapping discovery requires exactly seven module assemblies.*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Mapping discovery requires exactly seven module assemblies.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -38,7 +36,6 @@ public sealed class ModuleMappingDiscoveryFailureTests
 
         var action = () => services.AddApplicationMapping(assemblies);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Mapping assembly '*' was supplied more than once.");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Mapping assembly '*' was supplied more than once.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 }

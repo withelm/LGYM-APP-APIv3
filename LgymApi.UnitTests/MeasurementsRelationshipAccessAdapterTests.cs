@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Adapters;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.WorkoutProgress.Contracts.Measurements;
@@ -33,7 +32,7 @@ public sealed class MeasurementsRelationshipAccessAdapterTests
 
         var result = await new MeasurementsRelationshipAccessAdapter(accounts, links).GetAccessAsync(trainerId, traineeId);
 
-        result.HasActiveRelationship.Should().BeTrue();
+        Assert.That(result.HasActiveRelationship, Is.True);
     }
 
     [Test]
@@ -62,8 +61,8 @@ public sealed class MeasurementsRelationshipAccessAdapterTests
 
         var result = await new MeasurementsRelationshipAccessAdapter(accounts, links).GetAccessAsync(trainerId, traineeId);
 
-        result.HasActiveRelationship.Should().BeFalse();
-        result.Periods.Should().ContainSingle(period => period.EpisodeId == endedEpisode.Id);
+        Assert.That(result.HasActiveRelationship, Is.False);
+        Assert.That((result.Periods).Where(period => period.EpisodeId == endedEpisode.Id), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -72,7 +71,7 @@ public sealed class MeasurementsRelationshipAccessAdapterTests
         var trainerId = Id<AccountReference>.New();
         var links = Substitute.For<ICoachingActiveLinkPersistence>();
         var result = await new MeasurementsRelationshipAccessAdapter(Substitute.For<IAccountAccessReader>(), links).GetAccessAsync(trainerId, Id<AccountReference>.New());
-        result.Should().Be(MeasurementsRelationshipAccessFact.None);
+        Assert.That(result, Is.EqualTo(MeasurementsRelationshipAccessFact.None));
         await links.DidNotReceiveWithAnyArgs().GetMeasurementsAccessAsync(default, default);
     }
 }

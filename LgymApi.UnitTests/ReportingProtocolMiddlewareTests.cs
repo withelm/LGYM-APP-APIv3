@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
@@ -33,9 +32,9 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        nextCalled.Should().BeFalse();
-        (await ReadErrorCodeAsync(context)).Should().Be(ReportingProtocolResponses.UnsupportedCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(nextCalled, Is.False);
+        Assert.That((await ReadErrorCodeAsync(context)), Is.EqualTo(ReportingProtocolResponses.UnsupportedCode));
     }
 
     [Test]
@@ -56,9 +55,9 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        nextCalled.Should().BeFalse();
-        (await ReadErrorCodeAsync(context)).Should().Be(ReportingProtocolResponses.V2RequiredCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(nextCalled, Is.False);
+        Assert.That((await ReadErrorCodeAsync(context)), Is.EqualTo(ReportingProtocolResponses.V2RequiredCode));
     }
 
     [Test]
@@ -78,8 +77,8 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        nextCalled.Should().BeTrue();
-        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        Assert.That(nextCalled, Is.True);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
     }
 
     [Test]
@@ -95,9 +94,9 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status426UpgradeRequired);
-        nextCalled.Should().BeFalse();
-        (await ReadErrorCodeAsync(context)).Should().Be(ReportingProtocolResponses.V2RequiredCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status426UpgradeRequired));
+        Assert.That(nextCalled, Is.False);
+        Assert.That((await ReadErrorCodeAsync(context)), Is.EqualTo(ReportingProtocolResponses.V2RequiredCode));
     }
 
     [Test]
@@ -110,10 +109,10 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
-        context.Response.Headers[ReportingProtocolMiddleware.HeaderName].ToString().Should().Be("2");
-        context.Response.Headers.CacheControl.ToString().Should().Be("private, no-store");
-        context.Response.Headers.Vary.ToString().Should().Contain(ReportingProtocolMiddleware.HeaderName);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
+        Assert.That(context.Response.Headers[ReportingProtocolMiddleware.HeaderName].ToString(), Is.EqualTo("2"));
+        Assert.That(context.Response.Headers.CacheControl.ToString(), Is.EqualTo("private, no-store"));
+        Assert.That(context.Response.Headers.Vary.ToString(), Does.Contain(ReportingProtocolMiddleware.HeaderName));
     }
 
     [Test]
@@ -127,8 +126,8 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        (await ReadErrorCodeAsync(context)).Should().Be(ReportingProtocolResponses.PhotoTypeRequiredCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That((await ReadErrorCodeAsync(context)), Is.EqualTo(ReportingProtocolResponses.PhotoTypeRequiredCode));
     }
 
     [Test]
@@ -141,8 +140,8 @@ public sealed class ReportingProtocolMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        (await ReadErrorCodeAsync(context)).Should().Be(ReportingProtocolResponses.V2RequiredCode);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That((await ReadErrorCodeAsync(context)), Is.EqualTo(ReportingProtocolResponses.V2RequiredCode));
     }
 
     [Test]
@@ -153,10 +152,10 @@ public sealed class ReportingProtocolMiddlewareTests
 
         var compatible = ReportingProtocolResultFilter.TryAdapt(template);
 
-        compatible.Should().BeTrue();
+        Assert.That(compatible, Is.True);
         var config = template.Fields.Single().ModuleConfig!.Value;
-        config.TryGetProperty("schemaVersion", out _).Should().BeFalse();
-        config.GetProperty("requiredViews").EnumerateArray().Single().GetString().Should().Be("Front");
+        Assert.That(config.TryGetProperty("schemaVersion", out _), Is.False);
+        Assert.That(config.GetProperty("requiredViews").EnumerateArray().Single().GetString(), Is.EqualTo("Front"));
     }
 
     [TestCase(PhotoTypeNameMode.TrainerProvided, "Front")]
@@ -168,7 +167,7 @@ public sealed class ReportingProtocolMiddlewareTests
         var photoTypeId = LgymApi.Domain.ValueObjects.Id<TrainerPhotoType>.New().ToString();
         var template = CreateSnapshotTemplate(photoTypeId, nameMode, systemKey);
 
-        ReportingProtocolResultFilter.TryAdapt(template).Should().BeFalse();
+        Assert.That(ReportingProtocolResultFilter.TryAdapt(template), Is.False);
     }
 
     [Test]
@@ -178,12 +177,12 @@ public sealed class ReportingProtocolMiddlewareTests
         var p1Again = await CaptureIdempotencyRecordAsync(1);
         var p2 = await CaptureIdempotencyRecordAsync(2);
 
-        p1.ScopeTuple.Should().Be(p1Again.ScopeTuple);
-        p1.RequestFingerprint.Should().Be(p1Again.RequestFingerprint);
-        p1.ScopeTuple.Should().EndWith("|reporting-protocol:1");
-        p2.ScopeTuple.Should().EndWith("|reporting-protocol:2");
-        p2.ScopeTuple.Should().NotBe(p1.ScopeTuple);
-        p2.RequestFingerprint.Should().NotBe(p1.RequestFingerprint);
+        Assert.That(p1.ScopeTuple, Is.EqualTo(p1Again.ScopeTuple));
+        Assert.That(p1.RequestFingerprint, Is.EqualTo(p1Again.RequestFingerprint));
+        Assert.That(p1.ScopeTuple, Does.EndWith("|reporting-protocol:1"));
+        Assert.That(p2.ScopeTuple, Does.EndWith("|reporting-protocol:2"));
+        Assert.That(p2.ScopeTuple, Is.Not.EqualTo(p1.ScopeTuple));
+        Assert.That(p2.RequestFingerprint, Is.Not.EqualTo(p1.RequestFingerprint));
     }
 
     private static ReportingProtocolMiddleware CreateMiddleware(RequestDelegate next) => new(next);

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Reporting.Errors;
@@ -28,8 +27,8 @@ public sealed class ReportingPhotoRequestOwnershipTests
             ReportRequestId = request.Id, ViewType = "Front", MimeType = "image/jpeg", SizeBytes = 100
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await photos.DidNotReceiveWithAnyArgs().RecordUploadInitAsync(default!);
         await storage.DidNotReceiveWithAnyArgs().GenerateSignedUploadUrlAsync(default!, default!, default);
     }
@@ -52,8 +51,8 @@ public sealed class ReportingPhotoRequestOwnershipTests
             ReportRequestId = request.Id, ViewType = "Front", MimeType = "image/jpeg", SizeBytes = 100, StorageKey = session.StorageKey
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await photos.DidNotReceiveWithAnyArgs().SaveAsync(default!);
         await storage.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await storage.DidNotReceiveWithAnyArgs().GetMetadataAsync(default!);

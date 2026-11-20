@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Pagination;
@@ -13,31 +12,30 @@ public sealed class PaginationFacadeTests
     public void PaginationFacade_ExposesApplicationSafeContract()
     {
         var interfaceType = typeof(IQueryPaginationService);
-        interfaceType.Namespace.Should().Be("LgymApi.Application.Pagination");
+        Assert.That(interfaceType.Namespace, Is.EqualTo("LgymApi.Application.Pagination"));
 
         var method = interfaceType.GetMethod(nameof(IQueryPaginationService.ExecuteAsync));
-        method.Should().NotBeNull();
+        Assert.That(method, Is.Not.Null);
 
-        method!.ReturnType.IsGenericType.Should().BeTrue();
-        method.ReturnType.GetGenericTypeDefinition().Should().Be(typeof(Task<>));
+        Assert.That(method!.ReturnType.IsGenericType, Is.True);
+        Assert.That(method.ReturnType.GetGenericTypeDefinition(), Is.EqualTo(typeof(Task<>)));
         var resultType = method.ReturnType.GetGenericArguments()[0];
-        resultType.GetGenericTypeDefinition().Should().Be(typeof(Result<,>));
-        resultType.GetGenericArguments()[0].GetGenericTypeDefinition().Should().Be(typeof(Pagination<>));
-        resultType.GetGenericArguments()[1].Should().Be(typeof(AppError));
+        Assert.That(resultType.GetGenericTypeDefinition(), Is.EqualTo(typeof(Result<,>)));
+        Assert.That(resultType.GetGenericArguments()[0].GetGenericTypeDefinition(), Is.EqualTo(typeof(Pagination<>)));
+        Assert.That(resultType.GetGenericArguments()[1], Is.EqualTo(typeof(AppError)));
 
         var genericArguments = method.GetGenericArguments();
-        genericArguments.Should().HaveCount(1);
+        Assert.That(genericArguments, Has.Exactly(1).Items);
 
         var parameters = method.GetParameters();
-        parameters.Should().HaveCount(3);
-        parameters[0].ParameterType.GetGenericTypeDefinition().Should().Be(typeof(Func<>));
-        parameters[0].ParameterType.GetGenericArguments()[0].GetGenericTypeDefinition().Should().Be(typeof(IQueryable<>));
-        parameters[0].ParameterType.GetGenericArguments()[0].GetGenericArguments()[0].Should().Be(genericArguments[0]);
-        parameters[1].ParameterType.Should().Be(typeof(FilterInput));
-        parameters[2].ParameterType.Should().Be(typeof(CancellationToken));
+        Assert.That(parameters, Has.Exactly(3).Items);
+        Assert.That(parameters[0].ParameterType.GetGenericTypeDefinition(), Is.EqualTo(typeof(Func<>)));
+        Assert.That(parameters[0].ParameterType.GetGenericArguments()[0].GetGenericTypeDefinition(), Is.EqualTo(typeof(IQueryable<>)));
+        Assert.That(parameters[0].ParameterType.GetGenericArguments()[0].GetGenericArguments()[0], Is.EqualTo(genericArguments[0]));
+        Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(FilterInput)));
+        Assert.That(parameters[2].ParameterType, Is.EqualTo(typeof(CancellationToken)));
 
-        typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly.GetReferencedAssemblies()
-            .Select(x => x.Name)
-            .Should().NotContain(name => name != null && name.Contains("Gridify", StringComparison.OrdinalIgnoreCase));
+        Assert.That((typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly.GetReferencedAssemblies()
+            .Select(x => x.Name)).Any(name => name != null && name.Contains("Gridify", StringComparison.OrdinalIgnoreCase)), Is.False);
     }
 }

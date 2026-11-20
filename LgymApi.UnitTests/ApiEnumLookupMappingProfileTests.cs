@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Enum.Contracts;
 using LgymApi.Application.Mapping;
@@ -17,22 +16,16 @@ public sealed class ApiEnumLookupMappingProfileTests
     public void Mapper_Should_Register_Exactly_The_Six_Enum_To_Api_Lookup_Maps()
     {
         var mapper = CreateMapper();
-        var concreteMapper = mapper.Should().BeOfType<Mapper>().Subject;
+        var assertedValue81 = mapper;
+        Assert.That(assertedValue81, Is.TypeOf<Mapper>());
+        var concreteMapper = ((Mapper)assertedValue81);
 
         var apiEnumLookupMaps = concreteMapper.RegisteredMappings
             .Where(map => map.Source.IsEnum && map.Target == typeof(EnumLookupDto))
             .Select(map => map.Source)
             .ToList();
 
-        apiEnumLookupMaps.Should().BeEquivalentTo(
-        [
-            typeof(BodyParts),
-            typeof(ExerciseEloFormula),
-            typeof(MeasurementUnits),
-            typeof(WeightUnits),
-            typeof(HeightUnits),
-            typeof(Platforms)
-        ]);
+        Assert.That(apiEnumLookupMaps, Is.EquivalentTo(new[] { typeof(BodyParts), typeof(ExerciseEloFormula), typeof(MeasurementUnits), typeof(WeightUnits), typeof(HeightUnits), typeof(Platforms) }));
     }
 
     [Test]
@@ -44,9 +37,9 @@ public sealed class ApiEnumLookupMappingProfileTests
 
         var lookup = mapper.Map<ExerciseEloFormula, EnumLookupDto>(ExerciseEloFormula.PullupWeighted, context);
 
-        lookup.Id.Should().Be("PullupWeighted");
-        lookup.Name.Should().Be("Podciąganie: im mniejszy ciężar, tym lepiej");
-        lookup.DisplayName.Should().Be("Podciąganie: im mniejszy ciężar, tym lepiej");
+        Assert.That(lookup.Id, Is.EqualTo("PullupWeighted"));
+        Assert.That(lookup.Name, Is.EqualTo("Podciąganie: im mniejszy ciężar, tym lepiej"));
+        Assert.That(lookup.DisplayName, Is.EqualTo("Podciąganie: im mniejszy ciężar, tym lepiej"));
     }
 
     private static IMapper CreateMapper()

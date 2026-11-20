@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
@@ -46,14 +45,14 @@ public sealed class DummyEmailSenderTests
             Body = "Body content"
         });
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
         var files = Directory.GetFiles(_tempDirectory, "*.email.txt");
-        files.Length.Should().Be(1);
+        Assert.That(files.Length, Is.EqualTo(1));
 
         var content = await File.ReadAllTextAsync(files[0]);
-        content.Should().Contain("To: trainee@example.com");
-        content.Should().Contain("Subject: Invitation");
-        content.Should().Contain("Body content");
+        Assert.That(content, Does.Contain("To: trainee@example.com"));
+        Assert.That(content, Does.Contain("Subject: Invitation"));
+        Assert.That(content, Does.Contain("Body content"));
     }
 
     [Test]
@@ -73,7 +72,7 @@ public sealed class DummyEmailSenderTests
             Body = "y"
         });
 
-        result.Should().BeFalse();
-        Directory.Exists(_tempDirectory).Should().BeFalse();
+        Assert.That(result, Is.False);
+        Assert.That(Directory.Exists(_tempDirectory), Is.False);
     }
 }

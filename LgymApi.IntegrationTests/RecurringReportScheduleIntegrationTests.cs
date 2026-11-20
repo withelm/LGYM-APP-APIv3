@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -55,36 +54,32 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
                 Encoding.UTF8,
                 "application/json"));
         ClearIdempotencyKey();
-        invalidOffsetResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(invalidOffsetResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         var overrideResponse = await PostAsJsonWithApiOptionsAsync(
             TrainerOverrideUrl(scenario),
             new { scheduledAt = overrideAt, expectedScheduleRevision = 0 });
-        overrideResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(overrideResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var overridden = await ReadAsync<RecurringReportAssignmentDto>(overrideResponse);
-        overridden.ScheduleRevision.Should().Be(1);
-        overridden.EffectiveNextRecurringRequest.ScheduledAt.Should().BeCloseTo(
-            overrideAt.ToUniversalTime(),
-            TimeSpan.FromMicroseconds(1));
+        Assert.That(overridden.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(overridden.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(overrideAt.ToUniversalTime()).Within(TimeSpan.FromMicroseconds(1)));
 
         var staleResponse = await PostAsJsonWithApiOptionsAsync(
             TrainerOverrideUrl(scenario),
             new { scheduledAt = overrideAt.AddHours(1), expectedScheduleRevision = 0 });
-        staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(staleResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
         SetAuthorizationHeader(scenario.Trainee.Id);
         var proposalAt = overrideAt.AddDays(1);
         var proposalResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainee/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals",
             new { scheduledAt = proposalAt, reason = "Travel day", expectedScheduleRevision = 1 });
-        proposalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(proposalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var proposed = await ReadAsync<RecurringReportAssignmentDto>(proposalResponse);
-        proposed.ScheduleRevision.Should().Be(1);
-        proposed.PendingScheduleProposal.Should().NotBeNull();
-        proposed.PendingScheduleProposal!.Reason.Should().Be("Travel day");
-        proposed.EffectiveNextRecurringRequest.ScheduledAt.Should().BeCloseTo(
-            overrideAt.ToUniversalTime(),
-            TimeSpan.FromMicroseconds(1));
+        Assert.That(proposed.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(proposed.PendingScheduleProposal, Is.Not.Null);
+        Assert.That(proposed.PendingScheduleProposal!.Reason, Is.EqualTo("Travel day"));
+        Assert.That(proposed.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(overrideAt.ToUniversalTime()).Within(TimeSpan.FromMicroseconds(1)));
 
         SetAuthorizationHeader(scenario.Trainer.Id);
         SetIdempotencyKey("schedule-workflow-accept");
@@ -92,13 +87,11 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals/{proposed.PendingScheduleProposal.Id}/accept",
             content: null);
         ClearIdempotencyKey();
-        acceptResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(acceptResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var accepted = await ReadAsync<RecurringReportAssignmentDto>(acceptResponse);
-        accepted.ScheduleRevision.Should().Be(2);
-        accepted.PendingScheduleProposal.Should().BeNull();
-        accepted.EffectiveNextRecurringRequest.ScheduledAt.Should().BeCloseTo(
-            proposalAt.ToUniversalTime(),
-            TimeSpan.FromMicroseconds(1));
+        Assert.That(accepted.ScheduleRevision, Is.EqualTo(2));
+        Assert.That(accepted.PendingScheduleProposal, Is.Null);
+        Assert.That(accepted.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(proposalAt.ToUniversalTime()).Within(TimeSpan.FromMicroseconds(1)));
 
         await AssertProposalHistoryVisibleToBothActorsAsync(
             scenario,
@@ -115,9 +108,9 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         var rejectedProposalResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainee/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals",
             new { scheduledAt = rejectedProposalAt, reason = "Keep original", expectedScheduleRevision = 2 });
-        rejectedProposalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(rejectedProposalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var pendingRejection = await ReadAsync<RecurringReportAssignmentDto>(rejectedProposalResponse);
-        pendingRejection.PendingScheduleProposal.Should().NotBeNull();
+        Assert.That(pendingRejection.PendingScheduleProposal, Is.Not.Null);
 
         SetAuthorizationHeader(scenario.Trainer.Id);
         SetIdempotencyKey("schedule-workflow-reject");
@@ -125,7 +118,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals/{pendingRejection.PendingScheduleProposal!.Id}/reject",
             content: null);
         ClearIdempotencyKey();
-        rejectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(rejectResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await AssertProposalHistoryVisibleToBothActorsAsync(
             scenario,
@@ -147,11 +140,11 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/request-now",
             content: null);
         ClearIdempotencyKey();
-        requestNowResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestNowResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var requested = await ReadAsync<RecurringReportAssignmentDto>(requestNowResponse);
-        requested.ScheduleRevision.Should().Be(3);
-        requested.PendingScheduleProposal.Should().BeNull();
-        requested.EffectiveNextRecurringRequest.Status.Should().Be(NextRecurringReportRequestStatus.Unscheduled);
+        Assert.That(requested.ScheduleRevision, Is.EqualTo(3));
+        Assert.That(requested.PendingScheduleProposal, Is.Null);
+        Assert.That(requested.EffectiveNextRecurringRequest.Status, Is.EqualTo(NextRecurringReportRequestStatus.Unscheduled));
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -159,15 +152,15 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             .AsNoTracking()
             .Where(change => change.RecurringReportAssignmentId == ParseId<RecurringReportAssignment>(scenario.Assignment.Id))
             .ToListAsync();
-        changes.Should().ContainSingle(change =>
+        Assert.That((changes).Where(change =>
             change.Kind == RecurringReportScheduleChangeKind.TraineeProposal
-            && change.Status == RecurringReportScheduleChangeStatus.Approved);
-        changes.Should().ContainSingle(change =>
+            && change.Status == RecurringReportScheduleChangeStatus.Approved), Has.Exactly(1).Items);
+        Assert.That((changes).Where(change =>
             change.Kind == RecurringReportScheduleChangeKind.TrainerOverride
-            && change.Status == RecurringReportScheduleChangeStatus.Superseded);
-        changes.Should().ContainSingle(change =>
+            && change.Status == RecurringReportScheduleChangeStatus.Superseded), Has.Exactly(1).Items);
+        Assert.That((changes).Where(change =>
             change.Kind == RecurringReportScheduleChangeKind.TrainerOverride
-            && change.Status == RecurringReportScheduleChangeStatus.Consumed);
+            && change.Status == RecurringReportScheduleChangeStatus.Consumed), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -195,7 +188,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             TrainerOverrideUrl(scenario),
             new { scheduledAt = DateTimeOffset.UtcNow.AddDays(2), expectedScheduleRevision = 0 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -209,7 +202,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/request-now",
             content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var assignmentId = ParseId<RecurringReportAssignment>(scenario.Assignment.Id);
@@ -218,12 +211,10 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         var changes = await database.RecurringReportScheduleChanges.AsNoTracking()
             .Where(change => change.RecurringReportAssignmentId == assignmentId)
             .ToListAsync();
-        assignment.IsActive.Should().BeFalse();
-        assignment.ScheduleRevision.Should().Be(2);
-        changes.Single(change => change.Id == schedule.OverrideId).Status
-            .Should().Be(RecurringReportScheduleChangeStatus.Superseded);
-        changes.Single(change => change.Id == schedule.ProposalId).Status
-            .Should().Be(RecurringReportScheduleChangeStatus.Invalidated);
+        Assert.That(assignment.IsActive, Is.False);
+        Assert.That(assignment.ScheduleRevision, Is.EqualTo(2));
+        Assert.That(changes.Single(change => change.Id == schedule.OverrideId).Status, Is.EqualTo(RecurringReportScheduleChangeStatus.Superseded));
+        Assert.That(changes.Single(change => change.Id == schedule.ProposalId).Status, Is.EqualTo(RecurringReportScheduleChangeStatus.Invalidated));
     }
 
     [Test]
@@ -263,7 +254,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             $"/api/trainer/trainees/{scenario.Trainee.Id}/recurring-report-assignments/{scenario.Assignment.Id}/request-now",
             content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var assignmentId = ParseId<RecurringReportAssignment>(scenario.Assignment.Id);
@@ -272,12 +263,10 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         var changes = await assertionDatabase.RecurringReportScheduleChanges.AsNoTracking()
             .Where(change => change.RecurringReportAssignmentId == assignmentId)
             .ToListAsync();
-        assignment.IsActive.Should().BeTrue();
-        assignment.ScheduleRevision.Should().Be(1);
-        changes.Single(change => change.Id == schedule.OverrideId).Status
-            .Should().Be(RecurringReportScheduleChangeStatus.Active);
-        changes.Single(change => change.Id == schedule.ProposalId).Status
-            .Should().Be(RecurringReportScheduleChangeStatus.Pending);
+        Assert.That(assignment.IsActive, Is.True);
+        Assert.That(assignment.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(changes.Single(change => change.Id == schedule.OverrideId).Status, Is.EqualTo(RecurringReportScheduleChangeStatus.Active));
+        Assert.That(changes.Single(change => change.Id == schedule.ProposalId).Status, Is.EqualTo(RecurringReportScheduleChangeStatus.Pending));
     }
 
     private async Task<ScheduleScenario> CreateScenarioAsync(string prefix)
@@ -303,7 +292,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
             name = $"{prefix} template",
             fields = new[] { new { key = "note", label = "Note", type = "Text", isRequired = true, order = 0 } }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await ReadAsync<ReportTemplateDto>(templateResponse);
         var assignmentResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainer/trainees/{trainee.Id}/recurring-report-assignments",
@@ -316,7 +305,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
                 endsAt = DateTimeOffset.UtcNow.AddDays(30),
                 note = "Schedule workflow"
             });
-        assignmentResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(assignmentResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var assignment = await ReadAsync<RecurringReportAssignmentDto>(assignmentResponse);
         return new ScheduleScenario(trainer, trainee, assignment);
     }
@@ -329,14 +318,14 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         var overrideResponse = await PostAsJsonWithApiOptionsAsync(
             TrainerOverrideUrl(scenario),
             new { scheduledAt = DateTimeOffset.UtcNow.AddDays(2), expectedScheduleRevision = 0 });
-        overrideResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(overrideResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var overridden = await ReadAsync<RecurringReportAssignmentDto>(overrideResponse);
 
         SetAuthorizationHeader(scenario.Trainee.Id);
         var proposalResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainee/recurring-report-assignments/{scenario.Assignment.Id}/next-report-proposals",
             new { scheduledAt = DateTimeOffset.UtcNow.AddDays(3), reason = "Pending cleanup", expectedScheduleRevision = 1 });
-        proposalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(proposalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var proposed = await ReadAsync<RecurringReportAssignmentDto>(proposalResponse);
         SetAuthorizationHeader(scenario.Trainer.Id);
 
@@ -352,8 +341,8 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         var pendingProposal = changes.Single(change =>
             change.Kind == RecurringReportScheduleChangeKind.TraineeProposal
             && change.Status == RecurringReportScheduleChangeStatus.Pending);
-        overridden.ScheduleRevision.Should().Be(1);
-        proposed.ScheduleRevision.Should().Be(1);
+        Assert.That(overridden.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(proposed.ScheduleRevision, Is.EqualTo(1));
         return new PendingScheduleState(activeOverride.Id, pendingProposal.Id);
     }
 
@@ -392,26 +381,26 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
         IReadOnlyList<ProposalAuditExpectation> expected)
     {
         using var response = await Client.GetAsync(url);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var assignment = document.RootElement.EnumerateArray().Single(item =>
             item.GetProperty("_id").GetString() == scenario.Assignment.Id);
-        assignment.TryGetProperty("pendingScheduleProposal", out _).Should().BeFalse();
+        Assert.That(assignment.TryGetProperty("pendingScheduleProposal", out _), Is.False);
         var history = assignment.GetProperty("scheduleProposalHistory").EnumerateArray().ToArray();
-        history.Should().HaveCount(expected.Count);
+        Assert.That(history, Has.Exactly(expected.Count).Items);
 
         for (var index = 0; index < expected.Count; index++)
         {
             var actual = history[index];
-            actual.GetProperty("_id").GetString().Should().Be(expected[index].Id);
-            actual.GetProperty("assignmentId").GetString().Should().Be(scenario.Assignment.Id);
-            actual.GetProperty("status").GetString().Should().Be(expected[index].Status.ToString());
-            actual.GetProperty("reason").GetString().Should().Be(expected[index].Reason);
-            actual.GetProperty("scheduleRevision").GetInt32().Should().Be(expected[index].ScheduleRevision);
-            actual.GetProperty("requestedByAccountId").GetString().Should().Be(scenario.Trainee.Id.ToString());
-            actual.GetProperty("requestedAt").GetDateTimeOffset().Should().NotBe(default);
-            actual.GetProperty("resolvedByAccountId").GetString().Should().Be(scenario.Trainer.Id.ToString());
-            actual.GetProperty("resolvedAt").GetDateTimeOffset().Should().NotBe(default);
+            Assert.That(actual.GetProperty("_id").GetString(), Is.EqualTo(expected[index].Id));
+            Assert.That(actual.GetProperty("assignmentId").GetString(), Is.EqualTo(scenario.Assignment.Id));
+            Assert.That(actual.GetProperty("status").GetString(), Is.EqualTo(expected[index].Status.ToString()));
+            Assert.That(actual.GetProperty("reason").GetString(), Is.EqualTo(expected[index].Reason));
+            Assert.That(actual.GetProperty("scheduleRevision").GetInt32(), Is.EqualTo(expected[index].ScheduleRevision));
+            Assert.That(actual.GetProperty("requestedByAccountId").GetString(), Is.EqualTo(scenario.Trainee.Id.ToString()));
+            Assert.That(actual.GetProperty("requestedAt").GetDateTimeOffset(), Is.Not.EqualTo(default(System.DateTimeOffset)));
+            Assert.That(actual.GetProperty("resolvedByAccountId").GetString(), Is.EqualTo(scenario.Trainer.Id.ToString()));
+            Assert.That(actual.GetProperty("resolvedAt").GetDateTimeOffset(), Is.Not.EqualTo(default(System.DateTimeOffset)));
         }
     }
 
@@ -420,7 +409,7 @@ public sealed class RecurringReportScheduleIntegrationTests : PostgreSqlRecurrin
 
     private static Id<TEntity> ParseId<TEntity>(string value)
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

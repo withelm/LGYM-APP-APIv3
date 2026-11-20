@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications.Authorization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
@@ -24,8 +23,8 @@ public sealed class NotificationSourceReferenceParserTests
 
         var parsed = NotificationSourceReferenceParser.TryParse(notification, out var source);
 
-        parsed.Should().BeTrue();
-        source.SourceId.Should().Be(sourceId);
+        Assert.That(parsed, Is.True);
+        Assert.That(source.SourceId, Is.EqualTo(sourceId));
     }
 
     [TestCase("")]
@@ -39,7 +38,7 @@ public sealed class NotificationSourceReferenceParserTests
             InAppNotificationTypes.DietPlanUpdated,
             $"diet-plan:{sourceId}:{suffix}");
 
-        NotificationSourceReferenceParser.TryParse(notification, out _).Should().BeFalse();
+        Assert.That(NotificationSourceReferenceParser.TryParse(notification, out _), Is.False);
     }
 
     [Test]
@@ -50,7 +49,7 @@ public sealed class NotificationSourceReferenceParserTests
             $"trainee-note:{Id<TraineeNote>.New()}:{ProducerTimestamp:O}");
         notification.SenderUserId = null;
 
-        NotificationSourceReferenceParser.TryParse(notification, out _).Should().BeFalse();
+        Assert.That(NotificationSourceReferenceParser.TryParse(notification, out _), Is.False);
     }
 
     [Test]
@@ -60,7 +59,7 @@ public sealed class NotificationSourceReferenceParserTests
             InAppNotificationTypes.ReportSubmissionReceived,
             $"report-submission:{Id<ReportSubmission>.New()}:extra");
 
-        NotificationSourceReferenceParser.TryParse(notification, out _).Should().BeFalse();
+        Assert.That(NotificationSourceReferenceParser.TryParse(notification, out _), Is.False);
     }
 
     private static InAppNotification CreateNotification(InAppNotificationType type, string deliveryKey) => new()

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.Storage;
@@ -33,7 +32,7 @@ public sealed class HangfireDashboardAuthorizationIntegrationTests : Integration
         using var client = CreateAuthorizedClient(mountedFactory);
         using var response = await client.GetAsync("/hangfire");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
     }
 
     [Test]
@@ -49,7 +48,7 @@ public sealed class HangfireDashboardAuthorizationIntegrationTests : Integration
 
         using (var allowed = await client.GetAsync("/hangfire"))
         {
-            allowed.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            Assert.That(allowed.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
         }
 
         await using (var scope = Factory.Services.CreateAsyncScope())
@@ -63,7 +62,7 @@ public sealed class HangfireDashboardAuthorizationIntegrationTests : Integration
         }
 
         using var denied = await client.GetAsync("/hangfire");
-        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -86,7 +85,7 @@ public sealed class HangfireDashboardAuthorizationIntegrationTests : Integration
         }
 
         using var denied = await client.GetAsync("/hangfire");
-        denied.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private WebApplicationFactory<Program> CreateDashboardFactory() =>
@@ -96,7 +95,7 @@ public sealed class HangfireDashboardAuthorizationIntegrationTests : Integration
     private HttpClient CreateAuthorizedClient(WebApplicationFactory<Program> factory)
     {
         var token = Client.DefaultRequestHeaders.Authorization?.Parameter;
-        token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(token), Is.False);
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;

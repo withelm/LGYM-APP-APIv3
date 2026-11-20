@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
@@ -38,18 +37,14 @@ public sealed class GetTraineeDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(plan => plan.Name).Should().Equal(plans.Select(plan => plan.Name));
-        result.Value.Select(plan => plan.IsActive).Should().Equal(true, true, true, false);
-        result.Value.Select(plan => plan.StartDate).Should().Equal(
-            new DateOnly(2026, 7, 3),
-            new DateOnly(2026, 7, 2),
-            new DateOnly(2026, 7, 2),
-            new DateOnly(2026, 7, 4));
-        result.Value.Select(plan => plan.CreatedAt).Should().Equal(plans.Select(plan => plan.CreatedAt));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(plan => plan.Name), Is.EqualTo(plans.Select(plan => plan.Name)));
+        Assert.That(result.Value.Select(plan => plan.IsActive), Is.EqualTo(new[] { true, true, true, false }));
+        Assert.That(result.Value.Select(plan => plan.StartDate), Is.EqualTo(new[] { new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 4) }));
+        Assert.That(result.Value.Select(plan => plan.CreatedAt), Is.EqualTo(plans.Select(plan => plan.CreatedAt)));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
         await dependencies.Plans.Received(1).ListPlansByTraineeAsync(traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -61,13 +56,13 @@ public sealed class GetTraineeDietPlansUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<UserEntity>>(),
             Arg.Any<Id<UserEntity>>(),
             Arg.Any<CancellationToken>());
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -81,11 +76,11 @@ public sealed class GetTraineeDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
-        result.Error.HttpStatusCode.Should().Be(403);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo(403));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -99,10 +94,10 @@ public sealed class GetTraineeDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-        result.Error.Should().BeOfType<NotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -122,10 +117,10 @@ public sealed class GetTraineeDietPlansUseCaseTests
             new GetTraineeDietPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
         await dependencies.Plans.Received(1).ListPlansByTraineeAsync(traineeId, cancellationToken);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     private static DietPlan CreatePlan(

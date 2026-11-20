@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Nutrition.DietPlans.Models;
@@ -46,8 +45,8 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
                 scenario.PlanId,
                 updateData));
 
-            result.IsSuccess.Should().BeTrue();
-            result.Value.TrainerId.Should().Be(scenario.OriginalCoach.Id);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.TrainerId, Is.EqualTo(scenario.OriginalCoach.Id));
         }
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
@@ -62,11 +61,11 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             .OrderBy(entry => entry.ChangeDate)
             .ToListAsync();
 
-        plan.TrainerId.Should().Be(scenario.OriginalCoach.Id);
-        plan.Name.Should().Be(updateData.Name);
-        plan.Meals.Should().ContainSingle(meal => meal.Name == updateData.Meals[0].Name);
-        history.Should().HaveCount(2);
-        history.Single(entry => entry.ChangeType == "Updated").ChangedByUserId.Should().Be(scenario.CurrentCoach.Id);
+        Assert.That(plan.TrainerId, Is.EqualTo(scenario.OriginalCoach.Id));
+        Assert.That(plan.Name, Is.EqualTo(updateData.Name));
+        Assert.That((plan.Meals).Where(meal => meal.Name == updateData.Meals[0].Name), Has.Exactly(1).Items);
+        Assert.That(history, Has.Exactly(2).Items);
+        Assert.That(history.Single(entry => entry.ChangeType == "Updated").ChangedByUserId, Is.EqualTo(scenario.CurrentCoach.Id));
     }
 
     [Test]
@@ -111,9 +110,9 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
                         coachData),
                     cancellationToken))).WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
 
-        outcomes.Should().ContainSingle(outcome => outcome.Succeeded && outcome.Exception == null);
-        outcomes.Should().ContainSingle(outcome => outcome.Exception is DbUpdateConcurrencyException);
-        outcomes.Should().OnlyContain(outcome => outcome.ApplicationError == null);
+        Assert.That((outcomes).Where(outcome => outcome.Succeeded && outcome.Exception == null), Has.Exactly(1).Items);
+        Assert.That((outcomes).Where(outcome => outcome.Exception is DbUpdateConcurrencyException), Has.Exactly(1).Items);
+        Assert.That((outcomes).All(outcome => outcome.ApplicationError == null), Is.True);
         var winner = outcomes.Single(outcome => outcome.Succeeded);
         var loser = outcomes.Single(outcome => outcome.Exception is not null);
 
@@ -129,15 +128,15 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             .OrderBy(entry => entry.ChangeDate)
             .ToListAsync(cancellationToken);
 
-        plan.TrainerId.Should().Be(scenario.OriginalCoach.Id);
-        plan.Name.Should().Be(winner.PlanName);
-        plan.Meals.Should().ContainSingle(meal => meal.Name == winner.MealName);
-        plan.Meals.Should().NotContain(meal => meal.Name == loser.MealName);
-        history.Should().HaveCount(2);
+        Assert.That(plan.TrainerId, Is.EqualTo(scenario.OriginalCoach.Id));
+        Assert.That(plan.Name, Is.EqualTo(winner.PlanName));
+        Assert.That((plan.Meals).Where(meal => meal.Name == winner.MealName), Has.Exactly(1).Items);
+        Assert.That((plan.Meals).Any(meal => meal.Name == loser.MealName), Is.False);
+        Assert.That(history, Has.Exactly(2).Items);
         var updateHistory = history.Single(entry => entry.ChangeType == "Updated");
-        updateHistory.ChangedByUserId.Should().Be(winner.ActorId);
-        updateHistory.SnapshotJson.Should().Contain(winner.PlanName);
-        updateHistory.SnapshotJson.Should().NotContain(loser.PlanName);
+        Assert.That(updateHistory.ChangedByUserId, Is.EqualTo(winner.ActorId));
+        Assert.That(updateHistory.SnapshotJson, Does.Contain(winner.PlanName));
+        Assert.That(updateHistory.SnapshotJson, Does.Not.Contain(loser.PlanName));
 
         TestContext.Progress.WriteLine(
             $"winner={winner.ActorId}; loser={loser.ActorId}; conflict={loser.Exception!.GetType().Name}; "
@@ -187,9 +186,9 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
                         coachData),
                     cancellationToken))).WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
 
-        outcomes.Should().ContainSingle(outcome => outcome.Succeeded && outcome.Exception == null);
-        outcomes.Should().ContainSingle(outcome => outcome.Exception is DbUpdateConcurrencyException);
-        outcomes.Should().OnlyContain(outcome => outcome.ApplicationError == null);
+        Assert.That((outcomes).Where(outcome => outcome.Succeeded && outcome.Exception == null), Has.Exactly(1).Items);
+        Assert.That((outcomes).Where(outcome => outcome.Exception is DbUpdateConcurrencyException), Has.Exactly(1).Items);
+        Assert.That((outcomes).All(outcome => outcome.ApplicationError == null), Is.True);
         var winner = outcomes.Single(outcome => outcome.Succeeded);
         var loser = outcomes.Single(outcome => outcome.Exception is not null);
 
@@ -205,14 +204,14 @@ public sealed class PostgreSqlInheritedDietConcurrencyTests : PostgreSqlIntegrat
             .OrderBy(entry => entry.ChangeDate)
             .ToListAsync(cancellationToken);
 
-        plan.Name.Should().Be("Original inherited diet");
-        plan.Meals.Should().ContainSingle(meal => meal.Name == winner.MealName);
-        plan.Meals.Should().NotContain(meal => meal.Name == loser.MealName);
-        history.Should().HaveCount(2);
+        Assert.That(plan.Name, Is.EqualTo("Original inherited diet"));
+        Assert.That((plan.Meals).Where(meal => meal.Name == winner.MealName), Has.Exactly(1).Items);
+        Assert.That((plan.Meals).Any(meal => meal.Name == loser.MealName), Is.False);
+        Assert.That(history, Has.Exactly(2).Items);
         var updateHistory = history.Single(entry => entry.ChangeType == "Updated");
-        updateHistory.ChangedByUserId.Should().Be(winner.ActorId);
-        updateHistory.SnapshotJson.Should().Contain(winner.MealName);
-        updateHistory.SnapshotJson.Should().NotContain(loser.MealName);
+        Assert.That(updateHistory.ChangedByUserId, Is.EqualTo(winner.ActorId));
+        Assert.That(updateHistory.SnapshotJson, Does.Contain(winner.MealName));
+        Assert.That(updateHistory.SnapshotJson, Does.Not.Contain(loser.MealName));
     }
 
     private async Task<RaceScenario> SeedInheritedDietAsync(CancellationToken cancellationToken)

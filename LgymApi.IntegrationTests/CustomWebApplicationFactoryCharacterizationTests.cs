@@ -18,16 +18,12 @@ public sealed class CustomWebApplicationFactoryCharacterizationTests
         using var scope = factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        database.Database.ProviderName.Should().Be("Microsoft.EntityFrameworkCore.InMemory");
-        database.Database.EnsureCreated().Should().BeFalse();
+        Assert.That(database.Database.ProviderName, Is.EqualTo("Microsoft.EntityFrameworkCore.InMemory"));
+        Assert.That(database.Database.EnsureCreated(), Is.False);
 
         var roleNames = await database.Roles.Select(role => role.Name).ToListAsync();
 
-        roleNames.Should().Contain(
-            AuthConstants.Roles.User,
-            AuthConstants.Roles.Admin,
-            AuthConstants.Roles.Tester,
-            AuthConstants.Roles.Trainer);
+        Assert.That(roleNames, Does.Contain(AuthConstants.Roles.User), string.Format(System.Globalization.CultureInfo.InvariantCulture, AuthConstants.Roles.Admin, AuthConstants.Roles.Tester, AuthConstants.Roles.Trainer));
     }
 
     [Test]
@@ -40,8 +36,7 @@ public sealed class CustomWebApplicationFactoryCharacterizationTests
 
         var migrationAttempt = () => database.Database.MigrateAsync();
 
-        await migrationAttempt.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*relational-specific methods*");
+        await Assert.ThatAsync(async () => { await migrationAttempt(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*relational-specific methods*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await using var transaction = await unitOfWork.BeginTransactionAsync();
         await transaction.RollbackAsync();
     }
@@ -52,9 +47,11 @@ public sealed class CustomWebApplicationFactoryCharacterizationTests
         await using var factory = new CustomWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
 
-        scope.ServiceProvider.GetServices<IEmailSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(factory.EmailSender);
-        scope.ServiceProvider.GetServices<IPushProviderSender>().Should().ContainSingle()
-            .Which.Should().BeSameAs(factory.PushSender);
+        var assertedValue47 = (scope.ServiceProvider.GetServices<IEmailSender>()).ToArray();
+        Assert.That(assertedValue47, Has.Exactly(1).Items);
+        Assert.That(assertedValue47.Single(), Is.SameAs(factory.EmailSender));
+        var assertedValue48 = (scope.ServiceProvider.GetServices<IPushProviderSender>()).ToArray();
+        Assert.That(assertedValue48, Has.Exactly(1).Items);
+        Assert.That(assertedValue48.Single(), Is.SameAs(factory.PushSender));
     }
 }

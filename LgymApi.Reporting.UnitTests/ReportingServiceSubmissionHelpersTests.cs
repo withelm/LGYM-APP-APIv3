@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -38,8 +37,8 @@ public sealed class ReportingServiceSubmissionHelpersTests
             ["extra"] = JsonDocument.Parse("1").RootElement
         };
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, validAnswers), "IsSuccess").Should().BeTrue();
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, invalidAnswers), "IsFailure").Should().BeTrue();
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, validAnswers), "IsSuccess"), Is.True);
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, invalidAnswers), "IsFailure"), Is.True);
     }
 
     [Test]
@@ -59,37 +58,37 @@ public sealed class ReportingServiceSubmissionHelpersTests
             ]
         };
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
         {
             ["date"] = JsonDocument.Parse("\"not-a-date\"").RootElement,
             ["flag"] = JsonDocument.Parse("true").RootElement,
             ["photos"] = JsonDocument.Parse("[]").RootElement,
             ["measurements"] = JsonDocument.Parse("{}").RootElement
-        }), "IsFailure").Should().BeTrue();
+        }), "IsFailure"), Is.True);
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
         {
             ["date"] = JsonDocument.Parse("\"2026-06-21T12:00:00Z\"").RootElement,
             ["flag"] = JsonDocument.Parse("1").RootElement,
             ["photos"] = JsonDocument.Parse("[]").RootElement,
             ["measurements"] = JsonDocument.Parse("{}").RootElement
-        }), "IsFailure").Should().BeTrue();
+        }), "IsFailure"), Is.True);
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
         {
             ["date"] = JsonDocument.Parse("\"2026-06-21T12:00:00Z\"").RootElement,
             ["flag"] = JsonDocument.Parse("true").RootElement,
             ["photos"] = JsonDocument.Parse("\"bad\"").RootElement,
             ["measurements"] = JsonDocument.Parse("{}").RootElement
-        }), "IsFailure").Should().BeTrue();
+        }), "IsFailure"), Is.True);
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, new Dictionary<string, JsonElement>
         {
             ["date"] = JsonDocument.Parse("\"2026-06-21T12:00:00Z\"").RootElement,
             ["flag"] = JsonDocument.Parse("true").RootElement,
             ["photos"] = JsonDocument.Parse("[]").RootElement,
             ["measurements"] = JsonDocument.Parse("[]").RootElement
-        }), "IsFailure").Should().BeTrue();
+        }), "IsFailure"), Is.True);
     }
 
     [Test]
@@ -123,7 +122,7 @@ public sealed class ReportingServiceSubmissionHelpersTests
                 """).RootElement
         };
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, invalidAnswers), "IsFailure").Should().BeTrue();
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, invalidAnswers), "IsFailure"), Is.True);
     }
 
     [Test]
@@ -158,7 +157,7 @@ public sealed class ReportingServiceSubmissionHelpersTests
                 """).RootElement
         };
 
-        GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, validAnswers), "IsSuccess").Should().BeTrue();
+        Assert.That(GetBoolProperty(InvokeValidateAnswersAgainstTemplate(template, validAnswers), "IsSuccess"), Is.True);
     }
 
     [Test]
@@ -172,8 +171,8 @@ public sealed class ReportingServiceSubmissionHelpersTests
             ["Empty"] = "   "
         }])!;
 
-        result.Should().ContainSingle();
-        result["Weight"].Should().Be("keep going");
+        Assert.That(result, Has.Exactly(1).Items);
+        Assert.That(result["Weight"], Is.EqualTo("keep going"));
     }
 
     [Test]
@@ -188,8 +187,8 @@ public sealed class ReportingServiceSubmissionHelpersTests
         var valid = InvokeResult(method, template, new Dictionary<string, string> { ["weight"] = "ok" });
         var invalid = InvokeResult(method, template, new Dictionary<string, string> { ["unknown"] = "bad" });
 
-        GetBoolProperty(valid, "IsSuccess").Should().BeTrue();
-        GetBoolProperty(invalid, "IsFailure").Should().BeTrue();
+        Assert.That(GetBoolProperty(valid, "IsSuccess"), Is.True);
+        Assert.That(GetBoolProperty(invalid, "IsFailure"), Is.True);
     }
 
     [Test]
@@ -197,9 +196,9 @@ public sealed class ReportingServiceSubmissionHelpersTests
     {
         var method = typeof(ReportingService).GetMethod("IsDuplicateSubmissionException", BindingFlags.Static | BindingFlags.NonPublic)!;
 
-        ((bool)method.Invoke(null, [new Exception("duplicate key in ReportSubmissions on ReportRequestId")])!).Should().BeTrue();
-        ((bool)method.Invoke(null, [new Exception("unique constraint")])!).Should().BeTrue();
-        ((bool)method.Invoke(null, [new Exception("")])!).Should().BeFalse();
+        Assert.That(((bool)method.Invoke(null, [new Exception("duplicate key in ReportSubmissions on ReportRequestId")])!), Is.True);
+        Assert.That(((bool)method.Invoke(null, [new Exception("unique constraint")])!), Is.True);
+        Assert.That(((bool)method.Invoke(null, [new Exception("")])!), Is.False);
     }
 
     private static object InvokeValidateAnswersAgainstTemplate(ReportTemplate template, Dictionary<string, JsonElement> answers)

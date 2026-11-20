@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
@@ -35,8 +34,8 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.CreateInvitation(new CreateTrainerInvitationRequest { TraineeId = "not-a-guid" });
 
-        result.Should().BeOfType<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.TypeOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -64,10 +63,12 @@ public sealed class TrainerRelationshipControllerTests
 
         var result = await controller.CreateInvitation(new CreateTrainerInvitationRequest { TraineeId = traineeId.ToString() });
 
-        var dto = ((OkObjectResult)result).Value.Should().BeOfType<TrainerInvitationDto>().Subject;
-        dto.Id.Should().Be(invitation.Id.ToString());
-        dto.Status.Should().Be("Pending");
-        captured.Should().Be(new CreateInvitationCommand(trainerId, traineeId));
+        var assertedValue161 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue161, Is.TypeOf<TrainerInvitationDto>());
+        var dto = ((TrainerInvitationDto)assertedValue161);
+        Assert.That(dto.Id, Is.EqualTo(invitation.Id.ToString()));
+        Assert.That(dto.Status, Is.EqualTo("Pending"));
+        Assert.That(captured, Is.EqualTo(new CreateInvitationCommand(trainerId, traineeId)));
     }
 
     private static TrainerInvitationController CreateController(ICreateInvitationUseCase? createInvitation = null, Id<User>? trainerId = null)

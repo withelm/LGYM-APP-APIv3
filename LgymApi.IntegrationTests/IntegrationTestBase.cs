@@ -626,8 +626,7 @@ public abstract class IntegrationTestBase : IDisposable
     {
         var count = await CountCommandEnvelopesByCorrelationIdAsync(correlationId);
 
-        count.Should().Be(1,
-            message ?? $"Expected exactly one CommandEnvelope for CorrelationId {correlationId}, but found {count}");
+        Assert.That(count, Is.EqualTo(1), message ?? $"Expected exactly one CommandEnvelope for CorrelationId {correlationId}, but found {count}");
     }
 
     /// <summary>
@@ -661,8 +660,7 @@ public abstract class IntegrationTestBase : IDisposable
     {
         var count = await CountNotificationMessagesByKeyAsync(notificationType, correlationId, recipient);
 
-        count.Should().Be(1,
-            message ?? $"Expected exactly one NotificationMessage for Type={notificationType}, CorrelationId={correlationId}, Recipient={recipient}, but found {count}");
+        Assert.That(count, Is.EqualTo(1), message ?? $"Expected exactly one NotificationMessage for Type={notificationType}, CorrelationId={correlationId}, Recipient={recipient}, but found {count}");
     }
 
     /// <summary>

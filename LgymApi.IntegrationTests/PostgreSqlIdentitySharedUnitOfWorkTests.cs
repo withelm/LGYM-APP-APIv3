@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Identity.Sessions;
 using LgymApi.Application.Repositories;
@@ -40,16 +39,16 @@ internal sealed class PostgreSqlIdentitySharedUnitOfWorkTests : PostgreSqlIntegr
 
             var result = await service.LogoutAsync(user, sessionId);
 
-            result.IsSuccess.Should().BeTrue();
-            unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(0);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(0));
         }
 
-        stagedWritesWereInvisible.Should().BeTrue();
+        Assert.That(stagedWritesWereInvisible, Is.True);
         var persistedState = await ReadStateAsync(sessionId, installationId);
-        persistedState.RevokedAtUtc.Should().NotBeNull();
-        persistedState.UserId.Should().BeNull();
-        persistedState.SessionId.Should().BeNull();
+        Assert.That(persistedState.RevokedAtUtc, Is.Not.Null);
+        Assert.That(persistedState.UserId, Is.Null);
+        Assert.That(persistedState.SessionId, Is.Null);
     }
 
     [Test]
@@ -69,15 +68,15 @@ internal sealed class PostgreSqlIdentitySharedUnitOfWorkTests : PostgreSqlIntegr
 
             var action = () => service.LogoutAsync(user, sessionId);
 
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .Where(exception => ReferenceEquals(exception, stagingFailure));
-            unitOfWork.SaveChangesCalls.Should().Be(0);
+            var exception = await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); });
+            Assert.That(exception, Is.SameAs(stagingFailure));
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
         }
 
         var persistedState = await ReadStateAsync(sessionId, installationId);
-        persistedState.RevokedAtUtc.Should().BeNull();
-        persistedState.UserId.Should().Be(user.Id);
-        persistedState.SessionId.Should().Be(sessionId);
+        Assert.That(persistedState.RevokedAtUtc, Is.Null);
+        Assert.That(persistedState.UserId, Is.EqualTo(user.Id));
+        Assert.That(persistedState.SessionId, Is.EqualTo(sessionId));
     }
 
     private async Task<(User User, Id<UserSession> SessionId, Id<PushInstallation> InstallationId)> SeedSessionAndInstallationAsync()

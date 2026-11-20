@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -32,15 +31,10 @@ public sealed class PlanDayReferenceReadServiceTests
 
         var result = await service.GetByIdsAsync([secondId, missingId, deletedId, firstId, secondId]);
 
-        result.Should().Equal(
-            new PlanDayReferenceReadModel(secondId, result[0].PlanId, "Second", true, false),
-            new PlanDayReferenceReadModel(missingId, Id<PlanReference>.Empty, string.Empty, false, false),
-            new PlanDayReferenceReadModel(deletedId, result[2].PlanId, "Deleted", true, true),
-            new PlanDayReferenceReadModel(firstId, result[3].PlanId, "First", true, false),
-            new PlanDayReferenceReadModel(secondId, result[4].PlanId, "Second", true, false));
-        persistence.GetPlanDaysByIdsCalls.Should().ContainSingle();
-        persistence.GetPlanDaysByIdsCalls[0].PlanDayIds.Should().Equal(secondId, missingId, deletedId, firstId, secondId);
-        persistence.GetPlanDaysByIdsCalls[0].CancellationToken.Should().Be(CancellationToken.None);
+        Assert.That(result, Is.EqualTo(new[] { new PlanDayReferenceReadModel(secondId, result[0].PlanId, "Second", true, false), new PlanDayReferenceReadModel(missingId, Id<PlanReference>.Empty, string.Empty, false, false), new PlanDayReferenceReadModel(deletedId, result[2].PlanId, "Deleted", true, true), new PlanDayReferenceReadModel(firstId, result[3].PlanId, "First", true, false), new PlanDayReferenceReadModel(secondId, result[4].PlanId, "Second", true, false) }));
+        Assert.That(persistence.GetPlanDaysByIdsCalls, Has.Exactly(1).Items);
+        Assert.That(persistence.GetPlanDaysByIdsCalls[0].PlanDayIds, Is.EqualTo(new[] { secondId, missingId, deletedId, firstId, secondId }));
+        Assert.That(persistence.GetPlanDaysByIdsCalls[0].CancellationToken, Is.EqualTo(CancellationToken.None));
     }
 
     [Test]
@@ -51,7 +45,7 @@ public sealed class PlanDayReferenceReadServiceTests
 
         var result = await service.GetByIdAsync(Id<PlanDayReference>.New());
 
-        result.Should().Be(new PlanDayReferenceReadModel(result.PlanDayId, Id<PlanReference>.Empty, string.Empty, false, false));
+        Assert.That(result, Is.EqualTo(new PlanDayReferenceReadModel(result.PlanDayId, Id<PlanReference>.Empty, string.Empty, false, false)));
     }
 
     [Test]
@@ -60,8 +54,8 @@ public sealed class PlanDayReferenceReadServiceTests
         var services = new ServiceCollection();
         services.AddTrainingPlanningModule();
 
-        services.Count(descriptor => descriptor.ServiceType == typeof(IPlanDayReferenceReadService)).Should().Be(1);
-        services.Single(descriptor => descriptor.ServiceType == typeof(IPlanDayReferenceReadService)).ImplementationType.Should().Be(typeof(PlanDayReferenceReadService));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IPlanDayReferenceReadService)), Is.EqualTo(1));
+        Assert.That(services.Single(descriptor => descriptor.ServiceType == typeof(IPlanDayReferenceReadService)).ImplementationType, Is.EqualTo(typeof(PlanDayReferenceReadService)));
     }
 
     private static IMapper CreateMapper()

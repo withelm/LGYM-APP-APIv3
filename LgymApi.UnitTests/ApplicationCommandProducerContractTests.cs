@@ -1,5 +1,4 @@
 using System.IO;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -25,10 +24,10 @@ public sealed class ApplicationCommandProducerContractTests
     {
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), expectation.RelativePath));
 
-        source.Should().NotContain("LgymApi.BackgroundWorker.Common");
+        Assert.That(source, Does.Not.Contain("LgymApi.BackgroundWorker.Common"));
         foreach (var requiredNamespace in expectation.RequiredNamespaces)
         {
-            source.Should().Contain($"using {requiredNamespace};");
+            Assert.That(source, Does.Contain($"using {requiredNamespace};"));
         }
     }
 

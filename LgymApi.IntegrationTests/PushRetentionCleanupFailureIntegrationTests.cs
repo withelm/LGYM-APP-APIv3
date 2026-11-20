@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -54,8 +53,7 @@ public sealed class PushRetentionCleanupFailureIntegrationTests
 
             var action = () => cleanup.CleanupAsync();
 
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("Forced retention batch commit failure.");
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Forced retention batch commit failure.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
 
         using var verificationScope = factory.Services.CreateScope();
@@ -66,8 +64,8 @@ public sealed class PushRetentionCleanupFailureIntegrationTests
             .Select(message => message.Id)
             .ToListAsync();
 
-        remainingMessageIds.Should().Equal(secondMessageId, thirdMessageId);
-        remainingMessageIds.Should().NotContain(firstMessageId);
+        Assert.That(remainingMessageIds, Is.EqualTo(new[] { secondMessageId, thirdMessageId }));
+        Assert.That(remainingMessageIds, Does.Not.Contain(firstMessageId));
     }
 
     private static PushNotificationMessage CreateMessage(

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,7 +45,7 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        invalid.Should().BeEmpty("Endpoints must use only HttpGet or HttpPost: " + string.Join(", ", invalid));
+        Assert.That(invalid, Is.Empty, "Endpoints must use only HttpGet or HttpPost: " + string.Join(", ", invalid));
     }
 
     [Test]
@@ -84,7 +83,7 @@ public sealed class EndpointResponseTypeTests
             }
         }
 
-        missing.Should().BeEmpty("Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
+        Assert.That(missing, Is.Empty, "Endpoints missing ProducesResponseType(StatusCodes.Status200OK or StatusCodes.Status201Created): " +
             string.Join(", ", missing));
     }
 

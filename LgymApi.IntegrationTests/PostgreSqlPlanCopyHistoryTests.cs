@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -38,21 +37,21 @@ public sealed class PostgreSqlPlanCopyHistoryTests : PostgreSqlIntegrationTestBa
         }
 
         using var ownerLogin = await Client.PostAsJsonAsync("/api/login", new { name = owner.Name, password = "password123" });
-        ownerLogin.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerLogin.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerToken = (await ownerLogin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
         using var recipientLogin = await Client.PostAsJsonAsync("/api/login", new { name = recipient.Name, password = "password123" });
-        recipientLogin.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(recipientLogin.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var recipientToken = (await recipientLogin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
         using var share = await Client.PostAsync($"/api/{plan.Id}/share", null);
-        share.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(share.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var code = (await share.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("shareCode").GetString();
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", recipientToken);
         using var copy = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
-        copy.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(copy.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var copyId = (await copy.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
-        copyId.Should().NotBe(plan.Id.ToString());
+        Assert.That(copyId, Is.Not.EqualTo(plan.Id.ToString()));
         Id<PlanDay> copiedDayId;
         Id<Exercise> copiedExerciseId;
         await using (var copiedScope = Factory.Services.CreateAsyncScope())
@@ -61,131 +60,131 @@ public sealed class PostgreSqlPlanCopyHistoryTests : PostgreSqlIntegrationTestBa
             var copiedPlan = (await db.Plans.AsNoTracking().ToListAsync()).Single(p => p.Id.ToString() == copyId);
             var copiedDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.PlanId == copiedPlan.Id);
             var copiedDefinition = await db.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == copiedDay.Id);
-            copiedDay.Id.Should().NotBe(day.Id);
-            copiedDefinition.Id.Should().NotBe(planExercise.Id);
-            copiedDefinition.ExerciseId.Should().NotBe(exercise.Id);
+            Assert.That(copiedDay.Id, Is.Not.EqualTo(day.Id));
+            Assert.That(copiedDefinition.Id, Is.Not.EqualTo(planExercise.Id));
+            Assert.That(copiedDefinition.ExerciseId, Is.Not.EqualTo(exercise.Id));
             copiedDayId = copiedDay.Id;
             copiedExerciseId = copiedDefinition.ExerciseId;
         }
         using var denied = await Client.PostAsJsonAsync($"/api/{recipient.Id}/updatePlan", new { _id = plan.Id.ToString(), name = "Intrusion" });
-        denied.IsSuccessStatusCode.Should().BeFalse();
+        Assert.That(denied.IsSuccessStatusCode, Is.False);
         using var editCopy = await Client.PostAsJsonAsync($"/api/{recipient.Id}/updatePlan", new { _id = copyId, name = "Copy edited" });
-        editCopy.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editCopy.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var editCopyExercise = await Client.PostAsJsonAsync("/api/exercise/updateExercise", new { _id = copiedExerciseId.ToString(), name = "Copy exercise edited", bodyPart = "Back" });
-        editCopyExercise.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editCopyExercise.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var editCopyDay = await Client.PostAsJsonAsync("/api/planDay/updatePlanDay", new
         {
             _id = copiedDayId.ToString(), name = "Copy day edited",
             exercises = new[] { new { exercise = copiedExerciseId.ToString(), series = 4, reps = "12" } }
         });
-        editCopyDay.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editCopyDay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using (var unchangedScope = Factory.Services.CreateAsyncScope())
         {
             var db = unchangedScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var originalPlan = await db.Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-            originalPlan.UserId.Should().Be(owner.Id);
-            originalPlan.Name.Should().Be("Original plan");
-            originalPlan.Purpose.Should().Be(PlanPurpose.Personal);
+            Assert.That(originalPlan.UserId, Is.EqualTo(owner.Id));
+            Assert.That(originalPlan.Name, Is.EqualTo("Original plan"));
+            Assert.That(originalPlan.Purpose, Is.EqualTo(PlanPurpose.Personal));
             var originalDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.Id == day.Id);
-            originalDay.PlanId.Should().Be(plan.Id);
-            originalDay.Name.Should().Be("Original day");
+            Assert.That(originalDay.PlanId, Is.EqualTo(plan.Id));
+            Assert.That(originalDay.Name, Is.EqualTo("Original day"));
             var originalDefinition = await db.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == day.Id);
-            originalDefinition.Id.Should().Be(planExercise.Id);
-            originalDefinition.ExerciseId.Should().Be(exercise.Id);
-            originalDefinition.Series.Should().Be(3);
-            originalDefinition.Reps.Should().Be("8");
+            Assert.That(originalDefinition.Id, Is.EqualTo(planExercise.Id));
+            Assert.That(originalDefinition.ExerciseId, Is.EqualTo(exercise.Id));
+            Assert.That(originalDefinition.Series, Is.EqualTo(3));
+            Assert.That(originalDefinition.Reps, Is.EqualTo("8"));
             var originalExercise = await db.Exercises.AsNoTracking().SingleAsync(e => e.Id == exercise.Id);
-            originalExercise.UserId.Should().Be(owner.Id);
-            originalExercise.Name.Should().Be("Original exercise");
-            originalExercise.BodyPart.Should().Be(BodyParts.Chest);
+            Assert.That(originalExercise.UserId, Is.EqualTo(owner.Id));
+            Assert.That(originalExercise.Name, Is.EqualTo("Original exercise"));
+            Assert.That(originalExercise.BodyPart, Is.EqualTo(BodyParts.Chest));
             var originalTraining = await db.Trainings.AsNoTracking().SingleAsync(t => t.Id == training.Id);
-            originalTraining.UserId.Should().Be(owner.Id);
-            originalTraining.TypePlanDayId.Should().Be(day.Id);
-            originalTraining.GymId.Should().Be(gym.Id);
-            originalTraining.CreatedAt.Should().Be(dayTime);
+            Assert.That(originalTraining.UserId, Is.EqualTo(owner.Id));
+            Assert.That(originalTraining.TypePlanDayId, Is.EqualTo(day.Id));
+            Assert.That(originalTraining.GymId, Is.EqualTo(gym.Id));
+            Assert.That(originalTraining.CreatedAt, Is.EqualTo(dayTime));
             var originalScore = await db.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == score.Id);
-            originalScore.UserId.Should().Be(owner.Id);
-            originalScore.TrainingId.Should().Be(training.Id);
-            originalScore.ExerciseId.Should().Be(exercise.Id);
-            originalScore.Reps.Should().Be(8);
-            originalScore.Series.Should().Be(3);
-            originalScore.WeightValue.Should().Be(80);
-            originalScore.Unit.Should().Be(WeightUnits.Kilograms);
+            Assert.That(originalScore.UserId, Is.EqualTo(owner.Id));
+            Assert.That(originalScore.TrainingId, Is.EqualTo(training.Id));
+            Assert.That(originalScore.ExerciseId, Is.EqualTo(exercise.Id));
+            Assert.That(originalScore.Reps, Is.EqualTo(8));
+            Assert.That(originalScore.Series, Is.EqualTo(3));
+            Assert.That(originalScore.WeightValue, Is.EqualTo(80));
+            Assert.That(originalScore.Unit, Is.EqualTo(WeightUnits.Kilograms));
             var originalLink = await db.TrainingExerciseScores.AsNoTracking().SingleAsync(l => l.Id == link.Id);
-            originalLink.TrainingId.Should().Be(training.Id);
-            originalLink.ExerciseScoreId.Should().Be(score.Id);
+            Assert.That(originalLink.TrainingId, Is.EqualTo(training.Id));
+            Assert.That(originalLink.ExerciseScoreId, Is.EqualTo(score.Id));
         }
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
         using var editSource = await Client.PostAsJsonAsync($"/api/{owner.Id}/updatePlan", new { _id = plan.Id.ToString(), name = "Source edited", purpose = "Personal" });
-        editSource.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editSource.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var editSourceExercise = await Client.PostAsJsonAsync("/api/exercise/updateExercise", new { _id = exercise.Id.ToString(), name = "Source exercise edited", bodyPart = "Chest" });
-        editSourceExercise.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editSourceExercise.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var editSourceDay = await Client.PostAsJsonAsync("/api/planDay/updatePlanDay", new
         {
             _id = day.Id.ToString(), name = "Source day edited",
             exercises = new[] { new { exercise = exercise.Id.ToString(), series = 5, reps = "6" } }
         });
-        editSourceDay.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editSourceDay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await using (var verification = Factory.Services.CreateAsyncScope())
         {
             var db = verification.ServiceProvider.GetRequiredService<AppDbContext>();
             var plans = await db.Plans.AsNoTracking().ToListAsync();
-            plans.Single(p => p.Id == plan.Id).Name.Should().Be("Source edited");
+            Assert.That(plans.Single(p => p.Id == plan.Id).Name, Is.EqualTo("Source edited"));
             var copiedPlan = plans.Single(p => p.Id.ToString() == copyId);
-            copiedPlan.UserId.Should().Be(recipient.Id);
-            copiedPlan.Name.Should().Be("Copy edited");
+            Assert.That(copiedPlan.UserId, Is.EqualTo(recipient.Id));
+            Assert.That(copiedPlan.Name, Is.EqualTo("Copy edited"));
             var copiedDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.PlanId == copiedPlan.Id);
-            copiedDay.Id.Should().Be(copiedDayId);
-            copiedDay.Name.Should().Be("Copy day edited");
+            Assert.That(copiedDay.Id, Is.EqualTo(copiedDayId));
+            Assert.That(copiedDay.Name, Is.EqualTo("Copy day edited"));
             var copiedExercise = await db.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == copiedDay.Id);
-            copiedExercise.ExerciseId.Should().Be(copiedExerciseId);
-            copiedExercise.Series.Should().Be(4);
-            copiedExercise.Reps.Should().Be("12");
+            Assert.That(copiedExercise.ExerciseId, Is.EqualTo(copiedExerciseId));
+            Assert.That(copiedExercise.Series, Is.EqualTo(4));
+            Assert.That(copiedExercise.Reps, Is.EqualTo("12"));
             var copiedCatalogExercise = await db.Exercises.AsNoTracking().SingleAsync(e => e.Id == copiedExerciseId);
-            copiedCatalogExercise.UserId.Should().Be(recipient.Id);
-            copiedCatalogExercise.Name.Should().Be("Copy exercise edited");
-            copiedCatalogExercise.BodyPart.Should().Be(BodyParts.Back);
+            Assert.That(copiedCatalogExercise.UserId, Is.EqualTo(recipient.Id));
+            Assert.That(copiedCatalogExercise.Name, Is.EqualTo("Copy exercise edited"));
+            Assert.That(copiedCatalogExercise.BodyPart, Is.EqualTo(BodyParts.Back));
             var persistedDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.Id == day.Id);
-            persistedDay.PlanId.Should().Be(plan.Id);
-            persistedDay.Name.Should().Be("Source day edited");
+            Assert.That(persistedDay.PlanId, Is.EqualTo(plan.Id));
+            Assert.That(persistedDay.Name, Is.EqualTo("Source day edited"));
             var persistedExercise = await db.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == day.Id);
-            persistedExercise.PlanDayId.Should().Be(day.Id);
-            persistedExercise.ExerciseId.Should().Be(exercise.Id);
-            persistedExercise.Series.Should().Be(5);
-            persistedExercise.Reps.Should().Be("6");
+            Assert.That(persistedExercise.PlanDayId, Is.EqualTo(day.Id));
+            Assert.That(persistedExercise.ExerciseId, Is.EqualTo(exercise.Id));
+            Assert.That(persistedExercise.Series, Is.EqualTo(5));
+            Assert.That(persistedExercise.Reps, Is.EqualTo("6"));
             var sourceCatalogExercise = await db.Exercises.AsNoTracking().SingleAsync(e => e.Id == exercise.Id);
-            sourceCatalogExercise.UserId.Should().Be(owner.Id);
-            sourceCatalogExercise.Name.Should().Be("Source exercise edited");
-            sourceCatalogExercise.BodyPart.Should().Be(BodyParts.Chest);
+            Assert.That(sourceCatalogExercise.UserId, Is.EqualTo(owner.Id));
+            Assert.That(sourceCatalogExercise.Name, Is.EqualTo("Source exercise edited"));
+            Assert.That(sourceCatalogExercise.BodyPart, Is.EqualTo(BodyParts.Chest));
             var persistedTraining = await db.Trainings.AsNoTracking().SingleAsync(t => t.Id == training.Id);
-            persistedTraining.UserId.Should().Be(owner.Id);
-            persistedTraining.TypePlanDayId.Should().Be(day.Id);
-            persistedTraining.GymId.Should().Be(gym.Id);
-            persistedTraining.CreatedAt.Should().Be(dayTime);
+            Assert.That(persistedTraining.UserId, Is.EqualTo(owner.Id));
+            Assert.That(persistedTraining.TypePlanDayId, Is.EqualTo(day.Id));
+            Assert.That(persistedTraining.GymId, Is.EqualTo(gym.Id));
+            Assert.That(persistedTraining.CreatedAt, Is.EqualTo(dayTime));
             var persistedScore = await db.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == score.Id);
-            persistedScore.UserId.Should().Be(owner.Id);
-            persistedScore.TrainingId.Should().Be(training.Id);
-            persistedScore.ExerciseId.Should().Be(exercise.Id);
-            persistedScore.Reps.Should().Be(8);
-            persistedScore.Series.Should().Be(3);
-            persistedScore.WeightValue.Should().Be(80);
-            persistedScore.Unit.Should().Be(WeightUnits.Kilograms);
+            Assert.That(persistedScore.UserId, Is.EqualTo(owner.Id));
+            Assert.That(persistedScore.TrainingId, Is.EqualTo(training.Id));
+            Assert.That(persistedScore.ExerciseId, Is.EqualTo(exercise.Id));
+            Assert.That(persistedScore.Reps, Is.EqualTo(8));
+            Assert.That(persistedScore.Series, Is.EqualTo(3));
+            Assert.That(persistedScore.WeightValue, Is.EqualTo(80));
+            Assert.That(persistedScore.Unit, Is.EqualTo(WeightUnits.Kilograms));
             var persistedLink = await db.TrainingExerciseScores.AsNoTracking().SingleAsync(l => l.Id == link.Id);
-            persistedLink.TrainingId.Should().Be(training.Id);
-            persistedLink.ExerciseScoreId.Should().Be(score.Id);
+            Assert.That(persistedLink.TrainingId, Is.EqualTo(training.Id));
+            Assert.That(persistedLink.ExerciseScoreId, Is.EqualTo(score.Id));
         }
 
         using var history = await Client.PostAsJsonAsync($"/api/{owner.Id}/getTrainingByDate", new { createdAt = dayTime });
-        history.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(history.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var rows = await history.Content.ReadFromJsonAsync<JsonElement>();
         var row = rows.EnumerateArray().Single();
-        row.GetProperty("_id").GetString().Should().Be(training.Id.ToString());
-        row.GetProperty("type").GetString().Should().Be(day.Id.ToString());
-        row.GetProperty("planDay").GetProperty("name").GetString().Should().Be("Source day edited");
+        Assert.That(row.GetProperty("_id").GetString(), Is.EqualTo(training.Id.ToString()));
+        Assert.That(row.GetProperty("type").GetString(), Is.EqualTo(day.Id.ToString()));
+        Assert.That(row.GetProperty("planDay").GetProperty("name").GetString(), Is.EqualTo("Source day edited"));
         var historyExercise = row.GetProperty("exercises").EnumerateArray().Single();
-        historyExercise.GetProperty("exerciseScoreId").GetString().Should().Be(score.Id.ToString());
-        historyExercise.GetProperty("exerciseDetails").GetProperty("_id").GetString().Should().Be(exercise.Id.ToString());
-        historyExercise.GetProperty("scoresDetails").EnumerateArray().Single().GetProperty("weight").GetDouble().Should().Be(80);
+        Assert.That(historyExercise.GetProperty("exerciseScoreId").GetString(), Is.EqualTo(score.Id.ToString()));
+        Assert.That(historyExercise.GetProperty("exerciseDetails").GetProperty("_id").GetString(), Is.EqualTo(exercise.Id.ToString()));
+        Assert.That(historyExercise.GetProperty("scoresDetails").EnumerateArray().Single().GetProperty("weight").GetDouble(), Is.EqualTo(80));
     }
 }

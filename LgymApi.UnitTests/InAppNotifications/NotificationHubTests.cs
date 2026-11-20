@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using System.Security.Claims;
-using FluentAssertions;
 
 namespace LgymApi.UnitTests.InAppNotifications;
 
@@ -32,9 +31,9 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        context.AbortCalled.Should().BeFalse();
-        groups.AddCalls.Should().Be(1);
-        groups.LastGroupName.Should().Be($"user-{accountId}");
+        Assert.That(context.AbortCalled, Is.False);
+        Assert.That(groups.AddCalls, Is.EqualTo(1));
+        Assert.That(groups.LastGroupName, Is.EqualTo($"user-{accountId}"));
         await resolver.Received(1).ResolveAsync(accountId, sessionId, CancellationToken.None);
     }
 
@@ -53,8 +52,8 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        context.AbortCalled.Should().BeTrue();
-        groups.AddCalls.Should().Be(0);
+        Assert.That(context.AbortCalled, Is.True);
+        Assert.That(groups.AddCalls, Is.EqualTo(0));
         await resolver.DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default);
     }
 
@@ -75,8 +74,8 @@ public sealed class NotificationHubTests
 
         await hub.OnConnectedAsync();
 
-        context.AbortCalled.Should().BeTrue();
-        groups.AddCalls.Should().Be(0);
+        Assert.That(context.AbortCalled, Is.True);
+        Assert.That(groups.AddCalls, Is.EqualTo(0));
         await resolver.Received(1).ResolveAsync(accountId, invalidSessionId, CancellationToken.None);
     }
 

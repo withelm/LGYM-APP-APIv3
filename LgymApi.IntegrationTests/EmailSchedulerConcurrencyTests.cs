@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using LgymApi.Application.Features.TrainerRelationships;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -55,7 +54,7 @@ public sealed class EmailSchedulerConcurrencyTests : IntegrationTestBase
             .Where(n => n.CorrelationId == payload.CorrelationId)
             .ToListAsync();
 
-        notifications.Should().HaveCount(1);
+        Assert.That(notifications, Has.Exactly(1).Items);
     }
 
     private async Task<User> SeedTrainerAsync(string name = "trainer", string email = "trainer@example.com")

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -100,21 +99,19 @@ public sealed class UserServiceAuthTests
 
         var result = await _registrationService.RegisterAsync(new RegisterUserInput("new-user", " NEW@example.com ", "password123", "password123", null, null), cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        addedUser.Should().NotBeNull();
-        addedUser!.Email.Value.Should().Be("new@example.com");
-        addedUser.PreferredLanguage.Should().Be("en-US");
-        addedUser.PreferredTimeZone.Should().Be("UTC");
-        addedUser.IsVisibleInRanking.Should().BeTrue();
-        _roleRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(addedUser, Is.Not.Null);
+        Assert.That(addedUser!.Email.Value, Is.EqualTo("new@example.com"));
+        Assert.That(addedUser.PreferredLanguage, Is.EqualTo("en-US"));
+        Assert.That(addedUser.PreferredTimeZone, Is.EqualTo("UTC"));
+        Assert.That(addedUser.IsVisibleInRanking, Is.True);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.AddUserRolesAsync)
                 && call.Argument is ValueTuple<Id<User>, IReadOnlyCollection<Id<Role>>> arguments
                 && arguments.Item1 == addedUser.Id
                 && arguments.Item2.Single() == defaultRole.Id
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
         await _commandDispatcher.Received(1).EnqueueAsync(Arg.Is<UserRegisteredCommand>(command => command.UserId == addedUser.Id));
         await _tutorialService.Received(1).InitializeOnboardingTutorialAsync(addedUser.Id, cancellationToken);
         await _unitOfWork.Received(1).SaveChangesAsync(cancellationToken);
@@ -145,7 +142,7 @@ public sealed class UserServiceAuthTests
         var action = () => _registrationService.RegisterAsync(
             new RegisterUserInput("new-user", "new@example.com", "password123", "password123", true, null));
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("tutorial failed");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("tutorial failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _tutorialService.Received(1).InitializeOnboardingTutorialAsync(addedUser!.Id, Arg.Any<CancellationToken>());
     }
@@ -166,8 +163,8 @@ public sealed class UserServiceAuthTests
         var result = await _registrationService.RegisterAsync(
             new RegisterUserInput("new-user", "new@example.com", "password123", "password123", true, null));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeSameAs(tutorialError);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.SameAs(tutorialError));
     }
 
     [Test]
@@ -191,20 +188,19 @@ public sealed class UserServiceAuthTests
 
         var result = await _registrationService.RegisterTrainerAsync(new RegisterUserInput("trainer", "trainer@example.com", "password123", "password123", true, "pl-PL"));
 
-        result.IsSuccess.Should().BeTrue();
-        addedUser.Should().NotBeNull();
-        addedUser!.IsVisibleInRanking.Should().BeFalse();
-        addedUser.TrainerApplications.Should().ContainSingle()
-            .Which.Status.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
-        addedUser.PreferredLanguage.Should().Be("en-US");
-        _roleRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(addedUser, Is.Not.Null);
+        Assert.That(addedUser!.IsVisibleInRanking, Is.False);
+        var assertedValue179 = (addedUser.TrainerApplications).ToArray();
+        Assert.That(assertedValue179, Has.Exactly(1).Items);
+        Assert.That(assertedValue179.Single().Status, Is.EqualTo(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval));
+        Assert.That(addedUser.PreferredLanguage, Is.EqualTo("en-US"));
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.AddUserRolesAsync)
                 && call.Argument is ValueTuple<Id<User>, IReadOnlyCollection<Id<Role>>> arguments
                 && arguments.Item1 == addedUser.Id
-                && arguments.Item2.SequenceEqual(roles.Select(role => role.Id)))
-            .Should()
-            .ContainSingle();
+                && arguments.Item2.SequenceEqual(roles.Select(role => role.Id))), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -216,8 +212,8 @@ public sealed class UserServiceAuthTests
 
         var result = await _registrationService.RegisterAsync(new RegisterUserInput("new-user", "new@example.com", "password123", "password123", true, null));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InternalServerError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InternalServerError>());
         await _commandDispatcher.DidNotReceive().EnqueueAsync(Arg.Any<UserRegisteredCommand>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -244,27 +240,25 @@ public sealed class UserServiceAuthTests
 
         var result = await _credentialLoginService.LoginAsync(user.Name, "password123", cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Token.Should().Be("issued-token");
-        result.Value.PermissionClaims.Should().Equal(permissionClaims);
-        result.Value.User.Roles.Should().Equal(roles);
-        result.Value.User.PermissionClaims.Should().Equal(permissionClaims);
-        result.Value.User.PreferredTimeZone.Should().Be("UTC");
-        result.Value.User.Elo.Should().Be(1000);
-        result.Value.User.NextRank.Should().BeEquivalentTo(new RankInfo { Name = "Senior 1", NeedElo = 1500 });
-        result.Value.User.CreatedAt.Should().Be(user.CreatedAt.UtcDateTime);
-        result.Value.User.UpdatedAt.Should().Be(user.UpdatedAt.UtcDateTime);
-        result.Value.User.IsDeleted.Should().Be(user.IsDeleted);
-        result.Value.User.IsVisibleInRanking.Should().Be(user.IsVisibleInRanking);
-        result.Value.User.HasActiveTutorials.Should().BeTrue();
-        _userSessionStore.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Token, Is.EqualTo("issued-token"));
+        Assert.That(result.Value.PermissionClaims, Is.EqualTo(permissionClaims));
+        Assert.That(result.Value.User.Roles, Is.EqualTo(roles));
+        Assert.That(result.Value.User.PermissionClaims, Is.EqualTo(permissionClaims));
+        Assert.That(result.Value.User.PreferredTimeZone, Is.EqualTo("UTC"));
+        Assert.That(result.Value.User.Elo, Is.EqualTo(1000));
+        Assert.That(result.Value.User.NextRank, Is.EqualTo(new RankInfo { Name = "Senior 1", NeedElo = 1500 }).UsingPropertiesComparer());
+        Assert.That(result.Value.User.CreatedAt, Is.EqualTo(user.CreatedAt.UtcDateTime));
+        Assert.That(result.Value.User.UpdatedAt, Is.EqualTo(user.UpdatedAt.UtcDateTime));
+        Assert.That(result.Value.User.IsDeleted, Is.EqualTo(user.IsDeleted));
+        Assert.That(result.Value.User.IsVisibleInRanking, Is.EqualTo(user.IsVisibleInRanking));
+        Assert.That(result.Value.User.HasActiveTutorials, Is.True);
+        Assert.That(_userSessionStore.Calls
             .Where(call =>
                 call.Method == nameof(IUserSessionStore.CreateSessionAsync)
                 && call.Argument is ValueTuple<Id<User>, DateTimeOffset> arguments
                 && arguments.Item1 == user.Id
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
         await _unitOfWork.Received(1).SaveChangesAsync(cancellationToken);
     }
 
@@ -278,9 +272,9 @@ public sealed class UserServiceAuthTests
 
         var result = await _credentialLoginService.LoginTrainerAsync(user.Name, "password123");
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserUnauthorizedError>();
-        _userSessionStore.Calls.Should().NotContain(call => call.Method == nameof(IUserSessionStore.CreateSessionAsync));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserUnauthorizedError>());
+        Assert.That((_userSessionStore.Calls).Any(call => call.Method == nameof(IUserSessionStore.CreateSessionAsync)), Is.False);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,24 +29,24 @@ public sealed class TrainerAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/trainer/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "trainer-one");
-        user.Should().NotBeNull();
+        Assert.That(user, Is.Not.Null);
 
         var roleNames = await db.UserRoles
             .Where(ur => ur.UserId == user!.Id)
             .Select(ur => ur.Role.Name)
             .ToListAsync();
 
-        roleNames.Should().BeEquivalentTo(ExpectedTrainerRoles);
+        Assert.That(roleNames, Is.EquivalentTo(ExpectedTrainerRoles).UsingPropertiesComparer());
         var application = await db.TrainerApplications.SingleAsync(item => item.ApplicantId == user!.Id);
-        application.Status.Should().Be(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval);
-        application.CreatedAt.Should().NotBe(default);
-        (await db.UserSessions.CountAsync()).Should().Be(0);
+        Assert.That(application.Status, Is.EqualTo(LgymApi.Domain.Enums.TrainerApprovalStatus.PendingApproval));
+        Assert.That(application.CreatedAt, Is.Not.EqualTo(default(DateTimeOffset)));
+        Assert.That((await db.UserSessions.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -73,7 +72,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var applicant = await db.Users.SingleAsync(user => user.Name == "trainer-auth");
             var approval = await Client.PostAsync($"/api/admin/users/{applicant.Id}/trainer-application/approve", null);
-            approval.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(approval.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         ClearAuthorizationHeader();
 
@@ -83,15 +82,15 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             password = "password123"
         });
 
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        loginBody.Should().NotBeNull();
-        loginBody!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(loginBody, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(loginBody!.Token), Is.False);
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody.Token);
 
         var response = await Client.GetAsync("/api/trainer/checkToken");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -102,7 +101,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/trainer/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -116,7 +115,7 @@ public sealed class TrainerAuthTests : IntegrationTestBase
             password = "password123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private sealed class LoginResponse

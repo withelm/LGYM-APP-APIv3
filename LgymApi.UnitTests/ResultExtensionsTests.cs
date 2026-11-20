@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Extensions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Application.BuildingBlocks.Errors;
@@ -20,8 +19,8 @@ public sealed class ResultExtensionsTests
 
         var actionResult = result.ToActionResult();
 
-        actionResult.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)actionResult).Value.Should().Be(42);
+        Assert.That(actionResult, Is.TypeOf<OkObjectResult>());
+        Assert.That(((OkObjectResult)actionResult).Value, Is.EqualTo(42));
     }
 
     [Test]
@@ -32,10 +31,10 @@ public sealed class ResultExtensionsTests
 
         var actionResult = result.ToActionResult();
 
-        actionResult.Should().BeOfType<ObjectResult>();
+        Assert.That(actionResult, Is.TypeOf<ObjectResult>());
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(400);
-        objectResult.Value.Should().Be(payload);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(400));
+        Assert.That(objectResult.Value, Is.EqualTo(payload));
     }
 
     [Test]
@@ -46,11 +45,11 @@ public sealed class ResultExtensionsTests
 
         var actionResult = result.ToActionResult();
 
-        actionResult.Should().BeOfType<ObjectResult>();
+        Assert.That(actionResult, Is.TypeOf<ObjectResult>());
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(404);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>();
-        ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(404));
+        Assert.That(objectResult.Value, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
     }
 
     [Test]
@@ -60,7 +59,7 @@ public sealed class ResultExtensionsTests
 
         var actionResult = result.ToActionResult();
 
-        actionResult.Should().BeOfType<OkResult>();
+        Assert.That(actionResult, Is.TypeOf<OkResult>());
     }
 
     [Test]
@@ -71,10 +70,10 @@ public sealed class ResultExtensionsTests
 
         var actionResult = result.ToActionResult();
 
-        actionResult.Should().BeOfType<ObjectResult>();
+        Assert.That(actionResult, Is.TypeOf<ObjectResult>());
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(403);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>();
-        ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(403));
+        Assert.That(objectResult.Value, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
     }
 }

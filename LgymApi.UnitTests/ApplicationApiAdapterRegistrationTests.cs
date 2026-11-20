@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Hangfire.Logging;
 using LgymApi.Application;
 using LgymApi.Application.Coaching.ApiAdapters;
@@ -115,11 +114,11 @@ public sealed class ApplicationApiAdapterRegistrationTests
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .ToArray();
 
-        discoveredContracts.Should().Equal(ExpectedRegistrations.Keys.OrderBy(type => type.FullName, StringComparer.Ordinal));
-        ExpectedApplicationRegistrations.Should().HaveCount(19);
-        ExpectedReportingRegistrations.Should().HaveCount(8);
-        ExpectedNotificationsApiRegistrations.Should().HaveCount(3);
-        ExpectedRegistrations.Should().HaveCount(30);
+        Assert.That(discoveredContracts, Is.EqualTo(ExpectedRegistrations.Keys.OrderBy(type => type.FullName, StringComparer.Ordinal)));
+        Assert.That(ExpectedApplicationRegistrations, Has.Exactly(19).Items);
+        Assert.That(ExpectedReportingRegistrations, Has.Exactly(8).Items);
+        Assert.That(ExpectedNotificationsApiRegistrations, Has.Exactly(3).Items);
+        Assert.That(ExpectedRegistrations, Has.Exactly(30).Items);
     }
 
     [TestCase(true)]
@@ -154,8 +153,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
 
         var action = () => AssertExpectedApiAdapters(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*IAppConfigApiAdapter*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*IAppConfigApiAdapter*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -170,8 +168,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
 
         var action = () => AssertExpectedApiAdapters(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ITrainerInvitationApiPort*exactly once; actual count is 0*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*ITrainerInvitationApiPort*exactly once; actual count is 0*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -185,8 +182,7 @@ public sealed class ApplicationApiAdapterRegistrationTests
 
         var action = () => AssertExpectedApiAdapters(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*IAppConfigApiAdapter*lifetime 'Scoped'*Singleton*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*IAppConfigApiAdapter*lifetime 'Scoped'*Singleton*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -196,12 +192,9 @@ public sealed class ApplicationApiAdapterRegistrationTests
         services.AddNotificationsModule();
 
         AssertRetainedNotificationsIntegrationAdapters(services);
-        typeof(PushInstallationSessionDisassociationAdapter).GetInterfaces().Should().BeEquivalentTo(
-            new[] { typeof(IAccountSessionDisassociationPort) });
-        typeof(CoachingEmailNotificationSchedulerAdapter).GetInterfaces().Should().BeEquivalentTo(
-            new[] { typeof(ICoachingEmailNotificationFeature), typeof(ICoachingEmailNotificationScheduler) });
-        typeof(PasswordRecoveryEmailSchedulerAdapter).GetInterfaces().Should().BeEquivalentTo(
-            new[] { typeof(IPasswordRecoveryEmailScheduler) });
+        Assert.That(typeof(PushInstallationSessionDisassociationAdapter).GetInterfaces(), Is.EquivalentTo(new[] { typeof(IAccountSessionDisassociationPort) }));
+        Assert.That(typeof(CoachingEmailNotificationSchedulerAdapter).GetInterfaces(), Is.EquivalentTo(new[] { typeof(ICoachingEmailNotificationFeature), typeof(ICoachingEmailNotificationScheduler) }));
+        Assert.That(typeof(PasswordRecoveryEmailSchedulerAdapter).GetInterfaces(), Is.EquivalentTo(new[] { typeof(IPasswordRecoveryEmailScheduler) }));
     }
 
     private static void AssertExpectedApiAdapters(IServiceCollection services)
@@ -220,8 +213,8 @@ public sealed class ApplicationApiAdapterRegistrationTests
                     $"API adapter '{expected.Key.FullName}' must use lifetime '{ServiceLifetime.Scoped}'; actual lifetime is '{descriptors[0].Lifetime}'.");
             }
 
-            descriptors[0].ImplementationType.Should().Be(expected.Value, expected.Key.FullName);
-            descriptors[0].ImplementationType!.IsNotPublic.Should().BeTrue(expected.Key.FullName);
+            Assert.That(descriptors[0].ImplementationType, Is.EqualTo(expected.Value), expected.Key.FullName);
+            Assert.That(descriptors[0].ImplementationType!.IsNotPublic, Is.True, expected.Key.FullName);
         }
     }
 
@@ -237,13 +230,13 @@ public sealed class ApplicationApiAdapterRegistrationTests
     {
         foreach (var expected in ExpectedRegistrations)
         {
-            serviceProvider.GetRequiredService(expected.Key).GetType().Should().Be(expected.Value, expected.Key.FullName);
+            Assert.That(serviceProvider.GetRequiredService(expected.Key).GetType(), Is.EqualTo(expected.Value), expected.Key.FullName);
         }
 
-        serviceProvider.GetRequiredService<IAccountSessionDisassociationPort>().Should().BeOfType<PushInstallationSessionDisassociationAdapter>();
-        serviceProvider.GetRequiredService<ICoachingEmailNotificationFeature>().Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
-        serviceProvider.GetRequiredService<ICoachingEmailNotificationScheduler>().Should().BeOfType<CoachingEmailNotificationSchedulerAdapter>();
-        serviceProvider.GetRequiredService<IPasswordRecoveryEmailScheduler>().Should().BeOfType<PasswordRecoveryEmailSchedulerAdapter>();
+        Assert.That(serviceProvider.GetRequiredService<IAccountSessionDisassociationPort>(), Is.TypeOf<PushInstallationSessionDisassociationAdapter>());
+        Assert.That(serviceProvider.GetRequiredService<ICoachingEmailNotificationFeature>(), Is.TypeOf<CoachingEmailNotificationSchedulerAdapter>());
+        Assert.That(serviceProvider.GetRequiredService<ICoachingEmailNotificationScheduler>(), Is.TypeOf<CoachingEmailNotificationSchedulerAdapter>());
+        Assert.That(serviceProvider.GetRequiredService<IPasswordRecoveryEmailScheduler>(), Is.TypeOf<PasswordRecoveryEmailSchedulerAdapter>());
     }
 
     private static void AssertKnownMultiRegistrations(IServiceCollection services)

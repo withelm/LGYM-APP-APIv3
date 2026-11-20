@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -21,14 +20,14 @@ public sealed class IdempotencyKeyPolicyTests
         var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id.ToString());
         var k2 = IdempotencyKeyPolicy.CalculateKey(id.ToString());
-        k1.Should().Be(k2);
+        Assert.That(k1, Is.EqualTo(k2));
     }
 
     [Test]
     public void CalculateKey_WithEmptyCorrelationId_Throws()
     {
         var action = () => IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.Empty.ToString());
-        action.Should().Throw<ArgumentException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -36,7 +35,7 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New().ToString());
         var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New().ToString());
-        k1.Should().NotBe(k2);
+        Assert.That(k1, Is.Not.EqualTo(k2));
     }
 
     [Test]
@@ -45,7 +44,7 @@ public sealed class IdempotencyKeyPolicyTests
         var id = Id<CorrelationScope>.New();
         var k1 = IdempotencyKeyPolicy.CalculateKey(id.ToString());
         var k2 = IdempotencyKeyPolicy.CalculateKey(id.ToString());
-        IdempotencyKeyPolicy.AreKeysEqual(k1, k2).Should().BeTrue();
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.True);
     }
 
     [Test]
@@ -53,21 +52,21 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New().ToString());
         var k2 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New().ToString());
-        IdempotencyKeyPolicy.AreKeysEqual(k1, k2).Should().BeFalse();
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, k2), Is.False);
     }
 
     [Test]
     public void AreKeysEqual_NullKeys_True()
     {
-        IdempotencyKeyPolicy.AreKeysEqual(null, null).Should().BeTrue();
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(null, null), Is.True);
     }
 
     [Test]
     public void AreKeysEqual_OneNullKey_False()
     {
         var k1 = IdempotencyKeyPolicy.CalculateKey(Id<CorrelationScope>.New().ToString());
-        IdempotencyKeyPolicy.AreKeysEqual(k1, null).Should().BeFalse();
-        IdempotencyKeyPolicy.AreKeysEqual(null, k1).Should().BeFalse();
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(k1, null), Is.False);
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(null, k1), Is.False);
     }
 
     [Test]
@@ -75,7 +74,7 @@ public sealed class IdempotencyKeyPolicyTests
     {
         var id = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id.ToString());
-        IdempotencyKeyPolicy.IsKeyForCorrelation(key, id.ToString()).Should().BeTrue();
+        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id.ToString()), Is.True);
     }
 
     [Test]
@@ -84,14 +83,14 @@ public sealed class IdempotencyKeyPolicyTests
         var id1 = Id<CorrelationScope>.New();
         var id2 = Id<CorrelationScope>.New();
         var key = IdempotencyKeyPolicy.CalculateKey(id1.ToString());
-        IdempotencyKeyPolicy.IsKeyForCorrelation(key, id2.ToString()).Should().BeFalse();
+        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(key, id2.ToString()), Is.False);
     }
 
     [Test]
     public void IsKeyForCorrelation_WithNullKey_ReturnsFalse()
     {
         var id = Id<CorrelationScope>.New();
-        IdempotencyKeyPolicy.IsKeyForCorrelation(null, id.ToString()).Should().BeFalse();
+        Assert.That(IdempotencyKeyPolicy.IsKeyForCorrelation(null, id.ToString()), Is.False);
     }
 
     [Test]
@@ -109,7 +108,7 @@ public sealed class IdempotencyKeyPolicyTests
         await r.AddAsync(e);
         await ctx.SaveChangesAsync();
         var f = await r.FindByCorrelationIdAsync(cid);
-        f.Should().NotBeNull();
+        Assert.That(f, Is.Not.Null);
     }
 
     [Test]
@@ -127,7 +126,7 @@ public sealed class IdempotencyKeyPolicyTests
         await r.AddAsync(e);
         await ctx.SaveChangesAsync();
         var f = await r.FindByCorrelationIdAsync(cid);
-        f.Should().NotBeNull();
+        Assert.That(f, Is.Not.Null);
     }
 
     [Test]
@@ -146,9 +145,9 @@ public sealed class IdempotencyKeyPolicyTests
         await ctx.SaveChangesAsync();
         var e2 = new CommandEnvelope { CorrelationId = cid, PayloadJson = "{\"b\": 2}", CommandTypeFullName = "T", Status = ActionExecutionStatus.Pending };
         var res = await r.AddOrGetExistingAsync(e2);
-        res.PayloadJson.Should().Be("{\"a\": 1}");
+        Assert.That(res.PayloadJson, Is.EqualTo("{\"a\": 1}"));
         var all = await ctx.CommandEnvelopes.ToListAsync();
-        all.Count.Should().Be(1);
+        Assert.That(all.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -182,15 +181,15 @@ public sealed class IdempotencyKeyPolicyTests
         });
 
         var ress = await Task.WhenAll(t1, t2);
-        ress[0].CorrelationId.Should().Be(cid);
-        ress[1].CorrelationId.Should().Be(cid);
+        Assert.That(ress[0].CorrelationId, Is.EqualTo(cid));
+        Assert.That(ress[1].CorrelationId, Is.EqualTo(cid));
 
         var opts_final = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
         using var ctx_final = new AppDbContext(opts_final);
         var all = await ctx_final.CommandEnvelopes.ToListAsync();
-        all.Count.Should().Be(1);
+        Assert.That(all.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -211,7 +210,7 @@ public sealed class IdempotencyKeyPolicyTests
         await r.AddAsync(e2);
         await ctx.SaveChangesAsync();
         var all = await ctx.CommandEnvelopes.ToListAsync();
-        all.Count.Should().Be(2);
+        Assert.That(all.Count, Is.EqualTo(2));
     }
 
     [Test]
@@ -252,11 +251,13 @@ public sealed class IdempotencyKeyPolicyTests
 
         var recovered = await repository.TryRecoverDuplicateAsync(failedInsert, new DbUpdateException());
 
-        recovered.Should().NotBeNull();
-        recovered!.Id.Should().Be(winner.Id);
-        context.Entry(failedInsert).State.Should().Be(EntityState.Detached);
+        Assert.That(recovered, Is.Not.Null);
+        Assert.That(recovered!.Id, Is.EqualTo(winner.Id));
+        Assert.That(context.Entry(failedInsert).State, Is.EqualTo(EntityState.Detached));
         await context.SaveChangesAsync();
-        (await context.ApiIdempotencyRecords.ToListAsync()).Should().ContainSingle().Which.Id.Should().Be(winner.Id);
+        var assertedValue112 = ((await context.ApiIdempotencyRecords.ToListAsync())).ToArray();
+        Assert.That(assertedValue112, Has.Exactly(1).Items);
+        Assert.That(assertedValue112.Single().Id, Is.EqualTo(winner.Id));
     }
 
     private sealed class DuplicateScopeAndKeyFailureClassifier : IApiIdempotencyRecordDuplicateFailureClassifier

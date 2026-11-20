@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -107,9 +106,9 @@ public sealed class TypedIdEfTests : IntegrationTestBase
         var found = await dbContext.TestEntities.FindAsync(testId);
 
         // Assert
-        found.Should().NotBeNull("entity should be found by typed ID");
-        found!.Id.Should().Be(testId, "typed ID should match");
-        found.Name.Should().Be("Find Test Entity");
+        Assert.That(found, Is.Not.Null, "entity should be found by typed ID");
+        Assert.That(found!.Id, Is.EqualTo(testId), "typed ID should match");
+        Assert.That(found.Name, Is.EqualTo("Find Test Entity"));
     }
 
     /// <summary>
@@ -135,9 +134,9 @@ public sealed class TypedIdEfTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Id == targetId);
 
         // Assert
-        found.Should().NotBeNull("entity should be found by typed ID in Where clause");
-        found!.Id.Should().Be(targetId);
-        found.Name.Should().Be("Target Entity");
+        Assert.That(found, Is.Not.Null, "entity should be found by typed ID in Where clause");
+        Assert.That(found!.Id, Is.EqualTo(targetId));
+        Assert.That(found.Name, Is.EqualTo("Target Entity"));
     }
 
     /// <summary>
@@ -171,9 +170,9 @@ public sealed class TypedIdEfTests : IntegrationTestBase
             .ToListAsync();
 
         // Assert
-        matching.Should().HaveCount(2, "both targeted entities should match");
-        matching[0].Name.Should().Be("Entity A");
-        matching[1].Name.Should().Be("Entity C");
+        Assert.That(matching, Has.Exactly(2).Items, "both targeted entities should match");
+        Assert.That(matching[0].Name, Is.EqualTo("Entity A"));
+        Assert.That(matching[1].Name, Is.EqualTo("Entity C"));
     }
 
     /// <summary>
@@ -204,8 +203,8 @@ public sealed class TypedIdEfTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Id == testId);
 
         // Assert
-        loaded.Should().NotBeNull("entity should persist and reload");
-        loaded!.RelatedId.Should().BeNull("nullable typed FK should remain null via NullableTypedIdValueConverter");
+        Assert.That(loaded, Is.Not.Null, "entity should persist and reload");
+        Assert.That(loaded!.RelatedId, Is.Null, "nullable typed FK should remain null via NullableTypedIdValueConverter");
     }
 
     /// <summary>
@@ -240,8 +239,8 @@ public sealed class TypedIdEfTests : IntegrationTestBase
             .FirstOrDefaultAsync(e => e.Id == testId);
 
         // Assert
-        loaded.Should().NotBeNull("entity should persist and reload");
-        loaded!.RelatedId.Should().Be(relatedId, "nullable typed FK should preserve value via NullableTypedIdValueConverter");
+        Assert.That(loaded, Is.Not.Null, "entity should persist and reload");
+        Assert.That(loaded!.RelatedId, Is.EqualTo(relatedId), "nullable typed FK should preserve value via NullableTypedIdValueConverter");
     }
 }
 

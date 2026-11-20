@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using LgymApi.Domain.Enums;
 
@@ -51,7 +50,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var query = adapter.Adapt(input);
 
-        query.Should().Be("(status=active&age>18&(role=coach|role=trainer)&createdAt<=2026-04-05T10:15:00.0000000Z)");
+        Assert.That(query, Is.EqualTo("(status=active&age>18&(role=coach|role=trainer)&createdAt<=2026-04-05T10:15:00.0000000Z)"));
     }
 
     [Test]
@@ -80,8 +79,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Operator 'Contains' is not allowed for field 'age'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Operator 'Contains' is not allowed for field 'age'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -110,8 +108,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Filter field 'unknownField' is not allowed.*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Filter field 'unknownField' is not allowed.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -119,8 +116,7 @@ public sealed class GridifyPaginationFilterValidationTests
     {
         var act = () => new FilterToGridifyAdapterTestFactoryProxy().CreateWithInvalidFieldName();
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*is not a valid Gridify field name.*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*is not a valid Gridify field name.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -149,8 +145,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*requires at least one value*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*requires at least one value*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -179,8 +174,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Value 'eighteen' is not valid for field 'age'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Value 'eighteen' is not valid for field 'age'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -209,7 +203,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var query = adapter.Adapt(input);
 
-        query.Should().Be("invitationStatus=Pending");
+        Assert.That(query, Is.EqualTo("invitationStatus=Pending"));
     }
 
     [Test]
@@ -238,8 +232,7 @@ public sealed class GridifyPaginationFilterValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Value 'NotAStatus' is not valid for field 'invitationStatus'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Value 'NotAStatus' is not valid for field 'invitationStatus'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private sealed class FilterToGridifyAdapterTestFactoryProxy

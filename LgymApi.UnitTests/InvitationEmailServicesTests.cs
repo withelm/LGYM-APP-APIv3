@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -44,11 +43,11 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        repository.Added.Should().HaveCount(1);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(1);
-        metrics.Retried.Should().Be(0);
+        Assert.That(repository.Added, Has.Exactly(1).Items);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(1));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -87,10 +86,10 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        repository.Added.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -118,11 +117,11 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        repository.Added.Should().BeEmpty();
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -163,9 +162,9 @@ public sealed class InvitationEmailServicesTests
             CultureName = "en-US"
         });
 
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(1);
-        metrics.Retried.Should().Be(0);
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(1));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -193,11 +192,11 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id.ToString())).Should().ThrowAsync<InvalidOperationException>();
-        notification.Status.Should().Be(EmailNotificationStatus.Failed);
-        notification.LastError.Should().StartWith("InvalidOperationException");
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        metrics.Failed.Should().Be(1);
+        await Assert.ThatAsync(async () => { await handler.ProcessAsync(notification.Id.ToString()); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(metrics.Failed, Is.EqualTo(1));
     }
 
     [Test]
@@ -228,12 +227,12 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        sender.SendCalls.Should().Be(0);
-        notification.Attempts.Should().Be(2);
-        metrics.Sent.Should().Be(0);
-        metrics.Failed.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(notification.Attempts, Is.EqualTo(2));
+        Assert.That(metrics.Sent, Is.EqualTo(0));
+        Assert.That(metrics.Failed, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -264,13 +263,13 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        sender.SendCalls.Should().Be(1);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        notification.Status.Should().Be(EmailNotificationStatus.Sent);
-        notification.SentAt.Should().NotBeNull();
-        metrics.Sent.Should().Be(0);
-        metrics.Failed.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+        Assert.That(notification.SentAt, Is.Not.Null);
+        Assert.That(metrics.Sent, Is.EqualTo(0));
+        Assert.That(metrics.Failed, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -302,11 +301,11 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        logger.CriticalMessages.Should().ContainSingle();
-        logger.CriticalMessages[0].Should().Contain("delivered successfully but persisting Sent status failed");
-        sender.SendCalls.Should().Be(1);
-        metrics.Sent.Should().Be(0);
-        metrics.Failed.Should().Be(0);
+        Assert.That(logger.CriticalMessages, Has.Exactly(1).Items);
+        Assert.That(logger.CriticalMessages[0], Does.Contain("delivered successfully but persisting Sent status failed"));
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(metrics.Sent, Is.EqualTo(0));
+        Assert.That(metrics.Failed, Is.EqualTo(0));
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository
@@ -540,10 +539,10 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        sender.SendCalls.Should().Be(1);
-        metrics.Retried.Should().Be(1);
-        metrics.Sent.Should().Be(1);
-        logger.InformationMessages.Should().Contain(m => m.Contains("Retrying"));
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(metrics.Retried, Is.EqualTo(1));
+        Assert.That(metrics.Sent, Is.EqualTo(1));
+        Assert.That((logger.InformationMessages).Any(m => m.Contains("Retrying")), Is.True);
     }
 
     [Test]
@@ -574,11 +573,11 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        notification.Status.Should().Be(EmailNotificationStatus.Failed);
-        notification.LastError.Should().Be("Email sender is disabled.");
-        sender.SendCalls.Should().Be(1);
-        metrics.Failed.Should().Be(1);
-        metrics.Sent.Should().Be(0);
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        Assert.That(notification.LastError, Is.EqualTo("Email sender is disabled."));
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(metrics.Failed, Is.EqualTo(1));
+        Assert.That(metrics.Sent, Is.EqualTo(0));
     }
 
     [Test]
@@ -610,9 +609,9 @@ public sealed class InvitationEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        sender.SendCalls.Should().Be(1);
-        metrics.Sent.Should().Be(1);
-        logger.WarningMessages.Should().ContainSingle();
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(metrics.Sent, Is.EqualTo(1));
+        Assert.That(logger.WarningMessages, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -641,11 +640,11 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id.ToString())).Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await handler.ProcessAsync(notification.Id.ToString()); }, Throws.InstanceOf<InvalidOperationException>());
 
-        notification.Status.Should().Be(EmailNotificationStatus.Failed);
-        notification.LastError.Should().StartWith("InvalidOperationException");
-        metrics.Failed.Should().Be(1);
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
+        Assert.That(metrics.Failed, Is.EqualTo(1));
     }
 
     [Test]
@@ -673,12 +672,14 @@ public sealed class InvitationEmailServicesTests
             metrics,
             NullLogger<EmailJobHandlerService>.Instance);
 
-        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id.ToString())).Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await handler.ProcessAsync(notification.Id.ToString()); }, Throws.InstanceOf<InvalidOperationException>());
 
-        notification.Status.Should().Be(EmailNotificationStatus.Failed);
-        notification.LastError.Should().NotContain("\r").And.NotContain("\n");
-        notification.LastError!.Length.Should().BeLessThanOrEqualTo(400);
-        notification.LastError.Should().Contain("First line");
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        var assertedChain44 = notification.LastError;
+        Assert.That(assertedChain44, Does.Not.Contain("\r"));
+        Assert.That(assertedChain44, Does.Not.Contain("\n"));
+        Assert.That(notification.LastError!.Length, Is.LessThanOrEqualTo(400));
+        Assert.That(notification.LastError, Does.Contain("First line"));
     }
 
     private sealed class DisabledEmailSender : IEmailSender

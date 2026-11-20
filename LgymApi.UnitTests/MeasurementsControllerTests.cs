@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Measurements.Controllers;
 using LgymApi.Api.Features.Measurements.Contracts;
@@ -30,7 +29,7 @@ public sealed class MeasurementsControllerTests
 
         await controller.GetMeasurementDetail("not-a-guid");
 
-        service.LastMeasurementId.Should().Be(Id<LgymApi.Domain.Entities.Measurement>.Empty);
+        Assert.That(service.LastMeasurementId, Is.EqualTo(Id<LgymApi.Domain.Entities.Measurement>.Empty));
     }
 
     [Test]
@@ -45,7 +44,7 @@ public sealed class MeasurementsControllerTests
             Unit = MeasurementUnits.Kilograms
         });
 
-        service.LastRouteAccountId.Should().Be(Id<AccountReference>.Empty);
+        Assert.That(service.LastRouteAccountId, Is.EqualTo(Id<AccountReference>.Empty));
     }
 
     [Test]
@@ -56,7 +55,7 @@ public sealed class MeasurementsControllerTests
 
         await controller.GetMeasurementsTrends("invalid");
 
-        service.LastRouteAccountId.Should().Be(Id<AccountReference>.Empty);
+        Assert.That(service.LastRouteAccountId, Is.EqualTo(Id<AccountReference>.Empty));
     }
 
     [Test]
@@ -74,10 +73,10 @@ public sealed class MeasurementsControllerTests
             ]
         });
 
-        service.LastBulkMeasurements.Should().HaveCount(2);
-        service.LastCurrentAccount?.Id.Should().NotBe(Id<AccountReference>.Empty);
-        service.LastBulkMeasurements[0].BodyPart.Should().Be(BodyParts.BodyWeight);
-        service.LastBulkMeasurements[1].BodyPart.Should().Be(BodyParts.Waist);
+        Assert.That(service.LastBulkMeasurements, Has.Exactly(2).Items);
+        Assert.That(service.LastCurrentAccount?.Id, Is.Not.EqualTo(Id<AccountReference>.Empty));
+        Assert.That(service.LastBulkMeasurements[0].BodyPart, Is.EqualTo(BodyParts.BodyWeight));
+        Assert.That(service.LastBulkMeasurements[1].BodyPart, Is.EqualTo(BodyParts.Waist));
     }
 
     private static MeasurementsController CreateController(StubMeasurementsService service)

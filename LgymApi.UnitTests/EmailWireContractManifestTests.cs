@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -63,15 +62,15 @@ public sealed class EmailWireContractManifestTests
     {
         var action = () => Validate(ExpectedPayloads);
 
-        action.Should().NotThrow();
-        typeof(IEmailPayload).Assembly.GetName().Name.Should().Be("LgymApi.BackgroundWorker.Common");
+        Assert.That(() => { action(); }, Throws.Nothing);
+        Assert.That(typeof(IEmailPayload).Assembly.GetName().Name, Is.EqualTo("LgymApi.BackgroundWorker.Common"));
         foreach (var contract in ExpectedPayloads)
         {
-            contract.PayloadType.Assembly.Should().BeSameAs(typeof(IEmailPayload).Assembly);
-            contract.PayloadType.Namespace.Should().Be("LgymApi.BackgroundWorker.Common.Notifications.Models");
-            contract.PayloadType.IsPublic.Should().BeTrue();
-            contract.PayloadType.IsSealed.Should().BeTrue();
-            contract.PayloadType.Should().Implement<IEmailPayload>();
+            Assert.That(contract.PayloadType.Assembly, Is.SameAs(typeof(IEmailPayload).Assembly));
+            Assert.That(contract.PayloadType.Namespace, Is.EqualTo("LgymApi.BackgroundWorker.Common.Notifications.Models"));
+            Assert.That(contract.PayloadType.IsPublic, Is.True);
+            Assert.That(contract.PayloadType.IsSealed, Is.True);
+            Assert.That((contract.PayloadType).GetInterfaces(), Does.Contain(typeof(IEmailPayload)));
         }
     }
 
@@ -95,34 +94,23 @@ public sealed class EmailWireContractManifestTests
             .. ExpectedPayloads[1..]
         ]);
 
-        missing.Should().Throw<InvalidOperationException>()
-            .WithMessage("The Common email wire must contain exactly six payload types.");
-        alteredType.Should().Throw<InvalidOperationException>()
-            .WithMessage("The Common email payload type manifest was altered.");
-        alteredSchema.Should().Throw<InvalidOperationException>()
-            .WithMessage("Common email payload schema mismatch for '*'.");
+        Assert.That(() => { missing(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("The Common email wire must contain exactly six payload types.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { alteredType(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("The Common email payload type manifest was altered.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { alteredSchema(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Common email payload schema mismatch for '*'.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
     public void CommonEmailMessage_AndIdempotencyKeyRemainStable()
     {
-        GetWritableProperties(typeof(EmailMessage)).Should().BeEquivalentTo(
-        [
-            new PropertyContract("To", typeof(string)),
-            new PropertyContract("Subject", typeof(string)),
-            new PropertyContract("Body", typeof(string)),
-            new PropertyContract("IsHtml", typeof(bool))
-        ]);
-        Id<CorrelationScope>.TryParse("11111111-1111-1111-1111-111111111111", out var correlationId)
-            .Should().BeTrue();
-        IdempotencyKeyPolicy.CalculateKey(correlationId.ToString())
-            .Should().Be("11111111-1111-1111-1111-111111111111");
-        IdempotencyKeyPolicy.AreKeysEqual(
+        Assert.That(GetWritableProperties(typeof(EmailMessage)), Is.EquivalentTo(new[] { new PropertyContract("To", typeof(string)), new PropertyContract("Subject", typeof(string)), new PropertyContract("Body", typeof(string)), new PropertyContract("IsHtml", typeof(bool)) }));
+        Assert.That(Id<CorrelationScope>.TryParse("11111111-1111-1111-1111-111111111111", out var correlationId), Is.True);
+        Assert.That(IdempotencyKeyPolicy.CalculateKey(correlationId.ToString()), Is.EqualTo("11111111-1111-1111-1111-111111111111"));
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(
             "11111111-1111-1111-1111-111111111111",
-            "11111111-1111-1111-1111-111111111111").Should().BeTrue();
-        IdempotencyKeyPolicy.AreKeysEqual(
+            "11111111-1111-1111-1111-111111111111"), Is.True);
+        Assert.That(IdempotencyKeyPolicy.AreKeysEqual(
             "11111111-1111-1111-1111-111111111111",
-            "11111111-1111-1111-1111-11111111111A").Should().BeFalse();
+            "11111111-1111-1111-1111-11111111111A"), Is.False);
     }
 
     private static void Validate(IReadOnlyList<EmailPayloadContract> contracts)

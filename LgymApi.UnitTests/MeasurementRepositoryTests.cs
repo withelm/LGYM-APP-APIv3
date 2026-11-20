@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -23,8 +22,8 @@ public sealed class MeasurementRepositoryTests
 
         var found = await repository.FindByIdAsync(measurement.Id);
 
-        found.Should().NotBeNull();
-        found!.Id.Should().Be(measurement.Id);
+        Assert.That(found, Is.Not.Null);
+        Assert.That(found!.Id, Is.EqualTo(measurement.Id));
     }
 
     [Test]
@@ -42,8 +41,10 @@ public sealed class MeasurementRepositoryTests
         var all = await repository.GetByUserAsync(userId, null);
         var chestOnly = await repository.GetByUserAsync(userId, BodyParts.Chest);
 
-        all.Should().HaveCount(2);
-        chestOnly.Should().ContainSingle().Which.BodyPart.Should().Be(BodyParts.Chest);
+        Assert.That(all, Has.Exactly(2).Items);
+        var assertedValue130 = (chestOnly).ToArray();
+        Assert.That(assertedValue130, Has.Exactly(1).Items);
+        Assert.That(assertedValue130.Single().BodyPart, Is.EqualTo(BodyParts.Chest));
     }
 
     [Test]
@@ -54,7 +55,7 @@ public sealed class MeasurementRepositoryTests
 
         var existing = await repository.GetExistingBodyPartsByUserAndCreatedAtRangeAsync(Id<User>.New(), [], DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow);
 
-        existing.Should().BeEmpty();
+        Assert.That(existing, Is.Empty);
     }
 
     [Test]
@@ -75,7 +76,7 @@ public sealed class MeasurementRepositoryTests
 
         var existing = await repository.GetExistingBodyPartsByUserAndCreatedAtRangeAsync(userId, [BodyParts.Chest, BodyParts.Waist, BodyParts.Biceps], from, to);
 
-        existing.Should().BeEquivalentTo([BodyParts.Chest, BodyParts.Waist]);
+        Assert.That(existing, Is.EquivalentTo(new[] { BodyParts.Chest, BodyParts.Waist }));
     }
 
     private static AppDbContext CreateDbContext(string name)

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -37,8 +36,8 @@ public sealed class ReportingStaleRequestTests
 
         var result = await service.GetPendingRequestsForTraineeAsync(ReportingTestData.Account(trainee.Rebind<User>()));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(item => item.Id).Should().Equal(current.Id);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(item => item.Id), Is.EqualTo(new[] { current.Id }));
         await persistence.DidNotReceiveWithAnyArgs().SetRequestExpiredAsync(default, default);
     }
 
@@ -57,7 +56,7 @@ public sealed class ReportingStaleRequestTests
 
         var result = await service.SubmitReportRequestAsync(ReportingTestData.Account(trainee.Rebind<User>()), request.Id, new SubmitReportRequestCommand { Answers = new() });
 
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await persistence.DidNotReceiveWithAnyArgs().SetRequestExpiredAsync(default, default);
         await uow.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
@@ -75,7 +74,7 @@ public sealed class ReportingStaleRequestTests
 
         var result = await service.SubmitReportRequestAsync(ReportingTestData.Account(trainee.Rebind<User>()), request.Id, new SubmitReportRequestCommand { Answers = new() });
 
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await persistence.DidNotReceiveWithAnyArgs().SetRequestExpiredAsync(default, default);
     }
 
@@ -98,7 +97,7 @@ public sealed class ReportingStaleRequestTests
 
         var result = await service.GetPendingRequestsForTraineeAsync(ReportingTestData.Account(trainee.Rebind<User>()));
 
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     private static ReportRequestPersistenceModel Request(Id<AccountReference> trainer, Id<AccountReference> trainee, Id<CoachingEpisode>? episode)

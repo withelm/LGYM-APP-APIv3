@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.Application.Coaching.Persistence;
@@ -41,11 +40,10 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             .OrderBy(episode => episode.CreatedAt)
             .ToListAsync();
 
-        episodes.Select(episode => episode.Id).Should().BeEquivalentTo(
-            [firstEpisodeId, secondEpisodeId, thirdEpisodeId]);
-        episodes.Select(episode => episode.Id).Should().OnlyHaveUniqueItems();
-        episodes.Count(episode => episode.EndedAt != null).Should().Be(2);
-        episodes.Should().ContainSingle(episode => episode.Id == thirdEpisodeId && episode.EndedAt == null);
+        Assert.That(episodes.Select(episode => episode.Id), Is.EquivalentTo(new[] { firstEpisodeId, secondEpisodeId, thirdEpisodeId }));
+        Assert.That(episodes.Select(episode => episode.Id), Is.Unique);
+        Assert.That(episodes.Count(episode => episode.EndedAt != null), Is.EqualTo(2));
+        Assert.That((episodes).Where(episode => episode.Id == thirdEpisodeId && episode.EndedAt == null), Has.Exactly(1).Items);
     }
 
     [TestCase(CoachingEpisodeAuthorizationAction.TrainerUnlink)]
@@ -60,10 +58,10 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
 
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().BeFalse();
+        Assert.That((await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.False);
         var episode = await database.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
     }
 
     [TestCase(true, true)]
@@ -90,7 +88,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
                     .ExecuteAsync(new UnlinkTraineeCommand(trainer.Id, trainee.Id))
                 : await scope.ServiceProvider.GetRequiredService<IDetachFromTrainerUseCase>()
                     .ExecuteAsync(new DetachFromTrainerCommand(trainee.Id));
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
             if (commit)
             {
                 await transaction.CommitAsync();
@@ -103,13 +101,13 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
 
         await using var verification = Factory.Services.CreateAsyncScope();
         var db = verification.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().Be(!commit);
+        Assert.That((await db.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.EqualTo(!commit));
         var episode = await db.CoachingEpisodes.SingleAsync(item => item.Id == episodeId);
-        (episode.EndedAt is not null).Should().Be(commit);
+        Assert.That((episode.EndedAt is not null), Is.EqualTo(commit));
         var envelopes = await db.CommandEnvelopes.Where(envelope =>
             envelope.CommandTypeFullName.EndsWith("RelationshipEndedReportCancellationCommand") &&
             envelope.PayloadJson.Contains(episodeId.ToString())).ToListAsync();
-        envelopes.Should().HaveCount(commit ? 1 : 0);
+        Assert.That(envelopes, Has.Exactly(commit ? 1 : 0).Items);
     }
 
     [Test]
@@ -123,18 +121,18 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             RaceUnlinkAsync(trainer.Id, trainee.Id, barrier),
             RaceUnlinkAsync(trainer.Id, trainee.Id, barrier));
 
-        outcomes.Should().ContainSingle(outcome => outcome.Committed && !outcome.Recovered);
-        outcomes.Should().ContainSingle(outcome => !outcome.Committed && outcome.Recovered);
+        Assert.That((outcomes).Where(outcome => outcome.Committed && !outcome.Recovered), Has.Exactly(1).Items);
+        Assert.That((outcomes).Where(outcome => !outcome.Committed && outcome.Recovered), Has.Exactly(1).Items);
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().BeFalse();
+        Assert.That((await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.False);
         var episode = await database.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
-        (await database.CommandEnvelopes.CountAsync(envelope =>
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
+        Assert.That((await database.CommandEnvelopes.CountAsync(envelope =>
             envelope.CommandTypeFullName.EndsWith("RelationshipEndedReportCancellationCommand") &&
-            envelope.PayloadJson.Contains(episodeId.ToString()))).Should().Be(1);
+            envelope.PayloadJson.Contains(episodeId.ToString()))), Is.EqualTo(1));
     }
 
     [Test]
@@ -152,18 +150,17 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             trainer.Id,
             trainee.Id,
             CoachingEpisodeAuthorizationAction.ProtectedWrite);
-        grant.Should().NotBeNull();
+        Assert.That(grant, Is.Not.Null);
         staleDatabase.ApiIdempotencyRecords.Add(CreateProbe(probeKey));
 
         await UnlinkAsync(trainer.Id, trainee.Id, CoachingEpisodeAuthorizationAction.TrainerUnlink);
 
         var staleCommit = () => staleDatabase.SaveChangesAsync();
-        await staleCommit.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await staleCommit(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.ApiIdempotencyRecords.AnyAsync(record => record.IdempotencyKey == probeKey))
-            .Should().BeFalse();
+        Assert.That((await verificationDatabase.ApiIdempotencyRecords.AnyAsync(record => record.IdempotencyKey == probeKey)), Is.False);
     }
 
     [Test]
@@ -182,7 +179,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
                 trainer.Id,
                 trainee.Id,
                 CoachingEpisodeAuthorizationAction.ProtectedWrite);
-            grant.Should().NotBeNull();
+            Assert.That(grant, Is.Not.Null);
             database.ApiIdempotencyRecords.Add(CreateProbe(probeKey));
             await database.SaveChangesAsync();
         }
@@ -191,10 +188,8 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.ApiIdempotencyRecords.AnyAsync(record => record.IdempotencyKey == probeKey))
-            .Should().BeTrue();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id))
-            .Should().BeFalse();
+        Assert.That((await verificationDatabase.ApiIdempotencyRecords.AnyAsync(record => record.IdempotencyKey == probeKey)), Is.True);
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.False);
     }
 
     [Test]
@@ -214,7 +209,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
                 trainer.Id,
                 trainee.Id,
                 CoachingEpisodeAuthorizationAction.TrainerUnlink);
-            grant.Should().NotBeNull();
+            Assert.That(grant, Is.Not.Null);
             await activeLinks.RemoveAsync(grant!);
             await database.SaveChangesAsync();
             await transaction.RollbackAsync();
@@ -222,11 +217,10 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id))
-            .Should().BeTrue();
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.True);
         var episode = await verificationDatabase.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().BeNull();
-        episode.AuthorizationRevision.Should().Be(0);
+        Assert.That(episode.EndedAt, Is.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(0));
     }
 
     [Test]
@@ -245,8 +239,8 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var episode = await verificationDatabase.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
     }
 
     [Test]
@@ -263,13 +257,13 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
                 VALUES ({linkId.ToString()}::uuid, {trainer.Id.ToString()}::uuid, {trainee.Id.ToString()}::uuid, {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow}, FALSE)
                 """);
 
-            await insert.Should().ThrowAsync<PostgresException>();
+            await Assert.ThatAsync(async () => { await insert(); }, Throws.InstanceOf<PostgresException>());
         }
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.TrainerTraineeLinks.IgnoreQueryFilters().AnyAsync(link => link.Id == linkId)).Should().BeFalse();
-        (await verificationDatabase.CoachingEpisodes.AnyAsync(episode => episode.TraineeId == trainee.Id)).Should().BeFalse();
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.IgnoreQueryFilters().AnyAsync(link => link.Id == linkId)), Is.False);
+        Assert.That((await verificationDatabase.CoachingEpisodes.AnyAsync(episode => episode.TraineeId == trainee.Id)), Is.False);
     }
 
     [Test]
@@ -293,10 +287,10 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         var link = await verificationDatabase.TrainerTraineeLinks
             .IgnoreQueryFilters()
             .SingleAsync(candidate => candidate.TraineeId == trainee.Id);
-        link.IsDeleted.Should().BeTrue();
+        Assert.That(link.IsDeleted, Is.True);
         var episode = await verificationDatabase.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
     }
 
     [Test]
@@ -310,14 +304,14 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             var database = actionScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var rewrite = () => database.Database.ExecuteSqlInterpolatedAsync(
                 $"UPDATE \"TrainerTraineeLinks\" SET \"TrainerId\" = {otherTrainer.Id.ToString()}::uuid WHERE \"TraineeId\" = {trainee.Id.ToString()}::uuid");
-            await rewrite.Should().ThrowAsync<PostgresException>();
+            await Assert.ThatAsync(async () => { await rewrite(); }, Throws.InstanceOf<PostgresException>());
         }
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var episode = await verificationDatabase.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.TrainerId.Should().Be(trainer.Id);
-        episode.EndedAt.Should().BeNull();
+        Assert.That(episode.TrainerId, Is.EqualTo(trainer.Id));
+        Assert.That(episode.EndedAt, Is.Null);
     }
 
     [Test]
@@ -336,11 +330,11 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             trainer.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
             trainee.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>());
 
-        access.HasActiveRelationship.Should().BeFalse();
-        access.RelationshipPeriods.Should().ContainSingle();
-        access.HadRelationshipAt(episode.StartedAt!.Value).Should().BeTrue();
-        access.HadRelationshipAt(episode.EndedAt!.Value.AddTicks(-1)).Should().BeTrue();
-        access.HadRelationshipAt(episode.EndedAt.Value).Should().BeFalse();
+        Assert.That(access.HasActiveRelationship, Is.False);
+        Assert.That(access.RelationshipPeriods, Has.Exactly(1).Items);
+        Assert.That(access.HadRelationshipAt(episode.StartedAt!.Value), Is.True);
+        Assert.That(access.HadRelationshipAt(episode.EndedAt!.Value.AddTicks(-1)), Is.True);
+        Assert.That(access.HadRelationshipAt(episode.EndedAt.Value), Is.False);
     }
 
     [Test]
@@ -367,12 +361,12 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             trainee.Id.Rebind<LgymApi.Identity.Contracts.AccountReference>());
         var occurredBeforeObservation = episodeEnd.AddYears(-10);
 
-        access.RelationshipPeriods.Should().ContainSingle(period =>
+        Assert.That((access.RelationshipPeriods).Where(period =>
             period.StartedAt == null
-            && period.StartedAtProvenance == CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration);
-        access.HadRelationshipAt(occurredBeforeObservation).Should().BeFalse();
-        access.CanReadTrainerAuthoredRecordAt(occurredBeforeObservation).Should().BeTrue();
-        access.CanReadTrainerAuthoredRecordAt(episodeEnd).Should().BeFalse();
+            && period.StartedAtProvenance == CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration), Has.Exactly(1).Items);
+        Assert.That(access.HadRelationshipAt(occurredBeforeObservation), Is.False);
+        Assert.That(access.CanReadTrainerAuthoredRecordAt(occurredBeforeObservation), Is.True);
+        Assert.That(access.CanReadTrainerAuthoredRecordAt(episodeEnd), Is.False);
     }
 
     [Test]
@@ -387,16 +381,16 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             RaceInvitationAcceptanceAsync(firstInvitation, trainerOne.Id, trainee.Id, barrier),
             RaceInvitationAcceptanceAsync(secondInvitation, trainerTwo.Id, trainee.Id, barrier));
 
-        outcomes.Should().ContainSingle(outcome => outcome.Committed && !outcome.RecoveredDuplicate);
-        outcomes.Should().ContainSingle(outcome => !outcome.Committed && outcome.RecoveredDuplicate);
+        Assert.That((outcomes).Where(outcome => outcome.Committed && !outcome.RecoveredDuplicate), Has.Exactly(1).Items);
+        Assert.That((outcomes).Where(outcome => !outcome.Committed && outcome.RecoveredDuplicate), Has.Exactly(1).Items);
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.TrainerTraineeLinks.CountAsync(link => link.TraineeId == trainee.Id)).Should().Be(1);
-        (await database.CoachingEpisodes.CountAsync(episode => episode.TraineeId == trainee.Id)).Should().Be(1);
-        (await database.TrainerInvitations.CountAsync(invitation =>
+        Assert.That((await database.TrainerTraineeLinks.CountAsync(link => link.TraineeId == trainee.Id)), Is.EqualTo(1));
+        Assert.That((await database.CoachingEpisodes.CountAsync(episode => episode.TraineeId == trainee.Id)), Is.EqualTo(1));
+        Assert.That((await database.TrainerInvitations.CountAsync(invitation =>
             (invitation.Id == firstInvitation || invitation.Id == secondInvitation)
-            && invitation.Status == TrainerInvitationStatus.Accepted)).Should().Be(1);
+            && invitation.Status == TrainerInvitationStatus.Accepted)), Is.EqualTo(1));
     }
 
     private async Task<(User TrainerOne, User TrainerTwo, User Trainee)> SeedRelationshipUsersAsync(string scenario)
@@ -436,7 +430,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         var grant = action == CoachingEpisodeAuthorizationAction.TraineeDetach
             ? await authorization.AuthorizeTraineeDetachAndStageAsync(traineeId)
             : await authorization.AuthorizeAndStageAsync(actorId, actorId, traineeId, action);
-        grant.Should().NotBeNull();
+        Assert.That(grant, Is.Not.Null);
         await activeLinks.RemoveAsync(grant!);
         await database.SaveChangesAsync();
     }
@@ -476,7 +470,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
             trainerId,
             traineeId,
             CoachingEpisodeAuthorizationAction.TrainerUnlink);
-        grant.Should().NotBeNull();
+        Assert.That(grant, Is.Not.Null);
         await activeLinks.RemoveAsync(grant!);
         var staged = await scope.ServiceProvider.GetRequiredService<ICommandOutboxWriter>().StageAsync(
             new RelationshipEndedReportCancellationCommand { EpisodeId = grant!.EpisodeId });
@@ -507,7 +501,7 @@ internal sealed class PostgreSqlCoachingEpisodeTests : PostgreSqlIntegrationTest
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var activeLinks = scope.ServiceProvider.GetRequiredService<ICoachingActiveLinkPersistence>();
-        (await activeLinks.HasForTraineeAsync(traineeId)).Should().BeFalse();
+        Assert.That((await activeLinks.HasForTraineeAsync(traineeId)), Is.False);
         var invitation = await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId);
         var now = DateTimeOffset.UtcNow;
         await activeLinks.AddAsync(new CoachingActiveLinkWriteModel(
@@ -592,14 +586,14 @@ internal sealed class PostgreSqlCoachingEpisodeMigrationTests
 
         database.ChangeTracker.Clear();
         var link = await database.TrainerTraineeLinks.IgnoreQueryFilters().SingleAsync(candidate => candidate.Id == linkId);
-        link.EpisodeId.Should().NotBeNull();
+        Assert.That(link.EpisodeId, Is.Not.Null);
         var episode = await database.CoachingEpisodes.IgnoreQueryFilters().SingleAsync(candidate => candidate.Id == link.EpisodeId);
-        episode.StartedAt.Should().BeNull();
-        episode.StartedAtProvenance.Should().Be(CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration);
+        Assert.That(episode.StartedAt, Is.Null);
+        Assert.That(episode.StartedAtProvenance, Is.EqualTo(CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration));
 
         var downgrade = () => database.Database.MigrateAsync(PreviousMigrationId);
-        await downgrade.Should().ThrowAsync<NotSupportedException>();
-        (await database.CoachingEpisodes.IgnoreQueryFilters().AnyAsync(candidate => candidate.Id == episode.Id)).Should().BeTrue();
+        await Assert.ThatAsync(async () => { await downgrade(); }, Throws.InstanceOf<NotSupportedException>());
+        Assert.That((await database.CoachingEpisodes.IgnoreQueryFilters().AnyAsync(candidate => candidate.Id == episode.Id)), Is.True);
     }
 
     private static AppDbContext CreateDbContext(string connectionString)

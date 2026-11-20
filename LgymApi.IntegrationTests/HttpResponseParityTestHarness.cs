@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace LgymApi.IntegrationTests;
 
@@ -18,8 +17,7 @@ public sealed class HttpResponseParityTestHarness
         HttpStatusCode expectedStatusCode,
         string? because = null)
     {
-        response.StatusCode.Should().Be(expectedStatusCode,
-            because ?? $"Expected status {expectedStatusCode} for success response");
+        Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode), because ?? $"Expected status {expectedStatusCode} for success response");
     }
 
     /// <summary>
@@ -31,25 +29,21 @@ public sealed class HttpResponseParityTestHarness
         string? expectedMessageContent = null,
         string? because = null)
     {
-        response.StatusCode.Should().Be(expectedStatusCode,
-            because ?? $"Expected status {expectedStatusCode} for error response");
+        Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode), because ?? $"Expected status {expectedStatusCode} for error response");
 
         var content = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
 
-        json.RootElement.TryGetProperty("msg", out var msgField)
-            .Should().BeTrue("error response must contain 'msg' field in ResponseMessageDto format");
+        Assert.That(json.RootElement.TryGetProperty("msg", out var msgField), Is.True, "error response must contain 'msg' field in ResponseMessageDto format");
 
         var message = msgField.GetString();
-        message.Should().NotBeNullOrWhiteSpace("error message should not be empty");
+        Assert.That(string.IsNullOrWhiteSpace(message), Is.False, "error message should not be empty");
 
-        json.RootElement.TryGetProperty("message", out _)
-            .Should().BeFalse("response must use 'msg' field, not 'message' (legacy compatibility)");
+        Assert.That(json.RootElement.TryGetProperty("message", out _), Is.False, "response must use 'msg' field, not 'message' (legacy compatibility)");
 
         if (!string.IsNullOrEmpty(expectedMessageContent))
         {
-            message.Should().Contain(expectedMessageContent,
-                $"error message should contain '{expectedMessageContent}'");
+            Assert.That(message, Does.Contain(expectedMessageContent), $"error message should contain '{expectedMessageContent}'");
         }
     }
 
@@ -62,14 +56,12 @@ public sealed class HttpResponseParityTestHarness
         Action<JsonElement>? payloadAssertions = null,
         string? because = null)
     {
-        response.StatusCode.Should().Be(expectedStatusCode,
-            because ?? $"Expected status {expectedStatusCode} for error with payload");
+        Assert.That(response.StatusCode, Is.EqualTo(expectedStatusCode), because ?? $"Expected status {expectedStatusCode} for error with payload");
 
         var content = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
 
-        json.RootElement.TryGetProperty("msg", out _)
-            .Should().BeFalse("custom payload responses should not be wrapped in ResponseMessageDto format");
+        Assert.That(json.RootElement.TryGetProperty("msg", out _), Is.False, "custom payload responses should not be wrapped in ResponseMessageDto format");
 
         if (payloadAssertions != null)
         {
@@ -115,10 +107,8 @@ public sealed class HttpResponseParityTestHarness
         HttpStatusCode expectedStatusCode,
         string? because = null)
     {
-        oldResponse.StatusCode.Should().Be(expectedStatusCode,
-            because ?? "old endpoint status code should match expectation");
-        newResponse.StatusCode.Should().Be(expectedStatusCode,
-            because ?? "new endpoint status code should match old endpoint");
+        Assert.That(oldResponse.StatusCode, Is.EqualTo(expectedStatusCode), because ?? "old endpoint status code should match expectation");
+        Assert.That(newResponse.StatusCode, Is.EqualTo(expectedStatusCode), because ?? "new endpoint status code should match old endpoint");
 
         var oldContent = await oldResponse.Content.ReadAsStringAsync();
         var newContent = await newResponse.Content.ReadAsStringAsync();
@@ -126,18 +116,14 @@ public sealed class HttpResponseParityTestHarness
         var oldJson = JsonDocument.Parse(oldContent);
         var newJson = JsonDocument.Parse(newContent);
 
-        oldJson.RootElement.TryGetProperty("msg", out var oldMsg)
-            .Should().BeTrue("old response must have 'msg' field");
-        newJson.RootElement.TryGetProperty("msg", out var newMsg)
-            .Should().BeTrue("new response must have 'msg' field");
+        Assert.That(oldJson.RootElement.TryGetProperty("msg", out var oldMsg), Is.True, "old response must have 'msg' field");
+        Assert.That(newJson.RootElement.TryGetProperty("msg", out var newMsg), Is.True, "new response must have 'msg' field");
 
-        oldMsg.GetString().Should().NotBeNullOrWhiteSpace("old message should have content");
-        newMsg.GetString().Should().NotBeNullOrWhiteSpace("new message should have content");
+        Assert.That(string.IsNullOrWhiteSpace(oldMsg.GetString()), Is.False, "old message should have content");
+        Assert.That(string.IsNullOrWhiteSpace(newMsg.GetString()), Is.False, "new message should have content");
 
-        oldJson.RootElement.TryGetProperty("message", out _)
-            .Should().BeFalse("old response must use 'msg', not 'message'");
-        newJson.RootElement.TryGetProperty("message", out _)
-            .Should().BeFalse("new response must use 'msg', not 'message'");
+        Assert.That(oldJson.RootElement.TryGetProperty("message", out _), Is.False, "old response must use 'msg', not 'message'");
+        Assert.That(newJson.RootElement.TryGetProperty("message", out _), Is.False, "new response must use 'msg', not 'message'");
     }
 
     /// <summary>
@@ -149,16 +135,14 @@ public sealed class HttpResponseParityTestHarness
         IEnumerable<string> requiredFieldNames,
         string? because = null)
     {
-        successResponse.StatusCode.Should().Be(expectedStatusCode,
-            because ?? $"Expected status {expectedStatusCode}");
+        Assert.That(successResponse.StatusCode, Is.EqualTo(expectedStatusCode), because ?? $"Expected status {expectedStatusCode}");
 
         var content = await successResponse.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(content);
 
         foreach (var fieldName in requiredFieldNames)
         {
-            json.RootElement.TryGetProperty(fieldName, out _)
-                .Should().BeTrue($"response must have '{fieldName}' field");
+            Assert.That(json.RootElement.TryGetProperty(fieldName, out _), Is.True, $"response must have '{fieldName}' field");
         }
     }
 
@@ -178,7 +162,6 @@ public sealed class HttpResponseParityTestHarness
         var newNormalized = JsonSerializer.Serialize(newJson.RootElement,
             new JsonSerializerOptions { WriteIndented = false });
 
-        oldNormalized.Should().Be(newNormalized,
-            because ?? "error response content should be identical between old and new implementations");
+        Assert.That(oldNormalized, Is.EqualTo(newNormalized), because ?? "error response content should be identical between old and new implementations");
     }
 }

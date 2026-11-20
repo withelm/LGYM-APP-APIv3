@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
 using LgymApi.Api.Middleware;
@@ -41,16 +40,16 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
         var photoId = await SeedPhotoAsync(reportRequestId, trainee);
 
         var validResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{photoId}/signed-url");
-        validResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(validResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var validJson = await ReadJsonAsync(validResponse))
         {
-            ReadRequiredString(validJson.RootElement, "readUrl").Should().StartWith("http");
-            ReadRequiredString(validJson.RootElement, "expiresAt").Should().NotBeNullOrWhiteSpace();
+            Assert.That(ReadRequiredString(validJson.RootElement, "readUrl"), Does.StartWith("http"));
+            Assert.That(string.IsNullOrWhiteSpace(ReadRequiredString(validJson.RootElement, "expiresAt")), Is.False);
         }
 
         var malformedResponse = await Client.GetAsync("/api/trainer/reporting/photos/not-a-guid/signed-url");
-        malformedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(malformedResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         using (var malformedJson = await ReadJsonAsync(malformedResponse))
         {
@@ -58,9 +57,11 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
         }
 
         var emptyResult = await InvokeEmptySignedPhotoActionAsync();
-        emptyResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        var emptyPayload = emptyResult.Value.Should().BeOfType<ResponseMessageDto>().Subject;
-        emptyPayload.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(emptyResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        var assertedValue53 = emptyResult.Value;
+        Assert.That(assertedValue53, Is.TypeOf<ResponseMessageDto>());
+        var emptyPayload = ((ResponseMessageDto)assertedValue53);
+        Assert.That(emptyPayload.Message, Is.EqualTo(Messages.FieldRequired));
 
         using var emptyJson = JsonDocument.Parse(JsonSerializer.Serialize(emptyPayload));
         AssertLegacyMessage(emptyJson.RootElement, Messages.FieldRequired);
@@ -94,18 +95,18 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
                 }
             }
         });
-        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var chartResponse = await Client.PostAsJsonAsync(
             $"/api/exerciseScores/{user.Id}/getExerciseScoresChartData",
             new { exerciseId = exerciseId.ToString() });
-        chartResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(chartResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var chartJson = await ReadJsonAsync(chartResponse);
-        chartJson.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+        Assert.That(chartJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
         var entry = chartJson.RootElement.EnumerateArray().First();
-        ReadRequiredString(entry, "_id").Should().NotBeNullOrWhiteSpace();
-        entry.TryGetProperty("id", out _).Should().BeFalse("the chart retains the legacy _id property name");
+        Assert.That(string.IsNullOrWhiteSpace(ReadRequiredString(entry, "_id")), Is.False);
+        Assert.That(entry.TryGetProperty("id", out _), Is.False, "the chart retains the legacy _id property name");
         AssertUuidString(entry, "exerciseId", exerciseId.ToString());
     }
 
@@ -116,13 +117,13 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
         await AuthenticateAsAsync(user);
 
         var response = await Client.GetAsync($"/api/eloRegistry/{user.Id}/getEloRegistryChart");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
-        json.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+        Assert.That(json.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
         var entry = json.RootElement.EnumerateArray().First();
         AssertUuidString(entry, "_id");
-        entry.TryGetProperty("id", out _).Should().BeFalse("the chart retains the legacy _id property name");
+        Assert.That(entry.TryGetProperty("id", out _), Is.False, "the chart retains the legacy _id property name");
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)
@@ -157,13 +158,13 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
             name = user.Name,
             password = "password123"
         });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         var token = ReadRequiredString(json.RootElement, "token");
-        json.RootElement.TryGetProperty("req", out var requestUser).Should().BeTrue("login retains the legacy req property name");
+        Assert.That(json.RootElement.TryGetProperty("req", out var requestUser), Is.True, "login retains the legacy req property name");
         AssertUuidString(requestUser, "_id", user.Id.ToString());
-        json.RootElement.TryGetProperty("user", out _).Should().BeFalse("login must not rename req to user");
+        Assert.That(json.RootElement.TryGetProperty("user", out _), Is.False, "login must not rename req to user");
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
@@ -186,7 +187,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
                 }
             }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         using var templateJson = await ReadJsonAsync(templateResponse);
         var templateId = ParseId<ReportTemplate>(ReadRequiredString(templateJson.RootElement, "_id"));
@@ -195,7 +196,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
         {
             templateId = templateId.ToString()
         });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         using var requestJson = await ReadJsonAsync(requestResponse);
         return ParseId<ReportRequest>(ReadRequiredString(requestJson.RootElement, "_id"));
@@ -230,7 +231,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
             bodyPart = BodyParts.Chest.ToString(),
             description = "PostgreSQL compatibility exercise"
         });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         return ParseId<Exercise>(await FindItemIdByNameAsync($"/api/exercise/{user.Id}/getAllUserExercises", name));
     }
@@ -238,7 +239,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
     private async Task<Id<Gym>> CreateGymAsync(User user, string name)
     {
         var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", new { name });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         return ParseId<Gym>(await FindItemIdByNameAsync($"/api/gym/{user.Id}/getGyms", name));
     }
@@ -246,7 +247,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
     private async Task<Id<Plan>> CreatePlanAsync(User user, string name)
     {
         var response = await Client.PostAsJsonAsync($"/api/{user.Id}/createPlan", new { name });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         return ParseId<Plan>(await FindItemIdByNameAsync($"/api/{user.Id}/getPlansList", name));
     }
@@ -258,7 +259,7 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
             name,
             exercises = new[] { new { exercise = exerciseId.ToString(), series = 3, reps = "10" } }
         });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         return ParseId<PlanDay>(await FindItemIdByNameAsync($"/api/planDay/{planId}/getPlanDays", name));
     }
@@ -286,16 +287,18 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
                 false)));
 
         var result = await controller.GetPhotoSignedReadUrl(string.Empty);
-        return result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var assertedValue54 = result;
+        Assert.That(assertedValue54, Is.TypeOf<BadRequestObjectResult>());
+        return ((BadRequestObjectResult)assertedValue54);
     }
 
     private async Task<string> FindItemIdByNameAsync(string route, string name)
     {
         var response = await Client.GetAsync(route);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
-        json.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+        Assert.That(json.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
         var item = json.RootElement.EnumerateArray().Single(element =>
             element.TryGetProperty("name", out var itemName)
             && string.Equals(itemName.GetString(), name, StringComparison.Ordinal));
@@ -319,34 +322,34 @@ internal sealed class PostgreSqlApiCompatibilityTests : PostgreSqlIntegrationTes
 
     private static Id<T> ParseId<T>(string value)
     {
-        Id<T>.TryParse(value, out var id).Should().BeTrue($"{value} must be a UUID string");
+        Assert.That(Id<T>.TryParse(value, out var id), Is.True, $"{value} must be a UUID string");
         return id;
     }
 
     private static void AssertLegacyMessage(JsonElement element, string expectedMessage)
     {
-        ReadRequiredString(element, "msg").Should().Be(expectedMessage);
-        element.TryGetProperty("message", out _).Should().BeFalse("the legacy message property is msg");
+        Assert.That(ReadRequiredString(element, "msg"), Is.EqualTo(expectedMessage));
+        Assert.That(element.TryGetProperty("message", out _), Is.False, "the legacy message property is msg");
     }
 
     private static void AssertUuidString(JsonElement element, string propertyName, string? expectedValue = null)
     {
         var value = ReadRequiredString(element, propertyName);
-        Id<UuidValidationEntity>.TryParse(value, out var parsed).Should().BeTrue($"{propertyName} must remain a UUID string");
-        parsed.ToString().Should().Be(value);
+        Assert.That(Id<UuidValidationEntity>.TryParse(value, out var parsed), Is.True, $"{propertyName} must remain a UUID string");
+        Assert.That(parsed.ToString(), Is.EqualTo(value));
 
         if (expectedValue != null)
         {
-            value.Should().Be(expectedValue);
+            Assert.That(value, Is.EqualTo(expectedValue));
         }
     }
 
     private static string ReadRequiredString(JsonElement element, string propertyName)
     {
-        element.TryGetProperty(propertyName, out var property).Should().BeTrue($"response must contain {propertyName}");
-        property.ValueKind.Should().Be(JsonValueKind.String, $"{propertyName} must remain a JSON string");
+        Assert.That(element.TryGetProperty(propertyName, out var property), Is.True, $"response must contain {propertyName}");
+        Assert.That(property.ValueKind, Is.EqualTo(JsonValueKind.String), $"{propertyName} must remain a JSON string");
         var value = property.GetString();
-        value.Should().NotBeNullOrWhiteSpace($"{propertyName} must not be empty");
+        Assert.That(string.IsNullOrWhiteSpace(value), Is.False, $"{propertyName} must not be empty");
         return value!;
     }
 

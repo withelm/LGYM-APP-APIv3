@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
 using LgymApi.Application.WorkoutProgress.ReportingIntegration;
@@ -28,9 +27,9 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var result = await consumer.ConsumeAsync(@event);
 
-        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        staged.Select(measurement => measurement.BodyPart).Should().BeEquivalentTo([BodyParts.Chest, BodyParts.BodyWeight]);
-        staged.Should().OnlyContain(measurement => measurement.TraineeId == @event.TraineeId && measurement.CreatedAt == @event.ObservedAt);
+        Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That(staged.Select(measurement => measurement.BodyPart), Is.EquivalentTo(new[] { BodyParts.Chest, BodyParts.BodyWeight }));
+        Assert.That((staged).All(measurement => measurement.TraineeId == @event.TraineeId && measurement.CreatedAt == @event.ObservedAt), Is.True);
         await persistence.Received(1).HasReceiptAsync(
             Arg.Is<Id<ReportSubmission>>(id => id.ToString() == @event.ReportSubmissionId),
             Arg.Any<CancellationToken>());
@@ -41,10 +40,10 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
                 && receipt.SourceCoachingEpisodeId == null
                 && receipt.SourceReportAcceptedAt == null),
             Arg.Any<CancellationToken>());
-        staged.Should().OnlyContain(measurement =>
+        Assert.That((staged).All(measurement =>
             measurement.SourceReportRequestId == null
             && measurement.SourceCoachingEpisodeId == null
-            && measurement.SourceReportAcceptedAt == null);
+            && measurement.SourceReportAcceptedAt == null), Is.True);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -73,15 +72,15 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var result = await new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork).ConsumeAsync(@event);
 
-        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        receipt.Should().NotBeNull();
-        receipt!.SourceReportRequestId.Should().Be(sourceRequestId);
-        receipt.SourceCoachingEpisodeId.Should().Be(sourceEpisodeId);
-        receipt.SourceReportAcceptedAt.Should().Be(@event.AcceptedAt);
-        staged.Should().ContainSingle(measurement =>
+        Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That(receipt, Is.Not.Null);
+        Assert.That(receipt!.SourceReportRequestId, Is.EqualTo(sourceRequestId));
+        Assert.That(receipt.SourceCoachingEpisodeId, Is.EqualTo(sourceEpisodeId));
+        Assert.That(receipt.SourceReportAcceptedAt, Is.EqualTo(@event.AcceptedAt));
+        Assert.That((staged).Where(measurement =>
             measurement.SourceReportRequestId == sourceRequestId
             && measurement.SourceCoachingEpisodeId == sourceEpisodeId
-            && measurement.SourceReportAcceptedAt == @event.AcceptedAt);
+            && measurement.SourceReportAcceptedAt == @event.AcceptedAt), Has.Exactly(1).Items);
     }
 
     [TestCase(0)]
@@ -104,13 +103,15 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var result = await consumer.ConsumeAsync(@event);
 
-        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        var measurement = staged.Should().ContainSingle().Subject;
-        measurement.CreatedAt.Offset.Should().Be(TimeSpan.Zero);
-        measurement.CreatedAt.Should().Be(observedAt.ToUniversalTime());
-        measurement.Value.Should().Be(82.4);
-        measurement.Unit.Should().Be(MeasurementUnits.Kilograms);
-        @event.ObservedAt.Offset.Should().Be(TimeSpan.FromMinutes(offsetMinutes));
+        Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        var assertedValue150 = (staged).ToArray();
+        Assert.That(assertedValue150, Has.Exactly(1).Items);
+        var measurement = assertedValue150.Single();
+        Assert.That(measurement.CreatedAt.Offset, Is.EqualTo(TimeSpan.Zero));
+        Assert.That(measurement.CreatedAt, Is.EqualTo(observedAt.ToUniversalTime()));
+        Assert.That(measurement.Value, Is.EqualTo(82.4));
+        Assert.That(measurement.Unit, Is.EqualTo(MeasurementUnits.Kilograms));
+        Assert.That(@event.ObservedAt.Offset, Is.EqualTo(TimeSpan.FromMinutes(offsetMinutes)));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -134,11 +135,10 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
             .Returns(Task.CompletedTask);
         var consumer = new ReportSubmissionAcceptedProgressConsumer(persistence, unitOfWork);
 
-        (await consumer.ConsumeAsync(@event)).Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        (await consumer.ConsumeAsync(@event with { EventId = "00000000-0000-0000-0000-000000000099" })).Outcome
-            .Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate);
+        Assert.That((await consumer.ConsumeAsync(@event)).Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That((await consumer.ConsumeAsync(@event with { EventId = "00000000-0000-0000-0000-000000000099" })).Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate));
 
-        staged.Should().ContainSingle();
+        Assert.That(staged, Has.Exactly(1).Items);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -157,9 +157,9 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var result = await consumer.ConsumeAsync(@event);
 
-        result.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        staged.Should().ContainSingle(measurement =>
-            measurement.BodyPart == BodyParts.Chest && measurement.Value == 101.5);
+        Assert.That(result.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That((staged).Where(measurement =>
+            measurement.BodyPart == BodyParts.Chest && measurement.Value == 101.5), Has.Exactly(1).Items);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -184,11 +184,10 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
         var firstResult = await consumer.ConsumeAsync(firstEvent);
         var secondResult = await consumer.ConsumeAsync(secondEvent);
 
-        firstResult.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        secondResult.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Applied);
-        staged.Should().HaveCount(4);
-        staged.Select(measurement => measurement.BodyPart).Should().BeEquivalentTo(
-            [BodyParts.Chest, BodyParts.Waist, BodyParts.Chest, BodyParts.Waist]);
+        Assert.That(firstResult.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That(secondResult.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Applied));
+        Assert.That(staged, Has.Exactly(4).Items);
+        Assert.That(staged.Select(measurement => measurement.BodyPart), Is.EquivalentTo(new[] { BodyParts.Chest, BodyParts.Waist, BodyParts.Chest, BodyParts.Waist }));
         await persistence.Received(2).AddReceiptAsync(Arg.Any<AcceptedReportSubmissionReceiptPersistenceModel>(), Arg.Any<CancellationToken>());
         await unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -209,7 +208,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var result = await consumer.ConsumeAsync(@event);
 
-        result.Outcome.Should().Be(expectedOutcome);
+        Assert.That(result.Outcome, Is.EqualTo(expectedOutcome));
         await persistence.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
         await unitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
@@ -227,7 +226,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
         var action = () => consumer.ConsumeAsync(@event);
 
-        await action.Should().ThrowAsync<TimeoutException>().WithMessage(exception.Message);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<TimeoutException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(exception.Message).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await unitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
     }
 
@@ -245,7 +244,7 @@ public sealed class ReportSubmissionAcceptedProgressConsumerTests
 
     private static ReportSubmissionAcceptedProgressEvent CreateValidEvent(params ReportSubmissionAcceptedMeasurement[] measurements)
     {
-        Id<AccountReference>.TryParse("00000000-0000-0000-0000-000000000005", out var traineeId).Should().BeTrue();
+        Assert.That(Id<AccountReference>.TryParse("00000000-0000-0000-0000-000000000005", out var traineeId), Is.True);
         return new ReportSubmissionAcceptedProgressEvent(
             1,
             "00000000-0000-0000-0000-000000000001",

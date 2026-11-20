@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -33,19 +32,19 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
         SetAuthorizationHeader(coach.Id);
 
         using var update = await Client.PostAsJsonAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/update", new { name = "After" });
-        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(update.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var assign = await Client.PostAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/assign", null);
-        assign.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(assign.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var persisted = await dbVerify.Plans.AsNoTracking().SingleAsync(item => item.Id == plan.Id);
-        persisted.UserId.Should().Be(owner.Id);
-        persisted.Name.Should().Be("After");
-        persisted.Purpose.Should().Be(PlanPurpose.Personal);
-        persisted.IsActive.Should().BeTrue();
+        Assert.That(persisted.UserId, Is.EqualTo(owner.Id));
+        Assert.That(persisted.Name, Is.EqualTo("After"));
+        Assert.That(persisted.Purpose, Is.EqualTo(PlanPurpose.Personal));
+        Assert.That(persisted.IsActive, Is.True);
         var previousPersisted = await dbVerify.Plans.AsNoTracking().SingleAsync(item => item.Id == previous.Id);
-        previousPersisted.IsActive.Should().BeFalse();
+        Assert.That(previousPersisted.IsActive, Is.False);
     }
 
     [TestCase("update")]
@@ -69,14 +68,14 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
 
         using var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{plan.Id}/{operation}", new { name = "Intrusion" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verification = Factory.Services.CreateScope();
         var persisted = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.IgnoreQueryFilters().AsNoTracking().SingleAsync(item => item.Id == plan.Id);
-        persisted.UserId.Should().Be(owner.Id);
-        persisted.Name.Should().Be("Foreign");
-        persisted.Purpose.Should().Be(PlanPurpose.Personal);
-        persisted.IsDeleted.Should().BeFalse();
-        persisted.IsActive.Should().BeFalse();
+        Assert.That(persisted.UserId, Is.EqualTo(owner.Id));
+        Assert.That(persisted.Name, Is.EqualTo("Foreign"));
+        Assert.That(persisted.Purpose, Is.EqualTo(PlanPurpose.Personal));
+        Assert.That(persisted.IsDeleted, Is.False);
+        Assert.That(persisted.IsActive, Is.False);
     }
 
     [Test]
@@ -103,12 +102,12 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/trainer/trainees/{owner.Id}/plans");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        json.RootElement.EnumerateArray().Should().ContainSingle();
-        json.RootElement[0].GetProperty("name").GetString().Should().Be("Personal");
+        Assert.That(json.RootElement.EnumerateArray(), Has.Exactly(1).Items);
+        Assert.That(json.RootElement[0].GetProperty("name").GetString(), Is.EqualTo("Personal"));
         var indirect = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/plans");
-        indirect.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(indirect.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [TestCase(PlanPurpose.Professional, "update")]
@@ -134,13 +133,13 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/{operation}", new { name = "Intrusion" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verification = Factory.Services.CreateScope();
         var persisted = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.IgnoreQueryFilters().SingleAsync(item => item.Id == plan.Id);
-        persisted.Name.Should().Be("Private");
-        persisted.Purpose.Should().Be(purpose);
-        persisted.IsDeleted.Should().BeFalse();
-        persisted.IsActive.Should().BeFalse();
+        Assert.That(persisted.Name, Is.EqualTo("Private"));
+        Assert.That(persisted.Purpose, Is.EqualTo(purpose));
+        Assert.That(persisted.IsDeleted, Is.False);
+        Assert.That(persisted.IsActive, Is.False);
     }
 
     [Test]
@@ -158,11 +157,11 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
 
         var created = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/createPlan", new { name = "Library", purpose = "Professional" });
 
-        created.IsSuccessStatusCode.Should().BeTrue();
+        Assert.That(created.IsSuccessStatusCode, Is.True);
         using var verification = Factory.Services.CreateScope();
         var plans = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().ToListAsync();
-        plans.Single(item => item.Name == "Library").IsActive.Should().BeFalse();
-        plans.Single(item => item.Id == active.Id).IsActive.Should().BeTrue();
+        Assert.That(plans.Single(item => item.Name == "Library").IsActive, Is.False);
+        Assert.That(plans.Single(item => item.Id == active.Id).IsActive, Is.True);
     }
 
     [Test]
@@ -188,9 +187,9 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
             exercises = new[] { new { exercise = exercise.Id.ToString(), series = 1, reps = 8, weight = 50.0, unit = "Kilograms" } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verification = Factory.Services.CreateScope();
-        (await verification.ServiceProvider.GetRequiredService<AppDbContext>().Trainings.AnyAsync(t => t.UserId == actor.Id)).Should().BeFalse();
+        Assert.That((await verification.ServiceProvider.GetRequiredService<AppDbContext>().Trainings.AnyAsync(t => t.UserId == actor.Id)), Is.False);
     }
 
     [TestCase(PlanPurpose.Professional, true)]
@@ -216,10 +215,10 @@ public sealed class PlanPurposeCoachingTests : IntegrationTestBase
         var action = assign ? $"{personal.Id}/assign" : "unassign";
         var response = await Client.PostAsync($"/api/trainer/trainees/{owner.Id}/plans/{action}", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verification = Factory.Services.CreateScope();
         var activeIds = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans
             .Where(plan => plan.UserId == owner.Id && plan.IsActive).Select(plan => plan.Id).ToListAsync();
-        activeIds.Should().BeEquivalentTo(new[] { personal.Id, protectedPlan.Id });
+        Assert.That(activeIds, Is.EquivalentTo(new[] { personal.Id, protectedPlan.Id }));
     }
 }

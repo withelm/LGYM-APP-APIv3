@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Security.Claims;
 using LgymApi.Api;
 using LgymApi.Api.Features.AdminManagement.Contracts;
@@ -80,11 +79,11 @@ public sealed class AdminUserControllerTests
 
     private static void AssertBadRequest(IActionResult result)
     {
-        result.Should().BeOfType<BadRequestObjectResult>();
+        Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
         var badRequest = (BadRequestObjectResult)result;
-        badRequest.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        badRequest.Value.Should().BeOfType<ResponseMessageDto>();
-        ((ResponseMessageDto)badRequest.Value!).Message.Should().Be("Invalid user id.");
+        Assert.That(badRequest.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(badRequest.Value, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)badRequest.Value!).Message, Is.EqualTo("Invalid user id."));
     }
 
     private static AdminUserController CreateController()

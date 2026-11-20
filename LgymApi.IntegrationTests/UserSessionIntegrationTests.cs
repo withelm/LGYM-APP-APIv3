@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -28,10 +27,10 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var session = await db.UserSessions.SingleAsync(s => s.Id == sessionClaims.SessionId);
 
-        session.UserId.Should().Be(user.Id);
-        session.Jti.Should().Be(sessionClaims.Jti);
-        session.RevokedAtUtc.Should().BeNull();
-        session.ExpiresAtUtc.Should().BeAfter(DateTimeOffset.UtcNow.AddHours(12));
+        Assert.That(session.UserId, Is.EqualTo(user.Id));
+        Assert.That(session.Jti, Is.EqualTo(sessionClaims.Jti));
+        Assert.That(session.RevokedAtUtc, Is.Null);
+        Assert.That(session.ExpiresAtUtc, Is.GreaterThan(DateTimeOffset.UtcNow.AddHours(12)));
     }
 
     [Test]
@@ -44,21 +43,21 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Token);
 
         var logoutResponse = await Client.PostAsync("/api/logout", null);
-        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var session = await db.UserSessions.SingleAsync(s => s.Id == sessionClaims.SessionId);
-            session.RevokedAtUtc.Should().NotBeNull();
+            Assert.That(session.RevokedAtUtc, Is.Not.Null);
         }
 
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
-        checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(checkTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await checkTokenResponse.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -76,7 +75,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
             newPassword = "reset-new-pass-123",
             confirmPassword = "reset-new-pass-123"
         });
-        resetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(resetResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -86,18 +85,18 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
                 .OrderBy(s => s.CreatedAt)
                 .ToListAsync();
 
-            sessions.Should().HaveCount(2);
-            sessions.Select(s => s.Id).Should().BeEquivalentTo([firstSession.SessionId, secondSession.SessionId]);
-            sessions.Should().OnlyContain(s => s.RevokedAtUtc != null);
+            Assert.That(sessions, Has.Exactly(2).Items);
+            Assert.That(sessions.Select(s => s.Id), Is.EquivalentTo(new[] { firstSession.SessionId, secondSession.SessionId }));
+            Assert.That((sessions).All(s => s.RevokedAtUtc != null), Is.True);
         }
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", firstSession.Token);
         var rejectedResponse = await Client.GetAsync("/api/checkToken");
-        rejectedResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(rejectedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var rejectedBody = await rejectedResponse.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        rejectedBody.Should().NotBeNull();
-        rejectedBody!.Message.Should().Be("Unauthorized");
+        Assert.That(rejectedBody, Is.Not.Null);
+        Assert.That(rejectedBody!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -117,10 +116,10 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionClaims.Token);
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -140,10 +139,10 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionClaims.Token);
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [TestCase("block")]
@@ -158,47 +157,47 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.Token);
         var adminResponse = await Client.PostAsync($"/api/admin/users/{targetUser.Id}/{action}", null);
-        adminResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(adminResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var session = await db.UserSessions.SingleAsync(s => s.Id == targetSessionClaims.SessionId);
-            session.UserId.Should().Be(targetUser.Id);
-            session.RevokedAtUtc.Should().NotBeNull();
+            Assert.That(session.UserId, Is.EqualTo(targetUser.Id));
+            Assert.That(session.RevokedAtUtc, Is.Not.Null);
 
             var updatedUser = await db.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == targetUser.Id);
             if (action == "block")
             {
-                updatedUser.IsBlocked.Should().BeTrue();
-                updatedUser.IsDeleted.Should().BeFalse();
+                Assert.That(updatedUser.IsBlocked, Is.True);
+                Assert.That(updatedUser.IsDeleted, Is.False);
             }
             else
             {
-                updatedUser.IsDeleted.Should().BeFalse();
-                updatedUser.DeletionState.Should().Be(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion);
-                updatedUser.Name.Should().Be(targetUser.Name);
-                updatedUser.Email.Should().Be(targetUser.Email);
+                Assert.That(updatedUser.IsDeleted, Is.False);
+                Assert.That(updatedUser.DeletionState, Is.EqualTo(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion));
+                Assert.That(updatedUser.Name, Is.EqualTo(targetUser.Name));
+                Assert.That(updatedUser.Email, Is.EqualTo(targetUser.Email));
             }
         }
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", targetSessionClaims.Token);
         var rejectedResponse = await Client.GetAsync("/api/checkToken");
-        rejectedResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(rejectedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var rejectedBody = await rejectedResponse.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        rejectedBody.Should().NotBeNull();
-        rejectedBody!.Message.Should().Be("Unauthorized");
+        Assert.That(rejectedBody, Is.Not.Null);
+        Assert.That(rejectedBody!.Message, Is.EqualTo("Unauthorized"));
     }
 
     private async Task<LoginResponse> LoginAsync(string name, string password)
     {
         var response = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
         return body;
     }
 
@@ -230,7 +229,7 @@ public sealed class UserSessionIntegrationTests : IntegrationTestBase
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         var sid = jwt.Claims.Single(c => c.Type == AuthConstants.ClaimNames.SessionId).Value;
         var jti = jwt.Claims.Single(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
-        Id<UserSession>.TryParse(sid, out var sessionId).Should().BeTrue();
+        Assert.That(Id<UserSession>.TryParse(sid, out var sessionId), Is.True);
 
         return new SessionClaims(
             SessionId: sessionId,

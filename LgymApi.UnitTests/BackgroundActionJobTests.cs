@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Hangfire;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.BackgroundWorker.Jobs;
@@ -75,8 +74,8 @@ public class BackgroundActionJobTests
         await _testableJob.ExecuteAsync(messageId.ToString());
 
         // Assert
-        _testOrchestrator.OrchestrationCalls.Count.Should().Be(1, "Job should delegate to orchestrator exactly once");
-        _testOrchestrator.OrchestrationCalls[0].EnvelopeId.Should().Be(messageId, "Job should pass the message id to orchestrator");
+        Assert.That(_testOrchestrator.OrchestrationCalls.Count, Is.EqualTo(1), "Job should delegate to orchestrator exactly once");
+        Assert.That(_testOrchestrator.OrchestrationCalls[0].EnvelopeId, Is.EqualTo(messageId), "Job should pass the message id to orchestrator");
     }
 
 
@@ -93,9 +92,9 @@ public class BackgroundActionJobTests
             .FirstOrDefault() as AutomaticRetryAttribute;
 
         // Assert
-        classAttribute.Should().NotBeNull("ActionMessageJob class must have AutomaticRetryAttribute");
-        classAttribute!.Attempts.Should().Be(3);
-        classAttribute!.DelaysInSeconds.Should().Equal(new[] { 60, 300, 900 });
+        Assert.That(classAttribute, Is.Not.Null, "ActionMessageJob class must have AutomaticRetryAttribute");
+        Assert.That(classAttribute!.Attempts, Is.EqualTo(3));
+        Assert.That(classAttribute!.DelaysInSeconds, Is.EqualTo(new[] { 60, 300, 900 }));
     }
 
     /// <summary>
@@ -106,8 +105,8 @@ public class BackgroundActionJobTests
     {
         // Act & Assert
         var action = () => new ActionMessageJob(null!);
-        var ex = action.Should().Throw<ArgumentNullException>().Which;
-        ex.ParamName.Should().Be("orchestrator");
+        var ex = Assert.Catch<ArgumentNullException>(() => { action(); })!;
+        Assert.That(ex.ParamName, Is.EqualTo("orchestrator"));
     }
 
     /// <summary>
@@ -126,11 +125,11 @@ public class BackgroundActionJobTests
         }
 
         // Assert
-        _testOrchestrator.OrchestrationCalls.Count.Should().Be(3, "Orchestrator should be called once per execution");
+        Assert.That(_testOrchestrator.OrchestrationCalls.Count, Is.EqualTo(3), "Orchestrator should be called once per execution");
 
         for (int i = 0; i < 3; i++)
         {
-            _testOrchestrator.OrchestrationCalls[i].EnvelopeId.Should().Be(messageIds[i], $"Call {i + 1} should pass correct message id");
+            Assert.That(_testOrchestrator.OrchestrationCalls[i].EnvelopeId, Is.EqualTo(messageIds[i]), $"Call {i + 1} should pass correct message id");
         }
     }
 
@@ -141,7 +140,7 @@ public class BackgroundActionJobTests
     public void ActionMessageJob_IsSealed()
     {
         // Act & Assert
-        typeof(ActionMessageJob).IsSealed.Should().BeTrue("ActionMessageJob should be sealed to prevent subclassing");
+        Assert.That(typeof(ActionMessageJob).IsSealed, Is.True, "ActionMessageJob should be sealed to prevent subclassing");
     }
 
     /// <summary>
@@ -151,7 +150,7 @@ public class BackgroundActionJobTests
     public void ActionMessageJob_ImplementsIActionMessageJob()
     {
         // Act & Assert
-        typeof(ActionMessageJob).GetInterfaces().Contains(typeof(IActionMessageJob)).Should().BeTrue("ActionMessageJob must implement IActionMessageJob");
+        Assert.That(typeof(ActionMessageJob).GetInterfaces().Contains(typeof(IActionMessageJob)), Is.True, "ActionMessageJob must implement IActionMessageJob");
     }
 
     /// <summary>
@@ -164,7 +163,7 @@ public class BackgroundActionJobTests
         var method = typeof(ActionMessageJob).GetMethod(nameof(ActionMessageJob.ExecuteAsync));
 
         // Assert
-        method?.ReturnType.Should().Be(typeof(Task), "ExecuteAsync must return Task for async execution");
+        Assert.That(method?.ReturnType, Is.EqualTo(typeof(Task)), "ExecuteAsync must return Task for async execution");
     }
 
     /// <summary>
@@ -178,8 +177,8 @@ public class BackgroundActionJobTests
         var parameters = method?.GetParameters();
 
         // Assert
-        parameters?.Length.Should().Be(1, "ExecuteAsync should accept exactly 1 parameter");
-        parameters?[0].ParameterType.Should().Be(typeof(string), "Parameter should be the string actionMessageId wire value");
+        Assert.That(parameters?.Length, Is.EqualTo(1), "ExecuteAsync should accept exactly 1 parameter");
+        Assert.That(parameters?[0].ParameterType, Is.EqualTo(typeof(string)), "Parameter should be the string actionMessageId wire value");
     }
 
     /// <summary>
@@ -195,8 +194,8 @@ public class BackgroundActionJobTests
         await _testableJob.ExecuteAsync(unknownMessageId);
 
         // Assert
-        _testOrchestrator.OrchestrationCalls.Count.Should().Be(1, "Job should still delegate for unknown ids");
-        _testOrchestrator.OrchestrationCalls[0].EnvelopeId.Should().Be(unknownMessageId);
+        Assert.That(_testOrchestrator.OrchestrationCalls.Count, Is.EqualTo(1), "Job should still delegate for unknown ids");
+        Assert.That(_testOrchestrator.OrchestrationCalls[0].EnvelopeId, Is.EqualTo(unknownMessageId));
     }
 
     /// <summary>
@@ -212,14 +211,14 @@ public class BackgroundActionJobTests
 
         // Assert
         var delays = classAttribute!.DelaysInSeconds!;
-        delays[0].Should().Be(60, "First retry at 1 minute");
-        delays[1].Should().Be(300, "Second retry at 5 minutes");
-        delays[2].Should().Be(900, "Third retry at 15 minutes");
+        Assert.That(delays[0], Is.EqualTo(60), "First retry at 1 minute");
+        Assert.That(delays[1], Is.EqualTo(300), "Second retry at 5 minutes");
+        Assert.That(delays[2], Is.EqualTo(900), "Third retry at 15 minutes");
 
         // Verify increasing sequence
         for (int i = 1; i < delays.Length; i++)
         {
-            delays[i].Should().BeGreaterThan(delays[i - 1], "Delays should increase (backoff strategy)");
+            Assert.That(delays[i], Is.GreaterThan(delays[i - 1]), "Delays should increase (backoff strategy)");
         }
     }
 }

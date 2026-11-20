@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using LgymApi.Infrastructure.Pagination;
 using NUnit.Framework;
@@ -48,8 +47,8 @@ public sealed class PaginationRegressionGuardTests
 
         var found = registry.TryGetMapping<RegressionProjection>("nonExistentField", out var mapping);
 
-        found.Should().BeFalse("unknown fields must be rejected by the mapper registry");
-        mapping.Should().BeNull();
+        Assert.That(found, Is.False, "unknown fields must be rejected by the mapper registry");
+        Assert.That(mapping, Is.Null);
     }
 
     [Test]
@@ -62,8 +61,7 @@ public sealed class PaginationRegressionGuardTests
             new SortDescriptor { FieldName = "doesNotExist" }
         ]);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*'doesNotExist'*not a recognized field*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*'doesNotExist'*not a recognized field*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -78,8 +76,7 @@ public sealed class PaginationRegressionGuardTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Sort field 'unknownField' is not allowed*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Sort field 'unknownField' is not allowed*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -109,8 +106,7 @@ public sealed class PaginationRegressionGuardTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Filter field 'nonExistentColumn' is not allowed*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Filter field 'nonExistentColumn' is not allowed*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -124,11 +120,10 @@ public sealed class PaginationRegressionGuardTests
             Items = []
         };
 
-        pagination.TotalPages.Should().Be(2);
-        pagination.HasNextPage.Should().BeFalse(
-            "page 5 is beyond total pages (2), so there is no next page");
-        pagination.HasPreviousPage.Should().BeTrue();
-        pagination.Items.Should().BeEmpty();
+        Assert.That(pagination.TotalPages, Is.EqualTo(2));
+        Assert.That(pagination.HasNextPage, Is.False, "page 5 is beyond total pages (2), so there is no next page");
+        Assert.That(pagination.HasPreviousPage, Is.True);
+        Assert.That(pagination.Items, Is.Empty);
     }
 
     [Test]
@@ -142,9 +137,9 @@ public sealed class PaginationRegressionGuardTests
             Items = []
         };
 
-        pagination.TotalPages.Should().Be(3);
-        pagination.HasNextPage.Should().BeFalse();
-        pagination.HasPreviousPage.Should().BeTrue();
+        Assert.That(pagination.TotalPages, Is.EqualTo(3));
+        Assert.That(pagination.HasNextPage, Is.False);
+        Assert.That(pagination.HasPreviousPage, Is.True);
     }
 
     [Test]
@@ -163,8 +158,7 @@ public sealed class PaginationRegressionGuardTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate sort field 'name'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate sort field 'name'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -178,8 +172,7 @@ public sealed class PaginationRegressionGuardTests
             new SortDescriptor { FieldName = "name", Descending = true }
         ]);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate sort field*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate sort field*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -231,9 +224,9 @@ public sealed class PaginationRegressionGuardTests
 
         var result = adapter.Adapt(input);
 
-        result.Should().NotBeNullOrWhiteSpace("nested filter groups should produce a valid Gridify filter string");
-        result.Should().Contain("name", "outer condition field should be present");
-        result.Should().Contain("email", "inner group condition field should be present");
+        Assert.That(string.IsNullOrWhiteSpace(result), Is.False, "nested filter groups should produce a valid Gridify filter string");
+        Assert.That(result, Does.Contain("name"), "outer condition field should be present");
+        Assert.That(result, Does.Contain("email"), "inner group condition field should be present");
     }
 
     [Test]
@@ -266,8 +259,7 @@ public sealed class PaginationRegressionGuardTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*nesting depth*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*nesting depth*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -280,8 +272,7 @@ public sealed class PaginationRegressionGuardTests
             new FieldMapping { FieldName = "name", MemberName = "Email" }
         ]);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate field mapping*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate field mapping*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -293,8 +284,7 @@ public sealed class PaginationRegressionGuardTests
             new FieldMapping { FieldName = "", MemberName = "Name" }
         ]);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Field name must not be empty*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Field name must not be empty*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static FilterToGridifyAdapter CreateAdapter(int maxNestingDepth = 3)

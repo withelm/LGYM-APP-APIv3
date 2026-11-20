@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -47,12 +46,12 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
         await using var verificationContext = CreateDbContext(lease);
         var policyMigrationId = GetPolicyMigrationId(verificationContext.Database.GetMigrations());
 
-        (await verificationContext.Database.GetAppliedMigrationsAsync()).Should().Contain(policyMigrationId);
-        verificationContext.Database.HasPendingModelChanges().Should().BeFalse();
-        (await ReadTableStatesAsync(verificationContext)).Values.Should().OnlyContain(state => !state.Enabled && !state.Forced);
-        (await ReadPoliciesAsync(verificationContext)).Should().BeEquivalentTo(ExpectedPolicies);
-        (await verificationContext.UserTutorialProgresses.AsNoTracking().CountAsync()).Should().Be(1);
-        (await verificationContext.UserTutorialStepProgresses.AsNoTracking().CountAsync()).Should().Be(1);
+        Assert.That((await verificationContext.Database.GetAppliedMigrationsAsync()), Does.Contain(policyMigrationId));
+        Assert.That(verificationContext.Database.HasPendingModelChanges(), Is.False);
+        Assert.That(((await ReadTableStatesAsync(verificationContext)).Values).All(state => !state.Enabled && !state.Forced), Is.True);
+        Assert.That((await ReadPoliciesAsync(verificationContext)), Is.EquivalentTo(ExpectedPolicies).UsingPropertiesComparer());
+        Assert.That((await verificationContext.UserTutorialProgresses.AsNoTracking().CountAsync()), Is.EqualTo(1));
+        Assert.That((await verificationContext.UserTutorialStepProgresses.AsNoTracking().CountAsync()), Is.EqualTo(1));
     }
 
     [Test]
@@ -77,10 +76,10 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
         }
 
         await using var verificationContext = CreateDbContext(lease);
-        (await ReadTableStatesAsync(verificationContext)).Values.Should().OnlyContain(state => !state.Enabled && !state.Forced);
-        (await ReadPoliciesAsync(verificationContext)).Should().BeEmpty();
-        (await verificationContext.UserTutorialProgresses.AsNoTracking().CountAsync()).Should().Be(1);
-        (await verificationContext.UserTutorialStepProgresses.AsNoTracking().CountAsync()).Should().Be(1);
+        Assert.That(((await ReadTableStatesAsync(verificationContext)).Values).All(state => !state.Enabled && !state.Forced), Is.True);
+        Assert.That((await ReadPoliciesAsync(verificationContext)), Is.Empty);
+        Assert.That((await verificationContext.UserTutorialProgresses.AsNoTracking().CountAsync()), Is.EqualTo(1));
+        Assert.That((await verificationContext.UserTutorialStepProgresses.AsNoTracking().CountAsync()), Is.EqualTo(1));
     }
 
     private static AppDbContext CreateDbContext(PostgreSqlDatabaseLease lease)
@@ -92,7 +91,7 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
     private static string GetPolicyMigrationId(IEnumerable<string> migrations)
     {
         var matches = migrations.Where(migration => migration.EndsWith(PolicyMigrationName, StringComparison.Ordinal)).ToArray();
-        matches.Should().ContainSingle();
+        Assert.That(matches, Has.Exactly(1).Items);
         return matches[0];
     }
 
@@ -151,7 +150,7 @@ public sealed class PostgreSqlTutorialRowSecurityMigrationTests
                 states.Add(reader.GetString(0), new TutorialTableState(reader.GetBoolean(1), reader.GetBoolean(2)));
             }
 
-            states.Keys.Should().BeEquivalentTo(ExpectedPolicies.Select(policy => policy.Table).Distinct());
+            Assert.That(states.Keys, Is.EquivalentTo(ExpectedPolicies.Select(policy => policy.Table).Distinct()).UsingPropertiesComparer());
             return states;
         }
         finally

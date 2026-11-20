@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -42,7 +41,7 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             isVisibleInRanking = true
         });
 
-        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await using (var scope = Factory.Services.CreateAsyncScope())
         {
@@ -56,17 +55,17 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
                     progress.UserId == registeredUser.Id
                     && progress.TutorialType == TutorialType.OnboardingDemo);
 
-            tutorial.IsCompleted.Should().BeFalse();
+            Assert.That(tutorial.IsCompleted, Is.False);
         }
 
         Client.DefaultRequestHeaders.Remove("Idempotency-Key");
         var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>(SharedSerializationOptions.Current);
-        login.Should().NotBeNull();
-        login!.User.Should().NotBeNull();
-        login.User!.HasActiveTutorials.Should().BeTrue();
+        Assert.That(login, Is.Not.Null);
+        Assert.That(login!.User, Is.Not.Null);
+        Assert.That(login.User!.HasActiveTutorials, Is.True);
     }
 
     [Test]
@@ -90,11 +89,11 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
 
         var response = await client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var login = await response.Content.ReadFromJsonAsync<LoginResponseDto>(SharedSerializationOptions.Current);
-        login.Should().NotBeNull();
-        login!.User.Should().NotBeNull();
-        login.User!.HasActiveTutorials.Should().BeTrue();
+        Assert.That(login, Is.Not.Null);
+        Assert.That(login!.User, Is.Not.Null);
+        Assert.That(login.User!.HasActiveTutorials, Is.True);
 
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -106,8 +105,8 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
         var tutorial = await database.UserTutorialProgresses
             .AsNoTracking()
             .SingleAsync(progress => progress.UserId == registeredUserId);
-        tutorial.TutorialType.Should().Be(TutorialType.OnboardingDemo);
-        tutorial.IsCompleted.Should().BeFalse();
+        Assert.That(tutorial.TutorialType, Is.EqualTo(TutorialType.OnboardingDemo));
+        Assert.That(tutorial.IsCompleted, Is.False);
     }
 
     [Test]
@@ -126,8 +125,8 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
 
             var result = await tutorialService.InitializeOnboardingTutorialAsync(user.Id);
 
-            result.IsSuccess.Should().BeTrue();
-            database.Database.CurrentTransaction.Should().NotBeNull();
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(database.Database.CurrentTransaction, Is.Not.Null);
             await transaction.RollbackAsync();
         }
 
@@ -136,7 +135,7 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
         var tutorialExists = await verificationDatabase.UserTutorialProgresses
             .AsNoTracking()
             .AnyAsync(progress => progress.UserId == user.Id);
-        tutorialExists.Should().BeFalse();
+        Assert.That(tutorialExists, Is.False);
     }
 
     [Test]
@@ -163,7 +162,7 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
             isVisibleInRanking = true
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
         await AssertAccountWasRolledBackAsync(email);
     }
 
@@ -191,7 +190,7 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
 
         var response = await client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
         await AssertAccountWasRolledBackAsync(email);
     }
 
@@ -202,7 +201,7 @@ internal sealed class PostgreSqlTutorialRegistrationTests : PostgreSqlIntegratio
         var accountExists = await database.Users
             .AsNoTracking()
             .AnyAsync(user => user.Email == email);
-        accountExists.Should().BeFalse();
+        Assert.That(accountExists, Is.False);
     }
 
     private static ITutorialService CreateFailingTutorialService()

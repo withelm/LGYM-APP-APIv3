@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -19,7 +18,7 @@ public sealed class TokenServiceTests
         var service = new TokenService(configuration);
 
         var action = () => service.CreateToken(Id<User>.New(), Id<UserSession>.New(), Id<UserSession>.New().ToString(), Array.Empty<string>(), Array.Empty<string>());
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -37,15 +36,15 @@ public sealed class TokenServiceTests
         var jti = Id<UserSession>.New().ToString();
         var token = service.CreateToken(userId, sessionId, jti, ["User"], ["admin:access"]);
 
-        token.Should().NotBeNullOrEmpty();
+        Assert.That(token, Is.Not.Null.And.Not.Empty);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
-        jwt.Claims.Any(c => c.Type == "sub" && c.Value == userId.ToString()).Should().BeTrue();
-        jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.UserId && c.Value == userId.ToString()).Should().BeTrue();
-        jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.SessionId && c.Value == sessionId.ToString()).Should().BeTrue();
-        jwt.Claims.Any(c => c.Type == JwtRegisteredClaimNames.Jti && c.Value == jti).Should().BeTrue();
-        jwt.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "User").Should().BeTrue();
-        jwt.Claims.Any(c => c.Type == "permission" && c.Value == "admin:access").Should().BeTrue();
+        Assert.That(jwt.Claims.Any(c => c.Type == "sub" && c.Value == userId.ToString()), Is.True);
+        Assert.That(jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.UserId && c.Value == userId.ToString()), Is.True);
+        Assert.That(jwt.Claims.Any(c => c.Type == AuthConstants.ClaimNames.SessionId && c.Value == sessionId.ToString()), Is.True);
+        Assert.That(jwt.Claims.Any(c => c.Type == JwtRegisteredClaimNames.Jti && c.Value == jti), Is.True);
+        Assert.That(jwt.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "User"), Is.True);
+        Assert.That(jwt.Claims.Any(c => c.Type == "permission" && c.Value == "admin:access"), Is.True);
     }
 }

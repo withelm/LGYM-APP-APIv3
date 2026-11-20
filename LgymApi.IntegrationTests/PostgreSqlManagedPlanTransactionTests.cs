@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning;
@@ -83,14 +82,14 @@ internal sealed class PostgreSqlManagedPlanTransactionTests : PostgreSqlIntegrat
 
             Func<Task> action = () => useCase.ExecuteAsync(new AssignManagedPlanCommand(trainer.Id, trainee.Id, template.Id));
 
-            await action.Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         }
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persistedClone = await verificationDatabase.Plans.SingleOrDefaultAsync(plan => plan.Id == cloneId);
-        persistedClone.Should().BeNull();
-        (await verificationDatabase.Plans.AnyAsync(plan => plan.UserId == trainee.Id && plan.IsActive)).Should().BeFalse();
+        Assert.That(persistedClone, Is.Null);
+        Assert.That((await verificationDatabase.Plans.AnyAsync(plan => plan.UserId == trainee.Id && plan.IsActive)), Is.False);
     }
 
     private sealed class FlushThenThrowUnitOfWork : IUnitOfWork

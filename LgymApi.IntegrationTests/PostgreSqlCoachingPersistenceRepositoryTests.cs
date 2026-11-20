@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Domain.Entities;
@@ -43,18 +42,18 @@ internal sealed class PostgreSqlCoachingPersistenceRepositoryTests : PostgreSqlI
 
             var result = await useCase.ExecuteAsync(new AcceptInvitationCommand(trainee.Id, invitationId));
 
-            result.IsFailure.Should().BeTrue();
+            Assert.That(result.IsFailure, Is.True);
         }
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invitation = await verificationDatabase.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId);
 
-        invitation.Status.Should().Be(TrainerInvitationStatus.Expired);
-        invitation.RespondedAt.Should().NotBeNull();
-        invitation.TraineeId.Should().BeNull();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(candidate => candidate.TraineeId == trainee.Id)).Should().BeFalse();
-        (await verificationDatabase.CommandEnvelopes.CountAsync(candidate => candidate.PayloadJson.Contains(invitationId.ToString()))).Should().Be(0);
+        Assert.That(invitation.Status, Is.EqualTo(TrainerInvitationStatus.Expired));
+        Assert.That(invitation.RespondedAt, Is.Not.Null);
+        Assert.That(invitation.TraineeId, Is.Null);
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(candidate => candidate.TraineeId == trainee.Id)), Is.False);
+        Assert.That((await verificationDatabase.CommandEnvelopes.CountAsync(candidate => candidate.PayloadJson.Contains(invitationId.ToString()))), Is.EqualTo(0));
     }
 
     [Test]
@@ -109,10 +108,10 @@ internal sealed class PostgreSqlCoachingPersistenceRepositoryTests : PostgreSqlI
         var invitationFacts = await reader.GetInvitationFactsAsync(trainer.Id);
         var dashboardFacts = await reader.GetDashboardFactsAsync(trainer.Id);
 
-        invitationFacts.Should().Contain(fact => fact.Id == latestInvitation.Id && fact.TraineeId == trainee.Id);
-        invitationFacts.Should().Contain(fact => fact.Id == emailInvitation.Id && !fact.TraineeId.HasValue);
-        dashboardFacts.Should().ContainSingle(fact => fact.TraineeId == trainee.Id);
-        dashboardFacts.Single().LatestInvitation!.Id.Should().Be(latestInvitation.Id);
-        dashboardFacts.Single().ActiveLink.Should().NotBeNull();
+        Assert.That((invitationFacts).Any(fact => fact.Id == latestInvitation.Id && fact.TraineeId == trainee.Id), Is.True);
+        Assert.That((invitationFacts).Any(fact => fact.Id == emailInvitation.Id && !fact.TraineeId.HasValue), Is.True);
+        Assert.That((dashboardFacts).Where(fact => fact.TraineeId == trainee.Id), Has.Exactly(1).Items);
+        Assert.That(dashboardFacts.Single().LatestInvitation!.Id, Is.EqualTo(latestInvitation.Id));
+        Assert.That(dashboardFacts.Single().ActiveLink, Is.Not.Null);
     }
 }

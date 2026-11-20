@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.Identity.Errors;
@@ -32,8 +31,8 @@ public sealed class EloRegistryServiceTests
 
         var result = await service.GetChartAsync(Id<AccountReference>.Empty);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidEloRegistryError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidEloRegistryError>());
     }
 
     [Test]
@@ -48,8 +47,8 @@ public sealed class EloRegistryServiceTests
 
         var result = await service.GetUserEloAsync(Id<AccountReference>.Empty);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
     }
 
     [Test]
@@ -83,10 +82,10 @@ public sealed class EloRegistryServiceTests
 
         var result = await service.GetChartAsync(accountId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(entry => entry.Id).Should().Equal(entries.Select(entry => entry.Id));
-        result.Value.Select(entry => entry.Value).Should().Equal(1020, 1010);
-        result.Value.Select(entry => entry.Date).Should().Equal("02/12", "01/10");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(entry => entry.Id), Is.EqualTo(entries.Select(entry => entry.Id)));
+        Assert.That(result.Value.Select(entry => entry.Value), Is.EqualTo(new[] { 1020, 1010 }));
+        Assert.That(result.Value.Select(entry => entry.Date), Is.EqualTo(new[] { "02/12", "01/10" }));
     }
 
     [Test]
@@ -109,7 +108,7 @@ public sealed class EloRegistryServiceTests
 
         var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false, cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         Received.InOrder(() =>
         {
             userRegistrationService.RegisterAsync(input, cancellationToken);
@@ -137,7 +136,7 @@ public sealed class EloRegistryServiceTests
 
         var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: true);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await userRegistrationService.Received(1).RegisterTrainerAsync(input, Arg.Any<CancellationToken>());
         await userRegistrationService.DidNotReceive().RegisterAsync(Arg.Any<RegisterUserInput>(), Arg.Any<CancellationToken>());
     }
@@ -156,7 +155,7 @@ public sealed class EloRegistryServiceTests
 
         var result = await new EloRegistryService(progress, userRegistrationService, unitOfWork).RegisterUserAsync(input, trainer: false);
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
         await transaction.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
         await progress.DidNotReceive().InitializeEloAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());

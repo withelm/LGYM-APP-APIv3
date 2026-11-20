@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -34,17 +33,17 @@ public sealed class CommandEnvelopeBehaviorTests
 
         envelope.ResetStaleProcessing("lease expired");
 
-        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.ProcessingStartedAtUtc.Should().BeNull();
-        envelope.DispatchedAt.Should().BeNull();
-        envelope.SchedulerJobId.Should().BeNull();
-        envelope.NextAttemptAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(2));
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        Assert.That(envelope.ProcessingStartedAtUtc, Is.Null);
+        Assert.That(envelope.DispatchedAt, Is.Null);
+        Assert.That(envelope.SchedulerJobId, Is.Null);
+        Assert.That(envelope.NextAttemptAt, Is.EqualTo(DateTimeOffset.UtcNow).Within(TimeSpan.FromSeconds(2)));
 
         var executeLogs = envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.Execute).ToList();
-        executeLogs.Should().HaveCount(2);
-        executeLogs[^1].Status.Should().Be(ActionExecutionStatus.Failed);
-        executeLogs[^1].ErrorMessage.Should().Be("lease expired");
-        executeLogs[^1].AttemptNumber.Should().Be(1);
+        Assert.That(executeLogs, Has.Exactly(2).Items);
+        Assert.That(executeLogs[^1].Status, Is.EqualTo(ActionExecutionStatus.Failed));
+        Assert.That(executeLogs[^1].ErrorMessage, Is.EqualTo("lease expired"));
+        Assert.That(executeLogs[^1].AttemptNumber, Is.EqualTo(1));
     }
 
     [Test]
@@ -62,9 +61,9 @@ public sealed class CommandEnvelopeBehaviorTests
 
         envelope.ResetStaleProcessing("ignored");
 
-        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.SchedulerJobId.Should().Be("job-123");
-        envelope.ExecutionLogs.Should().BeEmpty();
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        Assert.That(envelope.SchedulerJobId, Is.EqualTo("job-123"));
+        Assert.That(envelope.ExecutionLogs, Is.Empty);
     }
 
     [Test]
@@ -83,7 +82,7 @@ public sealed class CommandEnvelopeBehaviorTests
         envelope.ExecutionLogs.Add(new ActionExecutionLog { Id = Id<ActionExecutionLog>.New(), CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.Execute, AttemptNumber = 1 });
         envelope.ExecutionLogs.Add(new ActionExecutionLog { Id = Id<ActionExecutionLog>.New(), CommandEnvelopeId = envelope.Id, ActionType = ActionExecutionLogType.DeadLetter, AttemptNumber = 2 });
 
-        envelope.GetExecutionAttemptCount().Should().Be(2);
+        Assert.That(envelope.GetExecutionAttemptCount(), Is.EqualTo(2));
     }
 
     [Test]
@@ -107,11 +106,11 @@ public sealed class CommandEnvelopeBehaviorTests
 
         envelope.MarkDeadLettered("manual dead-letter", "payload poisoned");
 
-        envelope.Status.Should().Be(ActionExecutionStatus.DeadLettered);
-        envelope.CompletedAt.Should().NotBeNull();
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
+        Assert.That(envelope.CompletedAt, Is.Not.Null);
         var deadLetter = envelope.ExecutionLogs.Single(log => log.ActionType == ActionExecutionLogType.DeadLetter);
-        deadLetter.ErrorMessage.Should().Be("manual dead-letter");
-        deadLetter.ErrorDetails.Should().Be("payload poisoned");
-        deadLetter.AttemptNumber.Should().Be(1);
+        Assert.That(deadLetter.ErrorMessage, Is.EqualTo("manual dead-letter"));
+        Assert.That(deadLetter.ErrorDetails, Is.EqualTo("payload poisoned"));
+        Assert.That(deadLetter.AttemptNumber, Is.EqualTo(1));
     }
 }

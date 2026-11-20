@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -35,35 +34,35 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             name = "Optional report",
             fields = new[] { new { key = "note", label = "Note", type = "Text", isRequired = false, order = 0 } }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = (await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>())!;
         using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template.Id });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = (await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>())!;
 
         SetAuthorizationHeader(trainee.Id);
         using var submit = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new { answers = new { note = "before" } });
-        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submit.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var submission = (await submit.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
-        Id<ReportSubmission>.TryParse(submission.Id, out var submissionId).Should().BeTrue();
+        Assert.That(Id<ReportSubmission>.TryParse(submission.Id, out var submissionId), Is.True);
         var route = $"/api/trainee/report-submissions/{submission.Id}/answers";
 
         foreach (var body in new[] { "{}", "{\"answers\":null}" })
         {
             using var response = await Client.PostAsync(route, new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "request body {0} must not replace answers", body);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), string.Format(System.Globalization.CultureInfo.InvariantCulture, "request body {0} must not replace answers", body));
             using var scope = Factory.Services.CreateScope();
             var persisted = await scope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
             using var payload = JsonDocument.Parse(persisted.PayloadJson);
-            payload.RootElement.GetProperty("note").GetString().Should().Be("before");
+            Assert.That(payload.RootElement.GetProperty("note").GetString(), Is.EqualTo("before"));
         }
 
         using var empty = await Client.PostAsJsonAsync(route, new { answers = new { } });
-        empty.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(empty.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var assertionScope = Factory.Services.CreateScope();
         var saved = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
         using var savedPayload = JsonDocument.Parse(saved.PayloadJson);
-        savedPayload.RootElement.EnumerateObject().Should().BeEmpty();
+        Assert.That(savedPayload.RootElement.EnumerateObject(), Is.Empty);
     }
 
     [Test]
@@ -92,38 +91,38 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = "measurements", label = "Measurements", type = "Measurements", isRequired = false, order = 1, moduleConfig = new { measurementTypes = new[] { "weight" } } }
             }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = (await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>())!;
         using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template.Id });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = (await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>())!;
 
         SetAuthorizationHeader(trainee.Id);
         var original = new { note = "before", measurements = new { weight = new { value = 80, unit = "kg" } } };
         using var submit = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new { answers = original });
-        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submit.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var submission = (await submit.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
         using (var scope = Factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")).Should().Be(1);
+            Assert.That((await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")), Is.EqualTo(1));
         }
         var route = $"/api/trainee/report-submissions/{submission.Id}/answers";
         using var omitted = await Client.PostAsJsonAsync(route, new { answers = new { note = "lost" } });
-        omitted.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(omitted.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var altered = await Client.PostAsJsonAsync(route, new { answers = new { note = "lost", measurements = new { weight = new { value = 90, unit = "kg" } } } });
-        altered.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(altered.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var duplicate = await Client.PostAsync(route, new StringContent("{\"answers\":{\"note\":\"lost\",\"measurements\":{},\"MEASUREMENTS\":{\"weight\":{\"value\":80,\"unit\":\"kg\"}}}}", System.Text.Encoding.UTF8, "application/json"));
-        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(duplicate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var exactDuplicate = await Client.PostAsync(route, new StringContent("{\"answers\":{\"note\":\"lost\",\"measurements\":{},\"measurements\":{\"weight\":{\"value\":80,\"unit\":\"kg\"}}}}", System.Text.Encoding.UTF8, "application/json"));
-        exactDuplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(exactDuplicate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var edited = await Client.PostAsJsonAsync(route, new { answers = new { note = "after", original.measurements } });
-        edited.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(edited.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var editedBody = (await edited.Content.ReadFromJsonAsync<ReportSubmissionResponse>())!;
-        editedBody.Answers["note"].GetString().Should().Be("after");
-        editedBody.Answers["measurements"].GetProperty("weight").GetProperty("value").GetInt32().Should().Be(80);
+        Assert.That(editedBody.Answers["note"].GetString(), Is.EqualTo("after"));
+        Assert.That(editedBody.Answers["measurements"].GetProperty("weight").GetProperty("value").GetInt32(), Is.EqualTo(80));
 
-        Id<ReportSubmission>.TryParse(submission.Id, out var submissionId).Should().BeTrue();
+        Assert.That(Id<ReportSubmission>.TryParse(submission.Id, out var submissionId), Is.True);
         foreach (var (storedPayload, replacement, expectedStatus) in new[]
         {
             ("{\"note\":\"before\"}", "{\"note\":\"after\"}", HttpStatusCode.OK),
@@ -143,12 +142,12 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 await database.SaveChangesAsync();
             }
             using var response = await Client.PostAsync(route, new StringContent($"{{\"answers\":{replacement}}}", System.Text.Encoding.UTF8, "application/json"));
-            response.StatusCode.Should().Be(expectedStatus, "stored payload {0}", storedPayload);
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatus), string.Format(System.Globalization.CultureInfo.InvariantCulture, "stored payload {0}", storedPayload));
             using var assertionScope = Factory.Services.CreateScope();
             var persisted = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == submissionId);
             if (expectedStatus == HttpStatusCode.BadRequest)
             {
-                persisted.PayloadJson.Should().Be(storedPayload);
+                Assert.That(persisted.PayloadJson, Is.EqualTo(storedPayload));
             }
             else
             {
@@ -156,11 +155,11 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 using var savedJson = JsonDocument.Parse(persisted.PayloadJson);
                 var originalHasMeasurement = originalJson.RootElement.TryGetProperty("measurements", out var originalMeasurement);
                 var savedHasMeasurement = savedJson.RootElement.EnumerateObject().Any(item => item.Name.Equals("measurements", StringComparison.OrdinalIgnoreCase));
-                savedHasMeasurement.Should().Be(originalHasMeasurement);
+                Assert.That(savedHasMeasurement, Is.EqualTo(originalHasMeasurement));
                 if (originalHasMeasurement)
                 {
                     var savedMeasurement = savedJson.RootElement.EnumerateObject().Single(item => item.Name.Equals("measurements", StringComparison.OrdinalIgnoreCase)).Value;
-                    JsonElement.DeepEquals(originalMeasurement, savedMeasurement).Should().BeTrue();
+                    Assert.That(JsonElement.DeepEquals(originalMeasurement, savedMeasurement), Is.True);
                 }
             }
         }
@@ -170,29 +169,29 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             var row = await database.ReportSubmissions.SingleAsync(item => item.Id == submissionId);
             row.PayloadJson = JsonSerializer.Serialize(new { note = "after", original.measurements });
             await database.SaveChangesAsync();
-            (await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")).Should().Be(1);
+            Assert.That((await database.CommandEnvelopes.CountAsync(item => item.CommandTypeFullName == "LgymApi.BackgroundWorker.Common.Commands.ReportSubmissionAcceptedProgressCommand")), Is.EqualTo(1));
         }
 
         SetAuthorizationHeader(other.Id);
         using var foreign = await Client.PostAsJsonAsync(route, new { answers = original });
-        foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreign.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         ClearAuthorizationHeader();
         using var anonymous = await Client.PostAsJsonAsync(route, new { answers = original });
-        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymous.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         SetAuthorizationHeader(trainer.Id);
         var feedbackRoute = $"/api/trainer/trainees/{trainee.Id}/report-submissions/{submission.Id}/feedback";
         using var feedback = await Client.PostAsJsonAsync(feedbackRoute, new { trainerOverallComment = "feedback", trainerFieldComments = new { } });
-        feedback.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(feedback.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var cleared = await Client.PostAsJsonAsync(feedbackRoute, new { trainerOverallComment = (string?)null, trainerFieldComments = new { } });
-        cleared.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(cleared.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(trainee.Id);
         using var blocked = await Client.PostAsJsonAsync(route, new { answers = original });
-        blocked.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(blocked.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var list = await Client.GetAsync("/api/trainee/report-submissions");
         using var listJson = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
-        listJson.RootElement[0].GetProperty("canEditAnswers").GetBoolean().Should().BeFalse();
-        listJson.RootElement[0].GetProperty("answers").GetProperty("note").GetString().Should().Be("after");
+        Assert.That(listJson.RootElement[0].GetProperty("canEditAnswers").GetBoolean(), Is.False);
+        Assert.That(listJson.RootElement[0].GetProperty("answers").GetProperty("note").GetString(), Is.EqualTo("after"));
     }
 
     [Test]
@@ -225,10 +224,10 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        createTemplateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createTemplateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await createTemplateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
-        template!.Fields.Should().HaveCount(2);
+        Assert.That(template, Is.Not.Null);
+        Assert.That(template!.Fields, Has.Exactly(2).Items);
 
         var createRequestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
         {
@@ -236,17 +235,17 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             dueAt = DateTimeOffset.UtcNow.AddDays(2)
         });
 
-        createRequestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createRequestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await createRequestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
-        request!.Status.Should().Be("Pending");
+        Assert.That(request, Is.Not.Null);
+        Assert.That(request!.Status, Is.EqualTo("Pending"));
 
         SetAuthorizationHeader(trainee.Id);
         var pendingResponse = await Client.GetAsync("/api/trainee/report-requests");
-        pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(pendingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var pending = await pendingResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
-        pending.Should().NotBeNull();
-        pending!.Should().ContainSingle(x => x.Id == request.Id);
+        Assert.That(pending, Is.Not.Null);
+        Assert.That((pending!).Where(x => x.Id == request.Id), Has.Exactly(1).Items);
 
         var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new
         {
@@ -257,16 +256,16 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainer.Id);
         var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/report-submissions");
-        submissionsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submissionsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var submissions = await submissionsResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
-        submissions.Should().NotBeNull();
-        submissions!.Should().ContainSingle();
-        submissions[0].ReportRequestId.Should().Be(request.Id);
-        submissions[0].Answers["weight"].GetDouble().Should().BeApproximately(81.2, 0.001);
+        Assert.That(submissions, Is.Not.Null);
+        Assert.That(submissions!, Has.Exactly(1).Items);
+        Assert.That(submissions[0].ReportRequestId, Is.EqualTo(request.Id));
+        Assert.That(submissions[0].Answers["weight"].GetDouble(), Is.EqualTo(81.2).Within(0.001));
     }
 
     [Test]
@@ -291,18 +290,18 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = "photos", label = "Issued photos", type = "Photos", isRequired = false, order = 1, moduleConfig = new { requiredViews = new[] { "Front" } } }
             }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
+        Assert.That(template, Is.Not.Null);
 
         using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new { templateId = template!.Id });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
+        Assert.That(request, Is.Not.Null);
 
         SetAuthorizationHeader(trainee.Id);
         using var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new { answers = new { checkIn = "immutable archive" } });
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainer.Id);
         using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/report-templates/{template.Id}/update", new
@@ -310,25 +309,25 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             name = "Mutated source template",
             fields = new[] { new { key = "replacement", label = "Replacement", type = "Text", isRequired = true, order = 0 } }
         });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var deleteResponse = await Client.PostAsync($"/api/trainer/report-templates/{template.Id}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainee.Id);
         using var archiveRequest = new HttpRequestMessage(HttpMethod.Get, "/api/trainee/report-submissions");
         archiveRequest.Headers.Add("X-LGYM-Reporting-Protocol", "2");
         using var archiveResponse = await Client.SendAsync(archiveRequest);
-        archiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(archiveResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var archive = JsonDocument.Parse(await archiveResponse.Content.ReadAsStringAsync());
         var archivedRequest = archive.RootElement[0].GetProperty("request");
-        archivedRequest.GetProperty("definitionSnapshotProvenance").GetString().Should().Be("Issued");
+        Assert.That(archivedRequest.GetProperty("definitionSnapshotProvenance").GetString(), Is.EqualTo("Issued"));
         var archivedTemplate = archivedRequest.GetProperty("template");
-        archivedTemplate.GetProperty("name").GetString().Should().Be("Issued archive template");
+        Assert.That(archivedTemplate.GetProperty("name").GetString(), Is.EqualTo("Issued archive template"));
         var archivedFields = archivedTemplate.GetProperty("fields");
-        archivedFields.EnumerateArray().Select(field => field.GetProperty("key").GetString()).Should().Contain(["checkIn", "photos"]);
-        archivedFields.EnumerateArray()
+        Assert.That(archivedFields.EnumerateArray().Select(field => field.GetProperty("key").GetString()), Is.SupersetOf(new[] { "checkIn", "photos" }));
+        Assert.That(archivedFields.EnumerateArray()
             .Single(field => field.GetProperty("key").GetString() == "photos")
-            .GetProperty("moduleConfig").GetProperty("photoTypes").GetArrayLength().Should().BeGreaterThan(0);
+            .GetProperty("moduleConfig").GetProperty("photoTypes").GetArrayLength(), Is.GreaterThan(0));
     }
 
     [Test]
@@ -356,15 +355,19 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         using var traineeResponse = await Client.GetAsync("/api/trainee/report-submissions");
-        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(traineeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var traineeBody = await traineeResponse.Content.ReadAsStringAsync();
-        traineeBody.Should().Contain(visibleSubmission.Id.ToString()).And.NotContain(deletedRequestSubmission.Id.ToString()).And.NotContain(deletedSubmission.Id.ToString());
+        var assertedChain17 = traineeBody;
+        Assert.That(assertedChain17, Does.Contain(visibleSubmission.Id.ToString()));
+        Assert.That(assertedChain17, Does.Not.Contain(deletedRequestSubmission.Id.ToString()).And.Not.Contain(deletedSubmission.Id.ToString()));
 
         SetAuthorizationHeader(trainer.Id);
         using var trainerResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/report-submissions");
-        trainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var trainerBody = await trainerResponse.Content.ReadAsStringAsync();
-        trainerBody.Should().Contain(visibleSubmission.Id.ToString()).And.NotContain(deletedRequestSubmission.Id.ToString()).And.NotContain(deletedSubmission.Id.ToString());
+        var assertedChain18 = trainerBody;
+        Assert.That(assertedChain18, Does.Contain(visibleSubmission.Id.ToString()));
+        Assert.That(assertedChain18, Does.Not.Contain(deletedRequestSubmission.Id.ToString()).And.Not.Contain(deletedSubmission.Id.ToString()));
     }
 
     [Test]
@@ -403,43 +406,43 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = "checkIn", label = "Check-in", type = "Text", isRequired = true, order = 0 }
             }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
+        Assert.That(template, Is.Not.Null);
 
         using var createRequestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
         {
             templateId = template!.Id,
             note = "Protected pending report request"
         });
-        createRequestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createRequestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var createdRequest = await createRequestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        createdRequest.Should().NotBeNull();
+        Assert.That(createdRequest, Is.Not.Null);
 
         SetAuthorizationHeader(trainee.Id);
         using var ownerResponse = await Client.GetAsync("/api/trainee/report-requests");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerRequests = await ownerResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
-        ownerRequests.Should().NotBeNull();
-        ownerRequests!.Should().ContainSingle(request => request.Id == createdRequest!.Id);
-        ownerRequests.Single().Note.Should().Be("Protected pending report request");
+        Assert.That(ownerRequests, Is.Not.Null);
+        Assert.That((ownerRequests!).Where(request => request.Id == createdRequest!.Id), Has.Exactly(1).Items);
+        Assert.That(ownerRequests.Single().Note, Is.EqualTo("Protected pending report request"));
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var otherResponse = await Client.GetAsync("/api/trainee/report-requests");
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var otherRequests = await otherResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
-        otherRequests.Should().NotBeNull();
-        otherRequests.Should().BeEmpty();
+        Assert.That(otherRequests, Is.Not.Null);
+        Assert.That(otherRequests, Is.Empty);
         var otherResponseText = await otherResponse.Content.ReadAsStringAsync();
-        otherResponseText.Should().NotContain(createdRequest!.Id);
-        otherResponseText.Should().NotContain("Protected pending report request");
+        Assert.That(otherResponseText, Does.Not.Contain(createdRequest!.Id));
+        Assert.That(otherResponseText, Does.Not.Contain("Protected pending report request"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainee/report-requests");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(createdRequest.Id);
-        anonymousResponseText.Should().NotContain("Protected pending report request");
+        Assert.That(anonymousResponseText, Does.Not.Contain(createdRequest.Id));
+        Assert.That(anonymousResponseText, Does.Not.Contain("Protected pending report request"));
 
         SetAuthorizationHeader(trainer.Id);
         using var unrelatedCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{otherTrainee.Id}/report-requests", new
@@ -447,7 +450,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template.Id,
             note = "Blocked unrelated report request"
         });
-        unrelatedCreateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var ordinaryCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -455,7 +458,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template.Id,
             note = "Blocked ordinary report request"
         });
-        ordinaryCreateResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         ClearAuthorizationHeader();
         using var anonymousCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -463,7 +466,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template.Id,
             note = "Blocked anonymous report request"
         });
-        anonymousCreateResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         SetAuthorizationHeader(trainer.Id);
         using (var unlinkScope = Factory.Services.CreateScope())
@@ -479,7 +482,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template.Id,
             note = "Blocked former report request"
         });
-        formerCreateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -503,47 +506,44 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             "ownerFieldTwo");
 
         using var ownerResponse = await Client.GetAsync("/api/trainer/report-templates");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerTemplates = await ownerResponse.Content.ReadFromJsonAsync<List<ReportTemplateResponse>>();
-        ownerTemplates.Should().NotBeNull();
-        ownerTemplates!.Select(template => template.Id).Should().BeEquivalentTo(ownerTemplateOne.Id, ownerTemplateTwo.Id);
-        ownerTemplates.Select(template => template.Name).Should().BeEquivalentTo(
-            "Task 10 owner template one",
-            "Task 10 owner template two");
-        ownerTemplates.SelectMany(template => template.Fields.Select(field => field.Label))
-            .Should().BeEquivalentTo("Owner-only field one", "Owner-only field two");
+        Assert.That(ownerTemplates, Is.Not.Null);
+        Assert.That(ownerTemplates!.Select(template => template.Id), Is.EquivalentTo(new[] { ownerTemplateOne.Id, ownerTemplateTwo.Id }).UsingPropertiesComparer());
+        Assert.That(ownerTemplates.Select(template => template.Name), Is.EquivalentTo(new[] { "Task 10 owner template one", "Task 10 owner template two" }));
+        Assert.That(ownerTemplates.SelectMany(template => template.Fields.Select(field => field.Label)), Is.EquivalentTo(new[] { "Owner-only field one", "Owner-only field two" }));
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var otherTrainerResponse = await Client.GetAsync("/api/trainer/report-templates");
-        otherTrainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(otherTrainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var otherTrainerTemplates = await otherTrainerResponse.Content.ReadFromJsonAsync<List<ReportTemplateResponse>>();
-        otherTrainerTemplates.Should().NotBeNull();
-        otherTrainerTemplates.Should().BeEmpty();
+        Assert.That(otherTrainerTemplates, Is.Not.Null);
+        Assert.That(otherTrainerTemplates, Is.Empty);
         var otherTrainerText = await otherTrainerResponse.Content.ReadAsStringAsync();
-        otherTrainerText.Should().NotContain(ownerTemplateOne.Id);
-        otherTrainerText.Should().NotContain(ownerTemplateTwo.Id);
-        otherTrainerText.Should().NotContain("Task 10 owner template one");
-        otherTrainerText.Should().NotContain("Task 10 owner template two");
-        otherTrainerText.Should().NotContain("Owner-only field one");
-        otherTrainerText.Should().NotContain("Owner-only field two");
+        Assert.That(otherTrainerText, Does.Not.Contain(ownerTemplateOne.Id));
+        Assert.That(otherTrainerText, Does.Not.Contain(ownerTemplateTwo.Id));
+        Assert.That(otherTrainerText, Does.Not.Contain("Task 10 owner template one"));
+        Assert.That(otherTrainerText, Does.Not.Contain("Task 10 owner template two"));
+        Assert.That(otherTrainerText, Does.Not.Contain("Owner-only field one"));
+        Assert.That(otherTrainerText, Does.Not.Contain("Owner-only field two"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync("/api/trainer/report-templates");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(ownerTemplateOne.Id);
-        ordinaryText.Should().NotContain(ownerTemplateTwo.Id);
-        ordinaryText.Should().NotContain("Task 10 owner template one");
-        ordinaryText.Should().NotContain("Task 10 owner template two");
+        Assert.That(ordinaryText, Does.Not.Contain(ownerTemplateOne.Id));
+        Assert.That(ordinaryText, Does.Not.Contain(ownerTemplateTwo.Id));
+        Assert.That(ordinaryText, Does.Not.Contain("Task 10 owner template one"));
+        Assert.That(ordinaryText, Does.Not.Contain("Task 10 owner template two"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainer/report-templates");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(ownerTemplateOne.Id);
-        anonymousText.Should().NotContain(ownerTemplateTwo.Id);
-        anonymousText.Should().NotContain("Owner-only field one");
-        anonymousText.Should().NotContain("Owner-only field two");
+        Assert.That(anonymousText, Does.Not.Contain(ownerTemplateOne.Id));
+        Assert.That(anonymousText, Does.Not.Contain(ownerTemplateTwo.Id));
+        Assert.That(anonymousText, Does.Not.Contain("Owner-only field one"));
+        Assert.That(anonymousText, Does.Not.Contain("Owner-only field two"));
     }
 
     [Test]
@@ -564,36 +564,36 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var route = $"/api/trainer/report-templates/{protectedTemplate.Id}";
 
         using var ownerResponse = await Client.GetAsync(route);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerTemplate = await ownerResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        ownerTemplate.Should().NotBeNull();
-        ownerTemplate!.Id.Should().Be(protectedTemplate.Id);
-        ownerTemplate.Name.Should().Be("Task 10 protected detail template");
-        ownerTemplate.Fields.Should().ContainSingle(field => field.Label == "Protected detail field");
+        Assert.That(ownerTemplate, Is.Not.Null);
+        Assert.That(ownerTemplate!.Id, Is.EqualTo(protectedTemplate.Id));
+        Assert.That(ownerTemplate.Name, Is.EqualTo("Task 10 protected detail template"));
+        Assert.That((ownerTemplate.Fields).Where(field => field.Label == "Protected detail field"), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var otherResponse = await Client.GetAsync(route);
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var otherText = await otherResponse.Content.ReadAsStringAsync();
-        otherText.Should().NotContain(protectedTemplate.Id);
-        otherText.Should().NotContain("Task 10 protected detail template");
-        otherText.Should().NotContain("Protected detail field");
+        Assert.That(otherText, Does.Not.Contain(protectedTemplate.Id));
+        Assert.That(otherText, Does.Not.Contain("Task 10 protected detail template"));
+        Assert.That(otherText, Does.Not.Contain("Protected detail field"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(route);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(protectedTemplate.Id);
-        ordinaryText.Should().NotContain("Task 10 protected detail template");
-        ordinaryText.Should().NotContain("Protected detail field");
+        Assert.That(ordinaryText, Does.Not.Contain(protectedTemplate.Id));
+        Assert.That(ordinaryText, Does.Not.Contain("Task 10 protected detail template"));
+        Assert.That(ordinaryText, Does.Not.Contain("Protected detail field"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync(route);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(protectedTemplate.Id);
-        anonymousText.Should().NotContain("Task 10 protected detail template");
-        anonymousText.Should().NotContain("Protected detail field");
+        Assert.That(anonymousText, Does.Not.Contain(protectedTemplate.Id));
+        Assert.That(anonymousText, Does.Not.Contain("Task 10 protected detail template"));
+        Assert.That(anonymousText, Does.Not.Contain("Protected detail field"));
     }
 
     [Test]
@@ -636,23 +636,23 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 startsAt = DateTimeOffset.UtcNow,
                 note = "HTTP recurring protected assignment"
             });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var createdText = await createResponse.Content.ReadAsStringAsync();
-        createdText.Should().Contain("HTTP recurring protected assignment");
+        Assert.That(createdText, Does.Contain("HTTP recurring protected assignment"));
 
         using var ownerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/recurring-report-assignments");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerAssignments = await ownerResponse.Content.ReadFromJsonAsync<List<RecurringReportAssignmentResponse>>();
-        ownerAssignments.Should().NotBeNull();
-        ownerAssignments!.Should().ContainSingle(assignment =>
+        Assert.That(ownerAssignments, Is.Not.Null);
+        Assert.That((ownerAssignments!).Where(assignment =>
             assignment.TemplateId == template.Id
-            && assignment.Note == "HTTP recurring protected assignment");
+            && assignment.Note == "HTTP recurring protected assignment"), Has.Exactly(1).Items);
 
         using var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{unrelated.Id}/recurring-report-assignments");
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
-        unrelatedText.Should().NotContain(template.Id);
-        unrelatedText.Should().NotContain("HTTP recurring protected assignment");
+        Assert.That(unrelatedText, Does.Not.Contain(template.Id));
+        Assert.That(unrelatedText, Does.Not.Contain("HTTP recurring protected assignment"));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -664,24 +664,24 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/recurring-report-assignments");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var formerText = await formerResponse.Content.ReadAsStringAsync();
-        formerText.Should().NotContain(template.Id);
-        formerText.Should().NotContain("HTTP recurring protected assignment");
+        Assert.That(formerText, Does.Not.Contain(template.Id));
+        Assert.That(formerText, Does.Not.Contain("HTTP recurring protected assignment"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/recurring-report-assignments");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(template.Id);
-        ordinaryText.Should().NotContain("HTTP recurring protected assignment");
+        Assert.That(ordinaryText, Does.Not.Contain(template.Id));
+        Assert.That(ordinaryText, Does.Not.Contain("HTTP recurring protected assignment"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/recurring-report-assignments");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(template.Id);
-        anonymousText.Should().NotContain("HTTP recurring protected assignment");
+        Assert.That(anonymousText, Does.Not.Contain(template.Id));
+        Assert.That(anonymousText, Does.Not.Contain("HTTP recurring protected assignment"));
     }
 
     [Test]
@@ -717,62 +717,62 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = "checkIn", label = "Check-in", type = "Text", isRequired = true, order = 0 }
             }
         });
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
+        Assert.That(template, Is.Not.Null);
 
         using var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
         {
             templateId = template!.Id,
             note = "Task 10 submission fixture"
         });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
+        Assert.That(request, Is.Not.Null);
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var foreignSubmitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new
         {
             answers = new { checkIn = "Foreign submission must not be accepted" }
         });
-        foreignSubmitResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await foreignSubmitResponse.Content.ReadAsStringAsync()).Should().NotContain("Foreign submission must not be accepted");
+        Assert.That(foreignSubmitResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await foreignSubmitResponse.Content.ReadAsStringAsync()), Does.Not.Contain("Foreign submission must not be accepted"));
 
         SetAuthorizationHeader(trainee.Id);
         using var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request.Id}/submit", new
         {
             answers = new { checkIn = "Protected submission answer" }
         });
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var submitted = await submitResponse.Content.ReadFromJsonAsync<ReportSubmissionResponse>();
-        submitted.Should().NotBeNull();
+        Assert.That(submitted, Is.Not.Null);
 
         using var ownerResponse = await Client.GetAsync("/api/trainee/report-submissions");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerSubmissions = await ownerResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
-        ownerSubmissions.Should().NotBeNull();
-        ownerSubmissions!.Should().ContainSingle(submission => submission.Id == submitted!.Id);
-        ownerSubmissions.Single().ReportRequestId.Should().Be(request.Id);
-        ownerSubmissions.Single().Answers["checkIn"].GetString().Should().Be("Protected submission answer");
+        Assert.That(ownerSubmissions, Is.Not.Null);
+        Assert.That((ownerSubmissions!).Where(submission => submission.Id == submitted!.Id), Has.Exactly(1).Items);
+        Assert.That(ownerSubmissions.Single().ReportRequestId, Is.EqualTo(request.Id));
+        Assert.That(ownerSubmissions.Single().Answers["checkIn"].GetString(), Is.EqualTo("Protected submission answer"));
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var otherResponse = await Client.GetAsync("/api/trainee/report-submissions");
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var otherSubmissions = await otherResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
-        otherSubmissions.Should().NotBeNull();
-        otherSubmissions.Should().BeEmpty();
+        Assert.That(otherSubmissions, Is.Not.Null);
+        Assert.That(otherSubmissions, Is.Empty);
         var otherResponseText = await otherResponse.Content.ReadAsStringAsync();
-        otherResponseText.Should().NotContain(submitted!.Id);
-        otherResponseText.Should().NotContain(request.Id);
-        otherResponseText.Should().NotContain("Protected submission answer");
+        Assert.That(otherResponseText, Does.Not.Contain(submitted!.Id));
+        Assert.That(otherResponseText, Does.Not.Contain(request.Id));
+        Assert.That(otherResponseText, Does.Not.Contain("Protected submission answer"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainee/report-submissions");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(submitted.Id);
-        anonymousResponseText.Should().NotContain(request.Id);
-        anonymousResponseText.Should().NotContain("Protected submission answer");
+        Assert.That(anonymousResponseText, Does.Not.Contain(submitted.Id));
+        Assert.That(anonymousResponseText, Does.Not.Contain(request.Id));
+        Assert.That(anonymousResponseText, Does.Not.Contain("Protected submission answer"));
     }
 
     [Test]
@@ -786,8 +786,8 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             answers = new { protectedAnswer = "must not be processed" }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await response.Content.ReadAsStringAsync()).Should().NotContain("must not be processed");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("must not be processed"));
     }
 
     [Test]
@@ -825,32 +825,32 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template.Id,
             note = "HTTP trainer submissions request"
         });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
+        Assert.That(request, Is.Not.Null);
 
         SetAuthorizationHeader(linked.Id);
         using var submitResponse = await Client.PostAsJsonAsync($"/api/trainee/report-requests/{request!.Id}/submit", new
         {
             answers = new { httpTrainerSubmissionsField = "HTTP trainer submissions answer" }
         });
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var submission = await submitResponse.Content.ReadFromJsonAsync<ReportSubmissionResponse>();
-        submission.Should().NotBeNull();
+        Assert.That(submission, Is.Not.Null);
 
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerSubmissions = await ownerResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
-        ownerSubmissions.Should().NotBeNull();
-        ownerSubmissions!.Should().ContainSingle(item => item.Id == submission!.Id);
-        ownerSubmissions.Single().Answers["httpTrainerSubmissionsField"].GetString().Should().Be("HTTP trainer submissions answer");
+        Assert.That(ownerSubmissions, Is.Not.Null);
+        Assert.That((ownerSubmissions!).Where(item => item.Id == submission!.Id), Has.Exactly(1).Items);
+        Assert.That(ownerSubmissions.Single().Answers["httpTrainerSubmissionsField"].GetString(), Is.EqualTo("HTTP trainer submissions answer"));
 
         using var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{unrelated.Id}/report-submissions");
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
-        unrelatedText.Should().NotContain(submission.Id);
-        unrelatedText.Should().NotContain("HTTP trainer submissions answer");
+        Assert.That(unrelatedText, Does.Not.Contain(submission.Id));
+        Assert.That(unrelatedText, Does.Not.Contain("HTTP trainer submissions answer"));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -862,25 +862,24 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerSubmissions = await formerResponse.Content.ReadFromJsonAsync<List<ReportSubmissionResponse>>();
-        formerSubmissions.Should().ContainSingle(item => item.Id == submission.Id);
-        formerSubmissions!.Single().Answers["httpTrainerSubmissionsField"].GetString()
-            .Should().Be("HTTP trainer submissions answer");
+        Assert.That((formerSubmissions).Where(item => item.Id == submission.Id), Has.Exactly(1).Items);
+        Assert.That(formerSubmissions!.Single().Answers["httpTrainerSubmissionsField"].GetString(), Is.EqualTo("HTTP trainer submissions answer"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(submission.Id);
-        ordinaryText.Should().NotContain("HTTP trainer submissions answer");
+        Assert.That(ordinaryText, Does.Not.Contain(submission.Id));
+        Assert.That(ordinaryText, Does.Not.Contain("HTTP trainer submissions answer"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/report-submissions");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(submission.Id);
-        anonymousText.Should().NotContain("HTTP trainer submissions answer");
+        Assert.That(anonymousText, Does.Not.Contain(submission.Id));
+        Assert.That(anonymousText, Does.Not.Contain("HTTP trainer submissions answer"));
     }
 
     [Test]
@@ -932,38 +931,38 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         using var ownerResponse = await Client.GetAsync($"/api/trainee/reporting/photos/history?requestId={request.Id}");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerHistory = await ownerResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
-        ownerHistory.Should().NotBeNull();
-        ownerHistory!.Photos.Should().ContainSingle();
-        ownerHistory.Photos[0].Id.Should().Be(photo.Id.ToString());
-        ownerHistory.Photos[0].ReportRequestId.Should().Be(request.Id.ToString());
-        ownerHistory.Photos[0].ViewType.Should().Be(photo.ViewType);
-        ownerHistory.Photos[0].SizeBytes.Should().Be(photo.SizeBytes);
-        ownerHistory.Photos[0].ReadUrl.Should().NotBeNullOrWhiteSpace();
-        ownerHistory.Photos[0].ThumbnailUrl.Should().NotBeNullOrWhiteSpace();
+        Assert.That(ownerHistory, Is.Not.Null);
+        Assert.That(ownerHistory!.Photos, Has.Exactly(1).Items);
+        Assert.That(ownerHistory.Photos[0].Id, Is.EqualTo(photo.Id.ToString()));
+        Assert.That(ownerHistory.Photos[0].ReportRequestId, Is.EqualTo(request.Id.ToString()));
+        Assert.That(ownerHistory.Photos[0].ViewType, Is.EqualTo(photo.ViewType));
+        Assert.That(ownerHistory.Photos[0].SizeBytes, Is.EqualTo(photo.SizeBytes));
+        Assert.That(string.IsNullOrWhiteSpace(ownerHistory.Photos[0].ReadUrl), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(ownerHistory.Photos[0].ThumbnailUrl), Is.False);
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var otherResponse = await Client.GetAsync($"/api/trainee/reporting/photos/history?requestId={request.Id}");
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var otherResponseText = await otherResponse.Content.ReadAsStringAsync();
-        otherResponseText.Should().NotContain(photo.Id.ToString());
-        otherResponseText.Should().NotContain(photo.StorageKey);
-        otherResponseText.Should().NotContain(photo.ThumbnailStorageKey);
-        otherResponseText.Should().NotContain(ownerHistory.Photos[0].ReadUrl);
-        otherResponseText.Should().NotContain(ownerHistory.Photos[0].ThumbnailUrl);
-        otherResponseText.Should().NotContain(request.Id.ToString());
-        otherResponseText.Should().NotContain(request.Note);
+        Assert.That(otherResponseText, Does.Not.Contain(photo.Id.ToString()));
+        Assert.That(otherResponseText, Does.Not.Contain(photo.StorageKey));
+        Assert.That(otherResponseText, Does.Not.Contain(photo.ThumbnailStorageKey));
+        Assert.That(otherResponseText, Does.Not.Contain(ownerHistory.Photos[0].ReadUrl));
+        Assert.That(otherResponseText, Does.Not.Contain(ownerHistory.Photos[0].ThumbnailUrl));
+        Assert.That(otherResponseText, Does.Not.Contain(request.Id.ToString()));
+        Assert.That(otherResponseText, Does.Not.Contain(request.Note));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/trainee/reporting/photos/history?requestId={request.Id}");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(photo.Id.ToString());
-        anonymousResponseText.Should().NotContain(photo.StorageKey);
-        anonymousResponseText.Should().NotContain(ownerHistory.Photos[0].ReadUrl);
-        anonymousResponseText.Should().NotContain(request.Id.ToString());
-        anonymousResponseText.Should().NotContain(request.Note);
+        Assert.That(anonymousResponseText, Does.Not.Contain(photo.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(photo.StorageKey));
+        Assert.That(anonymousResponseText, Does.Not.Contain(ownerHistory.Photos[0].ReadUrl));
+        Assert.That(anonymousResponseText, Does.Not.Contain(request.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(request.Note));
     }
 
     [Test]
@@ -1024,20 +1023,20 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var route = $"/api/trainer/reporting/photos/history?requestId={request.Id}";
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync(route);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerHistory = await ownerResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
-        ownerHistory.Should().NotBeNull();
-        ownerHistory!.Photos.Should().ContainSingle();
-        ownerHistory.Photos[0].Id.Should().Be(photo.Id.ToString());
-        ownerHistory.Photos[0].ReportRequestId.Should().Be(request.Id.ToString());
-        ownerHistory.Photos[0].ViewType.Should().Be(photo.ViewType);
-        ownerHistory.Photos[0].SizeBytes.Should().Be(photo.SizeBytes);
-        ownerHistory.Photos[0].ReadUrl.Should().NotBeNullOrWhiteSpace();
-        ownerHistory.Photos[0].ThumbnailUrl.Should().NotBeNullOrWhiteSpace();
+        Assert.That(ownerHistory, Is.Not.Null);
+        Assert.That(ownerHistory!.Photos, Has.Exactly(1).Items);
+        Assert.That(ownerHistory.Photos[0].Id, Is.EqualTo(photo.Id.ToString()));
+        Assert.That(ownerHistory.Photos[0].ReportRequestId, Is.EqualTo(request.Id.ToString()));
+        Assert.That(ownerHistory.Photos[0].ViewType, Is.EqualTo(photo.ViewType));
+        Assert.That(ownerHistory.Photos[0].SizeBytes, Is.EqualTo(photo.SizeBytes));
+        Assert.That(string.IsNullOrWhiteSpace(ownerHistory.Photos[0].ReadUrl), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(ownerHistory.Photos[0].ThumbnailUrl), Is.False);
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var unrelatedResponse = await Client.GetAsync(route);
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
         AssertPhotoHistoryDenialDoesNotDisclose(unrelatedText, photo, request, ownerHistory.Photos[0]);
 
@@ -1052,26 +1051,26 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainer.Id);
         using var formerResponse = await Client.GetAsync(route);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerHistory = await formerResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
-        formerHistory.Should().NotBeNull();
-        formerHistory!.Photos.Should().ContainSingle(item => item.Id == photo.Id.ToString());
+        Assert.That(formerHistory, Is.Not.Null);
+        Assert.That((formerHistory!.Photos).Where(item => item.Id == photo.Id.ToString()), Has.Exactly(1).Items);
 
         using var formerCollectionResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={trainee.Id}");
-        formerCollectionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerCollectionResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerCollection = await formerCollectionResponse.Content.ReadFromJsonAsync<PhotoHistoryResponse>();
-        formerCollection.Should().NotBeNull();
-        formerCollection!.Photos.Should().ContainSingle(item => item.Id == photo.Id.ToString());
+        Assert.That(formerCollection, Is.Not.Null);
+        Assert.That((formerCollection!.Photos).Where(item => item.Id == photo.Id.ToString()), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(route);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
         AssertPhotoHistoryDenialDoesNotDisclose(ordinaryText, photo, request, ownerHistory.Photos[0]);
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync(route);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
         AssertPhotoHistoryDenialDoesNotDisclose(anonymousText, photo, request, ownerHistory.Photos[0]);
 
@@ -1079,8 +1078,8 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var persistedPhoto = await verifyScope.ServiceProvider.GetRequiredService<AppDbContext>().Photos
             .AsNoTracking()
             .SingleAsync(candidate => candidate.Id == photo.Id);
-        persistedPhoto.StorageKey.Should().Be(photo.StorageKey);
-        persistedPhoto.IsDeleted.Should().BeFalse();
+        Assert.That(persistedPhoto.StorageKey, Is.EqualTo(photo.StorageKey));
+        Assert.That(persistedPhoto.IsDeleted, Is.False);
     }
 
     [Test]
@@ -1162,22 +1161,22 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         var protectedRoute = $"/api/trainer/reporting/photos/{photo.Id}/signed-url";
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync(protectedRoute);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerCapability = await ownerResponse.Content.ReadFromJsonAsync<SignedReadUrlResponse>();
-        ownerCapability.Should().NotBeNull();
-        ownerCapability!.ReadUrl.Should().NotBeNullOrWhiteSpace();
-        ownerCapability.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
-        ownerCapability.ReadUrl.Should().Contain("task10-signed-url");
+        Assert.That(ownerCapability, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(ownerCapability!.ReadUrl), Is.False);
+        Assert.That(ownerCapability.ExpiresAt, Is.GreaterThan(DateTimeOffset.UtcNow));
+        Assert.That(ownerCapability.ReadUrl, Does.Contain("task10-signed-url"));
 
         var foreignRoute = $"/api/trainer/reporting/photos/{foreignPhoto.Id}/signed-url";
         using var foreignResponse = await Client.GetAsync(foreignRoute);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
         AssertSignedUrlDenialDoesNotDisclose(foreignText, photo, request, ownerCapability, foreignPhoto);
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var unrelatedResponse = await Client.GetAsync(protectedRoute);
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
         AssertSignedUrlDenialDoesNotDisclose(unrelatedText, photo, request, ownerCapability, foreignPhoto);
 
@@ -1192,20 +1191,20 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainer.Id);
         using var formerResponse = await Client.GetAsync(protectedRoute);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerCapability = await formerResponse.Content.ReadFromJsonAsync<SignedReadUrlResponse>();
-        formerCapability.Should().NotBeNull();
-        formerCapability!.ReadUrl.Should().Contain("task10-signed-url");
+        Assert.That(formerCapability, Is.Not.Null);
+        Assert.That(formerCapability!.ReadUrl, Does.Contain("task10-signed-url"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync(protectedRoute);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
         AssertSignedUrlDenialDoesNotDisclose(ordinaryText, photo, request, ownerCapability, foreignPhoto);
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync(protectedRoute);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
         AssertSignedUrlDenialDoesNotDisclose(anonymousText, photo, request, ownerCapability, foreignPhoto);
 
@@ -1215,8 +1214,8 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             .AsNoTracking()
             .Where(candidate => candidate.Id == photo.Id || candidate.Id == foreignPhoto.Id)
             .ToListAsync();
-        persistedPhotos.Should().HaveCount(2);
-        persistedPhotos.Should().OnlyContain(candidate => !candidate.IsDeleted);
+        Assert.That(persistedPhotos, Has.Exactly(2).Items);
+        Assert.That((persistedPhotos).All(candidate => !candidate.IsDeleted), Is.True);
     }
 
     private static void AssertSignedUrlDenialDoesNotDisclose(
@@ -1226,13 +1225,13 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         SignedReadUrlResponse ownerCapability,
         Photo foreignPhoto)
     {
-        responseText.Should().NotContain(photo.Id.ToString());
-        responseText.Should().NotContain(photo.StorageKey);
-        responseText.Should().NotContain(ownerCapability.ReadUrl);
-        responseText.Should().NotContain(request.Id.ToString());
-        responseText.Should().NotContain(request.Note);
-        responseText.Should().NotContain(foreignPhoto.Id.ToString());
-        responseText.Should().NotContain(foreignPhoto.StorageKey);
+        Assert.That(responseText, Does.Not.Contain(photo.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(photo.StorageKey));
+        Assert.That(responseText, Does.Not.Contain(ownerCapability.ReadUrl));
+        Assert.That(responseText, Does.Not.Contain(request.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(request.Note));
+        Assert.That(responseText, Does.Not.Contain(foreignPhoto.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(foreignPhoto.StorageKey));
     }
 
     private static void AssertPhotoHistoryDenialDoesNotDisclose(
@@ -1241,13 +1240,13 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         ReportRequest request,
         PhotoHistoryItemResponse ownerPhoto)
     {
-        responseText.Should().NotContain(photo.Id.ToString());
-        responseText.Should().NotContain(photo.StorageKey);
-        responseText.Should().NotContain(photo.ThumbnailStorageKey);
-        responseText.Should().NotContain(ownerPhoto.ReadUrl);
-        responseText.Should().NotContain(ownerPhoto.ThumbnailUrl);
-        responseText.Should().NotContain(request.Id.ToString());
-        responseText.Should().NotContain(request.Note);
+        Assert.That(responseText, Does.Not.Contain(photo.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(photo.StorageKey));
+        Assert.That(responseText, Does.Not.Contain(photo.ThumbnailStorageKey));
+        Assert.That(responseText, Does.Not.Contain(ownerPhoto.ReadUrl));
+        Assert.That(responseText, Does.Not.Contain(ownerPhoto.ThumbnailUrl));
+        Assert.That(responseText, Does.Not.Contain(request.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(request.Note));
     }
 
     [Test]
@@ -1294,7 +1293,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -1325,9 +1324,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        createTemplateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createTemplateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await createTemplateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
+        Assert.That(template, Is.Not.Null);
 
         var dueAt = DateTimeOffset.UtcNow.Date.AddDays(1);
         var createRequestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -1336,17 +1335,17 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             dueAt
         });
 
-        createRequestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createRequestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await createRequestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
-        request!.Status.Should().Be("Pending");
+        Assert.That(request, Is.Not.Null);
+        Assert.That(request!.Status, Is.EqualTo("Pending"));
 
         SetAuthorizationHeader(trainee.Id);
         var pendingResponse = await Client.GetAsync("/api/trainee/report-requests");
-        pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(pendingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var pending = await pendingResponse.Content.ReadFromJsonAsync<List<ReportRequestResponse>>();
-        pending.Should().NotBeNull();
-        pending!.Should().ContainSingle(x => x.Id == request.Id);
+        Assert.That(pending, Is.Not.Null);
+        Assert.That((pending!).Where(x => x.Id == request.Id), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -1372,12 +1371,12 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         });
         var getSubmissionsBadTrainee = await Client.GetAsync("/api/trainer/trainees/not-a-guid/report-submissions");
 
-        getTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        updateTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        deleteTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        createRequestBadTrainee.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        createRequestBadTemplate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        getSubmissionsBadTrainee.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(getTemplate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(updateTemplate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(deleteTemplate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(createRequestBadTrainee.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(createRequestBadTemplate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(getSubmissionsBadTrainee.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -1396,21 +1395,21 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = "weight", label = "Weight", type = "Number", isRequired = true, order = 0 }
             }
         });
-        createTemplateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createTemplateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createTemplateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        created.Should().NotBeNull();
+        Assert.That(created, Is.Not.Null);
 
         var getAllResponse = await Client.GetAsync("/api/trainer/report-templates");
-        getAllResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getAllResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var allTemplates = await getAllResponse.Content.ReadFromJsonAsync<List<ReportTemplateResponse>>();
-        allTemplates.Should().NotBeNull();
-        allTemplates!.Any(x => x.Id == created!.Id).Should().BeTrue();
+        Assert.That(allTemplates, Is.Not.Null);
+        Assert.That(allTemplates!.Any(x => x.Id == created!.Id), Is.True);
 
         var getOneResponse = await Client.GetAsync($"/api/trainer/report-templates/{created!.Id}");
-        getOneResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getOneResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var deleteResponse = await Client.PostAsync($"/api/trainer/report-templates/{created.Id}/delete", content: null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -1426,7 +1425,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             fields = Array.Empty<object>()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -1441,7 +1440,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             fields = Array.Empty<object>()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -1464,21 +1463,21 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             "httpProtectedField");
 
         using var ownerResponse = await Client.PostAsync($"/api/trainer/report-templates/{deletedTemplate.Id}/delete", null);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var foreignResponse = await Client.PostAsync($"/api/trainer/report-templates/{protectedTemplate.Id}/delete", null);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
-        foreignText.Should().NotContain(protectedTemplate.Id);
-        foreignText.Should().NotContain("HTTP protected template");
+        Assert.That(foreignText, Does.Not.Contain(protectedTemplate.Id));
+        Assert.That(foreignText, Does.Not.Contain("HTTP protected template"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsync($"/api/trainer/report-templates/{protectedTemplate.Id}/delete", null);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(protectedTemplate.Id);
-        anonymousText.Should().NotContain("HTTP protected template");
+        Assert.That(anonymousText, Does.Not.Contain(protectedTemplate.Id));
+        Assert.That(anonymousText, Does.Not.Contain("HTTP protected template"));
     }
 
     [Test]
@@ -1505,25 +1504,25 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         };
 
         using var ownerResponse = await Client.PostAsJsonAsync($"/api/trainer/report-templates/{template.Id}/update", updatePayload);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerBody = await ownerResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        ownerBody.Should().NotBeNull();
-        ownerBody!.Name.Should().Be("HTTP updated template");
-        ownerBody.Fields.Should().ContainSingle(field => field.Label == "HTTP updated field");
+        Assert.That(ownerBody, Is.Not.Null);
+        Assert.That(ownerBody!.Name, Is.EqualTo("HTTP updated template"));
+        Assert.That((ownerBody.Fields).Where(field => field.Label == "HTTP updated field"), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(otherTrainer.Id);
         using var foreignResponse = await Client.PostAsJsonAsync($"/api/trainer/report-templates/{template.Id}/update", updatePayload);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
-        foreignText.Should().NotContain("HTTP updated template");
-        foreignText.Should().NotContain("HTTP updated field");
+        Assert.That(foreignText, Does.Not.Contain("HTTP updated template"));
+        Assert.That(foreignText, Does.Not.Contain("HTTP updated field"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsJsonAsync($"/api/trainer/report-templates/{template.Id}/update", updatePayload);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain("HTTP updated template");
-        anonymousText.Should().NotContain("HTTP updated field");
+        Assert.That(anonymousText, Does.Not.Contain("HTTP updated template"));
+        Assert.That(anonymousText, Does.Not.Contain("HTTP updated field"));
     }
 
     private async Task<ReportTemplateResponse> CreateReportTemplateAsync(
@@ -1539,9 +1538,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
                 new { key = fieldKey, label = fieldLabel, type = "Text", isRequired = true, order = 0 }
             }
         });
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await response.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template.Should().NotBeNull();
+        Assert.That(template, Is.Not.Null);
         return template!;
     }
 
@@ -1600,7 +1599,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
 
         var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -1608,7 +1607,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template!.Id
         });
 
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
 
         SetAuthorizationHeader(trainee.Id);
@@ -1620,9 +1619,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
         var errorContent = await submitResponse.Content.ReadAsStringAsync();
-        errorContent.Should().Contain("Missing required photo views");
+        Assert.That(errorContent, Does.Contain("Missing required photo views"));
     }
 
     [Test]
@@ -1664,7 +1663,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
 
         var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -1672,13 +1671,13 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template!.Id
         });
 
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Id<ReportRequest>.TryParse(request!.Id, out var requestId).Should().BeTrue();
+            Assert.That(Id<ReportRequest>.TryParse(request!.Id, out var requestId), Is.True);
             var traineeId = trainee.Id;
 
             db.Photos.AddRange(
@@ -1743,7 +1742,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(submitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -1788,7 +1787,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
 
         var requestResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/report-requests", new
@@ -1796,7 +1795,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             templateId = template!.Id
         });
 
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
 
         SetAuthorizationHeader(trainee.Id);
@@ -1808,10 +1807,10 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             sizeBytes = 1024000
         });
 
-        initiateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(initiateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var initiateResult = await initiateResponse.Content.ReadFromJsonAsync<JsonElement>();
         var storageKey = initiateResult.GetProperty("storageKey").GetString();
-        storageKey.Should().NotBeNullOrEmpty();
+        Assert.That(storageKey, Is.Not.Null.And.Not.Empty);
 
         SetAuthorizationHeader(trainer.Id);
         var trainerInitiateResponse = await Client.PostAsJsonAsync("/api/trainer/reporting/photos/upload-init", new
@@ -1821,7 +1820,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             mimeType = "image/jpeg",
             sizeBytes = 1024
         });
-        trainerInitiateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainerInitiateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -1840,7 +1839,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             sizeBytes = 1024
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         using var trainerResponse = await Client.PostAsJsonAsync("/api/trainer/reporting/photos/upload-init", new
         {
@@ -1849,7 +1848,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             mimeType = "image/jpeg",
             sizeBytes = 1024
         });
-        trainerResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(trainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -1885,9 +1884,9 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         {
             templateId = template.Id
         });
-        requestResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(requestResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var request = await requestResponse.Content.ReadFromJsonAsync<ReportRequestResponse>();
-        request.Should().NotBeNull();
+        Assert.That(request, Is.Not.Null);
 
         var payload = new
         {
@@ -1901,30 +1900,30 @@ public sealed class ReportingEngineTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         using var ownerResponse = await Client.PostAsJsonAsync("/api/trainee/photos/complete-upload", payload);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var ownerText = await ownerResponse.Content.ReadAsStringAsync();
-        ownerText.Should().NotContain(payload.storageKey);
+        Assert.That(ownerText, Does.Not.Contain(payload.storageKey));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsJsonAsync("/api/trainee/photos/complete-upload", payload);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(payload.storageKey);
+        Assert.That(anonymousText, Does.Not.Contain(payload.storageKey));
 
         SetAuthorizationHeader(trainee.Id);
         using var legacyOwnerResponse = await Client.PostAsJsonAsync("/api/trainee/reporting/photos/complete-upload", payload);
-        legacyOwnerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(legacyOwnerResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         ClearAuthorizationHeader();
         using var legacyAnonymousResponse = await Client.PostAsJsonAsync("/api/trainee/reporting/photos/complete-upload", payload);
-        legacyAnonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(legacyAnonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         SetAuthorizationHeader(trainer.Id);
         using var trainerResponse = await Client.PostAsJsonAsync("/api/trainer/reporting/photos/complete-upload", payload);
-        trainerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(trainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         ClearAuthorizationHeader();
         using var trainerAnonymousResponse = await Client.PostAsJsonAsync("/api/trainer/reporting/photos/complete-upload", payload);
-        trainerAnonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(trainerAnonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -1985,7 +1984,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             sizeBytes = 1024000
         });
 
-        initiateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(initiateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -2039,7 +2038,7 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Id<ReportRequest>.TryParse(request!.Id, out var requestId).Should().BeTrue();
+            Assert.That(Id<ReportRequest>.TryParse(request!.Id, out var requestId), Is.True);
             var traineeId = trainee.Id;
 
             var oldPhoto = new Photo
@@ -2082,16 +2081,16 @@ public sealed class ReportingEngineTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Id<ReportRequest>.TryParse(request!.Id, out var requestId).Should().BeTrue();
+            Assert.That(Id<ReportRequest>.TryParse(request!.Id, out var requestId), Is.True);
 
             var photos = await db.Photos
                 .Where(p => p.ReportRequestId == requestId && p.ViewType == PhotoViewType.Front.ToString())
                 .ToListAsync();
 
-            photos.Should().HaveCount(2);
-            photos.Count(p => p.IsDeleted).Should().Be(1);
-            photos.Count(p => !p.IsDeleted).Should().Be(1);
-            photos.Single(p => !p.IsDeleted).Checksum.Should().Be("new-checksum");
+            Assert.That(photos, Has.Exactly(2).Items);
+            Assert.That(photos.Count(p => p.IsDeleted), Is.EqualTo(1));
+            Assert.That(photos.Count(p => !p.IsDeleted), Is.EqualTo(1));
+            Assert.That(photos.Single(p => !p.IsDeleted).Checksum, Is.EqualTo("new-checksum"));
         }
     }
 
@@ -2150,12 +2149,12 @@ public sealed class ReportingEngineTests : IntegrationTestBase
             }
         });
 
-        templateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var template = await templateResponse.Content.ReadFromJsonAsync<ReportTemplateResponse>();
-        template!.Fields.Should().HaveCount(3);
-        template.Fields.Should().Contain(f => f.Key == "photos");
-        template.Fields.Should().Contain(f => f.Key == "weight");
-        template.Fields.Should().Contain(f => f.Key == "notes");
+        Assert.That(template!.Fields, Has.Exactly(3).Items);
+        Assert.That((template.Fields).Any(f => f.Key == "photos"), Is.True);
+        Assert.That((template.Fields).Any(f => f.Key == "weight"), Is.True);
+        Assert.That((template.Fields).Any(f => f.Key == "notes"), Is.True);
     }
 
     private sealed class ReportTemplateResponse

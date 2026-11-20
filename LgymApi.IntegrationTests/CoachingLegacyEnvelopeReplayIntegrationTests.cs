@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -34,39 +33,25 @@ public sealed class CoachingLegacyEnvelopeReplayIntegrationTests : PostgreSqlInt
             var inApp = await database.InAppNotifications.ToListAsync();
             var pushes = await database.PushNotificationMessages.ToListAsync();
 
-            envelopes.Should().HaveCount(16);
-            envelopes.Should().OnlyContain(envelope => envelope.Status == ActionExecutionStatus.Completed);
-            envelopes.Should().OnlyContain(envelope => envelope.ExecutionLogs.Count(log =>
+            Assert.That(envelopes, Has.Exactly(16).Items);
+            Assert.That((envelopes).All(envelope => envelope.Status == ActionExecutionStatus.Completed), Is.True);
+            Assert.That((envelopes).All(envelope => envelope.ExecutionLogs.Count(log =>
                 log.ActionType == ActionExecutionLogType.HandlerExecution
-                && log.Status == ActionExecutionStatus.Completed) == 1);
+                && log.Status == ActionExecutionStatus.Completed) == 1), Is.True);
 
-            emails.Should().HaveCount(3);
-            emails.Should().OnlyContain(message => message.Channel == NotificationChannel.Email);
-            emails.Select(message => message.Type.Value).Should().BeEquivalentTo([
-                EmailNotificationTypes.TrainerInvitation.Value,
-                EmailNotificationTypes.TrainerInvitationAccepted.Value,
-                EmailNotificationTypes.TrainerInvitationRevoked.Value
-            ]);
-            emails.Select(message => message.CorrelationId).Should().BeEquivalentTo([
-                fixture.CreatedInvitationId.Rebind<CorrelationScope>(),
-                fixture.AcceptedInvitationId.Rebind<CorrelationScope>(),
-                fixture.RevokedInvitationId.Rebind<CorrelationScope>()
-            ]);
+            Assert.That(emails, Has.Exactly(3).Items);
+            Assert.That((emails).All(message => message.Channel == NotificationChannel.Email), Is.True);
+            Assert.That(emails.Select(message => message.Type.Value), Is.EquivalentTo(new[] { EmailNotificationTypes.TrainerInvitation.Value, EmailNotificationTypes.TrainerInvitationAccepted.Value, EmailNotificationTypes.TrainerInvitationRevoked.Value }));
+            Assert.That(emails.Select(message => message.CorrelationId), Is.EquivalentTo(new[] { fixture.CreatedInvitationId.Rebind<CorrelationScope>(), fixture.AcceptedInvitationId.Rebind<CorrelationScope>(), fixture.RevokedInvitationId.Rebind<CorrelationScope>() }));
 
-            inApp.Should().HaveCount(5);
-            inApp.Select(notification => notification.DeliveryKey).Should().BeEquivalentTo([
-                $"trainer-invitation:{fixture.CreatedInvitationId}:sent",
-                $"trainer-invitation:{fixture.AcceptedInvitationId}:accepted",
-                $"trainer-invitation:{fixture.RejectedInvitationId}:rejected",
-                $"trainer-relationship-ended:{fixture.TrainerId}:{fixture.TraineeId}",
-                $"trainee-note:{fixture.NoteId}:{fixture.NoteTriggeredAt:O}"
-            ]);
-            pushes.Should().HaveCount(5, "each newly-created in-app notification creates one durable push intent");
+            Assert.That(inApp, Has.Exactly(5).Items);
+            Assert.That(inApp.Select(notification => notification.DeliveryKey), Is.EquivalentTo(new[] { $"trainer-invitation:{fixture.CreatedInvitationId}:sent", $"trainer-invitation:{fixture.AcceptedInvitationId}:accepted", $"trainer-invitation:{fixture.RejectedInvitationId}:rejected", $"trainer-relationship-ended:{fixture.TrainerId}:{fixture.TraineeId}", $"trainee-note:{fixture.NoteId}:{fixture.NoteTriggeredAt:O}" }));
+            Assert.That(pushes, Has.Exactly(5).Items, "each newly-created in-app notification creates one durable push intent");
 
-            fixture.NullTitlePayload.Should().NotContain("\"noteTitle\"");
-            envelopes.Where(envelope => envelope.PayloadJson == fixture.NullTitlePayload)
-                .Should().HaveCount(2)
-                .And.OnlyContain(envelope => envelope.PayloadJson == fixture.NullTitlePayload);
+            Assert.That(fixture.NullTitlePayload, Does.Not.Contain("\"noteTitle\""));
+            var assertedChain6 = envelopes.Where(envelope => envelope.PayloadJson == fixture.NullTitlePayload);
+            Assert.That(assertedChain6, Has.Exactly(2).Items);
+            Assert.That((assertedChain6).All(envelope => envelope.PayloadJson == fixture.NullTitlePayload), Is.True);
         }
 
         foreach (var notificationId in await GetEmailNotificationIdsAsync())
@@ -75,7 +60,7 @@ public sealed class CoachingLegacyEnvelopeReplayIntegrationTests : PostgreSqlInt
             await ProcessEmailAsync(notificationId);
         }
 
-        Factory.EmailSender.SentMessages.Should().HaveCount(3);
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(3).Items);
     }
 
     [Test]
@@ -92,9 +77,9 @@ public sealed class CoachingLegacyEnvelopeReplayIntegrationTests : PostgreSqlInt
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var envelopes = await database.CommandEnvelopes.ToListAsync();
 
-        envelopes.Should().OnlyContain(envelope => envelope.Status == ActionExecutionStatus.DeadLettered);
-        (await database.NotificationMessages.CountAsync()).Should().Be(0);
-        (await database.InAppNotifications.CountAsync()).Should().Be(0);
+        Assert.That((envelopes).All(envelope => envelope.Status == ActionExecutionStatus.DeadLettered), Is.True);
+        Assert.That((await database.NotificationMessages.CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.InAppNotifications.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -112,9 +97,9 @@ public sealed class CoachingLegacyEnvelopeReplayIntegrationTests : PostgreSqlInt
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.CommandEnvelopes.ToListAsync()).Should().OnlyContain(envelope =>
-            envelope.Status == ActionExecutionStatus.Completed);
-        (await database.NotificationMessages.CountAsync()).Should().Be(0);
+        Assert.That(((await database.CommandEnvelopes.ToListAsync())).All(envelope =>
+            envelope.Status == ActionExecutionStatus.Completed), Is.True);
+        Assert.That((await database.NotificationMessages.CountAsync()), Is.EqualTo(0));
     }
 
     private async Task<ReplayFixture> SeedReplayFixtureAsync()

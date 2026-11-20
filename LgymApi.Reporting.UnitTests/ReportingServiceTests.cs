@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 #if UNIT_TESTS_API
 using FluentValidation.TestHelper;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -481,9 +480,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
     }
 
     #region Photo Validation Tests
@@ -519,9 +518,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
     }
 
     [Test]
@@ -550,9 +549,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.ReportFieldValidationFailed);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.ReportFieldValidationFailed));
     }
 
     [Test]
@@ -580,7 +579,7 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -610,7 +609,7 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await commandDispatcher.Received(1).EnqueueAsync(Arg.Is<ReportSubmissionCreatedInAppNotificationCommand>(queued =>
             queued.TrainerId == trainerId.Rebind<LgymApi.Identity.Contracts.AccountReference>()
             && queued.TraineeId == traineeId.Rebind<LgymApi.Identity.Contracts.AccountReference>()
@@ -651,7 +650,7 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -678,7 +677,7 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -707,9 +706,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(trainee, requestId, command);
 
-        result.IsSuccess.Should().BeTrue();
-        request.Status.Should().Be(ReportRequestStatus.Submitted);
-        request.SubmittedAt.Should().NotBeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.That(request.SubmittedAt, Is.Not.Null);
     }
 
     [Test]
@@ -719,8 +718,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.SubmitReportRequestAsync(CreateUser(Id<User>.New()), Id<ReportRequest>.New(), new SubmitReportRequestCommand { Answers = null! });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -737,8 +736,8 @@ public sealed partial class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     [Test]
@@ -756,8 +755,8 @@ public sealed partial class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -778,8 +777,8 @@ public sealed partial class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -820,10 +819,10 @@ public sealed partial class ReportingServiceTests
             FieldComments = []
         });
 
-        result.IsSuccess.Should().BeTrue();
-        submission.TrainerOverallComment.Should().BeNull();
-        submission.TrainerFieldCommentsJson.Should().BeNull();
-        assignment.NextEligibleAt.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(submission.TrainerOverallComment, Is.Null);
+        Assert.That(submission.TrainerFieldCommentsJson, Is.Null);
+        Assert.That(assignment.NextEligibleAt, Is.Null);
         await outboxWriter.DidNotReceive().StageAsync(
             Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -846,7 +845,7 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -880,12 +879,12 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
 
-        result.IsSuccess.Should().BeTrue();
-        submission.TrainerFeedbackReadAt.Should().NotBeNull();
-        assignment.NextEligibleAt.Should().BeAfter(submission.TrainerFeedbackReadAt!.Value.AddDays(13));
-        result.Value.NextRecurringRequest.Should().NotBeNull();
-        result.Value.NextRecurringRequest!.ScheduledAt.Should().Be(assignment.NextEligibleAt);
-        result.Value.NextRecurringRequest.Status.Should().Be(NextRecurringReportRequestStatus.Scheduled);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(submission.TrainerFeedbackReadAt, Is.Not.Null);
+        Assert.That(assignment.NextEligibleAt, Is.GreaterThan(submission.TrainerFeedbackReadAt!.Value.AddDays(13)));
+        Assert.That(result.Value.NextRecurringRequest, Is.Not.Null);
+        Assert.That(result.Value.NextRecurringRequest!.ScheduledAt, Is.EqualTo(assignment.NextEligibleAt));
+        Assert.That(result.Value.NextRecurringRequest.Status, Is.EqualTo(NextRecurringReportRequestStatus.Scheduled));
     }
 
     [Test]
@@ -922,16 +921,16 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         var expectedSchedule = result.Value.TrainerFeedbackReadAt!.Value.AddDays(2);
-        assignment.NextEligibleAt.Should().Be(expectedSchedule);
-        result.Value.Request.Status.Should().Be(ReportRequestStatus.Completed);
-        result.Value.NextRecurringRequest.Should().BeEquivalentTo(new NextRecurringReportRequestResult
+        Assert.That(assignment.NextEligibleAt, Is.EqualTo(expectedSchedule));
+        Assert.That(result.Value.Request.Status, Is.EqualTo(ReportRequestStatus.Completed));
+        Assert.That(result.Value.NextRecurringRequest, Is.EqualTo(new NextRecurringReportRequestResult
         {
             AssignmentId = assignment.Id,
             ScheduledAt = expectedSchedule,
             Status = NextRecurringReportRequestStatus.Scheduled
-        });
+        }).UsingPropertiesComparer());
         await outboxWriter.Received(1).StageAsync(
             Arg.Is<ReportFeedbackReadInAppNotificationCommand>((ReportFeedbackReadInAppNotificationCommand command) =>
                 command.SubmissionId == submission.Id
@@ -971,13 +970,13 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.NextRecurringRequest.Should().BeEquivalentTo(new NextRecurringReportRequestResult
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.NextRecurringRequest, Is.EqualTo(new NextRecurringReportRequestResult
         {
             AssignmentId = assignment.Id,
             ScheduledAt = persistedSchedule,
             Status = NextRecurringReportRequestStatus.Scheduled
-        });
+        }).UsingPropertiesComparer());
         await outboxWriter.DidNotReceive().StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -998,9 +997,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        submission.TrainerFeedbackReadAt.Should().BeNull();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(submission.TrainerFeedbackReadAt, Is.Null);
         await outboxWriter.DidNotReceive().StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>());
     }
 
@@ -1041,11 +1040,11 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        submission.TrainerFeedbackReadAt.Should().BeNull();
-        request.Status.Should().Be(ReportRequestStatus.Submitted);
-        assignment.NextEligibleAt.Should().Be(originalNextEligibleAt);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(submission.TrainerFeedbackReadAt, Is.Null);
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.That(assignment.NextEligibleAt, Is.EqualTo(originalNextEligibleAt));
         await outboxWriter.DidNotReceive().StageAsync(
             Arg.Any<ReportFeedbackReadInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -1076,9 +1075,9 @@ public sealed partial class ReportingServiceTests
             FieldComments = []
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        submission.TrainerOverallComment.Should().Be("Original feedback");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(submission.TrainerOverallComment, Is.EqualTo("Original feedback"));
         await outboxWriter.DidNotReceive().StageAsync(
             Arg.Any<ReportFeedbackAddedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -1113,14 +1112,14 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Request.Status.Should().Be(ReportRequestStatus.Submitted);
-        result.Value.NextRecurringRequest.Should().BeEquivalentTo(new NextRecurringReportRequestResult
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Request.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.That(result.Value.NextRecurringRequest, Is.EqualTo(new NextRecurringReportRequestResult
         {
             AssignmentId = assignment.Id,
             ScheduledAt = persistedSchedule,
             Status = NextRecurringReportRequestStatus.Scheduled
-        });
+        }).UsingPropertiesComparer());
         await outboxWriter.DidNotReceive().StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>());
     }
 
@@ -1143,8 +1142,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsFailure.Should().BeTrue();
-        submission.TrainerFeedbackReadAt.Should().BeNull();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(submission.TrainerFeedbackReadAt, Is.Null);
         await outboxWriter.DidNotReceive().StageAsync(Arg.Any<ReportFeedbackReadInAppNotificationCommand>(), Arg.Any<CancellationToken>());
     }
 
@@ -1166,7 +1165,7 @@ public sealed partial class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("\"ok\"").RootElement }
         });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -1184,8 +1183,8 @@ public sealed partial class ReportingServiceTests
             Answers = new Dictionary<string, JsonElement> { ["feedback"] = JsonDocument.Parse("1").RootElement }
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -1207,9 +1206,9 @@ public sealed partial class ReportingServiceTests
             Id<ReportSubmission>.New(),
             new UpdateReportSubmissionFeedbackCommand());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingForbiddenError>();
-        submissionLookupCalled.Should().BeFalse();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingForbiddenError>());
+        Assert.That(submissionLookupCalled, Is.False);
     }
 
     [Test]
@@ -1233,9 +1232,9 @@ public sealed partial class ReportingServiceTests
             Id<ReportSubmission>.New(),
             new UpdateReportSubmissionFeedbackCommand());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        submissionLookupCalled.Should().BeFalse();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(submissionLookupCalled, Is.False);
     }
 
     [Test]
@@ -1247,8 +1246,8 @@ public sealed partial class ReportingServiceTests
             Id<ReportSubmission>.Empty,
             new UpdateReportSubmissionFeedbackCommand());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -1260,8 +1259,8 @@ public sealed partial class ReportingServiceTests
             Id<ReportSubmission>.New(),
             new UpdateReportSubmissionFeedbackCommand());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     [Test]
@@ -1282,8 +1281,8 @@ public sealed partial class ReportingServiceTests
             FieldComments = new Dictionary<string, string?> { ["unknown"] = "bad" }
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -1312,9 +1311,9 @@ public sealed partial class ReportingServiceTests
             TrainerOverallComment = "Great progress"
         });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.CanEditFeedback.Should().BeTrue();
-        result.Value.CanMarkFeedbackRead.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.CanEditFeedback, Is.True);
+        Assert.That(result.Value.CanMarkFeedbackRead, Is.False);
         await outboxWriter.Received(1).StageAsync(
             Arg.Is<ReportFeedbackAddedInAppNotificationCommand>(notification =>
                 notification.SubmissionId == submissionId
@@ -1329,7 +1328,7 @@ public sealed partial class ReportingServiceTests
     {
         var result = await CreateReportingService().MarkTrainerFeedbackAsReadAsync(CreateUser(Id<User>.New()), Id<ReportSubmission>.Empty);
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
     }
 
     [Test]
@@ -1337,8 +1336,8 @@ public sealed partial class ReportingServiceTests
     {
         var result = await CreateReportingService().MarkTrainerFeedbackAsReadAsync(CreateUser(Id<User>.New()), Id<ReportSubmission>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     [Test]
@@ -1355,9 +1354,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(currentTrainee, Id<ReportSubmission>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        queriedTraineeId.Should().Be(currentTrainee.Id);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(queriedTraineeId, Is.EqualTo(currentTrainee.Id));
     }
 
     [Test]
@@ -1371,8 +1370,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submissionId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -1380,7 +1379,7 @@ public sealed partial class ReportingServiceTests
     {
         var result = await CreateReportingService(userHasTrainerRole: false).GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
     }
 
     [Test]
@@ -1398,9 +1397,9 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.GetTraineeSubmissionsAsync(CreateUser(Id<User>.New()), Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        submissionsLookupCalled.Should().BeFalse();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(submissionsLookupCalled, Is.False);
     }
 
     [Test]
@@ -1419,8 +1418,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -1449,8 +1448,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle(item => item.ReportRequestId == historicalRequest.Id);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That((result.Value).Where(item => item.ReportRequestId == historicalRequest.Id), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -1477,8 +1476,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.Empty);
     }
 
     [Test]
@@ -1492,8 +1491,8 @@ public sealed partial class ReportingServiceTests
 
         var result = await service.GetOwnSubmissionsAsync(CreateUser(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -1511,12 +1510,12 @@ public sealed partial class ReportingServiceTests
         var actor = CreateUser(traineeId);
 
         var before = await service.GetOwnSubmissionsAsync(actor);
-        before.Value.Single().CanMarkFeedbackRead.Should().BeTrue();
+        Assert.That(before.Value.Single().CanMarkFeedbackRead, Is.True);
         var marked = await service.MarkTrainerFeedbackAsReadAsync(actor, submission.Id);
-        marked.IsSuccess.Should().BeTrue();
-        marked.Value.CanMarkFeedbackRead.Should().BeFalse();
+        Assert.That(marked.IsSuccess, Is.True);
+        Assert.That(marked.Value.CanMarkFeedbackRead, Is.False);
         var after = await service.GetOwnSubmissionsAsync(actor);
-        after.Value.Single().CanMarkFeedbackRead.Should().BeFalse();
+        Assert.That(after.Value.Single().CanMarkFeedbackRead, Is.False);
     }
 
     [TestCase(false)]
@@ -1564,9 +1563,8 @@ public sealed partial class ReportingServiceTests
             ? await service.GetTraineeSubmissionsAsync(CreateUser(trainerId), traineeId)
             : await service.GetOwnSubmissionsAsync(CreateUser(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(item => trainerView ? item.CanEditFeedback : item.CanMarkFeedbackRead)
-            .Should().Equal(true, false, false, false, false);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(item => trainerView ? item.CanEditFeedback : item.CanMarkFeedbackRead), Is.EqualTo(new[] { true, false, false, false, false }));
         await relationships.Received(1).GetActiveAccessForPairsAsync(
             Arg.Is<IReadOnlyCollection<(Id<LgymApi.Identity.Contracts.AccountReference>, Id<LgymApi.Identity.Contracts.AccountReference>)>>(pairs => pairs.Count == 1),
             Arg.Any<CancellationToken>());

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Mapping;
@@ -29,13 +28,13 @@ public sealed class ManagedPlanContractRegistrationTests
     [Test]
     public void ManagedPlanContracts_ArePublic()
     {
-        typeof(IGetManagedPlansUseCase).IsPublic.Should().BeTrue();
-        typeof(ICreateManagedPlanUseCase).IsPublic.Should().BeTrue();
-        typeof(IUpdateManagedPlanUseCase).IsPublic.Should().BeTrue();
-        typeof(IDeleteManagedPlanUseCase).IsPublic.Should().BeTrue();
-        typeof(IAssignManagedPlanUseCase).IsPublic.Should().BeTrue();
-        typeof(IUnassignManagedPlanUseCase).IsPublic.Should().BeTrue();
-        typeof(IGetActiveAssignedPlanUseCase).IsPublic.Should().BeTrue();
+        Assert.That(typeof(IGetManagedPlansUseCase).IsPublic, Is.True);
+        Assert.That(typeof(ICreateManagedPlanUseCase).IsPublic, Is.True);
+        Assert.That(typeof(IUpdateManagedPlanUseCase).IsPublic, Is.True);
+        Assert.That(typeof(IDeleteManagedPlanUseCase).IsPublic, Is.True);
+        Assert.That(typeof(IAssignManagedPlanUseCase).IsPublic, Is.True);
+        Assert.That(typeof(IUnassignManagedPlanUseCase).IsPublic, Is.True);
+        Assert.That(typeof(IGetActiveAssignedPlanUseCase).IsPublic, Is.True);
     }
 
     [Test]
@@ -50,10 +49,10 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = mapper.Map<Plan, ManagedPlanReadModel>(plan, mapper.CreateContext());
 
-        result.Id.Should().Be(plan.Id.Rebind<PlanReference>());
-        result.Name.Should().Be(plan.Name);
-        result.IsActive.Should().Be(plan.IsActive);
-        result.CreatedAt.Should().Be(plan.CreatedAt);
+        Assert.That(result.Id, Is.EqualTo(plan.Id.Rebind<PlanReference>()));
+        Assert.That(result.Name, Is.EqualTo(plan.Name));
+        Assert.That(result.IsActive, Is.EqualTo(plan.IsActive));
+        Assert.That(result.CreatedAt, Is.EqualTo(plan.CreatedAt));
     }
 
     [Test]
@@ -79,7 +78,7 @@ public sealed class ManagedPlanContractRegistrationTests
 
         foreach (var contract in contracts)
         {
-            services.Count(descriptor => descriptor.ServiceType == contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == contract), Is.EqualTo(1));
         }
 
         using var provider = services.BuildServiceProvider();
@@ -87,7 +86,7 @@ public sealed class ManagedPlanContractRegistrationTests
 
         foreach (var contract in contracts)
         {
-            scope.ServiceProvider.GetServices(contract).Should().ContainSingle();
+            Assert.That(scope.ServiceProvider.GetServices(contract), Has.Exactly(1).Items);
         }
     }
 
@@ -106,9 +105,9 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new GetManagedPlansQuery(traineeId), cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(plan => plan.Name).Should().Equal("New", "Old");
-        planRepository.GetByUserCalls.Should().ContainSingle(call => call.UserId == traineeId && call.CancellationToken == cancellationToken);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(plan => plan.Name), Is.EqualTo(new[] { "New", "Old" }));
+        Assert.That((planRepository.GetByUserCalls).Where(call => call.UserId == traineeId && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -122,7 +121,7 @@ public sealed class ManagedPlanContractRegistrationTests
 
         Func<Task> action = () => useCase.ExecuteAsync(new GetManagedPlansQuery(traineeId), cancellation.Token);
 
-        await action.Should().ThrowAsync<TaskCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<TaskCanceledException>());
     }
 
     [Test]
@@ -130,9 +129,11 @@ public sealed class ManagedPlanContractRegistrationTests
     {
         var result = await Resolve<IGetManagedPlansUseCase>().ExecuteAsync(new GetManagedPlansQuery(Id<User>.Empty));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>().Which.Message.Should().Be(Messages.UserIdRequired);
-        result.Error.HttpStatusCode.Should().Be(400);
+        Assert.That(result.IsFailure, Is.True);
+        var assertedValue120 = result.Error;
+        Assert.That(assertedValue120, Is.TypeOf<InvalidPlanError>());
+        Assert.That(((InvalidPlanError)assertedValue120).Message, Is.EqualTo(Messages.UserIdRequired));
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo(400));
     }
 
     [Test]
@@ -148,15 +149,15 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new CreateManagedPlanCommand(trainerId, traineeId, "  Template  "));
 
-        result.IsSuccess.Should().BeTrue();
-        stagedPlan.Should().NotBeNull();
-        stagedPlan!.UserId.Should().Be(trainerId);
-        stagedPlan.Name.Should().Be("Template");
-        stagedPlan.IsActive.Should().BeFalse();
-        stagedPlan.IsDeleted.Should().BeFalse();
-        result.Value.Id.Should().Be(stagedPlan.Id.Rebind<PlanReference>());
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.BeginTransactionCalls.Should().Be(0);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(stagedPlan, Is.Not.Null);
+        Assert.That(stagedPlan!.UserId, Is.EqualTo(trainerId));
+        Assert.That(stagedPlan.Name, Is.EqualTo("Template"));
+        Assert.That(stagedPlan.IsActive, Is.False);
+        Assert.That(stagedPlan.IsDeleted, Is.False);
+        Assert.That(result.Value.Id, Is.EqualTo(stagedPlan.Id.Rebind<PlanReference>()));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(0));
     }
 
     [TestCase("")]
@@ -167,8 +168,8 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new CreateManagedPlanCommand(Id<User>.New(), Id<User>.New(), name));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -184,26 +185,26 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var trainerResult = await useCase.ExecuteAsync(new UpdateManagedPlanCommand(trainerId, traineeId, plan.Id, "  Trainer update  "));
 
-        trainerResult.IsSuccess.Should().BeTrue();
-        plan.Name.Should().Be("Trainer update");
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(trainerResult.IsSuccess, Is.True);
+        Assert.That(plan.Name, Is.EqualTo("Trainer update"));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
 
         var traineePlan = CreatePlan(traineeId, "Trainee old");
         planRepository.PlansById[traineePlan.Id] = traineePlan;
 
         var traineeResult = await useCase.ExecuteAsync(new UpdateManagedPlanCommand(trainerId, traineeId, traineePlan.Id, "Trainee update"));
 
-        traineeResult.IsSuccess.Should().BeTrue();
-        traineePlan.Name.Should().Be("Trainee update");
+        Assert.That(traineeResult.IsSuccess, Is.True);
+        Assert.That(traineePlan.Name, Is.EqualTo("Trainee update"));
 
         var foreignPlan = CreatePlan(Id<User>.New(), "Foreign");
         planRepository.PlansById[foreignPlan.Id] = foreignPlan;
 
         var foreignResult = await useCase.ExecuteAsync(new UpdateManagedPlanCommand(trainerId, traineeId, foreignPlan.Id, "Nope"));
 
-        foreignResult.IsFailure.Should().BeTrue();
-        foreignResult.Error.Should().BeOfType<PlanNotFoundError>();
-        planRepository.UpdatedPlans.Should().NotContain(foreignPlan);
+        Assert.That(foreignResult.IsFailure, Is.True);
+        Assert.That(foreignResult.Error, Is.TypeOf<PlanNotFoundError>());
+        Assert.That(planRepository.UpdatedPlans, Does.Not.Contain(foreignPlan));
     }
 
     [Test]
@@ -215,8 +216,8 @@ public sealed class ManagedPlanContractRegistrationTests
         var result = await useCase.ExecuteAsync(
             new UpdateManagedPlanCommand(Id<User>.New(), Id<User>.New(), Id<Plan>.New(), "Updated"));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanNotFoundError>());
     }
 
     [Test]
@@ -227,8 +228,8 @@ public sealed class ManagedPlanContractRegistrationTests
         var result = await useCase.ExecuteAsync(
             new UpdateManagedPlanCommand(Id<User>.New(), Id<User>.New(), Id<Plan>.Empty, " "));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -251,12 +252,14 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new DeleteManagedPlanCommand(trainerId, traineeId, plan.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        plan.IsDeleted.Should().BeTrue();
-        plan.IsActive.Should().BeFalse();
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.Transaction!.CommitCalls.Should().Be(1);
-        pointerStore.StagedPlanIds.Should().ContainSingle().Which.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.IsDeleted, Is.True);
+        Assert.That(plan.IsActive, Is.False);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction!.CommitCalls, Is.EqualTo(1));
+        var assertedValue121 = (pointerStore.StagedPlanIds).ToArray();
+        Assert.That(assertedValue121, Has.Exactly(1).Items);
+        Assert.That(assertedValue121.Single(), Is.Null);
     }
 
     [Test]
@@ -271,9 +274,9 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new DeleteManagedPlanCommand(trainerId, traineeId, plan.Id));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanNotFoundError>();
-        plan.IsDeleted.Should().BeFalse();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanNotFoundError>());
+        Assert.That(plan.IsDeleted, Is.False);
     }
 
     [Test]
@@ -302,14 +305,18 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new AssignManagedPlanCommand(trainerId, traineeId, template.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        planRepository.FindByIdCalls.Should().ContainSingle(call => call.PlanId == template.Id);
-        planRepository.ClearedActiveUsers.Should().ContainSingle().Which.Should().Be(traineeId);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That((planRepository.FindByIdCalls).Where(call => call.PlanId == template.Id), Has.Exactly(1).Items);
+        var assertedValue122 = (planRepository.ClearedActiveUsers).ToArray();
+        Assert.That(assertedValue122, Has.Exactly(1).Items);
+        Assert.That(assertedValue122.Single(), Is.EqualTo(traineeId));
         await clonePort.Received(1).StageClonesAsync(traineeReference, [], Arg.Any<CancellationToken>());
-        planRepository.CloneCalls.Should().ContainSingle(call => call.SourcePlanId == template.Id && call.UserId == traineeId && ReferenceEquals(call.ExerciseIdMap, exerciseIdMap));
-        pointerStore.StagedPlanIds.Should().ContainSingle().Which.Should().Be(clone.Id);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.Transaction!.CommitCalls.Should().Be(1);
+        Assert.That((planRepository.CloneCalls).Where(call => call.SourcePlanId == template.Id && call.UserId == traineeId && ReferenceEquals(call.ExerciseIdMap, exerciseIdMap)), Has.Exactly(1).Items);
+        var assertedValue123 = (pointerStore.StagedPlanIds).ToArray();
+        Assert.That(assertedValue123, Has.Exactly(1).Items);
+        Assert.That(assertedValue123.Single(), Is.EqualTo(clone.Id));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction!.CommitCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -332,11 +339,13 @@ public sealed class ManagedPlanContractRegistrationTests
 
         Func<Task> action = () => useCase.ExecuteAsync(new AssignManagedPlanCommand(trainerId, traineeId, plan.Id));
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        planRepository.SetActiveCalls.Should().ContainSingle(call => call.UserId == traineeId && call.PlanId == plan.Id);
-        pointerStore.StagedPlanIds.Should().ContainSingle().Which.Should().Be(plan.Id);
-        unitOfWork.Transaction!.CommitCalls.Should().Be(0);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That((planRepository.SetActiveCalls).Where(call => call.UserId == traineeId && call.PlanId == plan.Id), Has.Exactly(1).Items);
+        var assertedValue124 = (pointerStore.StagedPlanIds).ToArray();
+        Assert.That(assertedValue124, Has.Exactly(1).Items);
+        Assert.That(assertedValue124.Single(), Is.EqualTo(plan.Id));
+        Assert.That(unitOfWork.Transaction!.CommitCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -357,9 +366,9 @@ public sealed class ManagedPlanContractRegistrationTests
 
         Func<Task> action = () => useCase.ExecuteAsync(new AssignManagedPlanCommand(trainerId, traineeId, plan.Id));
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        transaction.CommitCalls.Should().Be(1);
-        transaction.RollbackCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -374,16 +383,16 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var foreignResult = await useCase.ExecuteAsync(new AssignManagedPlanCommand(trainerId, traineeId, foreignPlan.Id));
 
-        foreignResult.IsFailure.Should().BeTrue();
-        foreignResult.Error.Should().BeOfType<PlanNotFoundError>();
+        Assert.That(foreignResult.IsFailure, Is.True);
+        Assert.That(foreignResult.Error, Is.TypeOf<PlanNotFoundError>());
 
         var traineePlan = CreatePlan(traineeId, "Trainee");
         planRepository.PlansById[traineePlan.Id] = traineePlan;
 
         var missingTraineeResult = await useCase.ExecuteAsync(new AssignManagedPlanCommand(trainerId, traineeId, traineePlan.Id));
 
-        missingTraineeResult.IsFailure.Should().BeTrue();
-        missingTraineeResult.Error.Should().BeOfType<PlanNotFoundError>();
+        Assert.That(missingTraineeResult.IsFailure, Is.True);
+        Assert.That(missingTraineeResult.Error, Is.TypeOf<PlanNotFoundError>());
     }
 
     [Test]
@@ -402,10 +411,14 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var result = await useCase.ExecuteAsync(new UnassignManagedPlanCommand(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        planRepository.ClearedActiveUsers.Should().ContainSingle().Which.Should().Be(traineeId);
-        pointerStore.StagedPlanIds.Should().ContainSingle().Which.Should().BeNull();
-        unitOfWork.Transaction!.CommitCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        var assertedValue125 = (planRepository.ClearedActiveUsers).ToArray();
+        Assert.That(assertedValue125, Has.Exactly(1).Items);
+        Assert.That(assertedValue125.Single(), Is.EqualTo(traineeId));
+        var assertedValue126 = (pointerStore.StagedPlanIds).ToArray();
+        Assert.That(assertedValue126, Has.Exactly(1).Items);
+        Assert.That(assertedValue126.Single(), Is.Null);
+        Assert.That(unitOfWork.Transaction!.CommitCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -420,15 +433,15 @@ public sealed class ManagedPlanContractRegistrationTests
 
         var success = await useCase.ExecuteAsync(new GetActiveAssignedPlanQuery(traineeId));
 
-        success.IsSuccess.Should().BeTrue();
-        success.Value.Id.Should().Be(activePlan.Id.Rebind<PlanReference>());
+        Assert.That(success.IsSuccess, Is.True);
+        Assert.That(success.Value.Id, Is.EqualTo(activePlan.Id.Rebind<PlanReference>()));
 
         planRepository.ActivePlan = null;
 
         var missing = await useCase.ExecuteAsync(new GetActiveAssignedPlanQuery(traineeId));
 
-        missing.IsFailure.Should().BeTrue();
-        missing.Error.Should().BeOfType<PlanNotFoundError>();
+        Assert.That(missing.IsFailure, Is.True);
+        Assert.That(missing.Error, Is.TypeOf<PlanNotFoundError>());
     }
 
     [Test]
@@ -448,10 +461,10 @@ public sealed class ManagedPlanContractRegistrationTests
 
         foreach (var propertyType in models.SelectMany(model => model.GetProperties()).Select(property => property.PropertyType))
         {
-            propertyType.Should().NotBe(typeof(Plan));
-            propertyType.Should().NotBe(typeof(User));
-            propertyType.Should().NotBe(typeof(IPlanRepository));
-            propertyType.Should().NotBe(typeof(IActivePlanPointerStore));
+            Assert.That(propertyType, Is.Not.EqualTo(typeof(Plan)));
+            Assert.That(propertyType, Is.Not.EqualTo(typeof(User)));
+            Assert.That(propertyType, Is.Not.EqualTo(typeof(IPlanRepository)));
+            Assert.That(propertyType, Is.Not.EqualTo(typeof(IActivePlanPointerStore)));
         }
     }
 

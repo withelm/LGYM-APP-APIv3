@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Reporting.Errors;
@@ -32,13 +31,13 @@ public sealed partial class RecurringReportAssignmentServiceTests
             scenario.Assignment.Id,
             new SetNextRecurringReportOverrideCommand { ScheduledAt = secondAt, ExpectedScheduleRevision = 1 });
 
-        first.IsSuccess.Should().BeTrue();
-        second.IsSuccess.Should().BeTrue();
-        second.Value.ScheduleRevision.Should().Be(2);
-        second.Value.EffectiveNextRecurringRequest.ScheduledAt.Should().Be(secondAt);
-        database.RecurringReportScheduleChanges.Should().HaveCount(2);
-        database.RecurringReportScheduleChanges.Count(change => change.Status == RecurringReportScheduleChangeStatus.Active).Should().Be(1);
-        database.RecurringReportScheduleChanges.Count(change => change.Status == RecurringReportScheduleChangeStatus.Superseded).Should().Be(1);
+        Assert.That(first.IsSuccess, Is.True);
+        Assert.That(second.IsSuccess, Is.True);
+        Assert.That(second.Value.ScheduleRevision, Is.EqualTo(2));
+        Assert.That(second.Value.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(secondAt));
+        Assert.That(database.RecurringReportScheduleChanges, Has.Exactly(2).Items);
+        Assert.That(database.RecurringReportScheduleChanges.Count(change => change.Status == RecurringReportScheduleChangeStatus.Active), Is.EqualTo(1));
+        Assert.That(database.RecurringReportScheduleChanges.Count(change => change.Status == RecurringReportScheduleChangeStatus.Superseded), Is.EqualTo(1));
     }
 
     [Test]
@@ -60,10 +59,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
                 ExpectedScheduleRevision = 2
             });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        database.RecurringReportScheduleChanges.Should().BeEmpty();
-        database.RecurringReportAssignments.Single().ScheduleRevision.Should().Be(3);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(database.RecurringReportScheduleChanges, Is.Empty);
+        Assert.That(database.RecurringReportAssignments.Single().ScheduleRevision, Is.EqualTo(3));
     }
 
     [Test]
@@ -81,8 +80,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
             scenario.Assignment.Id,
             new SetNextRecurringReportOverrideCommand { ScheduledAt = scheduledAt, ExpectedScheduleRevision = 0 });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.EffectiveNextRecurringRequest.ScheduledAt.Should().Be(scheduledAt);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(scheduledAt));
     }
 
     [Test]
@@ -116,14 +115,14 @@ public sealed partial class RecurringReportAssignmentServiceTests
             proposed.Value.PendingScheduleProposal.Id,
             true);
 
-        proposed.IsSuccess.Should().BeTrue();
-        proposed.Value.NextEligibleAt.Should().Be(originalAt);
-        proposed.Value.EffectiveNextRecurringRequest.ScheduledAt.Should().Be(originalAt);
-        accepted.IsSuccess.Should().BeTrue();
-        accepted.Value.ScheduleRevision.Should().Be(1);
-        accepted.Value.EffectiveNextRecurringRequest.ScheduledAt.Should().Be(proposedAt);
-        duplicate.IsFailure.Should().BeTrue();
-        duplicate.Error.Should().BeOfType<ReportingConflictError>();
+        Assert.That(proposed.IsSuccess, Is.True);
+        Assert.That(proposed.Value.NextEligibleAt, Is.EqualTo(originalAt));
+        Assert.That(proposed.Value.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(originalAt));
+        Assert.That(accepted.IsSuccess, Is.True);
+        Assert.That(accepted.Value.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(accepted.Value.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(proposedAt));
+        Assert.That(duplicate.IsFailure, Is.True);
+        Assert.That(duplicate.Error, Is.TypeOf<ReportingConflictError>());
     }
 
     [Test]
@@ -156,11 +155,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
                 ExpectedScheduleRevision = command.ExpectedScheduleRevision
             });
 
-        rejected.IsSuccess.Should().BeTrue();
-        rejected.Value.ScheduleRevision.Should().Be(0);
-        rejected.Value.EffectiveNextRecurringRequest.ScheduledAt.Should().Be(originalAt);
-        replacement.IsSuccess.Should().BeTrue();
-        replacement.Value.PendingScheduleProposal.Should().NotBeNull();
+        Assert.That(rejected.IsSuccess, Is.True);
+        Assert.That(rejected.Value.ScheduleRevision, Is.EqualTo(0));
+        Assert.That(rejected.Value.EffectiveNextRecurringRequest.ScheduledAt, Is.EqualTo(originalAt));
+        Assert.That(replacement.IsSuccess, Is.True);
+        Assert.That(replacement.Value.PendingScheduleProposal, Is.Not.Null);
     }
 
     [Test]
@@ -187,13 +186,13 @@ public sealed partial class RecurringReportAssignmentServiceTests
             ReportingTestData.AccountId(scenario.Trainee.Id),
             scenario.Assignment.Id);
 
-        proposed.Value.PendingScheduleProposal.Should().NotBeNull();
-        paused.IsSuccess.Should().BeTrue();
-        paused.Value.PendingScheduleProposal.Should().BeNull();
-        paused.Value.ScheduleRevision.Should().Be(1);
-        resumed.IsSuccess.Should().BeTrue();
-        resumed.Value.PendingScheduleProposal.Should().BeNull();
-        resumed.Value.ScheduleRevision.Should().Be(2);
+        Assert.That(proposed.Value.PendingScheduleProposal, Is.Not.Null);
+        Assert.That(paused.IsSuccess, Is.True);
+        Assert.That(paused.Value.PendingScheduleProposal, Is.Null);
+        Assert.That(paused.Value.ScheduleRevision, Is.EqualTo(1));
+        Assert.That(resumed.IsSuccess, Is.True);
+        Assert.That(resumed.Value.PendingScheduleProposal, Is.Null);
+        Assert.That(resumed.Value.ScheduleRevision, Is.EqualTo(2));
     }
 
     [Test]
@@ -224,11 +223,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
                 ExpectedScheduleRevision = 0
             });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
     }
 
     private static async Task<ScheduleScenario> SeedScheduleScenarioAsync(

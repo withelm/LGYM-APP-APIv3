@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -33,7 +32,7 @@ internal sealed class PostgreSqlPlanShareHttpConcurrencyTests : PostgreSqlIntegr
         }
 
         var login = await Client.PostAsJsonAsync("/api/login", new { name = owner.Name, password = "password123" });
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var gate = new UpdateGate();
@@ -50,8 +49,8 @@ internal sealed class PostgreSqlPlanShareHttpConcurrencyTests : PostgreSqlIntegr
         {
             await gate.Reached.Task.WaitAsync(TimeSpan.FromSeconds(20));
             var share = await Client.PostAsync($"/api/{plan.Id}/share", null);
-            share.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await share.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("shareCode").GetString().Should().Be("EXISTING01");
+            Assert.That(share.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That((await share.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("shareCode").GetString(), Is.EqualTo("EXISTING01"));
         }
         finally
         {
@@ -59,15 +58,15 @@ internal sealed class PostgreSqlPlanShareHttpConcurrencyTests : PostgreSqlIntegr
         }
 
         var response = await update.WaitAsync(TimeSpan.FromSeconds(20));
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That(string.IsNullOrWhiteSpace((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("msg").GetString()), Is.False);
         await using var verification = Factory.Services.CreateAsyncScope();
         var persisted = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        persisted.Name.Should().Be("Original");
-        persisted.ShareCode.Should().Be("EXISTING01");
-        persisted.ShareCodeDurationDays.Should().Be(7);
-        persisted.ShareCodeExpiresAt.Should().Be(expiresAt);
-        persisted.ShareCodeRevision.Should().Be(1);
+        Assert.That(persisted.Name, Is.EqualTo("Original"));
+        Assert.That(persisted.ShareCode, Is.EqualTo("EXISTING01"));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(7));
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(expiresAt));
+        Assert.That(persisted.ShareCodeRevision, Is.EqualTo(1));
     }
 
     private sealed class UpdateGate
@@ -102,7 +101,7 @@ internal sealed class PostgreSqlPlanShareHttpConcurrencyTests : PostgreSqlIntegr
             await db.SaveChangesAsync();
         }
         var login = await Client.PostAsJsonAsync("/api/login", new { name = owner.Name, password = "password123" });
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
         var barrier = new SaveBarrier();
         using var factory = Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
@@ -117,25 +116,25 @@ internal sealed class PostgreSqlPlanShareHttpConcurrencyTests : PostgreSqlIntegr
             client.PostAsync($"/api/{plan.Id}/share", null),
             client.PostAsync($"/api/{plan.Id}/share", null)).WaitAsync(TimeSpan.FromSeconds(30));
 
-        responses.Select(response => response.StatusCode).Should().BeEquivalentTo([HttpStatusCode.OK, HttpStatusCode.Conflict]);
+        Assert.That(responses.Select(response => response.StatusCode), Is.EquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
         var success = responses.Single(response => response.StatusCode == HttpStatusCode.OK);
         var body = await success.Content.ReadFromJsonAsync<JsonElement>();
-        body.EnumerateObject().Select(property => property.Name).Should().Equal("shareCode");
-        body.GetProperty("shareCode").GetString().Should().Be("EXISTING01");
+        Assert.That(body.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "shareCode" }));
+        Assert.That(body.GetProperty("shareCode").GetString(), Is.EqualTo("EXISTING01"));
         var conflict = await responses.Single(response => response.StatusCode == HttpStatusCode.Conflict).Content.ReadFromJsonAsync<JsonElement>();
-        conflict.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(conflict.GetProperty("msg").GetString()), Is.False);
         await using var verification = Factory.Services.CreateAsyncScope();
         var persisted = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        persisted.ShareCode.Should().Be("EXISTING01");
-        persisted.ShareCodeDurationDays.Should().Be(7);
-        persisted.ShareCodeExpiresAt.Should().Be(expiresAt);
-        persisted.ShareCodeRevision.Should().Be(1);
+        Assert.That(persisted.ShareCode, Is.EqualTo("EXISTING01"));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(7));
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(expiresAt));
+        Assert.That(persisted.ShareCodeRevision, Is.EqualTo(1));
 
         var retry = await client.PostAsync($"/api/{plan.Id}/share", null);
-        retry.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(retry.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var retryBody = await retry.Content.ReadFromJsonAsync<JsonElement>();
-        retryBody.EnumerateObject().Select(property => property.Name).Should().Equal("shareCode");
-        retryBody.GetProperty("shareCode").GetString().Should().Be("EXISTING01");
+        Assert.That(retryBody.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "shareCode" }));
+        Assert.That(retryBody.GetProperty("shareCode").GetString(), Is.EqualTo("EXISTING01"));
     }
 
     private sealed class SaveBarrier

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -45,20 +44,20 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        stagedPlan.Should().NotBeNull();
-        stagedPlan!.Id.IsEmpty.Should().BeFalse();
-        stagedPlan.TrainerId.Should().Be(trainerId);
-        stagedPlan.TraineeId.Should().Be(traineeId);
-        stagedPlan.Name.Should().Be("Plan");
-        stagedPlan.Notes.Should().Be("note");
-        stagedPlan.IsActive.Should().BeFalse();
-        stagedPlan.IsDeleted.Should().BeFalse();
-        stagedPlan.Items.Select(item => item.SupplementName).Should().Equal("Morning", "Evening");
-        stagedPlan.Items.Should().OnlyContain(item => !item.Id.IsEmpty && item.PlanId == stagedPlan.Id);
-        result.Value.IsActive.Should().BeFalse();
-        result.Value.Items.Select(item => item.SupplementName).Should().Equal("Morning", "Evening");
-        operations.Should().Equal("access", "stage", "save");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(stagedPlan, Is.Not.Null);
+        Assert.That(stagedPlan!.Id.IsEmpty, Is.False);
+        Assert.That(stagedPlan.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(stagedPlan.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(stagedPlan.Name, Is.EqualTo("Plan"));
+        Assert.That(stagedPlan.Notes, Is.EqualTo("note"));
+        Assert.That(stagedPlan.IsActive, Is.False);
+        Assert.That(stagedPlan.IsDeleted, Is.False);
+        Assert.That(stagedPlan.Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Morning", "Evening" }));
+        Assert.That((stagedPlan.Items).All(item => !item.Id.IsEmpty && item.PlanId == stagedPlan.Id), Is.True);
+        Assert.That(result.Value.IsActive, Is.False);
+        Assert.That(result.Value.Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Morning", "Evening" }));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "stage", "save" }));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
     }
 
@@ -73,8 +72,8 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new SupplementPlanUpsertData(" ", null, [])));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
     }
@@ -90,8 +89,8 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, ValidData()));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, Id<User>.Empty, Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
     }
@@ -108,8 +107,8 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
-        result.Error.Should().BeOfType<SupplementationForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
+        Assert.That(result.Error, Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await AssertNoWritesAsync(dependencies);
     }
 
@@ -125,8 +124,8 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
-        result.Error.Should().BeOfType<SupplementationNotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
+        Assert.That(result.Error, Is.TypeOf<SupplementationNotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
         await AssertNoWritesAsync(dependencies);
     }
 
@@ -146,8 +145,8 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
                 traineeId,
                 new SupplementPlanUpsertData("Plan", null, [invalidItem])));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await AssertNoWritesAsync(dependencies);
     }
 
@@ -167,7 +166,7 @@ public sealed class CreateTraineeSupplementPlanUseCaseTests
             new CreateTraineeSupplementPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await dependencies.Plans.Received(1).AddPlanAsync(Arg.Any<SupplementPlan>(), cancellationToken);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());

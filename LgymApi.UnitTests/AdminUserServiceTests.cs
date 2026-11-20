@@ -1,5 +1,4 @@
 using System.Net;
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.Features.AdminManagement;
@@ -62,10 +61,10 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.GetUserAsync(userId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("Test");
-        result.Value.Roles.Should().HaveCount(1);
-        result.Value.Roles[0].Should().Be("Admin");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Name, Is.EqualTo("Test"));
+        Assert.That(result.Value.Roles, Has.Exactly(1).Items);
+        Assert.That(result.Value.Roles[0], Is.EqualTo("Admin"));
     }
 
     [Test]
@@ -73,8 +72,8 @@ public sealed class AdminUserServiceTests
     {
         var result = await _service.GetUserAsync(Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -87,10 +86,10 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.BlockUserAsync(userId, adminId);
 
-        result.IsSuccess.Should().BeTrue();
-        user.IsBlocked.Should().BeTrue();
-        _sessionStore.RevokedAllUserIds.Should().Contain(userId);
-        _saveChangesCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.IsBlocked, Is.True);
+        Assert.That(_sessionStore.RevokedAllUserIds, Does.Contain(userId));
+        Assert.That(_saveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -101,8 +100,8 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.BlockUserAsync(userId, userId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ForbiddenError>());
     }
 
     [Test]
@@ -114,8 +113,8 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.UnblockUserAsync(userId);
 
-        result.IsSuccess.Should().BeTrue();
-        user.IsBlocked.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.IsBlocked, Is.False);
     }
 
     [Test]
@@ -128,8 +127,8 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.DeleteUserAsync(userId, adminId);
 
-        result.IsSuccess.Should().BeTrue();
-        user.IsDeleted.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.IsDeleted, Is.False);
         await _accountDeletionService.Received(1).RequestAsync(userId.Rebind<AccountReference>(), Arg.Any<CancellationToken>());
     }
 
@@ -141,8 +140,8 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.DeleteUserAsync(userId, userId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ForbiddenError>());
     }
 
     [Test]
@@ -156,9 +155,9 @@ public sealed class AdminUserServiceTests
         var command = new UpdateUserCommand { Name = "New", Email = "new@test.com", IsVisibleInRanking = false };
         var result = await _service.UpdateUserAsync(userId, Id<User>.New(), command);
 
-        result.IsSuccess.Should().BeTrue();
-        user.Name.Should().Be("New");
-        user.IsVisibleInRanking.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(user.Name, Is.EqualTo("New"));
+        Assert.That(user.IsVisibleInRanking, Is.False);
     }
 
     [Test]
@@ -175,8 +174,8 @@ public sealed class AdminUserServiceTests
         var command = new UpdateUserCommand { Name = "Test", Email = "other@test.com" };
         var result = await _service.UpdateUserAsync(userId, Id<User>.New(), command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ConflictError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ConflictError>());
     }
 
     [Test]
@@ -200,9 +199,9 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.GetUsersAsync(new FilterInput { Page = 1, PageSize = 10 }, includeDeleted: false);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().HaveCount(2);
-        result.Value.TotalCount.Should().Be(2);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Items, Has.Exactly(2).Items);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -226,8 +225,8 @@ public sealed class AdminUserServiceTests
 
         var resultWithDeleted = await _service.GetUsersAsync(new FilterInput { Page = 1, PageSize = 10 }, includeDeleted: true);
 
-        resultWithDeleted.IsSuccess.Should().BeTrue();
-        resultWithDeleted.Value.Items.Should().HaveCount(2);
+        Assert.That(resultWithDeleted.IsSuccess, Is.True);
+        Assert.That(resultWithDeleted.Value.Items, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -240,8 +239,8 @@ public sealed class AdminUserServiceTests
 
         var result = await _service.GetUserAsync(userId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.IsDeleted.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.IsDeleted, Is.True);
     }
 
     [Test]
@@ -250,8 +249,8 @@ public sealed class AdminUserServiceTests
         var command = new UpdateUserCommand { Name = "Test", Email = "test@test.com" };
         var result = await _service.UpdateUserAsync(Id<User>.New(), Id<User>.New(), command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -259,8 +258,8 @@ public sealed class AdminUserServiceTests
     {
         var result = await _service.DeleteUserAsync(Id<User>.New(), Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -268,8 +267,8 @@ public sealed class AdminUserServiceTests
     {
         var result = await _service.BlockUserAsync(Id<User>.New(), Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -277,8 +276,8 @@ public sealed class AdminUserServiceTests
     {
         var result = await _service.UnblockUserAsync(Id<User>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -287,8 +286,8 @@ public sealed class AdminUserServiceTests
         var command = new UpdateUserCommand { Name = "Test", Email = "test@test.com" };
         var result = await _service.UpdateUserAsync(Id<User>.Empty, Id<User>.New(), command);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidAdminUserError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidAdminUserError>());
     }
 
     private static UserResult ToUserResult(User user) => new()

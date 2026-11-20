@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Repositories;
@@ -64,7 +63,7 @@ public sealed class TutorialServiceActorScopeTests
     {
         await InvokeAsync(operation);
 
-        _calls.Take(2).Should().Equal("scope", expectedRepositoryCall);
+        Assert.That(_calls.Take(2), Is.EqualTo(new[] { "scope", expectedRepositoryCall }));
         await _actorScopeFactory.Received(1).BeginAsync(_userId.Rebind<ActorReference>(), CancellationToken.None);
     }
 
@@ -103,7 +102,7 @@ public sealed class TutorialServiceActorScopeTests
 
         await InvokeAsync(operation);
 
-        _calls.Should().ContainInOrder("save", "commit");
+        { var orderedItems = (_calls).ToArray(); var previousIndex = -1; foreach (var expectedItem in new[] { "save", "commit" }) { var nextIndex = Array.FindIndex(orderedItems, previousIndex + 1, item => Equals(item, expectedItem)); Assert.That(nextIndex, Is.GreaterThan(previousIndex), $"Expected {expectedItem} after index {previousIndex}"); previousIndex = nextIndex; } }
         await _unitOfWork.Received(1).SaveChangesAsync(CancellationToken.None);
         await _transaction.Received(1).CommitAsync(CancellationToken.None);
         await _transaction.DidNotReceive().RollbackAsync(Arg.Any<CancellationToken>());
@@ -117,7 +116,7 @@ public sealed class TutorialServiceActorScopeTests
 
         var action = async () => await _service.GetTutorialProgressAsync(_userId, TutorialType.OnboardingDemo);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("tutorial read failed");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("tutorial read failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await AssertFailureScopeAsync();
     }
 
@@ -133,7 +132,7 @@ public sealed class TutorialServiceActorScopeTests
             TutorialType.OnboardingDemo,
             cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
         await AssertFailureScopeAsync();
     }
 
@@ -146,7 +145,7 @@ public sealed class TutorialServiceActorScopeTests
 
         var action = async () => await _service.InitializeOnboardingTutorialAsync(_userId);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await _unitOfWork.Received(1).SaveChangesAsync(CancellationToken.None);
         await _transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
         await _transaction.DidNotReceive().RollbackAsync(Arg.Any<CancellationToken>());

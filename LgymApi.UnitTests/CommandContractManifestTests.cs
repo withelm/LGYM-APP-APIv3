@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Identity.Contracts.BackgroundCommands;
 using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
@@ -30,7 +29,7 @@ public sealed class CommandContractManifestTests
         var commandCount = manifest.Count;
 
         // Then
-        commandCount.Should().Be(16);
+        Assert.That(commandCount, Is.EqualTo(16));
     }
 
     [Test]
@@ -38,16 +37,13 @@ public sealed class CommandContractManifestTests
     {
         var action = () => LegacyCommandContractManifest.Validate(LegacyCommandContractManifest.All);
 
-        action.Should().NotThrow();
-        LegacyCommandContractManifest.All.Select(contract => contract.CommandType)
-            .Should().Equal(LegacyCommandContractManifest.ExpectedRuntimeTypes);
-        LegacyCommandContractManifest.All.Select(contract => contract.CanonicalId)
-            .Should().OnlyHaveUniqueItems();
-        LegacyCommandContractManifest.All.Select(contract => contract.FutureClrNameReadAlias)
-            .Should().Equal(LegacyCommandContractManifest.ExpectedFutureClrNameReadAliases)
-            .And.OnlyHaveUniqueItems();
-        LegacyCommandContractManifest.All.Sum(contract => contract.HandlerTypeFullNames.Count)
-            .Should().Be(17);
+        Assert.That(() => { action(); }, Throws.Nothing);
+        Assert.That(LegacyCommandContractManifest.All.Select(contract => contract.CommandType), Is.EqualTo(LegacyCommandContractManifest.ExpectedRuntimeTypes));
+        Assert.That(LegacyCommandContractManifest.All.Select(contract => contract.CanonicalId), Is.Unique);
+        var assertedChain34 = LegacyCommandContractManifest.All.Select(contract => contract.FutureClrNameReadAlias);
+        Assert.That(assertedChain34, Is.EqualTo(LegacyCommandContractManifest.ExpectedFutureClrNameReadAliases));
+        Assert.That(assertedChain34, Is.Unique);
+        Assert.That(LegacyCommandContractManifest.All.Sum(contract => contract.HandlerTypeFullNames.Count), Is.EqualTo(17));
     }
 
     [TestCaseSource(nameof(InvalidManifestCases))]
@@ -57,7 +53,7 @@ public sealed class CommandContractManifestTests
     {
         var action = () => LegacyCommandContractManifest.Validate(manifest);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage(expectedMessage);
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -72,7 +68,7 @@ public sealed class CommandContractManifestTests
             .CanonicalId;
 
         // Then
-        persistedId.Should().Be(contract.CanonicalId);
+        Assert.That(persistedId, Is.EqualTo(contract.CanonicalId));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -85,7 +81,7 @@ public sealed class CommandContractManifestTests
         var payloadJson = JsonSerializer.Serialize(command, contract.CommandType, SharedSerializationOptions.Current);
 
         // Then
-        payloadJson.Should().Be(contract.PayloadJson);
+        Assert.That(payloadJson, Is.EqualTo(contract.PayloadJson));
     }
 
     [Test]
@@ -98,7 +94,7 @@ public sealed class CommandContractManifestTests
         var correlationInput = $"{contract.CanonicalId}|{JsonSerializer.Serialize(contract.Command, contract.CommandType, SharedSerializationOptions.Current)}";
 
         // Then
-        correlationInput.Should().Be("LgymApi.BackgroundWorker.Common.Commands.InvitationAcceptedCommand|{\"invitationId\":\"00000000-0000-0000-0000-000000000005\"}");
+        Assert.That(correlationInput, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.InvitationAcceptedCommand|{\"invitationId\":\"00000000-0000-0000-0000-000000000005\"}"));
     }
 
     private static IEnumerable<TestCaseData> InvalidManifestCases()

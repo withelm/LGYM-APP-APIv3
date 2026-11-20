@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -117,11 +116,11 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.ReportRequests.CountAsync()).Should().Be(1);
-        (await database.RecurringReportAssignments.AsNoTracking()
+        Assert.That((await database.ReportRequests.CountAsync()), Is.EqualTo(1));
+        Assert.That((await database.RecurringReportAssignments.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == scenario.AssignmentId))
-            .CurrentReportRequestId.Should().Be(currentRequestId);
-        (await database.CommandEnvelopes.CountAsync()).Should().Be(0);
+            .CurrentReportRequestId, Is.EqualTo(currentRequestId));
+        Assert.That((await database.CommandEnvelopes.CountAsync()), Is.EqualTo(0));
     }
 
     [TestCase(UnavailableState.Inactive)]
@@ -174,10 +173,10 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.RecurringReportAssignments.IgnoreQueryFilters().AsNoTracking()
-            .SingleAsync(candidate => candidate.Id == scenario.AssignmentId)).IsActive.Should().BeFalse();
-        (await verificationDatabase.ReportRequests.CountAsync()).Should().Be(0);
-        (await verificationDatabase.CommandEnvelopes.CountAsync()).Should().Be(0);
+        Assert.That((await verificationDatabase.RecurringReportAssignments.IgnoreQueryFilters().AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == scenario.AssignmentId)).IsActive, Is.False);
+        Assert.That((await verificationDatabase.ReportRequests.CountAsync()), Is.EqualTo(0));
+        Assert.That((await verificationDatabase.CommandEnvelopes.CountAsync()), Is.EqualTo(0));
     }
 
     private async Task AssertLocalizedErrorAsync(
@@ -190,11 +189,10 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
             using var request = new HttpRequestMessage(HttpMethod.Post, route);
             request.Headers.AcceptLanguage.ParseAdd(culture);
             using var response = await Client.SendAsync(request);
-            response.StatusCode.Should().Be(expectedStatus);
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatus));
             using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            body.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal("msg");
-            body.RootElement.GetProperty("msg").GetString().Should().Be(
-                CompatibilityResourceMessage.InCulture(culture, messageAccessor));
+            Assert.That(body.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "msg" }));
+            Assert.That(body.RootElement.GetProperty("msg").GetString(), Is.EqualTo(CompatibilityResourceMessage.InCulture(culture, messageAccessor)));
         }
     }
 
@@ -298,8 +296,8 @@ public sealed class RecurringReportRequestNowErrorIntegrationTests : PostgreSqlR
     {
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.ReportRequests.CountAsync()).Should().Be(0);
-        (await database.CommandEnvelopes.CountAsync()).Should().Be(0);
+        Assert.That((await database.ReportRequests.CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.CommandEnvelopes.CountAsync()), Is.EqualTo(0));
     }
 
     private async Task<User> SeedTrainerAsync()

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Services;
@@ -34,7 +33,7 @@ public sealed class LocalPhotoDevelopmentStoreTests
     {
         var action = () => _store.ResolvePath($"{_testPrefix}/../escape.png");
 
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -52,15 +51,15 @@ public sealed class LocalPhotoDevelopmentStoreTests
         var savedBytes = await _store.ReadAsync(storageKey);
         var metadata = await _store.GetMetadataAsync(storageKey);
 
-        savedBytes.Should().Equal(fileBytes);
-        metadata.Should().NotBeNull();
-        metadata!.SizeBytes.Should().Be(fileBytes.Length);
-        metadata.ContentType.Should().Be("image/png");
-        _store.ResolveContentType(storageKey).Should().Be("image/png");
+        Assert.That(savedBytes, Is.EqualTo(fileBytes));
+        Assert.That(metadata, Is.Not.Null);
+        Assert.That(metadata!.SizeBytes, Is.EqualTo(fileBytes.Length));
+        Assert.That(metadata.ContentType, Is.EqualTo("image/png"));
+        Assert.That(_store.ResolveContentType(storageKey), Is.EqualTo("image/png"));
 
         await _store.DeleteAsync(storageKey);
 
-        (await _store.ReadAsync(storageKey)).Should().BeNull();
+        Assert.That((await _store.ReadAsync(storageKey)), Is.Null);
     }
 
     [Test]
@@ -68,7 +67,7 @@ public sealed class LocalPhotoDevelopmentStoreTests
     {
         var metadata = await _store.GetMetadataAsync($"{_testPrefix}/missing.jpg");
 
-        metadata.Should().BeNull();
+        Assert.That(metadata, Is.Null);
     }
 
     [Test]
@@ -82,7 +81,7 @@ public sealed class LocalPhotoDevelopmentStoreTests
 
         var action = () => _store.SaveAsync(storageKey, stream, cancellation.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
         AssertNoFilesRemain();
     }
 
@@ -95,7 +94,7 @@ public sealed class LocalPhotoDevelopmentStoreTests
 
         var action = () => _store.SaveAsync(storageKey, stream);
 
-        await action.Should().ThrowAsync<IOException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<IOException>());
         AssertNoFilesRemain();
     }
 
@@ -104,7 +103,7 @@ public sealed class LocalPhotoDevelopmentStoreTests
         var rootPath = _store.ResolvePath(_testPrefix);
         if (Directory.Exists(rootPath))
         {
-            Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories).Should().BeEmpty();
+            Assert.That(Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories), Is.Empty);
         }
     }
 

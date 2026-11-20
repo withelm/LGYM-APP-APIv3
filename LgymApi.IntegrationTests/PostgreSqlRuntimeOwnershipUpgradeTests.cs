@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Npgsql;
 
 namespace LgymApi.IntegrationTests;
@@ -26,6 +25,6 @@ public sealed class PostgreSqlRuntimeOwnershipUpgradeTests
             JOIN pg_roles owner ON owner.oid = relation.relowner
             WHERE namespace.nspname = 'public' AND relation.relname = 'ownership_upgrade_probe';
             """, connection);
-        (await command.ExecuteScalarAsync()).Should().Be(environment.RuntimeRole);
+        Assert.That((await command.ExecuteScalarAsync()), Is.EqualTo(environment.RuntimeRole));
     }
 }

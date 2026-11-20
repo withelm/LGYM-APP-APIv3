@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -29,8 +28,8 @@ public sealed class ReportingRepositoryTests
 
         var results = await persistence.ListPendingOrExpiredByTraineeAsync(traineeId.Rebind<AccountReference>());
 
-        results.Select(result => result.Status).Should().Equal(ReportRequestStatus.Expired, ReportRequestStatus.Pending);
-        results.Should().OnlyContain(result => result.Template.Fields.Select(field => field.Key).SequenceEqual(new[] { "a", "b" }));
+        Assert.That(results.Select(result => result.Status), Is.EqualTo(new[] { ReportRequestStatus.Expired, ReportRequestStatus.Pending }));
+        Assert.That((results).All(result => result.Template.Fields.Select(field => field.Key).SequenceEqual(new[] { "a", "b" })), Is.True);
     }
 
     [Test]
@@ -59,8 +58,8 @@ public sealed class ReportingRepositoryTests
             traineeId.Rebind<AccountReference>());
         var byTrainee = await persistence.ListSubmissionsByTraineeAsync(traineeId.Rebind<AccountReference>());
 
-        byTrainer.Should().NotBeNull();
-        byTrainee.Should().ContainSingle();
+        Assert.That(byTrainer, Is.Not.Null);
+        Assert.That(byTrainee, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -78,8 +77,8 @@ public sealed class ReportingRepositoryTests
         var totalBytes = await persistence.GetActiveStorageBytesAsync();
         var recentCount = await persistence.CountCreatedSinceAsync(now.AddHours(-1));
 
-        totalBytes.Should().Be(125);
-        recentCount.Should().Be(2);
+        Assert.That(totalBytes, Is.EqualTo(125));
+        Assert.That(recentCount, Is.EqualTo(2));
     }
 
     private static AppDbContext CreateDbContext(string name)

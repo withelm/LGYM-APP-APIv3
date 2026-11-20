@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Persistence;
 using LgymApi.Application.Nutrition.Supplementation.GetSchedule;
 using LgymApi.Application.Nutrition.Supplementation.GetSchedule.Contracts;
@@ -38,11 +37,11 @@ public sealed class GetSupplementScheduleUseCaseTests
 
         var result = await CreateUseCase(persistence).ExecuteAsync(new(traineeId, Monday));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(entry => entry.SupplementName).Should().Equal("Earlier", "Later");
-        result.Value.Select(entry => entry.Taken).Should().Equal(false, true);
-        result.Value[1].TakenAt.Should().Be(logs[0].TakenAt);
-        result.Value.Select(entry => entry.IntakeDate).Should().AllBeEquivalentTo(Monday);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(entry => entry.SupplementName), Is.EqualTo(new[] { "Earlier", "Later" }));
+        Assert.That(result.Value.Select(entry => entry.Taken), Is.EqualTo(new[] { false, true }));
+        Assert.That(result.Value[1].TakenAt, Is.EqualTo(logs[0].TakenAt));
+        Assert.That(result.Value.Select(entry => entry.IntakeDate), Is.All.EqualTo(Monday));
     }
 
     [Test]
@@ -54,9 +53,9 @@ public sealed class GetSupplementScheduleUseCaseTests
 
         var result = await CreateUseCase(persistence).ExecuteAsync(new(traineeId, Monday));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEmpty();
-        persistence.ReceivedCalls().Should().ContainSingle();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.Empty);
+        Assert.That(persistence.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -72,7 +71,7 @@ public sealed class GetSupplementScheduleUseCaseTests
 
         var result = await CreateUseCase(persistence).ExecuteAsync(new(traineeId, Monday));
 
-        result.Value.Select(entry => entry.SupplementName).Should().Equal("Monday");
+        Assert.That(result.Value.Select(entry => entry.SupplementName), Is.EqualTo(new[] { "Monday" }));
     }
 
     [Test]
@@ -89,7 +88,7 @@ public sealed class GetSupplementScheduleUseCaseTests
 
         await persistence.Received(1).GetActivePlanForTraineeAsync(traineeId, CancellationToken.None);
         await persistence.Received(1).ListIntakeLogsForPlanAsync(traineeId, plan.Id, Monday, Monday, CancellationToken.None);
-        persistence.ReceivedCalls().Should().HaveCount(2);
+        Assert.That(persistence.ReceivedCalls(), Has.Exactly(2).Items);
     }
 
     [Test]
@@ -106,10 +105,10 @@ public sealed class GetSupplementScheduleUseCaseTests
 
         var result = await CreateUseCase(persistence).ExecuteAsync(new(traineeId, Monday), cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await persistence.Received(1).GetActivePlanForTraineeAsync(traineeId, cancellationToken);
         await persistence.Received(1).ListIntakeLogsForPlanAsync(traineeId, plan.Id, Monday, Monday, cancellationToken);
-        persistence.ReceivedCalls().Should().HaveCount(2);
+        Assert.That(persistence.ReceivedCalls(), Has.Exactly(2).Items);
     }
 
     private static IGetSupplementScheduleUseCase CreateUseCase(ISupplementationPersistence persistence)

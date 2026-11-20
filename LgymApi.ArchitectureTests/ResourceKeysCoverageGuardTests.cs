@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -22,13 +21,13 @@ public sealed class ResourceKeysCoverageGuardTests
         var appRoot = Path.Combine(repoRoot, "LgymApi.Application");
         var resourceFile = Path.Combine(repoRoot, "LgymApi.Resources", "Resources", "Messages.resx");
 
-        Directory.Exists(apiRoot).Should().BeTrue($"LgymApi.Api root '{apiRoot}' not found.");
-        Directory.Exists(appRoot).Should().BeTrue($"LgymApi.Application root '{appRoot}' not found.");
-        File.Exists(resourceFile).Should().BeTrue($"Messages.resx file '{resourceFile}' not found.");
+        Assert.That(Directory.Exists(apiRoot), Is.True, $"LgymApi.Api root '{apiRoot}' not found.");
+        Assert.That(Directory.Exists(appRoot), Is.True, $"LgymApi.Application root '{appRoot}' not found.");
+        Assert.That(File.Exists(resourceFile), Is.True, $"Messages.resx file '{resourceFile}' not found.");
 
         // Parse the resource file and extract all valid keys
         var validKeys = ExtractResourceKeys(resourceFile);
-        validKeys.Should().NotBeEmpty("No keys found in Messages.resx.");
+        Assert.That(validKeys, Is.Not.Empty, "No keys found in Messages.resx.");
 
         // Parse all C# files in both projects and collect Messages.* references
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
@@ -64,10 +63,7 @@ public sealed class ResourceKeysCoverageGuardTests
             return fileCompare != 0 ? fileCompare : a.Line.CompareTo(b.Line);
         });
 
-        violations
-            .Should()
-            .BeEmpty(
-                $"All Messages.* references must exist in Messages.resx. " +
+        Assert.That(violations, Is.Empty, $"All Messages.* references must exist in Messages.resx. " +
                 $"Found {violations.Count} violations:\n" +
                 string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
     }

@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -32,12 +31,11 @@ public sealed class ReportingProgressIntegrationCutoverGuardTests
         var reportingSources = EnumerateReportingSources(repoRoot).ToArray();
         var acceptedProgressCommandPath = Path.Combine(repoRoot, AcceptedProgressCommandRelativePath);
 
-        reportingSources.Should().NotBeEmpty();
-        File.Exists(acceptedProgressCommandPath).Should().BeTrue(
-            "Reporting must publish the accepted-progress command contract from its own contracts folder before it can stage the durable outbox record");
-        reportingSources.Should().NotContain(source =>
+        Assert.That(reportingSources, Is.Not.Empty);
+        Assert.That(File.Exists(acceptedProgressCommandPath), Is.True, "Reporting must publish the accepted-progress command contract from its own contracts folder before it can stage the durable outbox record");
+        Assert.That((reportingSources).Any(source =>
             ForbiddenReportingProgressDependencies.Any(dependency =>
-                source.Content.Contains(dependency, StringComparison.Ordinal)));
+                source.Content.Contains(dependency, StringComparison.Ordinal))), Is.False);
     }
 
     [Test]
@@ -51,20 +49,18 @@ public sealed class ReportingProgressIntegrationCutoverGuardTests
             "WorkoutProgress",
             "ServiceCollectionExtensions.cs");
 
-        File.Exists(consumerPath).Should().BeTrue(
-            "the Reporting-to-Progress boundary requires a Workout & Progress-owned accepted-progress consumer");
+        Assert.That(File.Exists(consumerPath), Is.True, "the Reporting-to-Progress boundary requires a Workout & Progress-owned accepted-progress consumer");
 
         var consumerSource = File.ReadAllText(consumerPath);
         var registrationSource = File.ReadAllText(workoutProgressRegistrationPath);
 
         Assert.Multiple(() =>
         {
-            consumerSource.Should().Contain("IReportSubmissionAcceptedProgressConsumer");
-            consumerSource.Should().Contain("IReportSubmissionAcceptedProgressPersistence");
-            consumerSource.Should().Contain("AcceptedReportMeasurementPersistenceModel");
-            consumerSource.Should().NotContain("IMeasurementRepository");
-            registrationSource.Should().Contain(
-                "IReportSubmissionAcceptedProgressConsumer, ReportSubmissionAcceptedProgressConsumer");
+            Assert.That(consumerSource, Does.Contain("IReportSubmissionAcceptedProgressConsumer"));
+            Assert.That(consumerSource, Does.Contain("IReportSubmissionAcceptedProgressPersistence"));
+            Assert.That(consumerSource, Does.Contain("AcceptedReportMeasurementPersistenceModel"));
+            Assert.That(consumerSource, Does.Not.Contain("IMeasurementRepository"));
+            Assert.That(registrationSource, Does.Contain("IReportSubmissionAcceptedProgressConsumer, ReportSubmissionAcceptedProgressConsumer"));
         });
     }
 
@@ -79,8 +75,7 @@ public sealed class ReportingProgressIntegrationCutoverGuardTests
             .Select(source => ArchitectureTestHelpers.NormalizePath(source.Path))
             .ToArray();
 
-        violations.Should().BeEmpty(
-            "Application contracts and services must remain independent from Worker and Common runtime namespaces");
+        Assert.That(violations, Is.Empty, "Application contracts and services must remain independent from Worker and Common runtime namespaces");
     }
 
     private static IEnumerable<SourceFile> EnumerateReportingSources(string repoRoot)

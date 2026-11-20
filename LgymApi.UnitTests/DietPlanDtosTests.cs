@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using NUnit.Framework;
 
@@ -40,13 +39,13 @@ public sealed class DietPlanDtosTests
         var json = JsonSerializer.Serialize(request);
         var roundTrip = JsonSerializer.Deserialize<UpsertDietPlanRequest>(json);
 
-        roundTrip.Should().NotBeNull();
-        roundTrip!.Name.Should().Be("Cut");
-        roundTrip.EstimatedCalories.Should().Be(2200);
-        roundTrip.ProteinGrams.Should().Be(180);
-        roundTrip.Meals.Should().ContainSingle();
-        roundTrip.Meals[0].Description.Should().Be("Oats");
-        roundTrip.Meals[0].FatGrams.Should().Be(10);
+        Assert.That(roundTrip, Is.Not.Null);
+        Assert.That(roundTrip!.Name, Is.EqualTo("Cut"));
+        Assert.That(roundTrip.EstimatedCalories, Is.EqualTo(2200));
+        Assert.That(roundTrip.ProteinGrams, Is.EqualTo(180));
+        Assert.That(roundTrip.Meals, Has.Exactly(1).Items);
+        Assert.That(roundTrip.Meals[0].Description, Is.EqualTo("Oats"));
+        Assert.That(roundTrip.Meals[0].FatGrams, Is.EqualTo(10));
     }
 
     [Test]
@@ -87,13 +86,13 @@ public sealed class DietPlanDtosTests
         var json = JsonSerializer.Serialize(dto);
         var roundTrip = JsonSerializer.Deserialize<DietPlanDto>(json);
 
-        roundTrip.Should().NotBeNull();
-        roundTrip!.TrainerId.Should().Be("trainer-1");
-        roundTrip.TraineeId.Should().Be("trainee-1");
-        roundTrip.Name.Should().Be("Lean bulk");
-        roundTrip.Meals.Should().ContainSingle();
-        roundTrip.Meals[0].Id.Should().Be("meal-1");
-        roundTrip.Meals[0].EstimatedCalories.Should().Be(900);
+        Assert.That(roundTrip, Is.Not.Null);
+        Assert.That(roundTrip!.TrainerId, Is.EqualTo("trainer-1"));
+        Assert.That(roundTrip.TraineeId, Is.EqualTo("trainee-1"));
+        Assert.That(roundTrip.Name, Is.EqualTo("Lean bulk"));
+        Assert.That(roundTrip.Meals, Has.Exactly(1).Items);
+        Assert.That(roundTrip.Meals[0].Id, Is.EqualTo("meal-1"));
+        Assert.That(roundTrip.Meals[0].EstimatedCalories, Is.EqualTo(900));
     }
 
     [Test]
@@ -146,7 +145,7 @@ public sealed class DietPlanDtosTests
         const string expected = "{\"_id\":\"00000000-0000-0000-0000-000000000101\",\"trainerId\":\"00000000-0000-0000-0000-000000000102\",\"traineeId\":\"00000000-0000-0000-0000-000000000103\",\"createdAt\":\"2026-07-23T08:09:10+02:00\",\"updatedAt\":\"2026-07-24T11:12:13-04:00\",\"meals\":[{\"_id\":\"00000000-0000-0000-0000-000000000202\",\"name\":\"Dinner\",\"order\":2,\"description\":null,\"estimatedCalories\":900,\"proteinGrams\":55,\"carbsGrams\":100.5,\"fatGrams\":20.25},{\"_id\":\"00000000-0000-0000-0000-000000000201\",\"name\":\"Breakfast\",\"order\":1,\"description\":\"Eggs and oats\",\"estimatedCalories\":null,\"proteinGrams\":null,\"carbsGrams\":60,\"fatGrams\":10}],\"name\":\"Competition plan\",\"startDate\":\"2026-07-23\",\"endDate\":null,\"notes\":null,\"isActive\":true,\"estimatedCalories\":2750,\"proteinGrams\":180.5,\"carbsGrams\":null,\"fatGrams\":72.25}";
         const string wrongLegacyCopy = "{\"id\":\"00000000-0000-0000-0000-000000000101\",\"trainerId\":\"00000000-0000-0000-0000-000000000102\",\"traineeId\":\"00000000-0000-0000-0000-000000000103\",\"createdAt\":\"2026-07-23T08:09:10+02:00\",\"updatedAt\":\"2026-07-24T11:12:13-04:00\",\"meals\":[{\"id\":\"00000000-0000-0000-0000-000000000202\",\"name\":\"Dinner\",\"order\":2,\"description\":null,\"estimatedCalories\":900,\"proteinGrams\":55,\"carbsGrams\":100.5,\"fatGrams\":20.25},{\"id\":\"00000000-0000-0000-0000-000000000201\",\"name\":\"Breakfast\",\"order\":1,\"description\":\"Eggs and oats\",\"estimatedCalories\":null,\"proteinGrams\":null,\"carbsGrams\":60,\"fatGrams\":10}],\"name\":\"Competition plan\",\"startDate\":\"2026-07-23\",\"endDate\":null,\"notes\":null,\"isActive\":true,\"estimatedCalories\":2750,\"proteinGrams\":180.5,\"carbsGrams\":null,\"fatGrams\":72.25}";
 
-        json.Should().Be(expected);
-        json.Should().NotBe(wrongLegacyCopy);
+        Assert.That(json, Is.EqualTo(expected));
+        Assert.That(json, Is.Not.EqualTo(wrongLegacyCopy));
     }
 }

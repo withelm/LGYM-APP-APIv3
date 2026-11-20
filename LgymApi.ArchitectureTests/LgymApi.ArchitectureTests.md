@@ -1,6 +1,7 @@
 # LgymApi.ArchitectureTests.csproj
 
 - Purpose: Roslyn-based architecture guard tests.
+- Assertions: native NUnit constraints. The reviewed project-file hash ledger includes the nine test projects' assertion-dependency removal, including IntegrationTests; project-reference and persistence topology checks remain exact.
 - Contains: dependency direction checks, ID boundary checks, DI placement checks, feature layout checks, mapping checks, enum guards, UoW guards, persistence ownership guards, single-production-DbContext guards, and ownership documentation parsing guards.
 - Rules: treat failures as architecture violations unless intentionally documented.
 - Task 3 manifests close the Platform-assembly BuildingBlocks and Technical Platform surfaces; semantic fixtures reject unlisted service, repository, DTO, feature command, provider, Contracts, and Models types, including retained Application duplicate sources.

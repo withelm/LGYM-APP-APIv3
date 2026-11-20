@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Notifications;
@@ -31,24 +30,24 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "newuser");
-        user.Should().NotBeNull();
-        user!.Email.Value.Should().Be("newuser@example.com");
-        user.ProfileRank.Should().Be("Junior 1");
-        user.IsVisibleInRanking.Should().BeTrue();
+        Assert.That(user, Is.Not.Null);
+        Assert.That(user!.Email.Value, Is.EqualTo("newuser@example.com"));
+        Assert.That(user.ProfileRank, Is.EqualTo("Junior 1"));
+        Assert.That(user.IsVisibleInRanking, Is.True);
 
         var eloEntry = await db.EloRegistries.FirstOrDefaultAsync(e => e.UserId == user.Id);
-        eloEntry.Should().NotBeNull();
-        eloEntry!.Elo.Value.Should().Be(1000);
+        Assert.That(eloEntry, Is.Not.Null);
+        Assert.That(eloEntry!.Elo.Value, Is.EqualTo(1000));
     }
 
     [Test]
@@ -67,25 +66,25 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "bob-en");
-        user.Should().NotBeNull();
-        user!.PreferredLanguage.Should().StartWith("en");
+        Assert.That(user, Is.Not.Null);
+        Assert.That(user!.PreferredLanguage, Does.StartWith("en"));
 
         var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
             .FirstOrDefaultAsync(e => e.Recipient == "bob-en@example.com" && e.Type == EmailNotificationTypes.Welcome);
-        emailLog.Should().NotBeNull();
+        Assert.That(emailLog, Is.Not.Null);
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson, SharedSerializationOptions.Current);
-        payload.Should().NotBeNull();
-        payload!.CultureName.Should().StartWith("en");
-        emailLog.PayloadJson.Should().Contain("en");
+        Assert.That(payload, Is.Not.Null);
+        Assert.That(payload!.CultureName, Does.StartWith("en"));
+        Assert.That(emailLog.PayloadJson, Does.Contain("en"));
     }
     [Test]
     public async Task Register_WithAcceptLanguage_Header_PlSendsPolishWelcomeEmail()
@@ -107,27 +106,27 @@ public sealed class UserAuthTests : IntegrationTestBase
         msg.Headers.Add("Idempotency-Key", "test-register-alicja-hdr");
 
         var response = await Client.SendAsync(msg);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "alicja-hdr");
-        user.Should().NotBeNull();
-        user!.PreferredLanguage.Should().StartWith("pl");
+        Assert.That(user, Is.Not.Null);
+        Assert.That(user!.PreferredLanguage, Does.StartWith("pl"));
 
         var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
             .FirstOrDefaultAsync(e => e.Recipient == "alicja-hdr@example.com" && e.Type == EmailNotificationTypes.Welcome);
-        emailLog.Should().NotBeNull();
+        Assert.That(emailLog, Is.Not.Null);
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson, SharedSerializationOptions.Current);
-        payload.Should().NotBeNull();
-        payload!.CultureName.Should().StartWith("pl");
+        Assert.That(payload, Is.Not.Null);
+        Assert.That(payload!.CultureName, Does.StartWith("pl"));
 
         // The Polish template has a distinct subject and body.
-        emailLog.PayloadJson.Should().Contain("pl");
+        Assert.That(emailLog.PayloadJson, Does.Contain("pl"));
         // Optionally check the subject/body as needed.
     }
     [Test]
@@ -150,27 +149,27 @@ public sealed class UserAuthTests : IntegrationTestBase
         msg.Headers.Add("Idempotency-Key", "test-register-alicja-pl");
 
         var response = await Client.SendAsync(msg);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await ProcessPendingCommandsAsync();
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Name == "alicja-pl");
-        user.Should().NotBeNull();
-        user!.PreferredLanguage.Should().Be("pl-PL");
+        Assert.That(user, Is.Not.Null);
+        Assert.That(user!.PreferredLanguage, Is.EqualTo("pl-PL"));
 
         var emailLog = await db.NotificationMessages
             .OrderByDescending(e => e.SentAt ?? e.LastAttemptAt)
             .FirstOrDefaultAsync(e => e.Recipient == "alicja-pl@example.com" && e.Type == EmailNotificationTypes.Welcome);
-        emailLog.Should().NotBeNull();
+        Assert.That(emailLog, Is.Not.Null);
 
         var payload = System.Text.Json.JsonSerializer.Deserialize<LgymApi.BackgroundWorker.Common.Notifications.Models.WelcomeEmailPayload>(emailLog!.PayloadJson, SharedSerializationOptions.Current);
-        payload.Should().NotBeNull();
-        payload!.CultureName.Should().Be("pl-PL");
+        Assert.That(payload, Is.Not.Null);
+        Assert.That(payload!.CultureName, Is.EqualTo("pl-PL"));
 
         // The Polish template has a distinct subject and body.
-        emailLog.PayloadJson.Should().Contain("pl-PL");
+        Assert.That(emailLog.PayloadJson, Does.Contain("pl-PL"));
         // Optionally check the subject/body if stored; else, template test ensures content.
     }
     [TestCase("", "test@example.com", "password123", "password123", TestName = "Register_WithEmptyName_ReturnsError")]
@@ -191,7 +190,7 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -211,11 +210,11 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("A user with that name already exists.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("A user with that name already exists."));
     }
 
     [Test]
@@ -235,11 +234,11 @@ public sealed class UserAuthTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("A user with that email already exists.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("A user with that email already exists."));
     }
 
     [Test]
@@ -256,17 +255,17 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/login", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
-        body.User.Should().NotBeNull();
-        body.User!.Name.Should().Be("loginuser");
-        body.User.Email.Should().Be("login@example.com");
-        body.User.Elo.Should().Be(1500);
-        body.User.ProfileRank.Should().Be("Junior 1");
-        body.User.IsVisibleInRanking.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
+        Assert.That(body.User, Is.Not.Null);
+        Assert.That(body.User!.Name, Is.EqualTo("loginuser"));
+        Assert.That(body.User.Email, Is.EqualTo("login@example.com"));
+        Assert.That(body.User.Elo, Is.EqualTo(1500));
+        Assert.That(body.User.ProfileRank, Is.EqualTo("Junior 1"));
+        Assert.That(body.User.IsVisibleInRanking, Is.True);
     }
 
     [Test]
@@ -282,11 +281,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/login", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -300,11 +299,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/login", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -318,7 +317,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/login", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -331,13 +330,13 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
-        body.Should().NotBeNull();
-        body!.Name.Should().Be("tokenuser");
-        body.Email.Should().Be("token@example.com");
-        body.Elo.Should().Be(2000);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Name, Is.EqualTo("tokenuser"));
+        Assert.That(body.Email, Is.EqualTo("token@example.com"));
+        Assert.That(body.Elo, Is.EqualTo(2000));
     }
 
     [Test]
@@ -347,11 +346,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Invalid JWT token.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Invalid JWT token."));
     }
 
     [Test]
@@ -361,11 +360,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Invalid JWT token.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Invalid JWT token."));
     }
 
     [Test]
@@ -376,11 +375,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -395,21 +394,21 @@ public sealed class UserAuthTests : IntegrationTestBase
             name = "logoutuser",
             password = "logoutpass"
         });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        loginBody.Should().NotBeNull();
+        Assert.That(loginBody, Is.Not.Null);
 
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginBody!.Token);
 
         var logoutResponse = await Client.PostAsync("/api/logout", null);
-        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
-        checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(checkTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var body = await checkTokenResponse.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -422,11 +421,11 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/deleteAccount");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Deleted.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Deleted."));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -434,12 +433,12 @@ public sealed class UserAuthTests : IntegrationTestBase
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == user.Id);
 
-        updatedUser.Should().NotBeNull();
-        updatedUser!.IsDeleted.Should().BeFalse();
-        updatedUser.Name.Should().Be("todelete");
-        updatedUser.Email.Value.Should().Be("todelete@example.com");
-        updatedUser.LegacyHash.Should().Be(user.LegacyHash);
-        updatedUser.LegacySalt.Should().Be(user.LegacySalt);
+        Assert.That(updatedUser, Is.Not.Null);
+        Assert.That(updatedUser!.IsDeleted, Is.False);
+        Assert.That(updatedUser.Name, Is.EqualTo("todelete"));
+        Assert.That(updatedUser.Email.Value, Is.EqualTo("todelete@example.com"));
+        Assert.That(updatedUser.LegacyHash, Is.EqualTo(user.LegacyHash));
+        Assert.That(updatedUser.LegacySalt, Is.EqualTo(user.LegacySalt));
     }
 
     [Test]
@@ -451,7 +450,7 @@ public sealed class UserAuthTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/updateTimeZone", new { preferredTimeZone = "UTC" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     private sealed class MessageResponse

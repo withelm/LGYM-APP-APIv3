@@ -23,10 +23,10 @@ public sealed class SeederSmokeExtensionTests
         await context.SaveChangesAsync();
 
         var names = await context.Roles.Select(role => role.Name).ToListAsync();
-        names.Should().Contain(AuthConstants.Roles.Admin);
-        names.Should().Contain(AuthConstants.Roles.User);
-        names.Should().Contain(AuthConstants.Roles.Trainer);
-        names.Should().Contain(AuthConstants.Roles.Tester);
+        Assert.That(names, Does.Contain(AuthConstants.Roles.Admin));
+        Assert.That(names, Does.Contain(AuthConstants.Roles.User));
+        Assert.That(names, Does.Contain(AuthConstants.Roles.Trainer));
+        Assert.That(names, Does.Contain(AuthConstants.Roles.Tester));
     }
 
     [Test]
@@ -48,8 +48,8 @@ public sealed class SeederSmokeExtensionTests
             .Select(claim => claim.ClaimValue)
             .ToListAsync();
 
-        adminClaims.Should().Contain(AuthConstants.Permissions.AdminAccess);
-        adminClaims.Should().Contain(AuthConstants.Permissions.ManageUserRoles);
+        Assert.That(adminClaims, Does.Contain(AuthConstants.Permissions.AdminAccess));
+        Assert.That(adminClaims, Does.Contain(AuthConstants.Permissions.ManageUserRoles));
     }
 
     [Test]
@@ -68,8 +68,8 @@ public sealed class SeederSmokeExtensionTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.CoachingEpisodes.CountAsync()).Should().Be(1);
-        (await context.TrainerTraineeLinks.CountAsync()).Should().Be(1);
+        Assert.That((await context.CoachingEpisodes.CountAsync()), Is.EqualTo(1));
+        Assert.That((await context.TrainerTraineeLinks.CountAsync()), Is.EqualTo(1));
     }
 
     [Test]
@@ -84,8 +84,8 @@ public sealed class SeederSmokeExtensionTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.ReportTemplates.CountAsync()).Should().Be(1);
-        (await context.ReportTemplateFields.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.ReportTemplates.CountAsync()), Is.EqualTo(1));
+        Assert.That((await context.ReportTemplateFields.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -107,8 +107,8 @@ public sealed class SeederSmokeExtensionTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.ReportRequests.CountAsync()).Should().Be(1);
-        (await context.ReportSubmissions.CountAsync()).Should().Be(1);
+        Assert.That((await context.ReportRequests.CountAsync()), Is.EqualTo(1));
+        Assert.That((await context.ReportSubmissions.CountAsync()), Is.EqualTo(1));
     }
 
     [Test]
@@ -132,9 +132,9 @@ public sealed class SeederSmokeExtensionTests
         await logSeeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.SupplementPlans.CountAsync()).Should().Be(1);
-        (await context.SupplementPlanItems.CountAsync()).Should().BeGreaterThan(0);
-        (await context.SupplementIntakeLogs.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.SupplementPlans.CountAsync()), Is.EqualTo(1));
+        Assert.That((await context.SupplementPlanItems.CountAsync()), Is.GreaterThan(0));
+        Assert.That((await context.SupplementIntakeLogs.CountAsync()), Is.GreaterThan(0));
     }
 
     [Test]
@@ -147,7 +147,7 @@ public sealed class SeederSmokeExtensionTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.NotificationMessages.CountAsync()).Should().Be(2);
+        Assert.That((await context.NotificationMessages.CountAsync()), Is.EqualTo(2));
     }
 
     [Test]
@@ -160,7 +160,7 @@ public sealed class SeederSmokeExtensionTests
         await seeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.ReportSubmissions.CountAsync()).Should().Be(0);
+        Assert.That((await context.ReportSubmissions.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -180,7 +180,7 @@ public sealed class SeederSmokeExtensionTests
         await fieldSeeder.SeedAsync(context, seedContext, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        (await context.ReportTemplateFields.CountAsync()).Should().BeGreaterThan(0);
+        Assert.That((await context.ReportTemplateFields.CountAsync()), Is.GreaterThan(0));
     }
 
     private static async Task<AppDbContext> CreateContextAsync()

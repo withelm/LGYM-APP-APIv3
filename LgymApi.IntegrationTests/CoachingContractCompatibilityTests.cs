@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.Data.SeedData;
@@ -26,11 +25,11 @@ public sealed class CoachingContractCompatibilityTests : IntegrationTestBase
 
         var response = await Client.GetAsync(route);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("title").GetString().Should().Be("Not Found");
-        body.RootElement.GetProperty("status").GetInt32().Should().Be((int)HttpStatusCode.NotFound);
-        body.RootElement.TryGetProperty("msg", out _).Should().BeFalse();
+        Assert.That(body.RootElement.GetProperty("title").GetString(), Is.EqualTo("Not Found"));
+        Assert.That(body.RootElement.GetProperty("status").GetInt32(), Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.That(body.RootElement.TryGetProperty("msg", out _), Is.False);
     }
 
     [Test]
@@ -57,17 +56,17 @@ public sealed class CoachingContractCompatibilityTests : IntegrationTestBase
                 ClearIdempotencyKey();
             }
 
-            createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var invitation = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
-            invitation.RootElement.GetProperty("_id").GetString().Should().NotBeNullOrWhiteSpace();
-            invitation.RootElement.TryGetProperty("id", out _).Should().BeFalse();
+            Assert.That(string.IsNullOrWhiteSpace(invitation.RootElement.GetProperty("_id").GetString()), Is.False);
+            Assert.That(invitation.RootElement.TryGetProperty("id", out _), Is.False);
 
             var revokeResponse = await Client.PostAsync($"/api/trainer/invitations/{invitation.RootElement.GetProperty("_id").GetString()}/revoke", null);
 
-            revokeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(revokeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var message = JsonDocument.Parse(await revokeResponse.Content.ReadAsStringAsync());
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.Updated);
-            message.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.Updated));
+            Assert.That(message.RootElement.TryGetProperty("message", out _), Is.False);
         }
         finally
         {
@@ -93,10 +92,10 @@ public sealed class CoachingContractCompatibilityTests : IntegrationTestBase
             ClearIdempotencyKey();
         }
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.TryGetProperty("errors", out _).Should().BeTrue();
-        body.RootElement.TryGetProperty("msg", out _).Should().BeFalse();
+        Assert.That(body.RootElement.TryGetProperty("errors", out _), Is.True);
+        Assert.That(body.RootElement.TryGetProperty("msg", out _), Is.False);
     }
 
     [Test]
@@ -113,10 +112,10 @@ public sealed class CoachingContractCompatibilityTests : IntegrationTestBase
 
             var response = await Client.PostAsync("/api/trainee/invitations/not-a-guid/accept", null);
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            body.RootElement.GetProperty("msg").GetString().Should().Be(Messages.FieldRequired);
-            body.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+            Assert.That(body.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.FieldRequired));
+            Assert.That(body.RootElement.TryGetProperty("message", out _), Is.False);
         }
         finally
         {

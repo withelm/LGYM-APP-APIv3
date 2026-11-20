@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 
 namespace LgymApi.UnitTests.Pagination;
@@ -14,8 +13,9 @@ public sealed class GridifyPaginationPageParameterTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentOutOfRangeException>()
-            .WithMessage("*Page must be between 1*\nParameter 'page'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentOutOfRangeException>()
+            .With.Message.Contains("Page must be between 1").IgnoreCase
+            .And.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("page"));
     }
 
     [Test]
@@ -26,8 +26,9 @@ public sealed class GridifyPaginationPageParameterTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentOutOfRangeException>()
-            .WithMessage("*Page size must be between 1*\nParameter 'pageSize'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentOutOfRangeException>()
+            .With.Message.Contains("Page size must be between 1").IgnoreCase
+            .And.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("pageSize"));
     }
 
     [Test]
@@ -35,7 +36,7 @@ public sealed class GridifyPaginationPageParameterTests
     {
         var filter = new FilterInput();
 
-        filter.Page.Should().Be(1);
-        filter.PageSize.Should().Be(20);
+        Assert.That(filter.Page, Is.EqualTo(1));
+        Assert.That(filter.PageSize, Is.EqualTo(20));
     }
 }

@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.Logging;
@@ -69,15 +68,15 @@ public sealed class HangfireContractCompatibilityTests
     [TestCaseSource(nameof(GetPersistedJobContracts))]
     public void PersistedJobContract_HasFrozenIdentityAndSignature(PersistedJobContract contract)
     {
-        contract.ContractType.Assembly.GetName().Name.Should().Be("LgymApi.BackgroundWorker.Common");
-        contract.ContractType.Namespace.Should().Be("LgymApi.BackgroundWorker.Common.Jobs");
-        contract.ContractType.FullName.Should().Be($"LgymApi.BackgroundWorker.Common.Jobs.I{contract.Name}Job");
+        Assert.That(contract.ContractType.Assembly.GetName().Name, Is.EqualTo("LgymApi.BackgroundWorker.Common"));
+        Assert.That(contract.ContractType.Namespace, Is.EqualTo("LgymApi.BackgroundWorker.Common.Jobs"));
+        Assert.That(contract.ContractType.FullName, Is.EqualTo($"LgymApi.BackgroundWorker.Common.Jobs.I{contract.Name}Job"));
 
-        contract.WorkerType.Assembly.GetName().Name.Should().Be("LgymApi.BackgroundWorker");
-        contract.WorkerType.Namespace.Should().Be(contract.WorkerNamespace);
-        contract.WorkerType.FullName.Should().Be($"{contract.WorkerNamespace}.{contract.Name}Job");
-        contract.WorkerType.IsSealed.Should().BeTrue();
-        contract.WorkerType.Should().Implement(contract.ContractType);
+        Assert.That(contract.WorkerType.Assembly.GetName().Name, Is.EqualTo("LgymApi.BackgroundWorker"));
+        Assert.That(contract.WorkerType.Namespace, Is.EqualTo(contract.WorkerNamespace));
+        Assert.That(contract.WorkerType.FullName, Is.EqualTo($"{contract.WorkerNamespace}.{contract.Name}Job"));
+        Assert.That(contract.WorkerType.IsSealed, Is.True);
+        Assert.That((contract.WorkerType).GetInterfaces(), Does.Contain(contract.ContractType));
 
         AssertExecuteAsyncSignature(contract.ContractType, contract);
         AssertExecuteAsyncSignature(contract.WorkerType, contract);
@@ -93,9 +92,9 @@ public sealed class HangfireContractCompatibilityTests
             ? workerType.GetCustomAttribute<AutomaticRetryAttribute>()
             : workerType.GetMethod("ExecuteAsync")!.GetCustomAttribute<AutomaticRetryAttribute>();
 
-        attribute.Should().NotBeNull();
-        attribute!.Attempts.Should().Be(3);
-        attribute.DelaysInSeconds.Should().Equal(60, 300, 900);
+        Assert.That(attribute, Is.Not.Null);
+        Assert.That(attribute!.Attempts, Is.EqualTo(3));
+        Assert.That(attribute.DelaysInSeconds, Is.EqualTo(new[] { 60, 300, 900 }));
     }
 
     [Test]
@@ -103,8 +102,8 @@ public sealed class HangfireContractCompatibilityTests
     {
         var attribute = typeof(PushNotificationJob).GetCustomAttribute<AutomaticRetryAttribute>();
 
-        attribute.Should().NotBeNull();
-        attribute!.Attempts.Should().Be(0);
+        Assert.That(attribute, Is.Not.Null);
+        Assert.That(attribute!.Attempts, Is.EqualTo(0));
     }
 
     [TestCase(typeof(EmailJob), 60)]
@@ -114,9 +113,9 @@ public sealed class HangfireContractCompatibilityTests
         var method = workerType.GetMethod("ExecuteAsync")!;
         var attribute = method.CustomAttributes.SingleOrDefault(candidate => candidate.AttributeType == typeof(DisableConcurrentExecutionAttribute));
 
-        attribute.Should().NotBeNull();
-        attribute!.ConstructorArguments.Should().ContainSingle();
-        attribute.ConstructorArguments[0].Value.Should().Be(timeoutInSeconds);
+        Assert.That(attribute, Is.Not.Null);
+        Assert.That(attribute!.ConstructorArguments, Has.Exactly(1).Items);
+        Assert.That(attribute.ConstructorArguments[0].Value, Is.EqualTo(timeoutInSeconds));
     }
 
     [Test]
@@ -133,7 +132,7 @@ public sealed class HangfireContractCompatibilityTests
         pushScheduler.Enqueue(pushNotificationId);
         pushScheduler.ScheduleRetry(pushNotificationId, TimeSpan.FromMinutes(5));
 
-        client.CreatedJobs.Should().HaveCount(4);
+        Assert.That(client.CreatedJobs, Has.Exactly(4).Items);
         AssertCapturedJob(client.CreatedJobs[0], typeof(IActionMessageJob), actionMessageId.ToString(), typeof(EnqueuedState));
         AssertCapturedJob(client.CreatedJobs[1], typeof(IEmailJob), notificationId.ToString(), typeof(EnqueuedState));
         AssertCapturedJob(client.CreatedJobs[2], typeof(IPushNotificationJob), pushNotificationId.ToString(), typeof(EnqueuedState), hasCancellationToken: true);
@@ -184,17 +183,19 @@ public sealed class HangfireContractCompatibilityTests
             new RecurringJobContract("reporting-account-photo-deletion", "* * * * *", typeof(AccountPhotoDeletionJob))
         };
 
-        storage.RecurringJobHashes.Should().HaveCount(9);
+        Assert.That(storage.RecurringJobHashes, Has.Exactly(9).Items);
         foreach (var expectedJob in expectedJobs)
         {
             var hash = storage.RecurringJobHashes[$"recurring-job:{expectedJob.Id}"];
-            hash["Cron"].Should().Be(expectedJob.Cron);
+            Assert.That(hash["Cron"], Is.EqualTo(expectedJob.Cron));
 
             var job = InvocationData.DeserializePayload(hash["Job"]).DeserializeJob();
-            job.Type.Should().Be(expectedJob.ContractType);
-            job.Method.Name.Should().Be("ExecuteAsync");
-            job.Method.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(typeof(CancellationToken));
-            job.Args.Should().ContainSingle().Which.Should().Be(CancellationToken.None);
+            Assert.That(job.Type, Is.EqualTo(expectedJob.ContractType));
+            Assert.That(job.Method.Name, Is.EqualTo("ExecuteAsync"));
+            Assert.That(job.Method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(CancellationToken) }));
+            var assertedValue111 = (job.Args).ToArray();
+            Assert.That(assertedValue111, Has.Exactly(1).Items);
+            Assert.That(assertedValue111.Single(), Is.EqualTo(CancellationToken.None));
         }
     }
 
@@ -208,33 +209,32 @@ public sealed class HangfireContractCompatibilityTests
 
         var testingServices = new ServiceCollection();
         testingServices.AddPlatformServices(configuration, enableSensitiveLogging: false, isTesting: true, hostBackgroundServer: true);
-        testingServices.Should().NotContain(descriptor => descriptor.ServiceType == typeof(JobStorage));
-        FindHangfireServerDescriptor(testingServices).Should().BeNull();
+        Assert.That((testingServices).Any(descriptor => descriptor.ServiceType == typeof(JobStorage)), Is.False);
+        Assert.That(FindHangfireServerDescriptor(testingServices), Is.Null);
 
         var clientOnlyServices = new ServiceCollection();
         clientOnlyServices.AddPlatformServices(configuration, enableSensitiveLogging: false, isTesting: false, hostBackgroundServer: false);
         using var clientOnlyProvider = clientOnlyServices.BuildServiceProvider();
 
         var runtimeStorage = clientOnlyProvider.GetRequiredService<JobStorage>();
-        runtimeStorage.GetType().FullName.Should().Be("Hangfire.PostgreSql.PostgreSqlStorage");
+        Assert.That(runtimeStorage.GetType().FullName, Is.EqualTo("Hangfire.PostgreSql.PostgreSqlStorage"));
         var storageOptions = runtimeStorage.GetType()
             .GetProperty("Options", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(runtimeStorage)!;
         var prepareSchemaIfNecessary = (bool)storageOptions.GetType()
             .GetProperty("PrepareSchemaIfNecessary")!
             .GetValue(storageOptions)!;
-        prepareSchemaIfNecessary.Should().BeFalse();
-        FindHangfireServerDescriptor(clientOnlyServices).Should().BeNull();
-        GetCompatibilityLevel().Should().Be((int)CompatibilityLevel.Version_180);
-        GetConfiguredTypeSerializer().DynamicInvoke(typeof(ICommittedIntentDispatchJob))
-            .Should().Be("LgymApi.BackgroundWorker.Common.Jobs.ICommittedIntentDispatchJob, LgymApi.BackgroundWorker.Common");
+        Assert.That(prepareSchemaIfNecessary, Is.False);
+        Assert.That(FindHangfireServerDescriptor(clientOnlyServices), Is.Null);
+        Assert.That(GetCompatibilityLevel(), Is.EqualTo((int)CompatibilityLevel.Version_180));
+        Assert.That(GetConfiguredTypeSerializer().DynamicInvoke(typeof(ICommittedIntentDispatchJob)), Is.EqualTo("LgymApi.BackgroundWorker.Common.Jobs.ICommittedIntentDispatchJob, LgymApi.BackgroundWorker.Common"));
         AssertRecommendedSerializerSettings(GetConfiguredSerializerSettings());
 
         var serverServices = new ServiceCollection();
         serverServices.AddPlatformServices(configuration, enableSensitiveLogging: false, isTesting: false, hostBackgroundServer: true);
         var serverDescriptor = FindHangfireServerDescriptor(serverServices);
-        serverDescriptor.Should().NotBeNull();
-        serverDescriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
+        Assert.That(serverDescriptor, Is.Not.Null);
+        Assert.That(serverDescriptor!.Lifetime, Is.EqualTo(ServiceLifetime.Transient));
     }
 
     [TestCase(typeof(IActionMessageJob), "LgymApi.Domain.ValueObjects.Id`1[[LgymApi.Domain.Entities.CommandEnvelope, LgymApi.Domain]], LgymApi.Domain")]
@@ -260,13 +260,12 @@ public sealed class HangfireContractCompatibilityTests
 
         var job = invocation.DeserializeJob();
 
-        job.Type.Should().Be(contractType);
+        Assert.That(job.Type, Is.EqualTo(contractType));
         var expectedParameterTypes = contractType == typeof(IPushNotificationJob)
             ? new[] { typeof(string), typeof(CancellationToken) }
             : new[] { typeof(string) };
-        job.Method.GetParameters().Select(parameter => parameter.ParameterType)
-            .Should().Equal(expectedParameterTypes);
-        job.Args[0].Should().Be(uuid);
+        Assert.That(job.Method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(expectedParameterTypes));
+        Assert.That(job.Args[0], Is.EqualTo(uuid));
     }
 
     [TestCase("LgymApi.Domain.ValueObjects.Id`1[[LgymApi.Domain.Entities.User, LgymApi.Domain]], LgymApi.Domain")]
@@ -282,7 +281,7 @@ public sealed class HangfireContractCompatibilityTests
 
         Action action = () => invocation.DeserializeJob();
 
-        action.Should().Throw<Exception>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<Exception>());
     }
 
     private static void ConfigureHangfireTypeResolver()
@@ -308,8 +307,8 @@ public sealed class HangfireContractCompatibilityTests
         services.AddBackgroundWorkerServices(isTesting: false, hostBackgroundServer: true);
 
         var serverDescriptor = FindHangfireServerDescriptor(services);
-        serverDescriptor.Should().NotBeNull();
-        serverDescriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
+        Assert.That(serverDescriptor, Is.Not.Null);
+        Assert.That(serverDescriptor!.Lifetime, Is.EqualTo(ServiceLifetime.Transient));
     }
 
     [Test]
@@ -318,8 +317,8 @@ public sealed class HangfireContractCompatibilityTests
         var services = new ServiceCollection();
         services.AddSingleton<IHostedService, UnrelatedHostedService>();
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IHostedService));
-        FindHangfireServerDescriptor(services).Should().BeNull();
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IHostedService)), Has.Exactly(1).Items);
+        Assert.That(FindHangfireServerDescriptor(services), Is.Null);
     }
 
     private static IEnumerable<TestCaseData> GetPersistedJobContracts()
@@ -328,35 +327,33 @@ public sealed class HangfireContractCompatibilityTests
     private static void AssertExecuteAsyncSignature(Type type, PersistedJobContract contract)
     {
         var methods = type.GetMethods().Where(method => method.Name == "ExecuteAsync").ToArray();
-        methods.Should().ContainSingle();
+        Assert.That(methods, Has.Exactly(1).Items);
 
         var method = methods[0];
-        method.ReturnType.Should().Be(typeof(Task));
-        method.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(contract.ParameterTypes);
-        method.GetParameters().Select(parameter => parameter.IsOptional)
-            .Should().Equal(Enumerable.Range(0, contract.ParameterTypes.Length)
-                .Select(index => contract.OptionalParameterIndexes.Contains(index)));
+        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task)));
+        Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(contract.ParameterTypes));
+        Assert.That(method.GetParameters().Select(parameter => parameter.IsOptional), Is.EqualTo(Enumerable.Range(0, contract.ParameterTypes.Length)
+                .Select(index => contract.OptionalParameterIndexes.Contains(index))));
 
-        method.GetParameters()
+        Assert.That((method.GetParameters()
             .Where(parameter => parameter.ParameterType != typeof(CancellationToken))
-            .Select(parameter => parameter.ParameterType)
-            .Should().OnlyContain(parameterType => parameterType == typeof(string));
+            .Select(parameter => parameter.ParameterType)).All(parameterType => parameterType == typeof(string)), Is.True);
     }
 
     private static void AssertCapturedJob(CapturedBackgroundJob captured, Type expectedContractType, object expectedId, Type expectedStateType, bool hasCancellationToken = false)
     {
-        captured.Job.Type.Should().Be(expectedContractType);
-        captured.Job.Method.DeclaringType.Should().Be(expectedContractType);
-        captured.Job.Method.Name.Should().Be("ExecuteAsync");
-        captured.Job.Args[0].Should().Be(expectedId);
-        captured.Job.Args[0].GetType().Should().Be(expectedId.GetType());
-        captured.Job.Args.Should().HaveCount(hasCancellationToken ? 2 : 1);
+        Assert.That(captured.Job.Type, Is.EqualTo(expectedContractType));
+        Assert.That(captured.Job.Method.DeclaringType, Is.EqualTo(expectedContractType));
+        Assert.That(captured.Job.Method.Name, Is.EqualTo("ExecuteAsync"));
+        Assert.That(captured.Job.Args[0], Is.EqualTo(expectedId));
+        Assert.That(captured.Job.Args[0].GetType(), Is.EqualTo(expectedId.GetType()));
+        Assert.That(captured.Job.Args, Has.Exactly(hasCancellationToken ? 2 : 1).Items);
         if (hasCancellationToken)
         {
-            captured.Job.Args[1].Should().Be(CancellationToken.None);
+            Assert.That(captured.Job.Args[1], Is.EqualTo(CancellationToken.None));
         }
 
-        captured.State.GetType().Should().Be(expectedStateType);
+        Assert.That(captured.State.GetType(), Is.EqualTo(expectedStateType));
     }
 
     private static int GetCompatibilityLevel()
@@ -378,13 +375,13 @@ public sealed class HangfireContractCompatibilityTests
 
     private static void AssertRecommendedSerializerSettings(JsonSerializerSettings settings)
     {
-        settings.TypeNameHandling.Should().Be(TypeNameHandling.Auto);
-        settings.DefaultValueHandling.Should().Be(DefaultValueHandling.IgnoreAndPopulate);
-        settings.NullValueHandling.Should().Be(NullValueHandling.Ignore);
-        settings.CheckAdditionalContent.Should().BeTrue();
-        settings.MaxDepth.Should().Be(128);
-        settings.TypeNameAssemblyFormatHandling.Should().Be(TypeNameAssemblyFormatHandling.Simple);
-        settings.SerializationBinder!.GetType().FullName.Should().Be("Hangfire.Common.TypeHelperSerializationBinder");
+        Assert.That(settings.TypeNameHandling, Is.EqualTo(TypeNameHandling.Auto));
+        Assert.That(settings.DefaultValueHandling, Is.EqualTo(DefaultValueHandling.IgnoreAndPopulate));
+        Assert.That(settings.NullValueHandling, Is.EqualTo(NullValueHandling.Ignore));
+        Assert.That(settings.CheckAdditionalContent, Is.True);
+        Assert.That(settings.MaxDepth, Is.EqualTo(128));
+        Assert.That(settings.TypeNameAssemblyFormatHandling, Is.EqualTo(TypeNameAssemblyFormatHandling.Simple));
+        Assert.That(settings.SerializationBinder!.GetType().FullName, Is.EqualTo("Hangfire.Common.TypeHelperSerializationBinder"));
     }
 
     private static ServiceDescriptor? FindHangfireServerDescriptor(IServiceCollection services)

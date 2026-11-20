@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -40,8 +39,8 @@ public sealed class TrainerReportingPhotoControllerTests
             SizeBytes = 123
         });
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -70,13 +69,13 @@ public sealed class TrainerReportingPhotoControllerTests
             SizeBytes = 456
         });
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedCommand.Should().NotBeNull();
-        capturedCommand!.ReportRequestId.Should().Be(requestId);
-        capturedCommand.ViewType.Should().Be("Front");
-        capturedCommand.MimeType.Should().Be("image/jpeg");
-        capturedCommand.SizeBytes.Should().Be(456);
-        ((OkObjectResult)result).Value.Should().BeOfType<InitiatePhotoUploadResponse>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedCommand, Is.Not.Null);
+        Assert.That(capturedCommand!.ReportRequestId, Is.EqualTo(requestId));
+        Assert.That(capturedCommand.ViewType, Is.EqualTo("Front"));
+        Assert.That(capturedCommand.MimeType, Is.EqualTo("image/jpeg"));
+        Assert.That(capturedCommand.SizeBytes, Is.EqualTo(456));
+        Assert.That(((OkObjectResult)result).Value, Is.TypeOf<InitiatePhotoUploadResponse>());
     }
 
     [Test]
@@ -97,9 +96,11 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var result = await controller.GetPhotoSignedReadUrl(photoId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        var response = ((OkObjectResult)result).Value.Should().BeOfType<GetSignedReadUrlResponse>().Subject;
-        response.ReadUrl.Should().Be("https://read.example.com");
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        var assertedValue166 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue166, Is.TypeOf<GetSignedReadUrlResponse>());
+        var response = ((GetSignedReadUrlResponse)assertedValue166);
+        Assert.That(response.ReadUrl, Is.EqualTo("https://read.example.com"));
         await reportingService.Received(1).GetSignedReadUrlAsync(Arg.Any<AuthenticatedAccountContext>(), photoId, Arg.Any<CancellationToken>());
     }
 
@@ -111,9 +112,13 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var result = await controller.GetPhotoSignedReadUrl("not-a-guid");
 
-        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>().Which.Message.Should().Be("Invalid photo ID format");
+        var assertedValue167 = result;
+        Assert.That(assertedValue167, Is.TypeOf<BadRequestObjectResult>());
+        var objectResult = ((BadRequestObjectResult)assertedValue167);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        var assertedValue168 = objectResult.Value;
+        Assert.That(assertedValue168, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)assertedValue168).Message, Is.EqualTo("Invalid photo ID format"));
         await reportingService.DidNotReceive().GetSignedReadUrlAsync(Arg.Any<AuthenticatedAccountContext>(), Arg.Any<Id<Photo>>(), Arg.Any<CancellationToken>());
     }
 
@@ -125,9 +130,13 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var result = await controller.GetPhotoSignedReadUrl(string.Empty);
 
-        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>().Which.Message.Should().Be(Messages.FieldRequired);
+        var assertedValue169 = result;
+        Assert.That(assertedValue169, Is.TypeOf<BadRequestObjectResult>());
+        var objectResult = ((BadRequestObjectResult)assertedValue169);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        var assertedValue170 = objectResult.Value;
+        Assert.That(assertedValue170, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)assertedValue170).Message, Is.EqualTo(Messages.FieldRequired));
         await reportingService.DidNotReceive().GetSignedReadUrlAsync(Arg.Any<AuthenticatedAccountContext>(), Arg.Any<Id<Photo>>(), Arg.Any<CancellationToken>());
     }
 
@@ -146,8 +155,8 @@ public sealed class TrainerReportingPhotoControllerTests
             ViewType = "Front"
         });
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -178,12 +187,12 @@ public sealed class TrainerReportingPhotoControllerTests
             ViewType = "Front"
         });
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedCommand.Should().NotBeNull();
-        capturedCommand!.ReportRequestId.Should().Be(requestId);
-        capturedCommand.StorageKey.Should().Be("photos/test/front.jpg");
-        capturedCommand.Checksum.Should().Be("etag");
-        ((OkObjectResult)result).Value.Should().BeOfType<CompletePhotoUploadResponse>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedCommand, Is.Not.Null);
+        Assert.That(capturedCommand!.ReportRequestId, Is.EqualTo(requestId));
+        Assert.That(capturedCommand.StorageKey, Is.EqualTo("photos/test/front.jpg"));
+        Assert.That(capturedCommand.Checksum, Is.EqualTo("etag"));
+        Assert.That(((OkObjectResult)result).Value, Is.TypeOf<CompletePhotoUploadResponse>());
     }
 
     [Test]
@@ -193,8 +202,8 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var result = await controller.GetPhotoHistory("invalid-user", null);
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -225,13 +234,15 @@ public sealed class TrainerReportingPhotoControllerTests
 
         var result = await controller.GetPhotoHistory(traineeId.ToString(), requestId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedCommand.Should().NotBeNull();
-        capturedCommand!.TraineeId.Should().Be(traineeId.Rebind<AccountReference>());
-        capturedCommand.RequestId.Should().Be(requestId);
-        var response = ((OkObjectResult)result).Value.Should().BeOfType<GetPhotoHistoryResponse>().Subject;
-        response.Photos.Should().ContainSingle();
-        response.Photos[0].Id.Should().Be(photoId.ToString());
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedCommand, Is.Not.Null);
+        Assert.That(capturedCommand!.TraineeId, Is.EqualTo(traineeId.Rebind<AccountReference>()));
+        Assert.That(capturedCommand.RequestId, Is.EqualTo(requestId));
+        var assertedValue171 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue171, Is.TypeOf<GetPhotoHistoryResponse>());
+        var response = ((GetPhotoHistoryResponse)assertedValue171);
+        Assert.That(response.Photos, Has.Exactly(1).Items);
+        Assert.That(response.Photos[0].Id, Is.EqualTo(photoId.ToString()));
     }
 
     private static TrainerReportingController CreateController(IReportingService reportingService)

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Data.Common;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
@@ -29,9 +28,9 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
 
         var action = () => repository.ListByCurrentRequestsAsync(requestIds);
 
-        await action.Should().ThrowAsync<QueryCompiledException>();
-        capture.CommandCount.Should().Be(1);
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<QueryCompiledException>());
+        Assert.That(capture.CommandCount, Is.EqualTo(1));
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
     }
 
     private sealed class QueryCompiledException : Exception { }
@@ -100,12 +99,12 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
         var bulkAccess = await relationships.GetActiveAccessForPairsAsync(pairs);
         var bulkAssignments = await assignments.ListByCurrentRequestsAsync(requestIds);
 
-        counter.Count.Should().Be(singleCount);
-        singleCount.Should().BeGreaterThan(0);
+        Assert.That(counter.Count, Is.EqualTo(singleCount));
+        Assert.That(singleCount, Is.GreaterThan(0));
         for (var i = 0; i < rows.Count; i++)
         {
-            bulkAccess[pairs[i]].ActiveEpisode.Should().Be(expectedAccess[i].ActiveEpisode);
-            bulkAssignments.Single(item => item.CurrentReportRequestId == requestIds[i]).Should().BeEquivalentTo(expectedAssignments[i]);
+            Assert.That(bulkAccess[pairs[i]].ActiveEpisode, Is.EqualTo(expectedAccess[i].ActiveEpisode));
+            Assert.That(bulkAssignments.Single(item => item.CurrentReportRequestId == requestIds[i]), Is.EqualTo(expectedAssignments[i]).UsingPropertiesComparer());
         }
     }
 
@@ -132,7 +131,7 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
 
         var action = () => repository.FindByIdForUpdateAsync(assignmentId);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -242,11 +241,11 @@ public sealed class RecurringReportAssignmentRepositoryProviderTests
 
     private static void AssertCompleteGraph(RecurringReportAssignmentPersistenceModel? result)
     {
-        result.Should().NotBeNull();
-        result!.IsDeleted.Should().BeFalse();
-        result.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest.Should().NotBeNull();
-        result.CurrentReportRequest!.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest.Submission.Should().NotBeNull();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.IsDeleted, Is.False);
+        Assert.That(result.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest, Is.Not.Null);
+        Assert.That(result.CurrentReportRequest!.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest.Submission, Is.Not.Null);
     }
 }

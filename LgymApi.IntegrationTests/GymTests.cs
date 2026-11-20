@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -29,18 +28,18 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var gym = await db.Gyms.FirstOrDefaultAsync(g => g.Name == "Test Gym" && g.UserId == user.Id);
-        gym.Should().NotBeNull();
-        gym!.IsDeleted.Should().BeFalse();
+        Assert.That(gym, Is.Not.Null);
+        Assert.That(gym!.IsDeleted, Is.False);
     }
 
     [Test]
@@ -58,7 +57,7 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{otherUser.Id}/addGym", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -74,7 +73,7 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{user.Id}/addGym", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -87,7 +86,7 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{gym.Id}/deleteGym", new { });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -95,8 +94,8 @@ public sealed class GymTests : IntegrationTestBase
         var updatedGym = await db.Gyms
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(g => g.Id == gym.Id);
-        updatedGym.Should().NotBeNull();
-        updatedGym!.IsDeleted.Should().BeTrue();
+        Assert.That(updatedGym, Is.Not.Null);
+        Assert.That(updatedGym!.IsDeleted, Is.True);
     }
 
     [Test]
@@ -110,7 +109,7 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/gym/{gym.Id}/deleteGym", new { });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -121,11 +120,11 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Is.Empty);
     }
 
     [Test]
@@ -139,12 +138,12 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(g => g.Name).Should().Contain(new[] { "Gym 1", "Gym 2" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(g => g.Name), Is.SupersetOf(new[] { "Gym 1", "Gym 2" }));
     }
 
     [Test]
@@ -177,16 +176,16 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{userId}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().NotBeNull();
+        Assert.That(body, Is.Not.Null);
 
         var gym = body!.Single(g => g.Id == gymId.ToString());
-        gym.LastTrainingInfo.Should().NotBeNull();
-        gym.LastTrainingInfo!.Type.Should().NotBeNull();
-        gym.LastTrainingInfo.Type!.Id.Should().Be(planDayId.ToString());
-        gym.LastTrainingInfo.Type.Name.Should().Be("History Pull Day");
+        Assert.That(gym.LastTrainingInfo, Is.Not.Null);
+        Assert.That(gym.LastTrainingInfo!.Type, Is.Not.Null);
+        Assert.That(gym.LastTrainingInfo.Type!.Id, Is.EqualTo(planDayId.ToString()));
+        Assert.That(gym.LastTrainingInfo.Type.Name, Is.EqualTo("History Pull Day"));
     }
 
     [Test]
@@ -212,10 +211,10 @@ public sealed class GymTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
         var response = await Client.GetAsync($"/api/gym/{owner.Id}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().ContainSingle();
-        body!.Single().LastTrainingInfo.Should().BeNull();
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body!.Single().LastTrainingInfo, Is.Null);
     }
 
     [Test]
@@ -259,12 +258,11 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{userId}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(gym => gym.LastTrainingInfo?.Type?.Id)
-            .Should().OnlyContain(id => id == planDayId.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That((body!.Select(gym => gym.LastTrainingInfo?.Type?.Id)).All(id => id == planDayId.ToString()), Is.True);
     }
 
     [Test]
@@ -277,12 +275,12 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<GymChoiceInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("Active Gym");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("Active Gym"));
     }
 
     [Test]
@@ -295,12 +293,12 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/gym/{gym.Id}/getGym");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<GymFormResponse>();
-        body.Should().NotBeNull();
-        body!.Id.Should().Be(gym.Id.ToString());
-        body.Name.Should().Be("My Gym");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Id, Is.EqualTo(gym.Id.ToString()));
+        Assert.That(body.Name, Is.EqualTo("My Gym"));
     }
 
     [Test]
@@ -319,14 +317,14 @@ public sealed class GymTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/gym/editGym", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var updatedGym = await db.Gyms.FirstOrDefaultAsync(g => g.Id == gym.Id);
-        updatedGym.Should().NotBeNull();
-        updatedGym!.Name.Should().Be("New Name");
+        Assert.That(updatedGym, Is.Not.Null);
+        Assert.That(updatedGym!.Name, Is.EqualTo("New Name"));
     }
 
     [Test]
@@ -342,8 +340,8 @@ public sealed class GymTests : IntegrationTestBase
         using var detailResponse = await Client.GetAsync($"/api/gym/{gym.Id}/getGym");
         using var listResponse = await Client.GetAsync($"/api/gym/{owner.Id}/getGyms");
 
-        detailResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        listResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(detailResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     private async Task<Gym> SeedGymAsync(Id<User> userId, string name, bool isDeleted = false)

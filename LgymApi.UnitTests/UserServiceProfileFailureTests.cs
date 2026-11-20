@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.Identity.Contracts.Accounts;
@@ -45,8 +44,8 @@ public sealed class UserServiceProfileFailureTests
     {
         var result = await _profileService.CheckTokenAsync(null);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserNotFoundError>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -55,8 +54,8 @@ public sealed class UserServiceProfileFailureTests
     {
         var result = await _profileService.DeleteAccountAsync(null);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserNotFoundError>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -72,12 +71,12 @@ public sealed class UserServiceProfileFailureTests
 
         var action = () => _profileService.DeleteAccountAsync(user);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .Where(exception => ReferenceEquals(exception, stagingFailure));
-        user.IsDeleted.Should().BeFalse();
-        user.Name.Should().Be("profile-failure");
-        user.Email.Value.Should().Be("profile-failure@example.com");
-        _userRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserRepository.UpdateAsync));
+        var exception = await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); });
+        Assert.That(exception, Is.SameAs(stagingFailure));
+        Assert.That(user.IsDeleted, Is.False);
+        Assert.That(user.Name, Is.EqualTo("profile-failure"));
+        Assert.That(user.Email.Value, Is.EqualTo("profile-failure@example.com"));
+        Assert.That((_userRepository.Calls).Any(call => call.Method == nameof(IUserRepository.UpdateAsync)), Is.False);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

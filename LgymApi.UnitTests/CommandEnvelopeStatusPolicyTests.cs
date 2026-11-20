@@ -1,6 +1,5 @@
 using LgymApi.Domain.ValueObjects;
 using NUnit.Framework;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using System;
@@ -47,12 +46,12 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.RecordAttemptFailure(errorMsg, errorDetails);
 
         // Assert
-        _envelope.Status.Should().Be(ActionExecutionStatus.Failed);
-        _envelope.LastAttemptAt.Should().NotBeNull();
-        _envelope.NextAttemptAt.Should().NotBeNull();
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
+        Assert.That(_envelope.LastAttemptAt, Is.Not.Null);
+        Assert.That(_envelope.NextAttemptAt, Is.Not.Null);
 
         // Verify orchestrator added the log (no logs created by envelope method itself)
-        _envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution).Should().Be(1);
+        Assert.That(_envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution), Is.EqualTo(1));
     }
 
     [Test]
@@ -69,11 +68,11 @@ public class CommandEnvelopeStatusPolicyTests
         var firstRetryTime = _envelope.NextAttemptAt;
 
         // Assert - should schedule 60 second backoff for first retry
-        firstRetryTime.Should().NotBeNull();
+        Assert.That(firstRetryTime, Is.Not.Null);
         var expectedDelay = TimeSpan.FromSeconds(60);
         var actualDelay = firstRetryTime!.Value - now;
-        actualDelay.Should().BeGreaterThanOrEqualTo(expectedDelay - TimeSpan.FromMilliseconds(100));
-        actualDelay.Should().BeLessThanOrEqualTo(expectedDelay + TimeSpan.FromMilliseconds(100));
+        Assert.That(actualDelay, Is.GreaterThanOrEqualTo(expectedDelay - TimeSpan.FromMilliseconds(100)));
+        Assert.That(actualDelay, Is.LessThanOrEqualTo(expectedDelay + TimeSpan.FromMilliseconds(100)));
     }
 
     [Test]
@@ -96,11 +95,11 @@ public class CommandEnvelopeStatusPolicyTests
         var secondRetryTime = _envelope.NextAttemptAt;
         var expectedDelay = TimeSpan.FromSeconds(300);
         var actualDelay = secondRetryTime!.Value - now;
-        actualDelay.Should().BeGreaterThanOrEqualTo(expectedDelay - TimeSpan.FromMilliseconds(100));
-        actualDelay.Should().BeLessThanOrEqualTo(expectedDelay + TimeSpan.FromMilliseconds(100));
+        Assert.That(actualDelay, Is.GreaterThanOrEqualTo(expectedDelay - TimeSpan.FromMilliseconds(100)));
+        Assert.That(actualDelay, Is.LessThanOrEqualTo(expectedDelay + TimeSpan.FromMilliseconds(100)));
 
         // Verify execution logs accumulated (from simulated orchestrator)
-        _envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution).Should().Be(2);
+        Assert.That(_envelope.ExecutionLogs.Count(log => log.ActionType == ActionExecutionLogType.HandlerExecution), Is.EqualTo(2));
     }
     [Test]
     public void RecordAttemptFailure_PreservesFullErrorHistory()
@@ -122,15 +121,15 @@ public class CommandEnvelopeStatusPolicyTests
 
         // Assert - full history preserved in HandlerExecution logs
         var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
-        logs.Count.Should().Be(2);
+        Assert.That(logs.Count, Is.EqualTo(2));
 
-        logs[0].ErrorMessage.Should().Be(error1);
-        logs[0].ErrorDetails.Should().Be(error1Details);
-        logs[0].AttemptNumber.Should().Be(0);
+        Assert.That(logs[0].ErrorMessage, Is.EqualTo(error1));
+        Assert.That(logs[0].ErrorDetails, Is.EqualTo(error1Details));
+        Assert.That(logs[0].AttemptNumber, Is.EqualTo(0));
 
-        logs[1].ErrorMessage.Should().Be(error2);
-        logs[1].ErrorDetails.Should().Be(error2Details);
-        logs[1].AttemptNumber.Should().Be(1);
+        Assert.That(logs[1].ErrorMessage, Is.EqualTo(error2));
+        Assert.That(logs[1].ErrorDetails, Is.EqualTo(error2Details));
+        Assert.That(logs[1].AttemptNumber, Is.EqualTo(1));
 
     }
     [Test]
@@ -150,10 +149,10 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkCompleted();
 
         // Assert
-        _envelope.Status.Should().Be(ActionExecutionStatus.Completed);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
         var handlerLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
-        handlerLogs.Should().HaveCount(3);
-        handlerLogs.Count(log => log.Status == ActionExecutionStatus.Failed).Should().Be(2);
+        Assert.That(handlerLogs, Has.Exactly(3).Items);
+        Assert.That(handlerLogs.Count(log => log.Status == ActionExecutionStatus.Failed), Is.EqualTo(2));
     }
 
     #endregion
@@ -176,16 +175,16 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.RecordAttemptFailure("Attempt 3 failed");
 
         // Assert - third delay (900s) is scheduled
-        _envelope.NextAttemptAt.Should().NotBeNull();
-        _envelope.Status.Should().Be(ActionExecutionStatus.Failed);
+        Assert.That(_envelope.NextAttemptAt, Is.Not.Null);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
 
         // Verify 900-second delay is used
         var expectedNextAttempt = DateTimeOffset.UtcNow.AddSeconds(900);
-        _envelope.NextAttemptAt!.Value.Should().BeCloseTo(expectedNextAttempt, TimeSpan.FromSeconds(2));
+        Assert.That(_envelope.NextAttemptAt!.Value, Is.EqualTo(expectedNextAttempt).Within(TimeSpan.FromSeconds(2)));
 
         // Verify 3 logs recorded
         var handlerLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
-        handlerLogs.Count.Should().Be(3);
+        Assert.That(handlerLogs.Count, Is.EqualTo(3));
     }
 
     [Test]
@@ -207,12 +206,12 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.RecordAttemptFailure("Attempt 4 failed");
 
         // Assert - no next attempt scheduled (all delays exhausted)
-        _envelope.NextAttemptAt.Should().BeNull();
-        _envelope.Status.Should().Be(ActionExecutionStatus.Failed);
+        Assert.That(_envelope.NextAttemptAt, Is.Null);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
 
         // Verify 4 logs recorded
         var handlerLogs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
-        handlerLogs.Count.Should().Be(4);
+        Assert.That(handlerLogs.Count, Is.EqualTo(4));
     }
 
     [Test]
@@ -229,15 +228,15 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkDeadLettered();
 
         // Assert
-        _envelope.Status.Should().Be(ActionExecutionStatus.DeadLettered);
-        _envelope.CompletedAt.Should().NotBeNull();
-        _envelope.NextAttemptAt.Should().BeNull();
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
+        Assert.That(_envelope.CompletedAt, Is.Not.Null);
+        Assert.That(_envelope.NextAttemptAt, Is.Null);
 
         // Verify dead-letter log entry created
         var deadLetterLog = _envelope.ExecutionLogs.FirstOrDefault(log => log.ActionType == ActionExecutionLogType.DeadLetter);
-        deadLetterLog.Should().NotBeNull();
-        deadLetterLog!.Status.Should().Be(ActionExecutionStatus.DeadLettered);
-        deadLetterLog.ErrorMessage.Should().Be("Dead-lettered after maximum retry attempts exceeded");
+        Assert.That(deadLetterLog, Is.Not.Null);
+        Assert.That(deadLetterLog!.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
+        Assert.That(deadLetterLog.ErrorMessage, Is.EqualTo("Dead-lettered after maximum retry attempts exceeded"));
     }
 
     [Test]
@@ -257,19 +256,19 @@ public class CommandEnvelopeStatusPolicyTests
         var logs = _envelope.ExecutionLogs.ToList();
         var errorLogs = logs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution && log.Status == ActionExecutionStatus.Failed).ToList();
 
-        errorLogs.Count.Should().Be(4);
-        errorLogs[0].ErrorMessage.Should().Be("Network error");
-        errorLogs[0].ErrorDetails.Should().Be("System.Net.Http.HttpRequestException");
+        Assert.That(errorLogs.Count, Is.EqualTo(4));
+        Assert.That(errorLogs[0].ErrorMessage, Is.EqualTo("Network error"));
+        Assert.That(errorLogs[0].ErrorDetails, Is.EqualTo("System.Net.Http.HttpRequestException"));
 
-        errorLogs[1].ErrorMessage.Should().Be("Timeout error");
-        errorLogs[2].ErrorMessage.Should().Be("Service error");
+        Assert.That(errorLogs[1].ErrorMessage, Is.EqualTo("Timeout error"));
+        Assert.That(errorLogs[2].ErrorMessage, Is.EqualTo("Service error"));
 
-        errorLogs[3].ErrorMessage.Should().Be("Final error");
-        errorLogs[3].ErrorDetails.Should().Be("System.FinalException");
+        Assert.That(errorLogs[3].ErrorMessage, Is.EqualTo("Final error"));
+        Assert.That(errorLogs[3].ErrorDetails, Is.EqualTo("System.FinalException"));
 
         // Dead-letter marker also present
         var deadLetterLog = logs.FirstOrDefault(log => log.ActionType == ActionExecutionLogType.DeadLetter);
-        deadLetterLog.Should().NotBeNull();
+        Assert.That(deadLetterLog, Is.Not.Null);
 
     }
     [Test]
@@ -283,8 +282,8 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkDeadLettered();
 
         // Assert - no additional log entry created
-        _envelope.ExecutionLogs.Count.Should().Be(firstCallLogCount);
-        _envelope.Status.Should().Be(ActionExecutionStatus.DeadLettered);
+        Assert.That(_envelope.ExecutionLogs.Count, Is.EqualTo(firstCallLogCount));
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
     }
 
     #endregion
@@ -295,13 +294,13 @@ public class CommandEnvelopeStatusPolicyTests
     public void ShouldRetry_PendingStatus_ReturnsFalse()
     {
         // Arrange - envelope is still pending
-        _envelope.Status.Should().Be(ActionExecutionStatus.Pending);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
 
         // Act
         var result = _envelope.ShouldRetry();
 
         // Assert
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -312,12 +311,12 @@ public class CommandEnvelopeStatusPolicyTests
         // Simulate orchestrator adding HandlerExecution log
         AddMockHandlerExecutionLog(_envelope, 0, ActionExecutionStatus.Failed);
 
-        _envelope.Status.Should().Be(ActionExecutionStatus.Failed);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Failed));
         // Act
         var result = _envelope.ShouldRetry();
 
         // Assert
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     [Test]
@@ -333,7 +332,7 @@ public class CommandEnvelopeStatusPolicyTests
         var result = _envelope.ShouldRetry();
 
         // Assert
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -346,7 +345,7 @@ public class CommandEnvelopeStatusPolicyTests
         var result = _envelope.ShouldRetry();
 
         // Assert
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -359,7 +358,7 @@ public class CommandEnvelopeStatusPolicyTests
         var result = _envelope.ShouldRetry();
 
         // Assert
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     #endregion
@@ -376,8 +375,8 @@ public class CommandEnvelopeStatusPolicyTests
         var act = new Action(() =>
             _envelope.RecordAttemptFailure("Should fail"));
 
-        var ex = act.Should().Throw<InvalidOperationException>().And;
-        ex.Message.Should().Contain("dead-lettered");
+        var ex = Assert.Catch<InvalidOperationException>(() => { act(); })!;
+        Assert.That(ex.Message, Does.Contain("dead-lettered"));
     }
 
     [Test]
@@ -390,7 +389,7 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkCompleted();
 
         // Assert - stays dead-lettered
-        _envelope.Status.Should().Be(ActionExecutionStatus.DeadLettered);
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
     }
 
     [Test]
@@ -404,8 +403,8 @@ public class CommandEnvelopeStatusPolicyTests
         _envelope.MarkCompleted();
 
         // Assert
-        _envelope.Status.Should().Be(ActionExecutionStatus.Completed);
-        _envelope.ExecutionLogs.Count.Should().Be(firstCallLogCount); // No duplicate log
+        Assert.That(_envelope.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+        Assert.That(_envelope.ExecutionLogs.Count, Is.EqualTo(firstCallLogCount)); // No duplicate log
     }
 
     #endregion
@@ -417,17 +416,17 @@ public class CommandEnvelopeStatusPolicyTests
     {
         // MaxRetryAttempts = 3 means: 1 initial attempt + 3 retry attempts = 4 total executions
         // This allows all 3 delay values (60s, 300s, 900s) to be used before dead-lettering
-        CommandEnvelope.MaxRetryAttempts.Should().Be(3);
+        Assert.That(CommandEnvelope.MaxRetryAttempts, Is.EqualTo(3));
     }
 
     [Test]
     public void RetryDelaysSeconds_MatchesPolicy()
     {
         var delays = CommandEnvelope.RetryDelaysSeconds;
-        delays.Length.Should().Be(3); // 3 delays: 60s, 300s, 900s
-        delays[0].Should().Be(60);   // 1 minute
-        delays[1].Should().Be(300);  // 5 minutes
-        delays[2].Should().Be(900);  // 15 minutes
+        Assert.That(delays.Length, Is.EqualTo(3)); // 3 delays: 60s, 300s, 900s
+        Assert.That(delays[0], Is.EqualTo(60));   // 1 minute
+        Assert.That(delays[1], Is.EqualTo(300));  // 5 minutes
+        Assert.That(delays[2], Is.EqualTo(900));  // 15 minutes
     }
 
     [Test]
@@ -443,9 +442,9 @@ public class CommandEnvelopeStatusPolicyTests
         var logs = _envelope.ExecutionLogs.Where(log => log.ActionType == ActionExecutionLogType.HandlerExecution).ToList();
 
         // Assert
-        logs[0].AttemptNumber.Should().Be(0);
-        logs[1].AttemptNumber.Should().Be(1);
-        logs[2].AttemptNumber.Should().Be(2);
+        Assert.That(logs[0].AttemptNumber, Is.EqualTo(0));
+        Assert.That(logs[1].AttemptNumber, Is.EqualTo(1));
+        Assert.That(logs[2].AttemptNumber, Is.EqualTo(2));
     }
 
     #endregion

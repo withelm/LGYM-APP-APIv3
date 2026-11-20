@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
@@ -20,8 +19,8 @@ public sealed class EnumServiceTests
 
         var result = await service.GetLookupByNameAsync("NonExistentEnum");
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidEnumError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidEnumError>());
     }
 
     [TestCase("en", "Pull-up weighted")]
@@ -33,9 +32,9 @@ public sealed class EnumServiceTests
         var values = service.GetLookup<ExerciseEloFormula>(CultureInfo.GetCultureInfo(cultureName));
 
         var pullupWeighted = values.Single(value => value.Id == "PullupWeighted");
-        pullupWeighted.Id.Should().Be("PullupWeighted");
-        pullupWeighted.Name.Should().Be(expectedLabel);
-        pullupWeighted.DisplayName.Should().Be(expectedLabel);
+        Assert.That(pullupWeighted.Id, Is.EqualTo("PullupWeighted"));
+        Assert.That(pullupWeighted.Name, Is.EqualTo(expectedLabel));
+        Assert.That(pullupWeighted.DisplayName, Is.EqualTo(expectedLabel));
     }
 
     [Test]
@@ -45,9 +44,9 @@ public sealed class EnumServiceTests
 
         var lookup = service.GetLookupByName("eXeRcIsEeLoFoRmUlA", CultureInfo.GetCultureInfo("en"));
 
-        lookup.Should().NotBeNull();
-        lookup!.EnumType.Should().Be("ExerciseEloFormula");
-        lookup.Values.Select(value => value.Id).Should().Contain("PullupWeighted");
+        Assert.That(lookup, Is.Not.Null);
+        Assert.That(lookup!.EnumType, Is.EqualTo("ExerciseEloFormula"));
+        Assert.That(lookup.Values.Select(value => value.Id), Does.Contain("PullupWeighted"));
     }
 
     private static EnumService CreateService()

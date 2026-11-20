@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -91,24 +90,24 @@ public sealed class PlanAuthorizationMatrixCompletionTests : IntegrationTestBase
             "unassign" => await Client.PostAsync($"{route}/unassign", null),
             _ => await Client.PostAsJsonAsync($"{route}/{plan.Id}/{action}", new { name = "Intrusion" })
         };
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await response.Content.ReadAsStringAsync()).Should().NotContain("Protected");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("Protected"));
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await dbVerify.Plans.IgnoreQueryFilters().AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        stored.UserId.Should().Be(owner.Id);
-        stored.Name.Should().Be("Protected");
-        stored.Purpose.Should().Be(purpose);
-        stored.IsActive.Should().Be(action != "assign");
-        stored.IsDeleted.Should().BeFalse();
+        Assert.That(stored.UserId, Is.EqualTo(owner.Id));
+        Assert.That(stored.Name, Is.EqualTo("Protected"));
+        Assert.That(stored.Purpose, Is.EqualTo(purpose));
+        Assert.That(stored.IsActive, Is.EqualTo(action != "assign"));
+        Assert.That(stored.IsDeleted, Is.False);
         if (action == "assign")
         {
             var previous = await dbVerify.Plans.IgnoreQueryFilters().AsNoTracking().SingleAsync(p => p.Id == predecessor.Id);
-            previous.UserId.Should().Be(owner.Id);
-            previous.Name.Should().Be("Previous");
-            previous.Purpose.Should().Be(PlanPurpose.Personal);
-            previous.IsActive.Should().BeTrue();
-            previous.IsDeleted.Should().BeFalse();
+            Assert.That(previous.UserId, Is.EqualTo(owner.Id));
+            Assert.That(previous.Name, Is.EqualTo("Previous"));
+            Assert.That(previous.Purpose, Is.EqualTo(PlanPurpose.Personal));
+            Assert.That(previous.IsActive, Is.True);
+            Assert.That(previous.IsDeleted, Is.False);
         }
     }
 
@@ -127,15 +126,15 @@ public sealed class PlanAuthorizationMatrixCompletionTests : IntegrationTestBase
         }
         SetAuthorizationHeader(owner.Id);
         using var list = await Client.GetAsync($"/api/{owner.Id}/getPlansList?purpose={purpose}");
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
-        json.RootElement.EnumerateArray().Should().ContainSingle(row => row.GetProperty("_id").GetString() == plan.Id.ToString());
+        Assert.That((json.RootElement.EnumerateArray()).Where(row => row.GetProperty("_id").GetString() == plan.Id.ToString()), Has.Exactly(1).Items);
         using var update = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", new { _id = plan.Id.ToString(), name = "After", purpose = purpose.ToString() });
-        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(update.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var verification = Factory.Services.CreateScope();
         var stored = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        stored.Name.Should().Be("After");
-        stored.Purpose.Should().Be(purpose);
-        stored.UserId.Should().Be(owner.Id);
+        Assert.That(stored.Name, Is.EqualTo("After"));
+        Assert.That(stored.Purpose, Is.EqualTo(purpose));
+        Assert.That(stored.UserId, Is.EqualTo(owner.Id));
     }
 }

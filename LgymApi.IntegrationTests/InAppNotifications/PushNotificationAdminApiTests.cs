@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
@@ -35,21 +34,21 @@ public sealed class PushNotificationAdminApiTests : IntegrationTestBase
                 linkedNotification.Id.ToString(),
                 "/notifications"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Push test event queued");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Push test event queued"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var message = await db.PushNotificationMessages.SingleAsync(x => x.EventId == "event-admin-test-1");
 
-        message.Type.Should().Be("internal.test.push");
-        message.InAppNotificationId.Should().Be(linkedNotification.Id);
-        message.PayloadJson.Should().Contain(linkedNotification.Id.ToString());
-        message.PayloadJson.Should().Contain("event-admin-test-1");
-        message.PayloadJson.Should().Contain("entity-admin-test-1");
-        message.PayloadJson.Should().NotContain(linkedNotification.Message);
+        Assert.That(message.Type, Is.EqualTo("internal.test.push"));
+        Assert.That(message.InAppNotificationId, Is.EqualTo(linkedNotification.Id));
+        Assert.That(message.PayloadJson, Does.Contain(linkedNotification.Id.ToString()));
+        Assert.That(message.PayloadJson, Does.Contain("event-admin-test-1"));
+        Assert.That(message.PayloadJson, Does.Contain("entity-admin-test-1"));
+        Assert.That(message.PayloadJson, Does.Not.Contain(linkedNotification.Message));
     }
 
     [Test]
@@ -71,15 +70,15 @@ public sealed class PushNotificationAdminApiTests : IntegrationTestBase
                 null,
                 null));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.Unauthorized));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.Unauthorized)));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var count = await db.PushNotificationMessages.CountAsync(x => x.EventId == "event-admin-test-2");
-        count.Should().Be(0);
+        Assert.That(count, Is.EqualTo(0));
     }
 
     [Test]
@@ -95,14 +94,14 @@ public sealed class PushNotificationAdminApiTests : IntegrationTestBase
                 null,
                 null));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.InvalidToken));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.InvalidToken)));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.PushNotificationMessages.CountAsync(x => x.EventId == "event-admin-test-anonymous")).Should().Be(0);
+        Assert.That((await db.PushNotificationMessages.CountAsync(x => x.EventId == "event-admin-test-anonymous")), Is.EqualTo(0));
     }
 
     private async Task<InAppNotification> SeedNotificationAsync(Id<User> recipientId, string message)

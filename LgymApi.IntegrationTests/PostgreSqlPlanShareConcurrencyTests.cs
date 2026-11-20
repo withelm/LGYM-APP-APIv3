@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -46,15 +45,15 @@ internal sealed class PostgreSqlPlanShareConcurrencyTests : PostgreSqlIntegratio
             IssueAsync(plan.Id, owner.Id, firstDays, "FIRST00001", barrier),
             IssueAsync(plan.Id, owner.Id, secondDays, "SECOND0001", barrier)).WaitAsync(TimeSpan.FromSeconds(30));
 
-        outcomes.Count(outcome => outcome.Code is not null).Should().Be(1);
-        outcomes.Count(outcome => outcome.Conflict).Should().Be(1);
+        Assert.That(outcomes.Count(outcome => outcome.Code is not null), Is.EqualTo(1));
+        Assert.That(outcomes.Count(outcome => outcome.Conflict), Is.EqualTo(1));
         var winner = outcomes.Single(outcome => outcome.Code is not null);
         await using var verify = Factory.Services.CreateAsyncScope();
         var persisted = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        persisted.ShareCode.Should().Be(winner.Code);
-        persisted.ShareCodeDurationDays.Should().Be(winner.Days);
-        persisted.ShareCodeExpiresAt.Should().Be(Now.AddDays(winner.Days));
-        persisted.ShareCodeRevision.Should().Be(1);
+        Assert.That(persisted.ShareCode, Is.EqualTo(winner.Code));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(winner.Days));
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(Now.AddDays(winner.Days)));
+        Assert.That(persisted.ShareCodeRevision, Is.EqualTo(1));
     }
 
     [Test]
@@ -83,25 +82,25 @@ internal sealed class PostgreSqlPlanShareConcurrencyTests : PostgreSqlIntegratio
             var db = rotationScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var issue = new GenerateShareCodeUseCase(new PlanRepository(db, _ => "NEWCODE001"), new EfUnitOfWork(db), new FixedClock());
             var rotated = await issue.ExecuteAsync(new GenerateShareCodeCommand(owner.Id.Rebind<AccountReference>(), plan.Id.Rebind<PlanReference>(), 30));
-            rotated.IsSuccess.Should().BeTrue();
-            rotated.Value.Should().Be("NEWCODE001");
+            Assert.That(rotated.IsSuccess, Is.True);
+            Assert.That(rotated.Value, Is.EqualTo("NEWCODE001"));
         }
         finally
         {
             gate.Release.TrySetResult();
         }
 
-        (await pendingCopy.WaitAsync(TimeSpan.FromSeconds(20))).IsSuccess.Should().BeTrue();
+        Assert.That((await pendingCopy.WaitAsync(TimeSpan.FromSeconds(20))).IsSuccess, Is.True);
         await using var verifyScope = Factory.Services.CreateAsyncScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persisted = await verifyDb.Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        persisted.ShareCode.Should().Be("NEWCODE001");
-        persisted.ShareCodeDurationDays.Should().Be(30);
-        persisted.ShareCodeExpiresAt.Should().Be(Now.AddDays(30));
-        (await verifyDb.Plans.CountAsync(p => p.UserId == recipient.Id)).Should().Be(1);
+        Assert.That(persisted.ShareCode, Is.EqualTo("NEWCODE001"));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(30));
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(Now.AddDays(30)));
+        Assert.That((await verifyDb.Plans.CountAsync(p => p.UserId == recipient.Id)), Is.EqualTo(1));
         var retry = new CopyPlanUseCase(verifyScope.ServiceProvider.GetRequiredService<IPlanRepository>(),
             verifyScope.ServiceProvider.GetRequiredService<IPlanExerciseClonePort>(), new EfUnitOfWork(verifyDb), new FixedClock());
-        (await retry.ExecuteAsync(command)).IsFailure.Should().BeTrue();
+        Assert.That((await retry.ExecuteAsync(command)).IsFailure, Is.True);
     }
 
     private async Task<Outcome> IssueAsync(Id<Plan> planId, Id<User> ownerId, int days, string candidate, SaveBarrier barrier)
@@ -113,7 +112,7 @@ internal sealed class PostgreSqlPlanShareConcurrencyTests : PostgreSqlIntegratio
         var result = await useCase.ExecuteAsync(new GenerateShareCodeCommand(ownerId.Rebind<LgymApi.Identity.Contracts.AccountReference>(), planId.Rebind<LgymApi.TrainingPlanning.Contracts.PlanReference>(), days));
         if (result.IsFailure)
         {
-            result.Error.Should().BeOfType<ConflictError>();
+            Assert.That(result.Error, Is.TypeOf<ConflictError>());
             return new Outcome(days, null, true);
         }
         return new Outcome(days, result.Value, false);

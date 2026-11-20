@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Api.Features.Tutorial.Contracts;
 using LgymApi.Application.Features.Tutorial;
 using LgymApi.Application.Platform.Contracts.Serialization;
@@ -32,24 +31,24 @@ public sealed class PostgreSqlTutorialRowSecurityTests
         var (progressA, stepA) = await environment.ReadTutorialIdsAsync(actorA);
         var (progressB, stepB) = await environment.ReadTutorialIdsAsync(actorB);
 
-        (await ReadCountsAsync(environment.RuntimeConnectionString, actorA.ToString())).Should().Be((1, 1));
-        (await ReadCountsAsync(environment.RuntimeConnectionString, actorB.ToString())).Should().Be((1, 1));
-        (await ReadCountsAsync(environment.RuntimeConnectionString, null)).Should().Be((0, 0));
-        (await ReadCountsAsync(environment.RuntimeConnectionString, "malformed-actor")).Should().Be((0, 0));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, actorA.ToString())), Is.EqualTo((1, 1)));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, actorB.ToString())), Is.EqualTo((1, 1)));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, null)), Is.EqualTo((0, 0)));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, "malformed-actor")), Is.EqualTo((0, 0)));
 
-        (await UpdateAsync(environment.RuntimeConnectionString, actorA.ToString(), progressA.ToString(), stepA.ToString())).Should().Be((1, 1));
-        (await UpdateAsync(environment.RuntimeConnectionString, actorB.ToString(), progressB.ToString(), stepB.ToString())).Should().Be((1, 1));
+        Assert.That((await UpdateAsync(environment.RuntimeConnectionString, actorA.ToString(), progressA.ToString(), stepA.ToString())), Is.EqualTo((1, 1)));
+        Assert.That((await UpdateAsync(environment.RuntimeConnectionString, actorB.ToString(), progressB.ToString(), stepB.ToString())), Is.EqualTo((1, 1)));
         var victimBeforeForeignWrite = await environment.ReadTutorialSnapshotAsync(progressB, stepB);
-        (await UpdateAsync(environment.RuntimeConnectionString, actorA.ToString(), progressB.ToString(), stepB.ToString())).Should().Be((0, 0));
-        (await environment.ReadTutorialSnapshotAsync(progressB, stepB)).Should().Be(victimBeforeForeignWrite);
+        Assert.That((await UpdateAsync(environment.RuntimeConnectionString, actorA.ToString(), progressB.ToString(), stepB.ToString())), Is.EqualTo((0, 0)));
+        Assert.That((await environment.ReadTutorialSnapshotAsync(progressB, stepB)), Is.EqualTo(victimBeforeForeignWrite));
         var actorBeforeDeniedWrites = await environment.ReadTutorialSnapshotAsync(progressA, stepA);
-        (await UpdateAsync(environment.RuntimeConnectionString, null, progressA.ToString(), stepA.ToString())).Should().Be((0, 0));
-        (await environment.ReadTutorialSnapshotAsync(progressA, stepA)).Should().Be(actorBeforeDeniedWrites);
-        (await UpdateAsync(environment.RuntimeConnectionString, "malformed-actor", progressA.ToString(), stepA.ToString())).Should().Be((0, 0));
-        (await environment.ReadTutorialSnapshotAsync(progressA, stepA)).Should().Be(actorBeforeDeniedWrites);
+        Assert.That((await UpdateAsync(environment.RuntimeConnectionString, null, progressA.ToString(), stepA.ToString())), Is.EqualTo((0, 0)));
+        Assert.That((await environment.ReadTutorialSnapshotAsync(progressA, stepA)), Is.EqualTo(actorBeforeDeniedWrites));
+        Assert.That((await UpdateAsync(environment.RuntimeConnectionString, "malformed-actor", progressA.ToString(), stepA.ToString())), Is.EqualTo((0, 0)));
+        Assert.That((await environment.ReadTutorialSnapshotAsync(progressA, stepA)), Is.EqualTo(actorBeforeDeniedWrites));
 
-        (await ReadCountsAsync(environment.RuntimeConnectionString, actorA.ToString())).Should().Be((1, 1));
-        (await ReadCountsAsync(environment.RuntimeConnectionString, actorB.ToString())).Should().Be((1, 1));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, actorA.ToString())), Is.EqualTo((1, 1)));
+        Assert.That((await ReadCountsAsync(environment.RuntimeConnectionString, actorB.ToString())), Is.EqualTo((1, 1)));
 
         await AssertPooledScopeDoesNotLeakAsync(environment.RuntimeConnectionString, actorA.ToString(), actorB.ToString());
     }
@@ -74,44 +73,46 @@ public sealed class PostgreSqlTutorialRowSecurityTests
         await SeedTutorialAsync(environment.Factory, userId);
 
         var loginResponse = await client.PostAsJsonAsync("/api/login", new { name = userName, password = "UserSecret123!" });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        login.Should().NotBeNull();
-        login!.Token.Should().NotBeNullOrWhiteSpace();
-        login.User!.HasActiveTutorials.Should().BeTrue();
+        Assert.That(login, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(login!.Token), Is.False);
+        Assert.That(login.User!.HasActiveTutorials, Is.True);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Token);
 
         var activeResponse = await client.GetAsync("/api/tutorials/active");
-        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(activeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
-        activeTutorials.Should().ContainSingle(tutorial => tutorial.TutorialType == TutorialType.OnboardingDemo);
+        Assert.That((activeTutorials).Where(tutorial => tutorial.TutorialType == TutorialType.OnboardingDemo), Has.Exactly(1).Items);
 
         var stepResponse = await PostTutorialAsync(client, "/api/tutorials/completeStep", new CompleteStepRequest
         {
             TutorialType = TutorialType.OnboardingDemo,
             Step = TutorialStep.CreateArea
         }, suffix);
-        stepResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(stepResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var progressResponse = await client.GetAsync("/api/tutorials/OnboardingDemo");
         var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
-        progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        progress!.CompletedSteps.Should().ContainSingle().Which.Should().Be(TutorialStep.CreateArea);
+        Assert.That(progressResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var assertedValue60 = (progress!.CompletedSteps).ToArray();
+        Assert.That(assertedValue60, Has.Exactly(1).Items);
+        Assert.That(assertedValue60.Single(), Is.EqualTo(TutorialStep.CreateArea));
 
         var completeResponse = await PostTutorialAsync(client, "/api/tutorials/complete", new CompleteTutorialRequest
         {
             TutorialType = TutorialType.OnboardingDemo
         }, suffix);
-        completeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.GetAsync("/api/tutorials/active")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(completeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await client.GetAsync("/api/tutorials/active")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     private static async Task SeedTutorialAsync(PostgreSqlWebApplicationFactory factory, Id<User> userId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ITutorialService>();
-        (await service.InitializeOnboardingTutorialAsync(userId)).IsSuccess.Should().BeTrue();
-        (await service.CompleteStepAsync(userId, TutorialType.OnboardingDemo, TutorialStep.CreateArea)).IsSuccess.Should().BeTrue();
+        Assert.That((await service.InitializeOnboardingTutorialAsync(userId)).IsSuccess, Is.True);
+        Assert.That((await service.CompleteStepAsync(userId, TutorialType.OnboardingDemo, TutorialStep.CreateArea)).IsSuccess, Is.True);
     }
 
     private static async Task<(int Progresses, int Steps)> ReadCountsAsync(string connectionString, string? actorId)
@@ -156,19 +157,19 @@ public sealed class PostgreSqlTutorialRowSecurityTests
 
     private static async Task AssertPooledScopeDoesNotLeakAsync(string connectionString, string actorA, string actorB)
     {
-        (await ReadCountsAsync(connectionString, actorA)).Should().Be((1, 1));
+        Assert.That((await ReadCountsAsync(connectionString, actorA)), Is.EqualTo((1, 1)));
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
         await using (var settingCommand = new NpgsqlCommand("SELECT current_setting('lgym.account_id', true);", connection))
         {
             var value = (string?)await settingCommand.ExecuteScalarAsync();
-            string.IsNullOrEmpty(value).Should().BeTrue();
+            Assert.That(string.IsNullOrEmpty(value), Is.True);
         }
 
         await using var transaction = await connection.BeginTransactionAsync();
         await SetActorAsync(connection, transaction, actorB);
         await using var command = new NpgsqlCommand("SELECT count(*) FROM public.\"UserTutorialProgresses\";", connection, transaction);
-        (await command.ExecuteScalarAsync()).Should().Be(1L);
+        Assert.That((await command.ExecuteScalarAsync()), Is.EqualTo(1L));
         await transaction.CommitAsync();
     }
 
@@ -193,8 +194,8 @@ public sealed class PostgreSqlTutorialRowSecurityTests
             await using var command = new NpgsqlCommand(sql, connection);
             await command.ExecuteNonQueryAsync();
         };
-        var exception = await action.Should().ThrowAsync<PostgresException>();
-        exception.Which.SqlState.Should().Be("42501");
+        var exception = (await Assert.CatchAsync<PostgresException>(async () => { await action(); }))!;
+        Assert.That(exception.SqlState, Is.EqualTo("42501"));
     }
 
     private static async Task<HttpResponseMessage> PostTutorialAsync<T>(HttpClient client, string path, T request, string suffix)

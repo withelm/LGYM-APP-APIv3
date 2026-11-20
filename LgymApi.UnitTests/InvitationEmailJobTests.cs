@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -34,8 +33,8 @@ public sealed class InvitationEmailJobTests
 
         await job.ExecuteAsync(notificationId.ToString());
 
-        handler.Calls.Should().Be(1);
-        handler.LastNotificationId.Should().Be(notificationId);
+        Assert.That(handler.Calls, Is.EqualTo(1));
+        Assert.That(handler.LastNotificationId, Is.EqualTo(notificationId));
     }
 
     [Test]
@@ -49,11 +48,11 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeTrue();
+        Assert.That(claimed, Is.True);
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
-        stored.Should().NotBeNull();
-        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
-        stored.LastAttemptAt.Should().NotBeNull();
+        Assert.That(stored, Is.Not.Null);
+        Assert.That(stored!.Status, Is.EqualTo(EmailNotificationStatus.Sending));
+        Assert.That(stored.LastAttemptAt, Is.Not.Null);
     }
 
     [Test]
@@ -67,9 +66,9 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeFalse();
+        Assert.That(claimed, Is.False);
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
-        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
+        Assert.That(stored!.Status, Is.EqualTo(EmailNotificationStatus.Sending));
     }
 
     [Test]
@@ -83,11 +82,11 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeTrue();
+        Assert.That(claimed, Is.True);
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
-        stored.Should().NotBeNull();
-        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
-        stored.LastAttemptAt.Should().NotBeNull();
+        Assert.That(stored, Is.Not.Null);
+        Assert.That(stored!.Status, Is.EqualTo(EmailNotificationStatus.Sending));
+        Assert.That(stored.LastAttemptAt, Is.Not.Null);
     }
 
     [Test]
@@ -102,10 +101,10 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeTrue();
+        Assert.That(claimed, Is.True);
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
-        stored.Should().NotBeNull();
-        stored!.LastAttemptAt.Should().BeAfter(staleLease);
+        Assert.That(stored, Is.Not.Null);
+        Assert.That(stored!.LastAttemptAt, Is.GreaterThan(staleLease));
     }
 
     [Test]
@@ -119,7 +118,7 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeFalse();
+        Assert.That(claimed, Is.False);
     }
 
     [Test]
@@ -133,10 +132,10 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeTrue();
+        Assert.That(claimed, Is.True);
         var stored = await db.NotificationMessages.FirstOrDefaultAsync(x => x.Id == message.Id);
-        stored.Should().NotBeNull();
-        stored!.Status.Should().Be(EmailNotificationStatus.Sending);
+        Assert.That(stored, Is.Not.Null);
+        Assert.That(stored!.Status, Is.EqualTo(EmailNotificationStatus.Sending));
     }
 
     [Test]
@@ -151,7 +150,7 @@ public sealed class InvitationEmailJobTests
 
         var claimed = await repository.TryTransitionToSendingAsync(message.Id);
 
-        claimed.Should().BeFalse();
+        Assert.That(claimed, Is.False);
     }
 
     [Test]
@@ -169,7 +168,7 @@ public sealed class InvitationEmailJobTests
 
         var result = await repository.GetStuckSendingAsync(emailSendLeaseSeconds: 60);
 
-        result.Select(x => x.Id).Should().BeEquivalentTo(new[] { stuck.Id, missingLease.Id });
+        Assert.That(result.Select(x => x.Id), Is.EquivalentTo(new[] { stuck.Id, missingLease.Id }));
     }
 
     [Test]
@@ -188,7 +187,7 @@ public sealed class InvitationEmailJobTests
 
         await Task.WhenAll(handler.ProcessAsync(notification.Id.ToString()), handler.ProcessAsync(notification.Id.ToString()));
 
-        sender.SendCalls.Should().Be(1);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
     }
 
     private static AppDbContext CreateDbContext()

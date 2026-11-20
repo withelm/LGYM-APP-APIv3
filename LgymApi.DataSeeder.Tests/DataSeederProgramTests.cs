@@ -21,7 +21,7 @@ public sealed class DataSeederProgramTests
         {
             Environment.SetEnvironmentVariable("LGYM_MIGRATION_POSTGRES", "Host=maintenance;Database=seeder;Username=maintenance;Password=test-only");
 
-            DataSeederProgram.GetMigrationConnectionString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(string.IsNullOrWhiteSpace(DataSeederProgram.GetMigrationConnectionString()), Is.False);
         }
         finally
         {
@@ -37,7 +37,7 @@ public sealed class DataSeederProgramTests
         {
             Environment.SetEnvironmentVariable("LGYM_MIGRATION_POSTGRES", null);
 
-            DataSeederProgram.GetMigrationConnectionString().Should().BeNull();
+            Assert.That(DataSeederProgram.GetMigrationConnectionString(), Is.Null);
         }
         finally
         {
@@ -53,8 +53,8 @@ public sealed class DataSeederProgramTests
         {
             var config = DataSeederProgram.BuildConfiguration(repoRoot);
 
-            config.GetConnectionString("Postgres").Should().Be("Host=localhost");
-            config["FeatureFlag"].Should().Be("true");
+            Assert.That(config.GetConnectionString("Postgres"), Is.EqualTo("Host=localhost"));
+            Assert.That(config["FeatureFlag"], Is.EqualTo("true"));
         }
         finally
         {
@@ -74,13 +74,12 @@ public sealed class DataSeederProgramTests
         var password = passwordService.Create("seed-password");
         var seeders = scope.ServiceProvider.GetRequiredService<IEnumerable<IEntitySeeder>>().ToList();
 
-        passwordService.Verify("seed-password", password.Hash, password.Salt, password.Iterations, password.KeyLength, password.Digest)
-            .Should().BeTrue();
-        seeders.Should().HaveCount(42);
-        seeders.Should().ContainSingle(seeder => seeder is PhotoDeletionWorkItemSeeder);
-        seeders.Should().ContainSingle(seeder => seeder is CoachingEpisodeSeeder);
-        seeders.Should().ContainSingle(seeder => seeder is RecurringReportAssignmentSeeder);
-        seeders.Should().ContainSingle(seeder => seeder is RecurringReportScheduleChangeSeeder);
+        Assert.That(passwordService.Verify("seed-password", password.Hash, password.Salt, password.Iterations, password.KeyLength, password.Digest), Is.True);
+        Assert.That(seeders, Has.Exactly(42).Items);
+        Assert.That((seeders).Where(seeder => seeder is PhotoDeletionWorkItemSeeder), Has.Exactly(1).Items);
+        Assert.That((seeders).Where(seeder => seeder is CoachingEpisodeSeeder), Has.Exactly(1).Items);
+        Assert.That((seeders).Where(seeder => seeder is RecurringReportAssignmentSeeder), Has.Exactly(1).Items);
+        Assert.That((seeders).Where(seeder => seeder is RecurringReportScheduleChangeSeeder), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -104,12 +103,12 @@ public sealed class DataSeederProgramTests
 
         await orchestrator.RunAsync(context, new SeedContext(), seedOptions, CancellationToken.None);
 
-        seeders.Should().HaveCount(42);
-        (await context.PhotoDeletionWorkItems.CountAsync()).Should().Be(1);
-        (await context.PhotoDeletionWorkItems.SingleAsync()).CompletedAtUtc.Should().NotBeNull();
-        (await context.Users.CountAsync()).Should().Be(firstUserCount);
-        (await context.Roles.CountAsync()).Should().Be(firstRoleCount);
-        (await context.RoleClaims.CountAsync()).Should().Be(firstRoleClaimCount);
+        Assert.That(seeders, Has.Exactly(42).Items);
+        Assert.That((await context.PhotoDeletionWorkItems.CountAsync()), Is.EqualTo(1));
+        Assert.That((await context.PhotoDeletionWorkItems.SingleAsync()).CompletedAtUtc, Is.Not.Null);
+        Assert.That((await context.Users.CountAsync()), Is.EqualTo(firstUserCount));
+        Assert.That((await context.Roles.CountAsync()), Is.EqualTo(firstRoleCount));
+        Assert.That((await context.RoleClaims.CountAsync()), Is.EqualTo(firstRoleClaimCount));
     }
 
     private static string CreateTempRepo()

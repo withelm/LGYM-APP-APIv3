@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -41,9 +40,9 @@ public sealed class TrainingPlanningWorkoutPortTests
             cultures,
             cancellation.Token);
 
-        result.Should().ContainKeys(globalId.Rebind<PlanExerciseReference>(), accountExerciseId.Rebind<PlanExerciseReference>());
-        result[globalId.Rebind<PlanExerciseReference>()].Name.Should().Be("Globalny");
-        result[accountExerciseId.Rebind<PlanExerciseReference>()].Name.Should().Be("Custom");
+        Assert.That((result).Keys, Is.SupersetOf(new[] { globalId.Rebind<PlanExerciseReference>(), accountExerciseId.Rebind<PlanExerciseReference>() }));
+        Assert.That(result[globalId.Rebind<PlanExerciseReference>()].Name, Is.EqualTo("Globalny"));
+        Assert.That(result[accountExerciseId.Rebind<PlanExerciseReference>()].Name, Is.EqualTo("Custom"));
         await exercises.Received(1).GetTranslationsAsync(
             Arg.Is<IReadOnlyCollection<Id<Exercise>>>(ids => ids.SequenceEqual(new[] { globalId })),
             cultures,
@@ -67,11 +66,11 @@ public sealed class TrainingPlanningWorkoutPortTests
             [firstPlanDayId, secondPlanDayId],
             CancellationToken.None);
 
-        result.Should().Equal(new Dictionary<Id<PlanDayReference>, DateTime?>
+        Assert.That(result, Is.EqualTo(new Dictionary<Id<PlanDayReference>, DateTime?>
         {
             [firstPlanDayId] = null,
             [secondPlanDayId] = null
-        });
+        }));
     }
 
     [Test]
@@ -94,17 +93,16 @@ public sealed class TrainingPlanningWorkoutPortTests
             [globalId.Rebind<PlanExerciseReference>(), customId.Rebind<PlanExerciseReference>()],
             CancellationToken.None);
 
-        result[globalId.Rebind<PlanExerciseReference>()].Should().Be(globalId.Rebind<PlanExerciseReference>());
-        result[customId.Rebind<PlanExerciseReference>()].Should().NotBe(customId.Rebind<PlanExerciseReference>());
-        staged.Should().BeEquivalentTo(new
-        {
-            Name = "Custom",
-            OwnerId = targetAccountId,
-            BodyPart = BodyParts.Back,
-            Description = "Description",
-            Image = "image",
-            IsDeleted = false
-        });
+        Assert.That(result[globalId.Rebind<PlanExerciseReference>()], Is.EqualTo(globalId.Rebind<PlanExerciseReference>()));
+        Assert.That(result[customId.Rebind<PlanExerciseReference>()], Is.Not.EqualTo(customId.Rebind<PlanExerciseReference>()));
+        var assertedObject40 = staged;
+        Assert.That(assertedObject40, Is.Not.Null);
+        Assert.That(assertedObject40!.Name, Is.EqualTo("Custom"));
+        Assert.That(assertedObject40!.OwnerId, Is.EqualTo(targetAccountId));
+        Assert.That(assertedObject40!.BodyPart, Is.EqualTo(BodyParts.Back));
+        Assert.That(assertedObject40!.Description, Is.EqualTo("Description"));
+        Assert.That(assertedObject40!.Image, Is.EqualTo("image"));
+        Assert.That(assertedObject40!.IsDeleted, Is.EqualTo(false));
         await exercises.Received(1).AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), CancellationToken.None);
     }
 
@@ -122,7 +120,7 @@ public sealed class TrainingPlanningWorkoutPortTests
             [Id<PlanExerciseReference>.New()],
             cancellation.Token);
 
-        await action.Should().ThrowAsync<TaskCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<TaskCanceledException>());
         await exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
     }
 
@@ -147,9 +145,9 @@ public sealed class TrainingPlanningWorkoutPortTests
     private static void AssertRegistration<TPort, TAdapter>(IServiceCollection services)
     {
         var registrations = services.Where(descriptor => descriptor.ServiceType == typeof(TPort)).ToList();
-        registrations.Should().ContainSingle();
+        Assert.That(registrations, Has.Exactly(1).Items);
         var registration = registrations[0];
-        registration.ImplementationType.Should().Be(typeof(TAdapter));
-        registration.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        Assert.That(registration.ImplementationType, Is.EqualTo(typeof(TAdapter)));
+        Assert.That(registration.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
     }
 }

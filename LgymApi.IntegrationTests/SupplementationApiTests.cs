@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -63,20 +62,20 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             }
         });
 
-        createPlanResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createPlanResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var createdPlan = await createPlanResponse.Content.ReadFromJsonAsync<SupplementPlanResponse>();
-        createdPlan.Should().NotBeNull();
+        Assert.That(createdPlan, Is.Not.Null);
 
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{createdPlan!.Id}/assign", content: null);
-        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(assignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainee.Id);
         var scheduleResponse = await Client.GetAsync($"/api/trainee/supplements/schedule?date={date:yyyy-MM-dd}");
-        scheduleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(scheduleResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var schedule = await scheduleResponse.Content.ReadFromJsonAsync<List<SupplementScheduleEntryResponse>>();
-        schedule.Should().NotBeNull();
-        schedule!.Should().ContainSingle();
-        schedule[0].Taken.Should().BeFalse();
+        Assert.That(schedule, Is.Not.Null);
+        Assert.That(schedule!, Has.Exactly(1).Items);
+        Assert.That(schedule[0].Taken, Is.False);
 
         var checkOffResponse = await Client.PostAsJsonAsync("/api/trainee/supplements/intakes/check-off", new
         {
@@ -85,22 +84,22 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             takenAt = DateTimeOffset.UtcNow
         });
 
-        checkOffResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(checkOffResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var scheduleAfterResponse = await Client.GetAsync($"/api/trainee/supplements/schedule?date={date:yyyy-MM-dd}");
-        scheduleAfterResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(scheduleAfterResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var scheduleAfter = await scheduleAfterResponse.Content.ReadFromJsonAsync<List<SupplementScheduleEntryResponse>>();
-        scheduleAfter.Should().NotBeNull();
-        scheduleAfter![0].Taken.Should().BeTrue();
+        Assert.That(scheduleAfter, Is.Not.Null);
+        Assert.That(scheduleAfter![0].Taken, Is.True);
 
         SetAuthorizationHeader(trainer.Id);
         var complianceResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate={date:yyyy-MM-dd}&toDate={date:yyyy-MM-dd}");
-        complianceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(complianceResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var compliance = await complianceResponse.Content.ReadFromJsonAsync<SupplementComplianceResponse>();
-        compliance.Should().NotBeNull();
-        compliance!.PlannedDoses.Should().Be(1);
-        compliance.TakenDoses.Should().Be(1);
-        compliance.AdherenceRate.Should().Be(100);
+        Assert.That(compliance, Is.Not.Null);
+        Assert.That(compliance!.PlannedDoses, Is.EqualTo(1));
+        Assert.That(compliance.TakenDoses, Is.EqualTo(1));
+        Assert.That(compliance.AdherenceRate, Is.EqualTo(100));
     }
 
     [Test]
@@ -119,8 +118,8 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             takenAt = DateTimeOffset.UtcNow
         });
 
-        scheduleResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        checkOffResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(scheduleResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(checkOffResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -133,12 +132,12 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainerOther.Id);
         var summaryByOtherTrainer = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate=2026-01-01&toDate=2026-01-02");
-        summaryByOtherTrainer.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(summaryByOtherTrainer.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var regularUser = await SeedUserAsync(name: "normal-user", email: "normal-user@example.com", password: "password123");
         SetAuthorizationHeader(regularUser.Id);
         var trainerOnlyEndpoint = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans");
-        trainerOnlyEndpoint.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(trainerOnlyEndpoint.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -154,8 +153,8 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             items = new object[] { new { supplementName = "A", dosage = "1", timeOfDay = "08:00", daysOfWeekMask = 127, order = 0 } }
         });
 
-        badTraineeIdResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        badPlanIdResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(badTraineeIdResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(badPlanIdResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -175,14 +174,14 @@ public sealed class SupplementationApiTests : IntegrationTestBase
                 new { supplementName = "Magnesium", dosage = "1 tab", timeOfDay = "21:00", daysOfWeekMask = 127, order = 0 }
             }
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<SupplementPlanResponse>();
 
         var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans");
-        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var plans = await listResponse.Content.ReadFromJsonAsync<List<SupplementPlanResponse>>();
-        plans.Should().NotBeNull();
-        plans!.Any(x => x.Id == created!.Id).Should().BeTrue();
+        Assert.That(plans, Is.Not.Null);
+        Assert.That(plans!.Any(x => x.Id == created!.Id), Is.True);
 
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{created!.Id}/update", new
         {
@@ -193,17 +192,17 @@ public sealed class SupplementationApiTests : IntegrationTestBase
                 new { supplementName = "Magnesium", dosage = "2 tabs", timeOfDay = "22:00", daysOfWeekMask = 127, order = 0 }
             }
         });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var updated = await updateResponse.Content.ReadFromJsonAsync<SupplementPlanResponse>();
-        updated.Should().NotBeNull();
-        updated!.Id.Should().NotBe(created.Id);
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Id, Is.Not.EqualTo(created.Id));
 
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", content: null);
-        unassignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{updated.Id}/delete", content: null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -218,7 +217,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate = DateOnly.FromDateTime(DateTime.UtcNow)
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -230,7 +229,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate=2025-01-01&toDate=2026-12-31");
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -243,7 +242,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplements/compliance");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -261,7 +260,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             items = (object?)null
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -275,7 +274,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             planItemId = Domain.ValueObjects.Id<object>.New().ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -295,19 +294,19 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             "Original notes",
             new SupplementPlanItemInput("Original item", "1 cap", "08:00", 127, 0));
 
-        created.IsActive.Should().BeFalse();
-        created.Items.Should().ContainSingle();
+        Assert.That(created.IsActive, Is.False);
+        Assert.That(created.Items, Has.Exactly(1).Items);
 
         SetAuthorizationHeader(trainer.Id);
         var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans");
-        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var list = await ReadJsonAsync(listResponse))
         {
-            list.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-            list.RootElement.GetArrayLength().Should().Be(1);
+            Assert.That(list.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(list.RootElement.GetArrayLength(), Is.EqualTo(1));
             AssertPlanContract(list.RootElement[0]);
-            list.RootElement[0].GetProperty("_id").GetString().Should().Be(created.Id);
-            list.RootElement[0].GetProperty("name").GetString().Should().Be("Original stack");
+            Assert.That(list.RootElement[0].GetProperty("_id").GetString(), Is.EqualTo(created.Id));
+            Assert.That(list.RootElement[0].GetProperty("name").GetString(), Is.EqualTo("Original stack"));
         }
 
         var assignResponse = await Client.PostAsync(
@@ -328,38 +327,36 @@ public sealed class SupplementationApiTests : IntegrationTestBase
                 }
             });
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         string updatedId;
         string[] updatedItemIds;
         using (var updated = await ReadJsonAsync(updateResponse))
         {
             AssertPlanContract(updated.RootElement);
             updatedId = updated.RootElement.GetProperty("_id").GetString()!;
-            updatedId.Should().NotBe(created.Id);
-            updated.RootElement.GetProperty("trainerId").GetString().Should().Be(trainer.Id.ToString());
-            updated.RootElement.GetProperty("traineeId").GetString().Should().Be(trainee.Id.ToString());
-            updated.RootElement.GetProperty("name").GetString().Should().Be("Replacement stack");
-            updated.RootElement.GetProperty("notes").GetString().Should().Be("Replacement notes");
-            updated.RootElement.GetProperty("isActive").GetBoolean().Should().BeTrue();
-            updated.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("supplementName").GetString())
-                .Should().Equal("Earlier", "Later");
+            Assert.That(updatedId, Is.Not.EqualTo(created.Id));
+            Assert.That(updated.RootElement.GetProperty("trainerId").GetString(), Is.EqualTo(trainer.Id.ToString()));
+            Assert.That(updated.RootElement.GetProperty("traineeId").GetString(), Is.EqualTo(trainee.Id.ToString()));
+            Assert.That(updated.RootElement.GetProperty("name").GetString(), Is.EqualTo("Replacement stack"));
+            Assert.That(updated.RootElement.GetProperty("notes").GetString(), Is.EqualTo("Replacement notes"));
+            Assert.That(updated.RootElement.GetProperty("isActive").GetBoolean(), Is.True);
+            Assert.That(updated.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("supplementName").GetString()), Is.EqualTo(new[] { "Earlier", "Later" }));
             updatedItemIds = updated.RootElement.GetProperty("items").EnumerateArray()
                 .Select(item => item.GetProperty("_id").GetString()!)
                 .ToArray();
         }
 
         var persistedPlans = await GetSupplementPlansIgnoringFiltersAsync(trainee.Id);
-        persistedPlans.Should().HaveCount(2);
+        Assert.That(persistedPlans, Has.Exactly(2).Items);
         var replacedPlan = persistedPlans.Single(plan => plan.Id.ToString() == created.Id);
         var replacementPlan = persistedPlans.Single(plan => plan.Id.ToString() == updatedId);
-        replacedPlan.IsDeleted.Should().BeTrue();
-        replacedPlan.IsActive.Should().BeFalse();
-        replacementPlan.IsDeleted.Should().BeFalse();
-        replacementPlan.IsActive.Should().BeTrue();
-        replacementPlan.Items.Select(item => item.Id.ToString()).Should().Equal(updatedItemIds);
-        replacementPlan.Items.Select(item => item.Id.ToString())
-            .Intersect(created.Items.Select(item => item.Id))
-            .Should().BeEmpty();
+        Assert.That(replacedPlan.IsDeleted, Is.True);
+        Assert.That(replacedPlan.IsActive, Is.False);
+        Assert.That(replacementPlan.IsDeleted, Is.False);
+        Assert.That(replacementPlan.IsActive, Is.True);
+        Assert.That(replacementPlan.Items.Select(item => item.Id.ToString()), Is.EqualTo(updatedItemIds));
+        Assert.That(replacementPlan.Items.Select(item => item.Id.ToString())
+            .Intersect(created.Items.Select(item => item.Id)), Is.Empty);
 
         var deleteResponse = await Client.PostAsync(
             $"/api/trainer/trainees/{trainee.Id}/supplement-plans/{updatedId}/delete",
@@ -368,8 +365,8 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         persistedPlans = await GetSupplementPlansIgnoringFiltersAsync(trainee.Id);
         var deletedReplacement = persistedPlans.Single(plan => plan.Id.ToString() == updatedId);
-        deletedReplacement.IsDeleted.Should().BeTrue();
-        deletedReplacement.IsActive.Should().BeFalse();
+        Assert.That(deletedReplacement.IsDeleted, Is.True);
+        Assert.That(deletedReplacement.IsActive, Is.False);
     }
 
     [Test]
@@ -393,40 +390,40 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/update", ValidSupplementRequest()),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         await AssertMessageAsync(await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/assign", null), HttpStatusCode.NotFound, Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/delete", null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         ClearAuthorizationHeader();
         using (var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/assign", null))
         {
-            assignResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(assignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         using (var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/update", ValidSupplementRequest()))
         {
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         using (var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/delete", null))
         {
-            deleteResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
     }
 
     [Test]
@@ -449,17 +446,17 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             Messages.DidntFind);
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         await AssertMessageAsync(await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/assign", null), HttpStatusCode.NotFound, Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/delete", null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
     }
 
     [Test]
@@ -477,7 +474,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await AssertMessageAsync(
@@ -485,17 +482,17 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             Messages.DidntFind);
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         await AssertMessageAsync(await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/assign", null), HttpStatusCode.NotFound, Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
 
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/{plan.Id}/delete", null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(before);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(before));
     }
 
     [Test]
@@ -539,21 +536,21 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         await AssertSingleActivePlanAsync(trainee.Id, second.Id);
 
         var activePlans = await GetSupplementPlansIgnoringFiltersAsync(trainee.Id);
-        activePlans.Single(plan => plan.Id.ToString() == first.Id).IsActive.Should().BeFalse();
-        activePlans.Single(plan => plan.Id.ToString() == inactive.Id).IsActive.Should().BeFalse();
+        Assert.That(activePlans.Single(plan => plan.Id.ToString() == first.Id).IsActive, Is.False);
+        Assert.That(activePlans.Single(plan => plan.Id.ToString() == inactive.Id).IsActive, Is.False);
 
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.OK,
             Messages.Updated);
-        (await GetSupplementPlansIgnoringFiltersAsync(trainee.Id)).Should().NotContain(plan => plan.IsActive);
+        Assert.That(((await GetSupplementPlansIgnoringFiltersAsync(trainee.Id))).Any(plan => plan.IsActive), Is.False);
 
         var noActiveSnapshot = await GetSupplementPlanSnapshotsAsync(trainee.Id);
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.OK,
             Messages.Updated);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(noActiveSnapshot);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(noActiveSnapshot));
 
         var foreignPlanId = await SeedSupplementPlanAsync(otherTrainer.Id, trainee.Id, "Foreign active", isActive: true);
         var foreignBefore = (await GetSupplementPlanSnapshotsAsync(trainee.Id))
@@ -566,8 +563,8 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         var foreignAfter = (await GetSupplementPlanSnapshotsAsync(trainee.Id))
             .Single(plan => plan.Id == foreignPlanId.ToString());
-        foreignAfter.Should().Be(foreignBefore);
-        foreignAfter.IsActive.Should().BeTrue();
+        Assert.That(foreignAfter, Is.EqualTo(foreignBefore));
+        Assert.That(foreignAfter.IsActive, Is.True);
     }
 
     [Test]
@@ -592,11 +589,9 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.OK,
             Messages.Updated);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id))
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id))
             .Single(plan => plan.Id == ownedPlanId.ToString())
-            .IsActive
-            .Should()
-            .BeFalse();
+            .IsActive, Is.False);
 
         var foreignPlanId = await SeedSupplementPlanAsync(foreignTrainer.Id, trainee.Id, "Foreign active", isActive: true);
         var beforeDeniedOrNoOpRequests = await GetSupplementPlanSnapshotsAsync(trainee.Id);
@@ -606,35 +601,35 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.OK,
             Messages.Updated);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(beforeDeniedOrNoOpRequests);
-        beforeDeniedOrNoOpRequests.Single(plan => plan.Id == foreignPlanId.ToString()).IsActive.Should().BeTrue();
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(beforeDeniedOrNoOpRequests));
+        Assert.That(beforeDeniedOrNoOpRequests.Single(plan => plan.Id == foreignPlanId.ToString()).IsActive, Is.True);
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(beforeDeniedOrNoOpRequests);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(beforeDeniedOrNoOpRequests));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(beforeDeniedOrNoOpRequests);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(beforeDeniedOrNoOpRequests));
 
         SetAuthorizationHeader(trainer.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await AssertMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans/unassign", null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(beforeDeniedOrNoOpRequests);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(beforeDeniedOrNoOpRequests));
     }
 
     [Test]
@@ -657,67 +652,74 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
         using (var ownerResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans"))
         {
-            ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var ownerPlans = await ReadJsonAsync(ownerResponse);
-            ownerPlans.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-            ownerPlans.RootElement.EnumerateArray()
-                .Select(plan => plan.GetProperty("_id").GetString())
-                .Should().Contain(planId.ToString());
+            Assert.That(ownerPlans.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(ownerPlans.RootElement.EnumerateArray()
+                .Select(plan => plan.GetProperty("_id").GetString()), Does.Contain(planId.ToString()));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(foreignTrainer.Id);
         using (var foreignResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans"))
         {
-            foreignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var foreignBody = await foreignResponse.Content.ReadAsStringAsync();
-            foreignBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only plan");
+            var assertedChain19 = foreignBody;
+            Assert.That(assertedChain19, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain19, Does.Not.Contain("Owner-only plan"));
             using var foreignPlans = JsonDocument.Parse(foreignBody);
-            foreignPlans.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-            foreignPlans.RootElement.GetArrayLength().Should().Be(0);
+            Assert.That(foreignPlans.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(foreignPlans.RootElement.GetArrayLength(), Is.EqualTo(0));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         using (var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans"))
         {
-            unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var unrelatedBody = await unrelatedResponse.Content.ReadAsStringAsync();
-            unrelatedBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only plan");
+            var assertedChain20 = unrelatedBody;
+            Assert.That(assertedChain20, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain20, Does.Not.Contain("Owner-only plan"));
             using var message = JsonDocument.Parse(unrelatedBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans"))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             var anonymousBody = await anonymousResponse.Content.ReadAsStringAsync();
-            anonymousBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only plan");
+            var assertedChain21 = anonymousBody;
+            Assert.That(assertedChain21, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain21, Does.Not.Contain("Owner-only plan"));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(owner.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using (var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/supplement-plans"))
         {
-            formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var formerBody = await formerResponse.Content.ReadAsStringAsync();
-            formerBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only plan");
+            var assertedChain22 = formerBody;
+            Assert.That(assertedChain22, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain22, Does.Not.Contain("Owner-only plan"));
             using var message = JsonDocument.Parse(formerBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
     }
 
     [Test]
@@ -742,63 +744,71 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
         using (var ownerResponse = await Client.GetAsync(route))
         {
-            ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var ownerSummary = await ReadJsonAsync(ownerResponse);
             AssertComplianceContract(ownerSummary.RootElement, trainee.Id.ToString(), date, date, 1, 0, 0);
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(foreignTrainer.Id);
         using (var foreignResponse = await Client.GetAsync(route))
         {
-            foreignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var foreignBody = await foreignResponse.Content.ReadAsStringAsync();
-            foreignBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only compliance plan");
+            var assertedChain23 = foreignBody;
+            Assert.That(assertedChain23, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain23, Does.Not.Contain("Owner-only compliance plan"));
             using var foreignSummary = JsonDocument.Parse(foreignBody);
             AssertComplianceContract(foreignSummary.RootElement, trainee.Id.ToString(), date, date, 0, 0, 0);
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         using (var unrelatedResponse = await Client.GetAsync(route))
         {
-            unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var unrelatedBody = await unrelatedResponse.Content.ReadAsStringAsync();
-            unrelatedBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only compliance plan");
+            var assertedChain24 = unrelatedBody;
+            Assert.That(assertedChain24, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain24, Does.Not.Contain("Owner-only compliance plan"));
             using var message = JsonDocument.Parse(unrelatedBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.GetAsync(route))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             var anonymousBody = await anonymousResponse.Content.ReadAsStringAsync();
-            anonymousBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only compliance plan");
+            var assertedChain25 = anonymousBody;
+            Assert.That(assertedChain25, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain25, Does.Not.Contain("Owner-only compliance plan"));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
 
         SetAuthorizationHeader(owner.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using (var formerResponse = await Client.GetAsync(route))
         {
-            formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var formerBody = await formerResponse.Content.ReadAsStringAsync();
-            formerBody.Should().NotContain(planId.ToString()).And.NotContain("Owner-only compliance plan");
+            var assertedChain26 = formerBody;
+            Assert.That(assertedChain26, Does.Not.Contain(planId.ToString()));
+            Assert.That(assertedChain26, Does.Not.Contain("Owner-only compliance plan"));
             using var message = JsonDocument.Parse(formerBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(planId)).Should().Be(before);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(planId)), Is.EqualTo(before));
     }
 
     [Test]
@@ -827,14 +837,14 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             items = new[] { new { supplementName = "Owner item", dosage = "1", timeOfDay = "08:00", daysOfWeekMask = 127, order = 0 } }
         }))
         {
-            ownerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             using var ownerCreated = await ReadJsonAsync(ownerResponse);
-            ownerCreated.RootElement.GetProperty("trainerId").GetString().Should().Be(owner.Id.ToString());
-            ownerCreated.RootElement.GetProperty("traineeId").GetString().Should().Be(trainee.Id.ToString());
-            ownerCreated.RootElement.GetProperty("name").GetString().Should().Be("Owner-created plan");
+            Assert.That(ownerCreated.RootElement.GetProperty("trainerId").GetString(), Is.EqualTo(owner.Id.ToString()));
+            Assert.That(ownerCreated.RootElement.GetProperty("traineeId").GetString(), Is.EqualTo(trainee.Id.ToString()));
+            Assert.That(ownerCreated.RootElement.GetProperty("name").GetString(), Is.EqualTo("Owner-created plan"));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)).Should().Be(ownerPlanBefore);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)), Is.EqualTo(ownerPlanBefore));
 
         SetAuthorizationHeader(foreignTrainer.Id);
         using (var foreignResponse = await Client.PostAsJsonAsync(route, new
@@ -844,58 +854,66 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             items = new[] { new { supplementName = "Foreign item", dosage = "1", timeOfDay = "08:00", daysOfWeekMask = 127, order = 0 } }
         }))
         {
-            foreignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             using var foreignCreated = await ReadJsonAsync(foreignResponse);
-            foreignCreated.RootElement.GetProperty("trainerId").GetString().Should().Be(foreignTrainer.Id.ToString());
-            foreignCreated.RootElement.GetProperty("traineeId").GetString().Should().Be(trainee.Id.ToString());
-            foreignCreated.RootElement.GetProperty("name").GetString().Should().Be("Foreign-created plan");
-            foreignCreated.RootElement.GetRawText().Should().NotContain(ownerPlanId.ToString()).And.NotContain("Existing owner plan");
+            Assert.That(foreignCreated.RootElement.GetProperty("trainerId").GetString(), Is.EqualTo(foreignTrainer.Id.ToString()));
+            Assert.That(foreignCreated.RootElement.GetProperty("traineeId").GetString(), Is.EqualTo(trainee.Id.ToString()));
+            Assert.That(foreignCreated.RootElement.GetProperty("name").GetString(), Is.EqualTo("Foreign-created plan"));
+            var assertedChain27 = foreignCreated.RootElement.GetRawText();
+            Assert.That(assertedChain27, Does.Not.Contain(ownerPlanId.ToString()));
+            Assert.That(assertedChain27, Does.Not.Contain("Existing owner plan"));
         }
 
-        (await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)).Should().Be(ownerPlanBefore);
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)), Is.EqualTo(ownerPlanBefore));
         var beforeDeniedRequests = await GetSupplementPlanCountNoTrackingAsync(trainee.Id);
 
         SetAuthorizationHeader(unrelatedTrainer.Id);
         using (var unrelatedResponse = await Client.PostAsJsonAsync(route, ValidSupplementRequest()))
         {
-            unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var unrelatedBody = await unrelatedResponse.Content.ReadAsStringAsync();
-            unrelatedBody.Should().NotContain(ownerPlanId.ToString()).And.NotContain("Existing owner plan");
+            var assertedChain28 = unrelatedBody;
+            Assert.That(assertedChain28, Does.Not.Contain(ownerPlanId.ToString()));
+            Assert.That(assertedChain28, Does.Not.Contain("Existing owner plan"));
             using var message = JsonDocument.Parse(unrelatedBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanCountNoTrackingAsync(trainee.Id)).Should().Be(beforeDeniedRequests);
-        (await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)).Should().Be(ownerPlanBefore);
+        Assert.That((await GetSupplementPlanCountNoTrackingAsync(trainee.Id)), Is.EqualTo(beforeDeniedRequests));
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)), Is.EqualTo(ownerPlanBefore));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsJsonAsync(route, ValidSupplementRequest()))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             var anonymousBody = await anonymousResponse.Content.ReadAsStringAsync();
-            anonymousBody.Should().NotContain(ownerPlanId.ToString()).And.NotContain("Existing owner plan");
+            var assertedChain29 = anonymousBody;
+            Assert.That(assertedChain29, Does.Not.Contain(ownerPlanId.ToString()));
+            Assert.That(assertedChain29, Does.Not.Contain("Existing owner plan"));
         }
 
-        (await GetSupplementPlanCountNoTrackingAsync(trainee.Id)).Should().Be(beforeDeniedRequests);
-        (await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)).Should().Be(ownerPlanBefore);
+        Assert.That((await GetSupplementPlanCountNoTrackingAsync(trainee.Id)), Is.EqualTo(beforeDeniedRequests));
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)), Is.EqualTo(ownerPlanBefore));
 
         SetAuthorizationHeader(owner.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using (var formerResponse = await Client.PostAsJsonAsync(route, ValidSupplementRequest()))
         {
-            formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var formerBody = await formerResponse.Content.ReadAsStringAsync();
-            formerBody.Should().NotContain(ownerPlanId.ToString()).And.NotContain("Existing owner plan");
+            var assertedChain30 = formerBody;
+            Assert.That(assertedChain30, Does.Not.Contain(ownerPlanId.ToString()));
+            Assert.That(assertedChain30, Does.Not.Contain("Existing owner plan"));
             using var message = JsonDocument.Parse(formerBody);
-            message.RootElement.GetProperty("msg").GetString().Should().Be(Messages.DidntFind);
+            Assert.That(message.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.DidntFind));
         }
 
-        (await GetSupplementPlanCountNoTrackingAsync(trainee.Id)).Should().Be(beforeDeniedRequests);
-        (await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)).Should().Be(ownerPlanBefore);
+        Assert.That((await GetSupplementPlanCountNoTrackingAsync(trainee.Id)), Is.EqualTo(beforeDeniedRequests));
+        Assert.That((await GetSupplementPlanSnapshotNoTrackingAsync(ownerPlanId)), Is.EqualTo(ownerPlanBefore));
     }
 
     [Test]
@@ -932,16 +950,15 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate = monday,
             takenAt
         });
-        checkOff.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(checkOff.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var scheduledResponse = await Client.GetAsync($"/api/trainee/supplements/schedule?date={monday:yyyy-MM-dd}");
-        scheduledResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(scheduledResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var schedule = await ReadJsonAsync(scheduledResponse))
         {
-            schedule.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-            schedule.RootElement.EnumerateArray().Select(item => item.GetProperty("supplementName").GetString())
-                .Should().Equal("Daily", "Iron", "Zinc", "Later");
-            schedule.RootElement.EnumerateArray().Should().NotContain(item => item.GetProperty("supplementName").GetString() == "Tuesday only");
+            Assert.That(schedule.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(schedule.RootElement.EnumerateArray().Select(item => item.GetProperty("supplementName").GetString()), Is.EqualTo(new[] { "Daily", "Iron", "Zinc", "Later" }));
+            Assert.That((schedule.RootElement.EnumerateArray()).Any(item => item.GetProperty("supplementName").GetString() == "Tuesday only"), Is.False);
 
             foreach (var entry in schedule.RootElement.EnumerateArray())
             {
@@ -957,24 +974,24 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         var beforeDefaultDate = DateOnly.FromDateTime(DateTime.UtcNow);
         var defaultScheduleResponse = await Client.GetAsync("/api/trainee/supplements/schedule");
         var afterDefaultDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        defaultScheduleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(defaultScheduleResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var defaultSchedule = await ReadJsonAsync(defaultScheduleResponse))
         {
-            defaultSchedule.RootElement.EnumerateArray().Should().Contain(entry =>
-                entry.GetProperty("supplementName").GetString() == "Daily");
+            Assert.That((defaultSchedule.RootElement.EnumerateArray()).Any(entry =>
+                entry.GetProperty("supplementName").GetString() == "Daily"), Is.True);
             foreach (var entry in defaultSchedule.RootElement.EnumerateArray())
             {
-                DateOnly.Parse(entry.GetProperty("intakeDate").GetString()!).Should().BeOneOf(beforeDefaultDate, afterDefaultDate);
+                Assert.That(DateOnly.Parse(entry.GetProperty("intakeDate").GetString()!), Is.AnyOf(beforeDefaultDate, afterDefaultDate));
             }
         }
 
         var emptyTrainee = await SeedUserAsync("trainee-supp-empty-schedule", "trainee-supp-empty-schedule@example.com", "password123");
         SetAuthorizationHeader(emptyTrainee.Id);
         var emptyResponse = await Client.GetAsync($"/api/trainee/supplements/schedule?date={monday:yyyy-MM-dd}");
-        emptyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(emptyResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var empty = await ReadJsonAsync(emptyResponse);
-        empty.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        empty.RootElement.GetArrayLength().Should().Be(0);
+        Assert.That(empty.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+        Assert.That(empty.RootElement.GetArrayLength(), Is.EqualTo(0));
     }
 
     [Test]
@@ -1010,7 +1027,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate,
             takenAt = firstTakenAt
         });
-        explicitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(explicitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var explicitEntry = await ReadJsonAsync(explicitResponse))
         {
             AssertScheduleContract(explicitEntry.RootElement, intakeDate, taken: true, expectedTakenAt: firstTakenAt);
@@ -1021,7 +1038,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             planItemId = explicitItem.Id,
             intakeDate
         });
-        retainedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(retainedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var retainedEntry = await ReadJsonAsync(retainedResponse))
         {
             AssertScheduleContract(retainedEntry.RootElement, intakeDate, taken: true, expectedTakenAt: firstTakenAt);
@@ -1033,7 +1050,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate,
             takenAt = replacementTakenAt
         });
-        replacedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(replacedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var replacedEntry = await ReadJsonAsync(replacedResponse))
         {
             AssertScheduleContract(replacedEntry.RootElement, intakeDate, taken: true, expectedTakenAt: replacementTakenAt);
@@ -1046,18 +1063,22 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate
         });
         var afterDefaultTakenAt = DateTimeOffset.UtcNow;
-        defaultResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(defaultResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var defaultEntry = await ReadJsonAsync(defaultResponse))
         {
             AssertScheduleContract(defaultEntry.RootElement, intakeDate, taken: true, expectedTakenAt: null);
             var generatedTakenAt = defaultEntry.RootElement.GetProperty("takenAt").GetDateTimeOffset();
-            generatedTakenAt.Should().BeOnOrAfter(beforeDefaultTakenAt).And.BeOnOrBefore(afterDefaultTakenAt);
+            var assertedChain31 = generatedTakenAt;
+            Assert.That(assertedChain31, Is.GreaterThanOrEqualTo(beforeDefaultTakenAt));
+            Assert.That(assertedChain31, Is.LessThanOrEqualTo(afterDefaultTakenAt));
         }
 
         var logs = await GetSupplementIntakeLogsAsync(trainee.Id);
-        logs.Should().HaveCount(2);
-        logs.Single(log => log.PlanItemId.ToString() == explicitItem.Id).TakenAt.Should().Be(replacementTakenAt);
-        logs.Single(log => log.PlanItemId.ToString() == defaultItem.Id).TakenAt.Should().BeOnOrAfter(beforeDefaultTakenAt).And.BeOnOrBefore(afterDefaultTakenAt);
+        Assert.That(logs, Has.Exactly(2).Items);
+        Assert.That(logs.Single(log => log.PlanItemId.ToString() == explicitItem.Id).TakenAt, Is.EqualTo(replacementTakenAt));
+        var assertedChain32 = logs.Single(log => log.PlanItemId.ToString() == defaultItem.Id).TakenAt;
+        Assert.That(assertedChain32, Is.GreaterThanOrEqualTo(beforeDefaultTakenAt));
+        Assert.That(assertedChain32, Is.LessThanOrEqualTo(afterDefaultTakenAt));
     }
 
     [Test]
@@ -1088,12 +1109,12 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             intakeDate = fromDate,
             takenAt = new DateTimeOffset(2026, 7, 6, 8, 0, 0, TimeSpan.Zero)
         });
-        checkOffResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(checkOffResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainer.Id);
         var summaryResponse = await Client.GetAsync(
             $"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate={fromDate:yyyy-MM-dd}&toDate={toDate:yyyy-MM-dd}");
-        summaryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(summaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var summary = await ReadJsonAsync(summaryResponse))
         {
             AssertComplianceContract(summary.RootElement, trainee.Id.ToString(), fromDate, toDate, 3, 1, 33.33);
@@ -1118,7 +1139,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             Messages.Updated);
         var zeroSummaryResponse = await Client.GetAsync(
             $"/api/trainer/trainees/{trainee.Id}/supplements/compliance?fromDate={fromDate:yyyy-MM-dd}&toDate={toDate:yyyy-MM-dd}");
-        zeroSummaryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(zeroSummaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var zeroSummary = await ReadJsonAsync(zeroSummaryResponse))
         {
             AssertComplianceContract(zeroSummary.RootElement, trainee.Id.ToString(), fromDate, toDate, 0, 0, 0);
@@ -1178,7 +1199,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(regularUser.Id);
         var regularUserResponse = await Client.GetAsync($"/api/trainer/trainees/{existingTrainee.Id}/supplement-plans");
-        regularUserResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(regularUserResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         SetAuthorizationHeader(trainer.Id);
         await AssertMessageAsync(
@@ -1210,7 +1231,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             }),
             HttpStatusCode.BadRequest,
             Messages.FieldRequired);
-        (await GetSupplementPlansIgnoringFiltersAsync(trainee.Id)).Should().BeEmpty();
+        Assert.That((await GetSupplementPlansIgnoringFiltersAsync(trainee.Id)), Is.Empty);
 
         var plan = await CreateSupplementPlanAsync(
             trainer.Id,
@@ -1236,7 +1257,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             }),
             HttpStatusCode.BadRequest,
             Messages.FieldRequired);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(plansBeforeFailures);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(plansBeforeFailures));
 
         SetAuthorizationHeader(trainee.Id);
         await AssertMessageAsync(
@@ -1247,7 +1268,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
             }),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementIntakeLogsAsync(trainee.Id)).Should().BeEmpty();
+        Assert.That((await GetSupplementIntakeLogsAsync(trainee.Id)), Is.Empty);
 
         SetAuthorizationHeader(trainer.Id);
         await AssertMessageAsync(
@@ -1256,7 +1277,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
                 null),
             HttpStatusCode.NotFound,
             Messages.DidntFind);
-        (await GetSupplementPlanSnapshotsAsync(trainee.Id)).Should().Equal(plansBeforeFailures);
+        Assert.That((await GetSupplementPlanSnapshotsAsync(trainee.Id)), Is.EqualTo(plansBeforeFailures));
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)
@@ -1318,14 +1339,14 @@ public sealed class SupplementationApiTests : IntegrationTestBase
                 })
             });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var document = await ReadJsonAsync(response);
         AssertPlanContract(document.RootElement);
-        document.RootElement.GetProperty("trainerId").GetString().Should().Be(trainerId.ToString());
-        document.RootElement.GetProperty("traineeId").GetString().Should().Be(traineeId.ToString());
-        document.RootElement.GetProperty("name").GetString().Should().Be(name);
-        document.RootElement.GetProperty("notes").GetString().Should().Be(notes);
-        document.RootElement.GetProperty("isActive").GetBoolean().Should().BeFalse();
+        Assert.That(document.RootElement.GetProperty("trainerId").GetString(), Is.EqualTo(trainerId.ToString()));
+        Assert.That(document.RootElement.GetProperty("traineeId").GetString(), Is.EqualTo(traineeId.ToString()));
+        Assert.That(document.RootElement.GetProperty("name").GetString(), Is.EqualTo(name));
+        Assert.That(document.RootElement.GetProperty("notes").GetString(), Is.EqualTo(notes));
+        Assert.That(document.RootElement.GetProperty("isActive").GetBoolean(), Is.False);
 
         return JsonSerializer.Deserialize<SupplementPlanResponse>(document.RootElement.GetRawText())!;
     }
@@ -1434,8 +1455,7 @@ public sealed class SupplementationApiTests : IntegrationTestBase
     private async Task AssertSingleActivePlanAsync(Id<User> traineeId, string expectedPlanId)
     {
         var plans = await GetSupplementPlansIgnoringFiltersAsync(traineeId);
-        plans.Where(plan => plan.IsActive && !plan.IsDeleted).Select(plan => plan.Id.ToString())
-            .Should().Equal(expectedPlanId);
+        Assert.That(plans.Where(plan => plan.IsActive && !plan.IsDeleted).Select(plan => plan.Id.ToString()), Is.EqualTo(new[] { expectedPlanId }));
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
@@ -1445,42 +1465,28 @@ public sealed class SupplementationApiTests : IntegrationTestBase
 
     private static async Task AssertMessageAsync(HttpResponseMessage response, HttpStatusCode statusCode, string expectedMessage)
     {
-        response.StatusCode.Should().Be(statusCode);
+        Assert.That(response.StatusCode, Is.EqualTo(statusCode));
         using var document = await ReadJsonAsync(response);
-        document.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal("msg");
-        document.RootElement.GetProperty("msg").GetString().Should().Be(expectedMessage);
-        document.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        Assert.That(document.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "msg" }));
+        Assert.That(document.RootElement.GetProperty("msg").GetString(), Is.EqualTo(expectedMessage));
+        Assert.That(document.RootElement.TryGetProperty("message", out _), Is.False);
     }
 
     private static void AssertPlanContract(JsonElement plan)
     {
-        plan.ValueKind.Should().Be(JsonValueKind.Object);
-        plan.EnumerateObject().Select(property => property.Name).Should().Equal(
-            "_id",
-            "trainerId",
-            "traineeId",
-            "name",
-            "notes",
-            "isActive",
-            "createdAt",
-            "items");
-        plan.TryGetProperty("id", out _).Should().BeFalse();
-        plan.GetProperty("_id").GetString().Should().NotBeNullOrWhiteSpace();
-        plan.GetProperty("trainerId").GetString().Should().NotBeNullOrWhiteSpace();
-        plan.GetProperty("traineeId").GetString().Should().NotBeNullOrWhiteSpace();
-        plan.GetProperty("createdAt").GetDateTimeOffset().Should().NotBe(default);
+        Assert.That(plan.ValueKind, Is.EqualTo(JsonValueKind.Object));
+        Assert.That(plan.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "_id", "trainerId", "traineeId", "name", "notes", "isActive", "createdAt", "items" }));
+        Assert.That(plan.TryGetProperty("id", out _), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(plan.GetProperty("_id").GetString()), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(plan.GetProperty("trainerId").GetString()), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(plan.GetProperty("traineeId").GetString()), Is.False);
+        Assert.That(plan.GetProperty("createdAt").GetDateTimeOffset(), Is.Not.EqualTo(default(System.DateTimeOffset)));
 
         foreach (var item in plan.GetProperty("items").EnumerateArray())
         {
-            item.EnumerateObject().Select(property => property.Name).Should().Equal(
-                "_id",
-                "supplementName",
-                "dosage",
-                "timeOfDay",
-                "daysOfWeekMask",
-                "order");
-            item.TryGetProperty("id", out _).Should().BeFalse();
-            item.GetProperty("_id").GetString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(item.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "_id", "supplementName", "dosage", "timeOfDay", "daysOfWeekMask", "order" }));
+            Assert.That(item.TryGetProperty("id", out _), Is.False);
+            Assert.That(string.IsNullOrWhiteSpace(item.GetProperty("_id").GetString()), Is.False);
         }
     }
 
@@ -1490,26 +1496,25 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         bool taken,
         DateTimeOffset? expectedTakenAt)
     {
-        entry.ValueKind.Should().Be(JsonValueKind.Object);
+        Assert.That(entry.ValueKind, Is.EqualTo(JsonValueKind.Object));
         var expectedProperties = taken
             ? new[] { "planItemId", "supplementName", "dosage", "timeOfDay", "intakeDate", "taken", "takenAt" }
             : new[] { "planItemId", "supplementName", "dosage", "timeOfDay", "intakeDate", "taken" };
-        entry.EnumerateObject().Select(property => property.Name).Should().Equal(expectedProperties);
-        entry.GetProperty("planItemId").GetString().Should().NotBeNullOrWhiteSpace();
-        entry.GetProperty("intakeDate").GetString().Should().Be(expectedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        entry.GetProperty("taken").GetBoolean().Should().Be(taken);
+        Assert.That(entry.EnumerateObject().Select(property => property.Name), Is.EqualTo(expectedProperties));
+        Assert.That(string.IsNullOrWhiteSpace(entry.GetProperty("planItemId").GetString()), Is.False);
+        Assert.That(entry.GetProperty("intakeDate").GetString(), Is.EqualTo(expectedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        Assert.That(entry.GetProperty("taken").GetBoolean(), Is.EqualTo(taken));
 
         if (!taken)
         {
-            entry.TryGetProperty("takenAt", out _).Should().BeFalse();
+            Assert.That(entry.TryGetProperty("takenAt", out _), Is.False);
             return;
         }
 
-        entry.GetProperty("takenAt").ValueKind.Should().Be(JsonValueKind.String);
+        Assert.That(entry.GetProperty("takenAt").ValueKind, Is.EqualTo(JsonValueKind.String));
         if (expectedTakenAt is not null)
         {
-            entry.GetProperty("takenAt").GetString().Should().Be(
-                expectedTakenAt.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture));
+            Assert.That(entry.GetProperty("takenAt").GetString(), Is.EqualTo(expectedTakenAt.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)));
         }
     }
 
@@ -1522,26 +1527,20 @@ public sealed class SupplementationApiTests : IntegrationTestBase
         int takenDoses,
         double adherenceRate)
     {
-        summary.ValueKind.Should().Be(JsonValueKind.Object);
-        summary.EnumerateObject().Select(property => property.Name).Should().Equal(
-            "traineeId",
-            "fromDate",
-            "toDate",
-            "plannedDoses",
-            "takenDoses",
-            "adherenceRate");
-        summary.GetProperty("traineeId").GetString().Should().Be(traineeId);
-        summary.GetProperty("fromDate").GetString().Should().Be(fromDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        summary.GetProperty("toDate").GetString().Should().Be(toDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        summary.GetProperty("plannedDoses").GetInt32().Should().Be(plannedDoses);
-        summary.GetProperty("takenDoses").GetInt32().Should().Be(takenDoses);
-        summary.GetProperty("adherenceRate").GetDouble().Should().Be(adherenceRate);
+        Assert.That(summary.ValueKind, Is.EqualTo(JsonValueKind.Object));
+        Assert.That(summary.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "traineeId", "fromDate", "toDate", "plannedDoses", "takenDoses", "adherenceRate" }));
+        Assert.That(summary.GetProperty("traineeId").GetString(), Is.EqualTo(traineeId));
+        Assert.That(summary.GetProperty("fromDate").GetString(), Is.EqualTo(fromDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        Assert.That(summary.GetProperty("toDate").GetString(), Is.EqualTo(toDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        Assert.That(summary.GetProperty("plannedDoses").GetInt32(), Is.EqualTo(plannedDoses));
+        Assert.That(summary.GetProperty("takenDoses").GetInt32(), Is.EqualTo(takenDoses));
+        Assert.That(summary.GetProperty("adherenceRate").GetDouble(), Is.EqualTo(adherenceRate));
     }
 
     private void SetRequestCulture(string culture)
     {
         Client.DefaultRequestHeaders.Remove("Accept-Language");
-        Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", culture).Should().BeTrue();
+        Assert.That(Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", culture), Is.True);
     }
 
     private static string GetMessageForCulture(string culture, Func<string> getMessage)

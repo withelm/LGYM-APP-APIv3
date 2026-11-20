@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
@@ -18,8 +17,8 @@ public sealed class ReportingServiceModuleConfigTests
 
         var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var views);
 
-        result.Should().BeTrue();
-        views.Should().BeEquivalentTo(new[] { "Front", "Side", "Back" });
+        Assert.That(result, Is.True);
+        Assert.That(views, Is.EquivalentTo(new[] { "Front", "Side", "Back" }));
     }
 
     [Test]
@@ -31,8 +30,8 @@ public sealed class ReportingServiceModuleConfigTests
 
         var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out var views);
 
-        result.Should().BeTrue();
-        views.Should().BeEquivalentTo(new[] { "Front", "SideLeft", "SideRight", "Back" });
+        Assert.That(result, Is.True);
+        Assert.That(views, Is.EquivalentTo(new[] { "Front", "SideLeft", "SideRight", "Back" }));
     }
 
     [Test]
@@ -44,7 +43,7 @@ public sealed class ReportingServiceModuleConfigTests
 
         var result = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(config, out _, out _);
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -56,8 +55,8 @@ public sealed class ReportingServiceModuleConfigTests
 
         var result = ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(config, out _, out var types);
 
-        result.Should().BeTrue();
-        types.Should().BeEquivalentTo(new[] { BodyParts.BodyWeight, BodyParts.BodyFat, BodyParts.Thigh });
+        Assert.That(result, Is.True);
+        Assert.That(types, Is.EquivalentTo(new[] { BodyParts.BodyWeight, BodyParts.BodyFat, BodyParts.Thigh }));
     }
 
     [Test]
@@ -69,7 +68,7 @@ public sealed class ReportingServiceModuleConfigTests
 
         var result = ReportingModuleConfigParser.TryNormalizeMeasurementModuleConfig(config, out _, out _);
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -84,7 +83,7 @@ public sealed class ReportingServiceModuleConfigTests
         var missing = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(missingConfig, out _, out _);
         var wrongKind = ReportingModuleConfigParser.TryNormalizePhotoModuleConfig(wrongKindConfig, out _, out _);
 
-        missing.Should().BeFalse();
-        wrongKind.Should().BeFalse();
+        Assert.That(missing, Is.False);
+        Assert.That(wrongKind, Is.False);
     }
 }

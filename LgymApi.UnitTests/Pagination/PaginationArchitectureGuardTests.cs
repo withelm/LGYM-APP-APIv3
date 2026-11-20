@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Infrastructure.Pagination;
 using NUnit.Framework;
 using System.Xml.Linq;
@@ -25,7 +24,7 @@ public sealed class PaginationArchitectureGuardTests
             .Where(t => t.Namespace is "LgymApi.Application.Pagination")
             .ToList();
 
-        paginationTypes.Should().NotBeEmpty("the Application.Pagination namespace should contain types");
+        Assert.That(paginationTypes, Is.Not.Empty, "the Application.Pagination namespace should contain types");
 
         var violations = new List<string>();
 
@@ -34,8 +33,7 @@ public sealed class PaginationArchitectureGuardTests
             CheckTypeForForbiddenReferences(type, violations);
         }
 
-        violations.Should().BeEmpty(
-            "Application.Pagination contracts must not depend on Gridify or EF Core types. " +
+        Assert.That(violations, Is.Empty, "Application.Pagination contracts must not depend on Gridify or EF Core types. " +
             $"Violations:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
@@ -50,8 +48,7 @@ public sealed class PaginationArchitectureGuardTests
             .Select(a => a.FullName)
             .ToList();
 
-        gridifyReferences.Should().BeEmpty(
-            "LgymApi.Application must not reference Gridify assemblies — " +
+        Assert.That(gridifyReferences, Is.Empty, "LgymApi.Application must not reference Gridify assemblies — " +
             "Gridify is an infrastructure concern");
     }
 
@@ -61,8 +58,7 @@ public sealed class PaginationArchitectureGuardTests
         var applicationProject = Path.Combine(ResolveRepositoryRoot(), "LgymApi.Application", "LgymApi.Application.csproj");
         var efCoreReferences = FindDirectEfCorePackageReferences(File.ReadAllText(applicationProject));
 
-        efCoreReferences.Should().BeEmpty(
-            "LgymApi.Application must not directly reference EF Core packages — " +
+        Assert.That(efCoreReferences, Is.Empty, "LgymApi.Application must not directly reference EF Core packages — " +
             "EF Core is an infrastructure concern");
     }
 
@@ -71,7 +67,9 @@ public sealed class PaginationArchitectureGuardTests
     {
         const string project = "<Project><ItemGroup><PackageReference Include=\"Microsoft.EntityFrameworkCore\" /></ItemGroup></Project>";
 
-        FindDirectEfCorePackageReferences(project).Should().ContainSingle().Which.Should().Be("Microsoft.EntityFrameworkCore");
+        var assertedValue191 = (FindDirectEfCorePackageReferences(project)).ToArray();
+        Assert.That(assertedValue191, Has.Exactly(1).Items);
+        Assert.That(assertedValue191.Single(), Is.EqualTo("Microsoft.EntityFrameworkCore"));
     }
 
     [Test]
@@ -83,7 +81,7 @@ public sealed class PaginationArchitectureGuardTests
                         && !t.IsInterface)
             .ToList();
 
-        repositoryTypes.Should().NotBeEmpty("the Infrastructure assembly should contain repository types");
+        Assert.That(repositoryTypes, Is.Not.Empty, "the Infrastructure assembly should contain repository types");
 
         var violations = new List<string>();
         var concreteGridifyType = typeof(GridifyExecutionService);
@@ -103,8 +101,7 @@ public sealed class PaginationArchitectureGuardTests
             }
         }
 
-        violations.Should().BeEmpty(
-            "repositories must depend on IGridifyExecutionService (interface), not GridifyExecutionService (concrete class). " +
+        Assert.That(violations, Is.Empty, "repositories must depend on IGridifyExecutionService (interface), not GridifyExecutionService (concrete class). " +
             "This enforces Dependency Inversion Principle and allows test substitution. " +
             $"Violations:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }

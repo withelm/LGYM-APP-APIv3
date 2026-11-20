@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Notifications;
 using System.Text.Json;
 using NUnit.Framework;
@@ -13,7 +12,7 @@ public sealed class InAppNotificationTypeTests
     {
         var type = InAppNotificationType.Define("custom.type");
 
-        type.Value.Should().Be("custom.type");
+        Assert.That(type.Value, Is.EqualTo("custom.type"));
     }
 
     [Test]
@@ -21,7 +20,7 @@ public sealed class InAppNotificationTypeTests
     {
         var act = () => InAppNotificationType.Define(string.Empty);
 
-        act.Should().Throw<ArgumentException>();
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -29,7 +28,7 @@ public sealed class InAppNotificationTypeTests
     {
         var type = InAppNotificationType.Parse("trainer.invitation.sent");
 
-        type.Should().Be(InAppNotificationTypes.InvitationSent);
+        Assert.That(type, Is.EqualTo(InAppNotificationTypes.InvitationSent));
     }
 
     [Test]
@@ -37,7 +36,7 @@ public sealed class InAppNotificationTypeTests
     {
         var act = () => InAppNotificationType.Parse("unknown.type");
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentOutOfRangeException>());
     }
 
     [Test]
@@ -45,8 +44,8 @@ public sealed class InAppNotificationTypeTests
     {
         var result = InAppNotificationTypes.TryFromValue("trainer.invitation.accepted", out var type);
 
-        result.Should().BeTrue();
-        type.Should().Be(InAppNotificationTypes.InvitationAccepted);
+        Assert.That(result, Is.True);
+        Assert.That(type, Is.EqualTo(InAppNotificationTypes.InvitationAccepted));
     }
 
     [Test]
@@ -54,8 +53,8 @@ public sealed class InAppNotificationTypeTests
     {
         var result = InAppNotificationTypes.TryFromValue("ReportRequestReceived", out var type);
 
-        result.Should().BeTrue();
-        type.Should().Be(InAppNotificationTypes.ReportRequestReceived);
+        Assert.That(result, Is.True);
+        Assert.That(type, Is.EqualTo(InAppNotificationTypes.ReportRequestReceived));
     }
 
     [Test]
@@ -63,8 +62,8 @@ public sealed class InAppNotificationTypeTests
     {
         var result = InAppNotificationTypes.TryFromValue("unknown.type", out var type);
 
-        result.Should().BeFalse();
-        type.Should().Be(default(InAppNotificationType));
+        Assert.That(result, Is.False);
+        Assert.That(type, Is.EqualTo(default(InAppNotificationType)));
     }
 
     [Test]
@@ -72,8 +71,8 @@ public sealed class InAppNotificationTypeTests
     {
         var result = InAppNotificationTypes.TryFromValue(null, out var type);
 
-        result.Should().BeFalse();
-        type.Should().Be(default(InAppNotificationType));
+        Assert.That(result, Is.False);
+        Assert.That(type, Is.EqualTo(default(InAppNotificationType)));
     }
 
     [Test]
@@ -82,8 +81,8 @@ public sealed class InAppNotificationTypeTests
         var json = JsonSerializer.Serialize(InAppNotificationTypes.InvitationRejected);
         var type = JsonSerializer.Deserialize<InAppNotificationType>(json);
 
-        json.Should().Be("\"trainer.invitation.rejected\"");
-        type.Should().Be(InAppNotificationTypes.InvitationRejected);
+        Assert.That(json, Is.EqualTo("\"trainer.invitation.rejected\""));
+        Assert.That(type, Is.EqualTo(InAppNotificationTypes.InvitationRejected));
     }
 
     [Test]
@@ -91,6 +90,6 @@ public sealed class InAppNotificationTypeTests
     {
         var act = () => JsonSerializer.Deserialize<InAppNotificationType>("\"\"");
 
-        act.Should().Throw<JsonException>();
+        Assert.That(() => { act(); }, Throws.InstanceOf<JsonException>());
     }
 }

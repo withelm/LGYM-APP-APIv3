@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Logging;
 using System.Reflection;
@@ -46,18 +45,18 @@ public sealed class PlatformServiceCollectionDecompositionTests
             using var scope = provider.CreateScope();
             var scopedServices = scope.ServiceProvider;
 
-            scopedServices.GetRequiredService<AppDbContext>().Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
-            scopedServices.GetRequiredService<IUnitOfWork>().Should().BeOfType<EfUnitOfWork>();
-            scopedServices.GetRequiredService<ICommittedIntentDispatcher>().GetType().Name.Should().Be("CommittedIntentDispatcher");
-            provider.GetRequiredService<IMapperRegistry>().GetType().Name.Should().Be("MapperRegistry");
+            Assert.That(scopedServices.GetRequiredService<AppDbContext>().Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
+            Assert.That(scopedServices.GetRequiredService<IUnitOfWork>(), Is.TypeOf<EfUnitOfWork>());
+            Assert.That(scopedServices.GetRequiredService<ICommittedIntentDispatcher>().GetType().Name, Is.EqualTo("CommittedIntentDispatcher"));
+            Assert.That(provider.GetRequiredService<IMapperRegistry>().GetType().Name, Is.EqualTo("MapperRegistry"));
 
             if (isTesting)
             {
-                provider.GetService<JobStorage>().Should().BeNull();
+                Assert.That(provider.GetService<JobStorage>(), Is.Null);
             }
             else
             {
-                provider.GetRequiredService<JobStorage>().GetType().FullName.Should().Be("Hangfire.PostgreSql.PostgreSqlStorage");
+                Assert.That(provider.GetRequiredService<JobStorage>().GetType().FullName, Is.EqualTo("Hangfire.PostgreSql.PostgreSqlStorage"));
             }
         }
         finally
@@ -75,7 +74,7 @@ public sealed class PlatformServiceCollectionDecompositionTests
 
         var action = () => AssertPlatformDescriptors(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*AppDbContext*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*AppDbContext*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -87,7 +86,7 @@ public sealed class PlatformServiceCollectionDecompositionTests
 
         var action = () => AssertPlatformDescriptors(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*IUnitOfWork*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*IUnitOfWork*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -99,8 +98,8 @@ public sealed class PlatformServiceCollectionDecompositionTests
 
         var action = () => services.AddNotificationsModule(TestConfigurationBuilder.BuildConfiguration(values));
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("Email:DeliveryMode must be one of: Smtp, Dummy.");
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Logging.ILoggerFactory));
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Email:DeliveryMode must be one of: Smtp, Dummy.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Logging.ILoggerFactory)), Has.Exactly(1).Items);
     }
 
     private static ServiceCollection CreateServices()
@@ -127,7 +126,7 @@ public sealed class PlatformServiceCollectionDecompositionTests
 
         if (isTesting)
         {
-            services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(JobStorage));
+            Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(JobStorage)), Is.False);
             return;
         }
 

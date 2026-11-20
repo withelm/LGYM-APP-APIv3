@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Application.Services;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -34,14 +33,14 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         }
         _googleTokenValidator.ReturnFor("applicant-token", new GoogleTokenPayload("applicant-subject", user.Email.Value, true, "Applicant", null));
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "applicant-token" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
-        json.GetProperty("req").GetProperty("trainerApprovalStatus").GetString().Should().Be(status.ToString());
-        json.GetProperty("req").GetProperty("roles").EnumerateArray().Select(role => role.GetString()).Should().NotContain("Trainer");
-        json.GetProperty("permissionClaims").EnumerateArray().Select(claim => claim.GetString()).Should().NotContain("trainer.access");
+        Assert.That(json.GetProperty("req").GetProperty("trainerApprovalStatus").GetString(), Is.EqualTo(status.ToString()));
+        Assert.That(json.GetProperty("req").GetProperty("roles").EnumerateArray().Select(role => role.GetString()), Does.Not.Contain("Trainer"));
+        Assert.That(json.GetProperty("permissionClaims").EnumerateArray().Select(claim => claim.GetString()), Does.Not.Contain("trainer.access"));
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", json.GetProperty("token").GetString());
-        (await _client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await _client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await _client.GetAsync("/api/trainer/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await _client.GetAsync("/api/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     private ConfigurableGoogleTokenValidator _googleTokenValidator = null!;
@@ -86,33 +85,33 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
-        body.User.Should().NotBeNull();
-        body.User!.HasActiveTutorials.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
+        Assert.That(body.User, Is.Not.Null);
+        Assert.That(body.User!.HasActiveTutorials, Is.True);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.FirstOrDefaultAsync(x => x.Email.Value == email);
-        user.Should().NotBeNull();
+        Assert.That(user, Is.Not.Null);
 
         var externalLogin = await db.UserExternalLogins.FirstOrDefaultAsync(x => x.UserId == user!.Id && x.Provider == AuthConstants.ExternalProviders.Google);
-        externalLogin.Should().NotBeNull();
-        externalLogin!.ProviderEmail.Should().Be(email);
+        Assert.That(externalLogin, Is.Not.Null);
+        Assert.That(externalLogin!.ProviderEmail, Is.EqualTo(email));
 
         var tutorial = await db.UserTutorialProgresses
             .AsNoTracking()
             .SingleAsync(progress => progress.UserId == user.Id && !progress.IsCompleted);
-        tutorial.TutorialType.Should().Be(LgymApi.Domain.Enums.TutorialType.OnboardingDemo);
+        Assert.That(tutorial.TutorialType, Is.EqualTo(LgymApi.Domain.Enums.TutorialType.OnboardingDemo));
 
         var session = await db.UserSessions
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.UserId == user.Id && x.RevokedAtUtc == null);
-        session.Should().NotBeNull();
+        Assert.That(session, Is.Not.Null);
     }
 
     [Test]
@@ -128,16 +127,16 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        (await db.Users.CountAsync(x => x.Email.Value == email)).Should().Be(1);
+        Assert.That((await db.Users.CountAsync(x => x.Email.Value == email)), Is.EqualTo(1));
     }
 
     [Test]
@@ -151,7 +150,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
@@ -161,7 +160,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "invalid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -171,7 +170,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -179,7 +178,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
     {
         var response = await _client.PostAsJsonAsync("/api/auth/google", new { });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -196,14 +195,14 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/account/link-google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var externalLogin = await db.UserExternalLogins.FirstOrDefaultAsync(x => x.UserId == user.Id && x.Provider == AuthConstants.ExternalProviders.Google);
-        externalLogin.Should().NotBeNull();
-        externalLogin!.ProviderEmail.Should().Be(email);
+        Assert.That(externalLogin, Is.Not.Null);
+        Assert.That(externalLogin!.ProviderEmail, Is.EqualTo(email));
     }
 
     [Test]
@@ -213,7 +212,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/account/link-google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -232,7 +231,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsJsonAsync("/api/account/link-google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
@@ -249,13 +248,13 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsync("/api/account/unlink-google", content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var externalLogin = await db.UserExternalLogins.IgnoreQueryFilters().SingleAsync(x => x.UserId == user.Id && x.Provider == AuthConstants.ExternalProviders.Google);
-        externalLogin.IsDeleted.Should().BeTrue();
+        Assert.That(externalLogin.IsDeleted, Is.True);
     }
 
     [Test]
@@ -263,7 +262,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
     {
         var response = await _client.PostAsync("/api/account/unlink-google", content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -274,7 +273,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.PostAsync("/api/account/unlink-google", content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -287,15 +286,15 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
 
         var unlinkResponse = await _client.PostAsync("/api/account/unlink-google", content: null);
-        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var response = await _client.GetAsync("/api/account/external-logins");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExternalLoginDto>>();
-        body.Should().NotBeNull();
-        body.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Is.Empty);
     }
 
     [Test]
@@ -309,13 +308,13 @@ public sealed class GoogleAuthTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
 
         var unlinkResponse = await _client.PostAsync("/api/account/unlink-google", content: null);
-        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         _googleTokenValidator.ReturnFor("valid-token", new GoogleTokenPayload(subject, email, true, "Google Relink", null));
 
         var response = await _client.PostAsJsonAsync("/api/account/link-google", new { idToken = "valid-token" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -324,9 +323,9 @@ public sealed class GoogleAuthTests : IntegrationTestBase
             .Where(x => x.UserId == user.Id && x.Provider == AuthConstants.ExternalProviders.Google)
             .ToListAsync();
 
-        logins.Should().HaveCount(2);
-        logins.Should().ContainSingle(x => !x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email);
-        logins.Should().ContainSingle(x => x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email);
+        Assert.That(logins, Has.Exactly(2).Items);
+        Assert.That((logins).Where(x => !x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email), Has.Exactly(1).Items);
+        Assert.That((logins).Where(x => x.IsDeleted && x.ProviderKey == subject && x.ProviderEmail == email), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -342,13 +341,13 @@ public sealed class GoogleAuthTests : IntegrationTestBase
 
         var response = await _client.GetAsync("/api/account/external-logins");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExternalLoginDto>>();
-        body.Should().NotBeNull();
-        body.Should().ContainSingle();
-        body![0].Provider.Should().Be(AuthConstants.ExternalProviders.Google);
-        body[0].ProviderEmail.Should().Be(email);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Provider, Is.EqualTo(AuthConstants.ExternalProviders.Google));
+        Assert.That(body[0].ProviderEmail, Is.EqualTo(email));
     }
 
     [Test]
@@ -356,7 +355,7 @@ public sealed class GoogleAuthTests : IntegrationTestBase
     {
         var response = await _client.GetAsync("/api/account/external-logins");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private async Task SeedGoogleExternalLoginAsync(Id<User> userId, string subject, string email)

@@ -1,5 +1,3 @@
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -53,11 +51,11 @@ public sealed class ServiceTransactionBehaviorTests
 
         await useCase.ExecuteAsync(new SetActivePlanCommand(userId, userId, planId), CancellationToken.None);
 
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.Transaction.CommitCalls.Should().Be(1);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(0);
-        activePlanPointerStore.StagedPlanId.Should().Be(planId);
-        planRepository.SetActiveCalls.Should().Be(1);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
+        Assert.That(activePlanPointerStore.StagedPlanId, Is.EqualTo(planId));
+        Assert.That(planRepository.SetActiveCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -78,10 +76,10 @@ public sealed class ServiceTransactionBehaviorTests
         Func<Task> action = async () =>
             await useCase.ExecuteAsync(new SetActivePlanCommand(userId, userId, planId), CancellationToken.None);
 
-        action.Should().ThrowAsync<InvalidOperationException>();
+        Assert.That(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
 
-        unitOfWork.Transaction.CommitCalls.Should().Be(0);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -105,12 +103,12 @@ public sealed class ServiceTransactionBehaviorTests
 
         Func<Task> action = () => useCase.ExecuteAsync(new DeletePlanCommand(userId, planId), CancellationToken.None);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
 
-        planDayRepository.MarkDeletedCalls.Should().Be(1);
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        unitOfWork.Transaction.CommitCalls.Should().Be(0);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(planDayRepository.MarkDeletedCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -135,14 +133,14 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new DeletePlanCommand(userId, deletedPlanId), CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        deletedPlan.IsActive.Should().BeFalse();
-        deletedPlan.IsDeleted.Should().BeTrue();
-        planRepository.UpdateCalls.Should().Be(1);
-        planRepository.SetActiveCalls.Should().Be(1);
-        activePlanPointerStore.StagedPlanId.Should().Be(fallbackPlanId);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.Transaction.CommitCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(deletedPlan.IsActive, Is.False);
+        Assert.That(deletedPlan.IsDeleted, Is.True);
+        Assert.That(planRepository.UpdateCalls, Is.EqualTo(1));
+        Assert.That(planRepository.SetActiveCalls, Is.EqualTo(1));
+        Assert.That(activePlanPointerStore.StagedPlanId, Is.EqualTo(fallbackPlanId));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -164,11 +162,11 @@ public sealed class ServiceTransactionBehaviorTests
             new UpdatePlanDayCommand(accountId, planDayId, new PlanDayWriteModel("new", [new PlanDayExerciseWriteModel(Id<PlanExerciseReference>.New(), 3, "8")])),
             CancellationToken.None);
 
-        persistence.UpdateCalls.Should().Be(1);
-        persistence.ReplaceExerciseCalls.Should().Be(1);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        unitOfWork.Transaction.CommitCalls.Should().Be(1);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(0);
+        Assert.That(persistence.UpdateCalls, Is.EqualTo(1));
+        Assert.That(persistence.ReplaceExerciseCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -192,10 +190,10 @@ public sealed class ServiceTransactionBehaviorTests
                 new UpdatePlanDayCommand(accountId, planDayId, new PlanDayWriteModel("new", [new PlanDayExerciseWriteModel(Id<PlanExerciseReference>.New(), 3, "8")])),
                 CancellationToken.None);
 
-        action.Should().ThrowAsync<InvalidOperationException>();
+        Assert.That(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
 
-        unitOfWork.Transaction.CommitCalls.Should().Be(0);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     // ===== VALIDATION BRANCH TESTS (Wave 3, Batch A) =====
@@ -210,8 +208,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new CreatePlanCommand(Id<User>.Empty, Id<User>.New(), "Test Plan"), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -224,8 +222,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new CreatePlanCommand(Id<User>.New(), Id<User>.Empty, "Test Plan"), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -236,8 +234,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new UpdatePlanCommand(Id<User>.New(), Id<User>.Empty, planId, "Updated"), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -248,8 +246,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new UpdatePlanCommand(userId, userId, Id<Plan>.Empty, "Updated"), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -260,9 +258,9 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new UpdatePlanCommand(userId, userId, Id<Plan>.Empty, " "), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
-        result.Error.Message.Should().Be(LgymApi.Resources.Messages.FieldRequired);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
+        Assert.That(result.Error.Message, Is.EqualTo(LgymApi.Resources.Messages.FieldRequired));
     }
 
     [Test]
@@ -278,10 +276,10 @@ public sealed class ServiceTransactionBehaviorTests
             new UpdatePlanCommand(ownerId, ownerId, ownerPlan.Id, "Updated Owner Plan"),
             CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        ownerPlan.Name.Should().Be("Updated Owner Plan");
-        planRepository.UpdateCalls.Should().Be(1);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(ownerPlan.Name, Is.EqualTo("Updated Owner Plan"));
+        Assert.That(planRepository.UpdateCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -298,12 +296,12 @@ public sealed class ServiceTransactionBehaviorTests
             new UpdatePlanCommand(attackerId, attackerId, victimPlan.Id, "Attacker Update"),
             CancellationToken.None);
 
-        using var assertionScope = new AssertionScope();
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanNotFoundError>();
-        victimPlan.Name.Should().Be("Victim Plan");
-        planRepository.UpdateCalls.Should().Be(0);
-        unitOfWork.SaveChangesCalls.Should().Be(0);
+        using var assertionScope = Assert.EnterMultipleScope();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanNotFoundError>());
+        Assert.That(victimPlan.Name, Is.EqualTo("Victim Plan"));
+        Assert.That(planRepository.UpdateCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -314,8 +312,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new GetPlanConfigQuery(currentUser.Id, Id<User>.Empty), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanError>());
     }
 
     [Test]
@@ -333,15 +331,15 @@ public sealed class ServiceTransactionBehaviorTests
         using var scope = provider.CreateScope();
         var serviceProvider = scope.ServiceProvider;
 
-        serviceProvider.GetRequiredService<ICreatePlanUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<IUpdatePlanUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<IDeletePlanUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<IGetPlanConfigUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<IGetPlansListUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<ISetActivePlanUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<ICopyPlanUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<IGenerateShareCodeUseCase>().Should().NotBeNull();
-        serviceProvider.GetRequiredService<ICheckIsUserHavePlanUseCase>().Should().NotBeNull();
+        Assert.That(serviceProvider.GetRequiredService<ICreatePlanUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<IUpdatePlanUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<IDeletePlanUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<IGetPlanConfigUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<IGetPlansListUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<ISetActivePlanUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<ICopyPlanUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<IGenerateShareCodeUseCase>(), Is.Not.Null);
+        Assert.That(serviceProvider.GetRequiredService<ICheckIsUserHavePlanUseCase>(), Is.Not.Null);
     }
 
     [Test]
@@ -352,9 +350,9 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await useCase.ExecuteAsync(new CheckIsUserHavePlanQuery(currentUser.Id, Id<User>.Empty), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeAssignableTo<BadRequestError>();
-        result.Error.GetPayload().Should().Be(false);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.InstanceOf<BadRequestError>());
+        Assert.That(result.Error.GetPayload(), Is.EqualTo(false));
     }
 
     [Test]
@@ -369,8 +367,8 @@ public sealed class ServiceTransactionBehaviorTests
                 new PlanDayWriteModel("Test PlanDay", [new PlanDayExerciseWriteModel(Id<PlanExerciseReference>.New(), 3, "8")])),
             CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanDayError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanDayError>());
     }
 
     [Test]
@@ -382,8 +380,8 @@ public sealed class ServiceTransactionBehaviorTests
             new GetPlanDayQuery(Id<AccountReference>.New(), Id<PlanDayReference>.Empty, ["en"]),
             CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidPlanDayError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidPlanDayError>());
     }
 
     [Test]
@@ -398,8 +396,8 @@ public sealed class ServiceTransactionBehaviorTests
                 new PlanDayWriteModel("Updated", [new PlanDayExerciseWriteModel(Id<PlanExerciseReference>.New(), 3, "8")])),
             CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanDayNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanDayNotFoundError>());
     }
 
     [Test]
@@ -418,8 +416,8 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await service.GetAsync(new GetPlanDayQuery(accountId, planDayId, ["en"]), CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<PlanDayNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<PlanDayNotFoundError>());
     }
 
     [Test]
@@ -440,9 +438,9 @@ public sealed class ServiceTransactionBehaviorTests
 
         var result = await service.CreateAsync(new CreatePlanDayCommand(accountId, planId, input), CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        persistence.CreatedInput.Should().BeSameAs(input);
-        persistence.CreatedInput!.Exercises.Select(exercise => exercise.Series).Should().Equal(3, 4);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(persistence.CreatedInput, Is.SameAs(input));
+        Assert.That(persistence.CreatedInput!.Exercises.Select(exercise => exercise.Series), Is.EqualTo(new[] { 3, 4 }));
     }
 
     [Test]
@@ -463,11 +461,11 @@ public sealed class ServiceTransactionBehaviorTests
             new UpdatePlanDayCommand(accountId, planDayId, new PlanDayWriteModel("Updated", [new PlanDayExerciseWriteModel(Id<PlanExerciseReference>.New(), 3, "8")])),
             CancellationToken.None);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        persistence.UpdateCalls.Should().Be(1);
-        persistence.ReplaceExerciseCalls.Should().Be(1);
-        unitOfWork.Transaction.CommitCalls.Should().Be(0);
-        unitOfWork.Transaction.RollbackCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(persistence.UpdateCalls, Is.EqualTo(1));
+        Assert.That(persistence.ReplaceExerciseCalls, Is.EqualTo(1));
+        Assert.That(unitOfWork.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     private static PlanDayService CreatePlanDayService(

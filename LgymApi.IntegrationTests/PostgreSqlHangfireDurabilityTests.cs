@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using ImageMagick;
@@ -68,9 +67,9 @@ public sealed class PostgreSqlHangfireDurabilityTests
             canonicalCommandId = await StageAndDispatchUserRegisteredCommandAsync(stoppedHost.Services, userId);
             (envelopeId, actionJobId) = await ReadSingleDispatchedEnvelopeAsync(stoppedHost.Services);
 
-            stoppedHost.Storage.GetType().FullName.Should().Be("Hangfire.PostgreSql.PostgreSqlStorage");
-            actionJobId.Should().Be("1");
-            ReadTimeline(stoppedHost.Storage, actionJobId).Should().Contain("Enqueued");
+            Assert.That(stoppedHost.Storage.GetType().FullName, Is.EqualTo("Hangfire.PostgreSql.PostgreSqlStorage"));
+            Assert.That(actionJobId, Is.EqualTo("1"));
+            Assert.That(ReadTimeline(stoppedHost.Storage, actionJobId), Does.Contain("Enqueued"));
         }
         finally
         {
@@ -87,42 +86,35 @@ public sealed class PostgreSqlHangfireDurabilityTests
         var notificationId = await ReadSingleNotificationIdAsync(restartedHost.Services);
         var emailJobId = await ReadNotificationJobIdAsync(restartedHost.Services, notificationId);
 
-        emailJobId.Should().Be("2");
+        Assert.That(emailJobId, Is.EqualTo("2"));
         await WaitForStateAsync(restartedHost.Storage, emailJobId, "Succeeded", TimeSpan.FromSeconds(90));
         var emailTimeline = ReadTimeline(restartedHost.Storage, emailJobId);
         AssertStateSubsequence(emailTimeline, "Enqueued", "Processing", "Failed", "Scheduled", "Processing", "Succeeded");
 
         var sentNotification = await ReadNotificationAsync(restartedHost.Services, notificationId);
-        sentNotification.Status.Should().Be(EmailNotificationStatus.Sent);
-        sentNotification.Attempts.Should().Be(2);
-        sentNotification.SentAt.Should().NotBeNull();
-        sentNotification.DeliveredAt.Should().NotBeNull();
-        emailSender.SentMessages.Should().ContainSingle();
-        pushSender.Attempts.Should().BeEmpty();
+        Assert.That(sentNotification.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+        Assert.That(sentNotification.Attempts, Is.EqualTo(2));
+        Assert.That(sentNotification.SentAt, Is.Not.Null);
+        Assert.That(sentNotification.DeliveredAt, Is.Not.Null);
+        Assert.That(emailSender.SentMessages, Has.Exactly(1).Items);
+        Assert.That(pushSender.Attempts, Is.Empty);
 
         var replayActionJobId = await EnqueueActionReplayAsync(restartedHost.Services, envelopeId);
         await WaitForStateAsync(restartedHost.Storage, replayActionJobId, "Succeeded");
         var replayEmailJobId = await EnqueueEmailReplayAsync(restartedHost.Services, notificationId);
         await WaitForStateAsync(restartedHost.Storage, replayEmailJobId, "Succeeded");
 
-        replayActionJobId.Should().Be("3");
-        replayEmailJobId.Should().Be("4");
-        (await CountNotificationsAsync(restartedHost.Services)).Should().Be(1);
-        emailSender.SentMessages.Should().ContainSingle();
-        pushSender.Attempts.Should().BeEmpty();
+        Assert.That(replayActionJobId, Is.EqualTo("3"));
+        Assert.That(replayEmailJobId, Is.EqualTo("4"));
+        Assert.That((await CountNotificationsAsync(restartedHost.Services)), Is.EqualTo(1));
+        Assert.That(emailSender.SentMessages, Has.Exactly(1).Items);
+        Assert.That(pushSender.Attempts, Is.Empty);
 
-        canonicalCommandId.Should().Be("LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand");
-        typeof(IActionMessageJob).FullName.Should().Be("LgymApi.BackgroundWorker.Common.Jobs.IActionMessageJob");
-        typeof(IActionMessageJob).GetMethod(nameof(IActionMessageJob.ExecuteAsync))!
-            .GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(typeof(string));
-        RecurringJobIds.Should().Equal(
-            "reliability-committed-intent-dispatch",
-            "reporting-expired-photo-upload-cleanup",
-            "reporting-recurring-report-assignments",
-            "push-stale-installation-cleanup",
-            "push-notification-message-retention-cleanup",
-            "push-disabled-installation-retention-cleanup",
-            "in-app-notification-retention-cleanup");
+        Assert.That(canonicalCommandId, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.UserRegisteredCommand"));
+        Assert.That(typeof(IActionMessageJob).FullName, Is.EqualTo("LgymApi.BackgroundWorker.Common.Jobs.IActionMessageJob"));
+        Assert.That(typeof(IActionMessageJob).GetMethod(nameof(IActionMessageJob.ExecuteAsync))!
+            .GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(string) }));
+        Assert.That(RecurringJobIds, Is.EqualTo(new[] { "reliability-committed-intent-dispatch", "reporting-expired-photo-upload-cleanup", "reporting-recurring-report-assignments", "push-stale-installation-cleanup", "push-notification-message-retention-cleanup", "push-disabled-installation-retention-cleanup", "in-app-notification-retention-cleanup" }));
 
         TestContext.Progress.WriteLine(
             "Hangfire durability evidence: storage=Hangfire.PostgreSql.PostgreSqlStorage; " +
@@ -161,16 +153,16 @@ public sealed class PostgreSqlHangfireDurabilityTests
             var waiting = scope.ServiceProvider.GetRequiredService<IExerciseMediaProcessingScheduler>().ProcessAsync(operation, gif, caller.Token);
             using var connection = first.Storage.GetConnection();
             var queued = first.Storage.GetMonitoringApi().EnqueuedJobs("default", 0, 10);
-            queued.Should().ContainSingle();
+            Assert.That(queued, Has.Exactly(1).Items);
             jobId = queued.Single().Key;
             var saved = connection.GetJobData(jobId).Job;
-            saved.Type.Should().Be(typeof(LgymApi.BackgroundWorker.Jobs.ExerciseMediaProcessingJob));
-            saved.Args[0].Should().Be(operation);
-            ((byte[])saved.Args[1]).Should().Equal(gif);
+            Assert.That(saved.Type, Is.EqualTo(typeof(LgymApi.BackgroundWorker.Jobs.ExerciseMediaProcessingJob)));
+            Assert.That(saved.Args[0], Is.EqualTo(operation));
+            Assert.That(((byte[])saved.Args[1]), Is.EqualTo(gif));
             caller.Cancel();
             await Assert.CatchAsync<OperationCanceledException>(async () => await waiting);
-            ReadTimeline(first.Storage, jobId).Should().Equal("Enqueued");
-            storage.Attempts.Should().Be(0);
+            Assert.That(ReadTimeline(first.Storage, jobId), Is.EqualTo(new[] { "Enqueued" }));
+            Assert.That(storage.Attempts, Is.EqualTo(0));
         }
         finally { await first.DisposeAsync(); }
 
@@ -180,7 +172,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
         {
             await interrupted.StartAsync();
             await storage.FirstPublication.Task.WaitAsync(TimeSpan.FromSeconds(45));
-            storage.Objects.Should().ContainSingle();
+            Assert.That(storage.Objects, Has.Exactly(1).Items);
         }
         finally
         {
@@ -195,23 +187,25 @@ public sealed class PostgreSqlHangfireDurabilityTests
         using (var connection = recovered.Storage.GetConnection())
             image = JsonSerializer.Deserialize<string>(connection.GetStateData(jobId).Data["Result"]);
         var publication = storage.Objects.Single();
-        image.Should().Be("https://exercise-media.test/" + publication.Key);
-        publication.Key.Should().StartWith($"exercises/{operation}/").And.EndWith("/animation.gif");
-        storage.Attempts.Should().Be(2);
+        Assert.That(image, Is.EqualTo("https://exercise-media.test/" + publication.Key));
+        var assertedChain13 = publication.Key;
+        Assert.That(assertedChain13, Does.StartWith($"exercises/{operation}/"));
+        Assert.That(assertedChain13, Does.EndWith("/animation.gif"));
+        Assert.That(storage.Attempts, Is.EqualTo(2));
         using (var frames = new MagickImageCollection(publication.Value.Bytes))
-            frames.Count.Should().Be(2);
+            Assert.That(frames.Count, Is.EqualTo(2));
 
         var client = recovered.Services.GetRequiredService<IBackgroundJobClient>();
-        client.Requeue(jobId).Should().BeTrue();
+        Assert.That(client.Requeue(jobId), Is.True);
         await WaitForStateAsync(recovered.Storage, jobId, "Succeeded", minimumOccurrences: 2);
-        storage.Attempts.Should().Be(3);
-        storage.Objects.Should().ContainSingle();
+        Assert.That(storage.Attempts, Is.EqualTo(3));
+        Assert.That(storage.Objects, Has.Exactly(1).Items);
         await using (var scope = recovered.Services.CreateAsyncScope())
         {
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
             await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => scope.ServiceProvider.GetRequiredService<IExerciseMediaProcessingScheduler>()
                 .ProcessAsync(Id<CorrelationScope>.New().ToString(), "GIF89a"u8.ToArray(), deadline.Token));
-            storage.Attempts.Should().Be(3, "rejected bytes never reach publication");
+            Assert.That(storage.Attempts, Is.EqualTo(3), "rejected bytes never reach publication");
         }
         TestContext.Progress.WriteLine("Exercise media durability evidence: input-persisted=true; caller-cancelled=true; provider-restarted=true; interrupted-after-publication=true; replay-same-operation=true; immutable-objects=1; gif-frames=2.");
     }
@@ -228,8 +222,8 @@ public sealed class PostgreSqlHangfireDurabilityTests
         {
             var attempt = Interlocked.Increment(ref _attempts);
             var published = Objects.GetOrAdd(key, _ => (bytes.ToArray(), contentType));
-            published.Bytes.Should().Equal(bytes);
-            published.Mime.Should().Be(contentType);
+            Assert.That(published.Bytes, Is.EqualTo(bytes));
+            Assert.That(published.Mime, Is.EqualTo(contentType));
             if (attempt == 1)
             {
                 FirstPublication.TrySetResult();
@@ -260,9 +254,9 @@ public sealed class PostgreSqlHangfireDurabilityTests
             .AsNoTracking()
             .SingleAsync();
 
-        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.DispatchedAt.Should().NotBeNull();
-        envelope.SchedulerJobId.Should().NotBeNullOrWhiteSpace();
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        Assert.That(envelope.DispatchedAt, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(envelope.SchedulerJobId), Is.False);
         return (envelope.Id.ToString(), envelope.SchedulerJobId!);
     }
 
@@ -284,7 +278,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
             .AsNoTracking()
             .SingleAsync(message => message.Id == parsedNotificationId);
 
-        notification.SchedulerJobId.Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(notification.SchedulerJobId), Is.False);
         return notification.SchedulerJobId!;
     }
 
@@ -299,7 +293,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
 
     private static Id<NotificationMessage> ParseNotificationId(string notificationId)
     {
-        Id<NotificationMessage>.TryParse(notificationId, out var parsedNotificationId).Should().BeTrue();
+        Assert.That(Id<NotificationMessage>.TryParse(notificationId, out var parsedNotificationId), Is.True);
         return parsedNotificationId;
     }
 
@@ -326,7 +320,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
     private static IReadOnlyList<string> ReadTimeline(JobStorage storage, string jobId)
     {
         var details = storage.GetMonitoringApi().JobDetails(jobId);
-        details.Should().NotBeNull();
+        Assert.That(details, Is.Not.Null);
         return details!.History.OrderBy(entry => entry.CreatedAt).Select(entry => entry.StateName).ToArray();
     }
 
@@ -362,7 +356,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
             }
         }
 
-        expectedIndex.Should().Be(expectedStates.Length, $"timeline {string.Join('>', timeline)} should contain {string.Join('>', expectedStates)} in order");
+        Assert.That(expectedIndex, Is.EqualTo(expectedStates.Length), $"timeline {string.Join('>', timeline)} should contain {string.Join('>', expectedStates)} in order");
     }
 
     private sealed class HangfireDurabilityHost : IAsyncDisposable
@@ -442,8 +436,8 @@ public sealed class PostgreSqlHangfireDurabilityTests
                 }
 
                 var hostedServices = provider.GetServices<IHostedService>().ToArray();
-                hostedServices.OfType<BackgroundJobServerHostedService>().Should().HaveCount(hostBackgroundServer ? 1 : 0);
-                hostedServices.Should().HaveCount(hostBackgroundServer ? 1 : 0);
+                Assert.That(hostedServices.OfType<BackgroundJobServerHostedService>(), Has.Exactly(hostBackgroundServer ? 1 : 0).Items);
+                Assert.That(hostedServices, Has.Exactly(hostBackgroundServer ? 1 : 0).Items);
                 return new HangfireDurabilityHost(provider, hostedServices);
             }
             catch
@@ -455,7 +449,7 @@ public sealed class PostgreSqlHangfireDurabilityTests
 
         public async Task StartAsync()
         {
-            _hostedServices.OfType<BackgroundJobServerHostedService>().Should().ContainSingle();
+            Assert.That(_hostedServices.OfType<BackgroundJobServerHostedService>(), Has.Exactly(1).Items);
             foreach (var hostedService in _hostedServices)
             {
                 await hostedService.StartAsync(CancellationToken.None);

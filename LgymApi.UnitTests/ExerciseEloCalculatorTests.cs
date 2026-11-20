@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.WorkoutProgress.Scoring.Elo;
 using LgymApi.Domain.Enums;
 using NUnit.Framework;
@@ -19,12 +18,12 @@ public sealed class ExerciseEloCalculatorTests
 
         Assert.Multiple(() =>
         {
-            new StandardExerciseEloCalculator().Formula.Should().Be(ExerciseEloFormula.Standard);
-            new StandardExerciseEloCalculator().Calculate(input).Should().Be(16);
-            new StrengthWeightedExerciseEloCalculator().Formula.Should().Be(ExerciseEloFormula.StrengthWeighted);
-            new StrengthWeightedExerciseEloCalculator().Calculate(input).Should().Be(8);
-            new VolumeWeightedExerciseEloCalculator().Formula.Should().Be(ExerciseEloFormula.VolumeWeighted);
-            new VolumeWeightedExerciseEloCalculator().Calculate(input).Should().Be(17);
+            Assert.That(new StandardExerciseEloCalculator().Formula, Is.EqualTo(ExerciseEloFormula.Standard));
+            Assert.That(new StandardExerciseEloCalculator().Calculate(input), Is.EqualTo(16));
+            Assert.That(new StrengthWeightedExerciseEloCalculator().Formula, Is.EqualTo(ExerciseEloFormula.StrengthWeighted));
+            Assert.That(new StrengthWeightedExerciseEloCalculator().Calculate(input), Is.EqualTo(8));
+            Assert.That(new VolumeWeightedExerciseEloCalculator().Formula, Is.EqualTo(ExerciseEloFormula.VolumeWeighted));
+            Assert.That(new VolumeWeightedExerciseEloCalculator().Calculate(input), Is.EqualTo(17));
         });
     }
 
@@ -35,9 +34,9 @@ public sealed class ExerciseEloCalculatorTests
 
         Assert.Multiple(() =>
         {
-            calculator.Formula.Should().Be(ExerciseEloFormula.PullupWeighted);
-            calculator.Calculate(new ExerciseEloCalculationInput(80, 8, 60, 8)).Should().Be(17);
-            calculator.Calculate(new ExerciseEloCalculationInput(80, 8, 100, 8)).Should().Be(-17);
+            Assert.That(calculator.Formula, Is.EqualTo(ExerciseEloFormula.PullupWeighted));
+            Assert.That(calculator.Calculate(new ExerciseEloCalculationInput(80, 8, 60, 8)), Is.EqualTo(17));
+            Assert.That(calculator.Calculate(new ExerciseEloCalculationInput(80, 8, 100, 8)), Is.EqualTo(-17));
         });
     }
 }

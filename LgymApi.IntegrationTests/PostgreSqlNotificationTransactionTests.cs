@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Platform.Contracts.Serialization;
@@ -44,13 +43,13 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
             await handler.ProcessAsync(notificationId.ToString());
         }
 
-        sender.SendCalls.Should().Be(1);
-        sender.StatusObservedBeforeSend.Should().Be(EmailNotificationStatus.Sending);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(sender.StatusObservedBeforeSend, Is.EqualTo(EmailNotificationStatus.Sending));
         var persisted = await ReadEmailAsync(notificationId);
-        persisted.Status.Should().Be(EmailNotificationStatus.Sent);
-        persisted.Attempts.Should().Be(1);
-        persisted.SentAt.Should().NotBeNull();
-        persisted.DeliveredAt.Should().NotBeNull();
+        Assert.That(persisted.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+        Assert.That(persisted.Attempts, Is.EqualTo(1));
+        Assert.That(persisted.SentAt, Is.Not.Null);
+        Assert.That(persisted.DeliveredAt, Is.Not.Null);
     }
 
     [Test]
@@ -73,16 +72,16 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
 
             var action = () => handler.ProcessAsync(notificationId.ToString());
 
-            await action.Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         }
 
-        sender.StatusObservedBeforeSend.Should().Be(EmailNotificationStatus.Sending);
+        Assert.That(sender.StatusObservedBeforeSend, Is.EqualTo(EmailNotificationStatus.Sending));
         var persisted = await ReadEmailAsync(notificationId);
-        persisted.Status.Should().Be(EmailNotificationStatus.Failed);
-        persisted.Attempts.Should().Be(1);
-        persisted.LastError.Should().Contain(nameof(InvalidOperationException));
-        persisted.SentAt.Should().BeNull();
-        persisted.DeliveredAt.Should().BeNull();
+        Assert.That(persisted.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        Assert.That(persisted.Attempts, Is.EqualTo(1));
+        Assert.That(persisted.LastError, Does.Contain(nameof(InvalidOperationException)));
+        Assert.That(persisted.SentAt, Is.Null);
+        Assert.That(persisted.DeliveredAt, Is.Null);
     }
 
     [Test]
@@ -109,20 +108,20 @@ internal sealed class PostgreSqlNotificationTransactionTests : PostgreSqlIntegra
 
             var action = () => service.ProcessAsync(messageId.ToString());
 
-            await action.Should().ThrowAsync<HttpRequestException>();
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<HttpRequestException>());
         }
 
-        sender.SendCalls.Should().Be(1);
-        sender.LastInstallationId.Should().Be(installationId);
-        sender.StatusObservedBeforeSend.Should().Be(PushNotificationStatus.Sending);
-        scheduler.ScheduleRetryCalls.Should().Be(1);
-        scheduler.StatusObservedBeforeScheduling.Should().Be(PushNotificationStatus.Failed);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
+        Assert.That(sender.LastInstallationId, Is.EqualTo(installationId));
+        Assert.That(sender.StatusObservedBeforeSend, Is.EqualTo(PushNotificationStatus.Sending));
+        Assert.That(scheduler.ScheduleRetryCalls, Is.EqualTo(1));
+        Assert.That(scheduler.StatusObservedBeforeScheduling, Is.EqualTo(PushNotificationStatus.Failed));
         var persisted = await ReadPushAsync(messageId);
-        persisted.Status.Should().Be(PushNotificationStatus.Failed);
-        persisted.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        persisted.Attempts.Should().Be(1);
-        persisted.SchedulerJobId.Should().Be("task-36-retry-job");
-        persisted.NextAttemptAt.Should().NotBeNull();
+        Assert.That(persisted.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(persisted.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(persisted.Attempts, Is.EqualTo(1));
+        Assert.That(persisted.SchedulerJobId, Is.EqualTo("task-36-retry-job"));
+        Assert.That(persisted.NextAttemptAt, Is.Not.Null);
     }
 
     private async Task<Id<NotificationMessage>> SeedEmailNotificationAsync()

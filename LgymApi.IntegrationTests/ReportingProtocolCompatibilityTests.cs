@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -28,10 +27,10 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         using (var defaultResponse = await Client.GetAsync("/api/trainer/reporting/capabilities"))
         {
-            defaultResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(defaultResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await defaultResponse.Content.ReadAsStringAsync());
-            body.RootElement.GetProperty("supportedProtocols").EnumerateArray().Select(value => value.GetInt32()).Should().Equal(1, 2);
-            body.RootElement.GetProperty("photoTypesEnabled").GetBoolean().Should().BeTrue();
+            Assert.That(body.RootElement.GetProperty("supportedProtocols").EnumerateArray().Select(value => value.GetInt32()), Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(body.RootElement.GetProperty("photoTypesEnabled").GetBoolean(), Is.True);
             AssertProtocolHeaders(defaultResponse, "1");
         }
 
@@ -41,28 +40,28 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
                    "/api/trainer/reporting/capabilities",
                    protocol: "2"))
         {
-            readyP2.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(readyP2.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             AssertProtocolHeaders(readyP2, "2");
         }
 
         SetAuthorizationHeader(trainee.Id);
         using (var forbidden = await Client.GetAsync("/api/trainer/reporting/capabilities"))
         {
-            forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            Assert.That(forbidden.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         }
         using (var traineeCapability = await Client.GetAsync("/api/trainee/reporting/capabilities"))
         {
-            traineeCapability.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(traineeCapability.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         ClearAuthorizationHeader();
         using (var anonymousTrainerCapability = await Client.GetAsync("/api/trainer/reporting/capabilities"))
         {
-            anonymousTrainerCapability.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousTrainerCapability.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
         using (var anonymousTraineeCapability = await Client.GetAsync("/api/trainee/reporting/capabilities"))
         {
-            anonymousTraineeCapability.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousTraineeCapability.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
         SetAuthorizationHeader(trainer.Id);
@@ -73,15 +72,14 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         enabledRequest.Headers.Add("Origin", "http://localhost");
         using var enabledResponse = await enabledClient.SendAsync(enabledRequest);
 
-        enabledResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(enabledResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var body = JsonDocument.Parse(await enabledResponse.Content.ReadAsStringAsync()))
         {
-            body.RootElement.GetProperty("supportedProtocols").EnumerateArray().Select(value => value.GetInt32()).Should().Equal(1, 2);
-            body.RootElement.GetProperty("photoTypesEnabled").GetBoolean().Should().BeTrue();
+            Assert.That(body.RootElement.GetProperty("supportedProtocols").EnumerateArray().Select(value => value.GetInt32()), Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(body.RootElement.GetProperty("photoTypesEnabled").GetBoolean(), Is.True);
         }
         AssertProtocolHeaders(enabledResponse, "2");
-        enabledResponse.Headers.GetValues("Access-Control-Expose-Headers")
-            .Should().ContainSingle(value => value.Contains(ReportingProtocolMiddleware.HeaderName, StringComparison.OrdinalIgnoreCase));
+        Assert.That((enabledResponse.Headers.GetValues("Access-Control-Expose-Headers")).Where(value => value.Contains(ReportingProtocolMiddleware.HeaderName, StringComparison.OrdinalIgnoreCase)), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -94,19 +92,19 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
 
         using (var p1Dictionary = await client.GetAsync("/api/trainer/reporting/photo-types"))
         {
-            p1Dictionary.StatusCode.Should().Be(HttpStatusCode.UpgradeRequired);
+            Assert.That(p1Dictionary.StatusCode, Is.EqualTo(HttpStatusCode.UpgradeRequired));
             await AssertErrorCodeAsync(p1Dictionary, "REPORTING_PROTOCOL_V2_REQUIRED");
         }
         using (var scope = enabledFactory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await database.TrainerPhotoTypes.CountAsync()).Should().Be(0, "P1 dictionary reads must not lazily initialize protocol-2 state");
+            Assert.That((await database.TrainerPhotoTypes.CountAsync()), Is.EqualTo(0), "P1 dictionary reads must not lazily initialize protocol-2 state");
         }
 
         string photoTypeId;
         using (var dictionary = await SendAsync(client, HttpMethod.Get, "/api/trainer/reporting/photo-types", protocol: "2"))
         {
-            dictionary.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(dictionary.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await dictionary.Content.ReadAsStringAsync());
             photoTypeId = body.RootElement.EnumerateArray()
                 .Single(item => item.GetProperty("systemKey").GetString() == "Front")
@@ -132,27 +130,27 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         string templateId;
         using (var created = await SendJsonAsync(client, "/api/trainer/report-templates", schemaTwoTemplate, "2"))
         {
-            created.StatusCode.Should().Be(HttpStatusCode.Created);
-            created.Headers.GetValues(ReportingProtocolMiddleware.HeaderName).Should().ContainSingle("2");
+            Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            Assert.That(created.Headers.GetValues(ReportingProtocolMiddleware.HeaderName), Has.Exactly(1).Items, "2");
             using var body = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
             templateId = body.RootElement.GetProperty("_id").GetString()!;
         }
 
         using (var p1Write = await client.PostAsJsonAsync("/api/trainer/report-templates", schemaTwoTemplate))
         {
-            p1Write.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(p1Write.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             await AssertErrorCodeAsync(p1Write, "REPORTING_PROTOCOL_V2_REQUIRED");
         }
 
         using (var strippedChunkedWrite = await SendChunkedJsonAsync(client, "/api/trainer/report-templates", schemaTwoTemplate))
         {
-            strippedChunkedWrite.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(strippedChunkedWrite.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             await AssertErrorCodeAsync(strippedChunkedWrite, "REPORTING_PROTOCOL_V2_REQUIRED");
         }
 
         using (var p1Read = await client.GetAsync($"/api/trainer/report-templates/{templateId}"))
         {
-            p1Read.StatusCode.Should().Be(HttpStatusCode.UpgradeRequired);
+            Assert.That(p1Read.StatusCode, Is.EqualTo(HttpStatusCode.UpgradeRequired));
             await AssertErrorCodeAsync(p1Read, "REPORTING_PROTOCOL_UPGRADE_REQUIRED");
         }
 
@@ -174,14 +172,14 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         };
         using (var overwrite = await client.PostAsJsonAsync($"/api/trainer/report-templates/{templateId}/update", legacyEdit))
         {
-            overwrite.StatusCode.Should().Be(HttpStatusCode.UpgradeRequired);
+            Assert.That(overwrite.StatusCode, Is.EqualTo(HttpStatusCode.UpgradeRequired));
             await AssertErrorCodeAsync(overwrite, "REPORTING_PROTOCOL_UPGRADE_REQUIRED");
         }
 
         using var unchanged = await SendAsync(client, HttpMethod.Get, $"/api/trainer/report-templates/{templateId}", protocol: "2");
-        unchanged.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unchanged.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var unchangedBody = JsonDocument.Parse(await unchanged.Content.ReadAsStringAsync());
-        unchangedBody.RootElement.GetProperty("name").GetString().Should().Be("Protocol 2 template");
+        Assert.That(unchangedBody.RootElement.GetProperty("name").GetString(), Is.EqualTo("Protocol 2 template"));
     }
 
     [Test]
@@ -212,11 +210,11 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         using var traineeClient = CreateAuthorizedClient(enabledFactory);
         using (var compatibleRead = await traineeClient.GetAsync("/api/trainee/report-requests"))
         {
-            compatibleRead.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(compatibleRead.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await compatibleRead.Content.ReadAsStringAsync());
             var moduleConfig = body.RootElement[0].GetProperty("template").GetProperty("fields")[0].GetProperty("moduleConfig");
-            moduleConfig.TryGetProperty("requiredPhotoTypeIds", out _).Should().BeFalse();
-            moduleConfig.GetProperty("requiredViews")[0].GetString().Should().Be("Front");
+            Assert.That(moduleConfig.TryGetProperty("requiredPhotoTypeIds", out _), Is.False);
+            Assert.That(moduleConfig.GetProperty("requiredViews")[0].GetString(), Is.EqualTo("Front"));
         }
 
         SetAuthorizationHeader(trainer.Id);
@@ -228,7 +226,7 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
                    new { name = "Competition pose" },
                    "2"))
         {
-            customType.StatusCode.Should().Be(HttpStatusCode.Created);
+            Assert.That(customType.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             using var body = JsonDocument.Parse(await customType.Content.ReadAsStringAsync());
             customTypeId = body.RootElement.GetProperty("_id").GetString()!;
         }
@@ -238,7 +236,7 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         using var customTraineeClient = CreateAuthorizedClient(enabledFactory);
         using var incompatibleRead = await customTraineeClient.GetAsync("/api/trainee/report-requests");
-        incompatibleRead.StatusCode.Should().Be(HttpStatusCode.UpgradeRequired);
+        Assert.That(incompatibleRead.StatusCode, Is.EqualTo(HttpStatusCode.UpgradeRequired));
         await AssertErrorCodeAsync(incompatibleRead, "REPORTING_PROTOCOL_UPGRADE_REQUIRED");
     }
 
@@ -288,23 +286,23 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
 
     private static void AssertProtocolHeaders(HttpResponseMessage response, string protocol)
     {
-        response.Headers.GetValues(ReportingProtocolMiddleware.HeaderName).Should().ContainSingle(protocol);
-        response.Headers.CacheControl!.Private.Should().BeTrue();
-        response.Headers.CacheControl.NoStore.Should().BeTrue();
-        response.Headers.Vary.Should().Contain(ReportingProtocolMiddleware.HeaderName);
+        Assert.That(response.Headers.GetValues(ReportingProtocolMiddleware.HeaderName), Has.Exactly(1).Items, protocol);
+        Assert.That(response.Headers.CacheControl!.Private, Is.True);
+        Assert.That(response.Headers.CacheControl.NoStore, Is.True);
+        Assert.That(response.Headers.Vary, Does.Contain(ReportingProtocolMiddleware.HeaderName));
     }
 
     private static async Task AssertErrorCodeAsync(HttpResponseMessage response, string expected)
     {
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("code").GetString().Should().Be(expected);
-        body.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(body.RootElement.GetProperty("code").GetString(), Is.EqualTo(expected));
+        Assert.That(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("msg").GetString()), Is.False);
     }
 
     private static async Task<string> GetBuiltInPhotoTypeIdAsync(HttpClient client)
     {
         using var response = await SendAsync(client, HttpMethod.Get, "/api/trainer/reporting/photo-types", protocol: "2");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return body.RootElement.EnumerateArray()
             .Single(item => item.GetProperty("systemKey").GetString() == "Front")
@@ -329,7 +327,7 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
                 }
             }
         }, "2");
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return body.RootElement.GetProperty("_id").GetString()!;
     }
@@ -341,7 +339,7 @@ public sealed class ReportingProtocolCompatibilityTests : IntegrationTestBase
             $"/api/trainer/trainees/{traineeId}/report-requests",
             new { templateId },
             "2");
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
     }
 
     private sealed class ChunkedJsonContent : HttpContent

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Access;
 using LgymApi.Application.Features.AdminManagement.Models;
 using LgymApi.Application.Mapping.Core;
@@ -26,7 +25,7 @@ public sealed class PendingAccountAccessTests
 
         var lookupResult = await lookup.GetByIdAsync(accountId);
 
-        lookupResult.Should().BeNull();
+        Assert.That(lookupResult, Is.Null);
     }
 
     private sealed class UserRepositoryFake(User user) : IUserRepository

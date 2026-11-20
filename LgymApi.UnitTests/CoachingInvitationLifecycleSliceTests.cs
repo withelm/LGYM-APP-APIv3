@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Coaching.Invitations.Accept;
@@ -36,8 +35,8 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
         await invitations.Received(1).UpdateResponseAsync(
             Arg.Is<CoachingInvitationResponseUpdateModel>(update => update.Status == TrainerInvitationStatus.Expired && !update.TraineeId.HasValue),
             Arg.Any<CancellationToken>());
@@ -58,8 +57,8 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
         await invitations.DidNotReceive().UpdateResponseAsync(Arg.Any<CoachingInvitationResponseUpdateModel>(), Arg.Any<CancellationToken>());
         await links.DidNotReceive().AddAsync(Arg.Any<CoachingActiveLinkWriteModel>(), Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
@@ -79,7 +78,7 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await invitations.Received(1).UpdateResponseAsync(
             Arg.Is<CoachingInvitationResponseUpdateModel>(update => update.Status == TrainerInvitationStatus.Accepted && update.TraineeId == traineeId),
             Arg.Any<CancellationToken>());
@@ -104,7 +103,7 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await invitations.DidNotReceive().UpdateResponseAsync(Arg.Any<CoachingInvitationResponseUpdateModel>(), Arg.Any<CancellationToken>());
         await links.DidNotReceive().AddAsync(Arg.Any<CoachingActiveLinkWriteModel>(), Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
@@ -125,8 +124,8 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IAcceptInvitationUseCase>(services).ExecuteAsync(new AcceptInvitationCommand(traineeId, invitation.Id));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
 
@@ -142,7 +141,7 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IRejectInvitationUseCase>(services).ExecuteAsync(new RejectInvitationCommand(traineeId, invitation.Id));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await invitations.Received(1).UpdateResponseAsync(
             Arg.Is<CoachingInvitationResponseUpdateModel>(update => update.Status == TrainerInvitationStatus.Rejected && update.TraineeId == traineeId),
             Arg.Any<CancellationToken>());
@@ -161,7 +160,7 @@ public sealed class CoachingInvitationLifecycleSliceTests
 
         var result = await Resolve<IRevokeInvitationUseCase>(services).ExecuteAsync(new RevokeInvitationCommand(trainerId, invitation.Id));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await invitations.Received(1).UpdateResponseAsync(
             Arg.Is<CoachingInvitationResponseUpdateModel>(update => update.Status == TrainerInvitationStatus.Revoked && !update.TraineeId.HasValue),
             Arg.Any<CancellationToken>());

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.Ranking;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Application.WorkoutProgress.Ranking;
@@ -30,11 +29,11 @@ public sealed class WorkoutProgressRankingReadServiceTests
 
         var result = await service.GetUsersRankingAsync();
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(entry => entry.Name).Should().Equal("higher", "default");
-        result.Value.Select(entry => entry.Avatar).Should().Equal("avatar", null);
-        result.Value.Select(entry => entry.Elo).Should().Equal(1450, 1000);
-        result.Value.Select(entry => entry.ProfileRank).Should().Equal("Senior 1", "Junior 1");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(entry => entry.Name), Is.EqualTo(new[] { "higher", "default" }));
+        Assert.That(result.Value.Select(entry => entry.Avatar), Is.EqualTo(new[] { "avatar", null }));
+        Assert.That(result.Value.Select(entry => entry.Elo), Is.EqualTo(new[] { 1450, 1000 }));
+        Assert.That(result.Value.Select(entry => entry.ProfileRank), Is.EqualTo(new[] { "Senior 1", "Junior 1" }));
         await eloRegistry.Received(1).GetLatestEloAsync(defaultEloUserId, Arg.Any<CancellationToken>());
         await eloRegistry.Received(1).GetLatestEloAsync(higherEloUserId, Arg.Any<CancellationToken>());
     }
@@ -49,7 +48,7 @@ public sealed class WorkoutProgressRankingReadServiceTests
 
         var result = await service.GetUsersRankingAsync();
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
         await eloRegistry.DidNotReceive().GetLatestEloAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
     }
 }

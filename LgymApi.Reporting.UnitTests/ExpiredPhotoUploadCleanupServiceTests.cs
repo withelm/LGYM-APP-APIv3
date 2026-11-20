@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Repositories;
@@ -30,7 +29,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
 
         var cleaned = await service.CleanupExpiredUploadsAsync();
 
-        cleaned.Should().Be(0);
+        Assert.That(cleaned, Is.EqualTo(0));
         await storage.DidNotReceiveWithAnyArgs().DeleteAsync(default!, default);
         await tracker.DidNotReceiveWithAnyArgs().MarkUploadExpiredAsync(default!, default);
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -50,7 +49,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
 
         var cleaned = await service.CleanupExpiredUploadsAsync();
 
-        cleaned.Should().Be(1);
+        Assert.That(cleaned, Is.EqualTo(1));
         await storage.Received(1).DeleteAsync(candidate.StorageKey, Arg.Any<CancellationToken>());
         await tracker.Received(1).MarkUploadExpiredAsync(candidate.StorageKey, Arg.Any<CancellationToken>());
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -75,7 +74,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
 
         var cleaned = await service.CleanupExpiredUploadsAsync();
 
-        cleaned.Should().Be(1);
+        Assert.That(cleaned, Is.EqualTo(1));
         await storage.Received(1).DeleteAsync(failedCandidate.StorageKey, Arg.Any<CancellationToken>());
         await tracker.DidNotReceive().MarkUploadExpiredAsync(failedCandidate.StorageKey, Arg.Any<CancellationToken>());
         await tracker.Received(1).MarkUploadExpiredAsync(successfulCandidate.StorageKey, Arg.Any<CancellationToken>());
@@ -85,9 +84,9 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
             && call.GetArguments()[0] is LogLevel logLevel
             && logLevel == LogLevel.Warning);
         var warningState = warningCall.GetArguments()[2];
-        warningState.Should().NotBeNull();
-        warningState!.ToString().Should().Contain(failedCandidate.StorageKey);
-        warningCall.GetArguments()[3].Should().BeOfType<InvalidOperationException>();
+        Assert.That(warningState, Is.Not.Null);
+        Assert.That(warningState!.ToString(), Does.Contain(failedCandidate.StorageKey));
+        Assert.That(warningCall.GetArguments()[3], Is.TypeOf<InvalidOperationException>());
     }
 
     [Test]
@@ -106,7 +105,7 @@ public sealed class ExpiredPhotoUploadCleanupServiceTests
 
         var cleanup = () => service.CleanupExpiredUploadsAsync();
 
-        await cleanup.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await cleanup(); }, Throws.InstanceOf<InvalidOperationException>());
         await storage.Received(1).DeleteAsync(candidate.StorageKey, Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }

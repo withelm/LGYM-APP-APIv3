@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -10,15 +9,15 @@ public sealed class PersistedCommandAuthorizationCatalogTests
     {
         var entries = PersistedCommandAuthorizationCatalog.Entries;
 
-        entries.Should().HaveCount(19);
-        entries.Select(entry => entry.CanonicalId).Should().OnlyHaveUniqueItems();
-        entries.Select(entry => entry.RuntimeCommandType).Should().OnlyHaveUniqueItems();
-        PersistedCommandAuthorizationCatalog.AuthorizationClass.Should().Be(PersistedCommandAuthorizationClass.CommittedSystemIntent);
-        entries.Should().OnlyContain(entry =>
+        Assert.That(entries, Has.Exactly(19).Items);
+        Assert.That(entries.Select(entry => entry.CanonicalId), Is.Unique);
+        Assert.That(entries.Select(entry => entry.RuntimeCommandType), Is.Unique);
+        Assert.That(PersistedCommandAuthorizationCatalog.AuthorizationClass, Is.EqualTo(PersistedCommandAuthorizationClass.CommittedSystemIntent));
+        Assert.That((entries).All(entry =>
             !string.IsNullOrWhiteSpace(entry.Owner)
             && entry.SubjectIds.Count != 0
             && entry.RecipientIds.Count != 0
-            && entry.ScheduleSites.Count != 0);
+            && entry.ScheduleSites.Count != 0), Is.True);
     }
 
     [Test]
@@ -38,16 +37,14 @@ public sealed class PersistedCommandAuthorizationCatalogTests
 
         foreach (var entry in PersistedCommandAuthorizationCatalog.Entries)
         {
-            registrySource.Should().Contain(entry.CanonicalId);
-            defaultContractsSource.Should().Contain(entry.RuntimeCommandType);
+            Assert.That(registrySource, Does.Contain(entry.CanonicalId));
+            Assert.That(defaultContractsSource, Does.Contain(entry.RuntimeCommandType));
 
             foreach (var scheduleSite in entry.ScheduleSites)
             {
                 var sourcePath = Path.Combine(repositoryRoot, scheduleSite);
-                File.Exists(sourcePath).Should().BeTrue($"{entry.RuntimeCommandType} must have its declared schedule site");
-                File.ReadAllText(sourcePath).Should().Contain(
-                    entry.RuntimeCommandType,
-                    $"{scheduleSite} must schedule {entry.RuntimeCommandType}");
+                Assert.That(File.Exists(sourcePath), Is.True, $"{entry.RuntimeCommandType} must have its declared schedule site");
+                Assert.That(File.ReadAllText(sourcePath), Does.Contain(entry.RuntimeCommandType), $"{scheduleSite} must schedule {entry.RuntimeCommandType}");
             }
         }
     }

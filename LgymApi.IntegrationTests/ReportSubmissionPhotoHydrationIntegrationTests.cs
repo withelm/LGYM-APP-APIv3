@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -22,7 +21,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         using var response = await Client.GetAsync("/api/trainee/report-submissions");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         AssertHydratedPhoto(document.RootElement[0], scenario.Photo.StorageKey);
     }
@@ -37,12 +36,11 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             $"/api/trainee/report-submissions/{scenario.SubmissionId}/mark-feedback-read",
             content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         AssertHydratedPhoto(document.RootElement, scenario.Photo.StorageKey);
-        document.RootElement.GetProperty("trainerFeedbackReadAt").ValueKind.Should().Be(JsonValueKind.String);
-        document.RootElement.GetProperty("nextRecurringRequest").GetProperty("status").GetString()
-            .Should().Be(nameof(NextRecurringReportRequestStatus.Unscheduled));
+        Assert.That(document.RootElement.GetProperty("trainerFeedbackReadAt").ValueKind, Is.EqualTo(JsonValueKind.String));
+        Assert.That(document.RootElement.GetProperty("nextRecurringRequest").GetProperty("status").GetString(), Is.EqualTo(nameof(NextRecurringReportRequestStatus.Unscheduled)));
     }
 
     [Test]
@@ -53,9 +51,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         using var response = await Client.GetAsync("/api/trainee/report-submissions");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength().Should().Be(0);
+        Assert.That(document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength(), Is.EqualTo(0));
     }
 
     [Test]
@@ -66,7 +64,7 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         using var response = await Client.GetAsync("/api/trainee/report-submissions");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         AssertHydratedPhoto(document.RootElement[0], scenario.Photo.StorageKey);
     }
@@ -79,9 +77,9 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         using var response = await Client.GetAsync("/api/trainee/report-submissions");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength().Should().Be(1);
+        Assert.That(document.RootElement[0].GetProperty("answers").GetProperty("photos").GetArrayLength(), Is.EqualTo(1));
     }
 
     [Test]
@@ -99,14 +97,14 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         SetAuthorizationHeader(scenario.TrainerId);
         using var sourceResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
-        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(sourceResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(successor.Id);
         using var successorResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
-        successorResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(successorResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var body = await successorResponse.Content.ReadAsStringAsync();
-        body.Should().NotContain(scenario.Photo.Id.ToString());
-        body.Should().NotContain(scenario.Photo.StorageKey);
+        Assert.That(body, Does.Not.Contain(scenario.Photo.Id.ToString()));
+        Assert.That(body, Does.Not.Contain(scenario.Photo.StorageKey));
     }
 
     [Test]
@@ -132,29 +130,29 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         SetAuthorizationHeader(scenario.TraineeId);
         using var traineeResponse = await Client.GetAsync($"/api/trainee/reporting/photos/history?requestId={scenario.RequestId}");
-        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await PhotoCountAsync(traineeResponse)).Should().Be(1);
+        Assert.That(traineeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PhotoCountAsync(traineeResponse)), Is.EqualTo(1));
 
         SetAuthorizationHeader(scenario.TrainerId);
         using var sourceResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
-        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await PhotoCountAsync(sourceResponse)).Should().Be(1);
+        Assert.That(sourceResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PhotoCountAsync(sourceResponse)), Is.EqualTo(1));
 
         foreach (var actorId in new[] { successor.Id, admin.Id })
         {
             SetAuthorizationHeader(actorId);
             using var response = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().NotContain(scenario.Photo.Id.ToString());
-            body.Should().NotContain(scenario.Photo.StorageKey);
+            Assert.That(body, Does.Not.Contain(scenario.Photo.Id.ToString()));
+            Assert.That(body, Does.Not.Contain(scenario.Photo.StorageKey));
             using var document = JsonDocument.Parse(body);
-            document.RootElement.GetProperty("photos").GetArrayLength().Should().Be(0);
+            Assert.That(document.RootElement.GetProperty("photos").GetArrayLength(), Is.EqualTo(0));
         }
 
         SetAuthorizationHeader(outsider.Id);
         using var outsiderResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
-        outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(outsiderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -180,29 +178,29 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
 
         SetAuthorizationHeader(scenario.TraineeId);
         using var traineeResponse = await Client.GetAsync("/api/trainee/report-submissions");
-        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await SubmissionCountAsync(traineeResponse)).Should().Be(1);
+        Assert.That(traineeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await SubmissionCountAsync(traineeResponse)), Is.EqualTo(1));
 
         SetAuthorizationHeader(scenario.TrainerId);
         using var sourceResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
-        sourceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await SubmissionCountAsync(sourceResponse)).Should().Be(1);
+        Assert.That(sourceResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await SubmissionCountAsync(sourceResponse)), Is.EqualTo(1));
 
         foreach (var actorId in new[] { successor.Id, admin.Id })
         {
             SetAuthorizationHeader(actorId);
             using var response = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().NotContain(scenario.Photo.Id.ToString());
-            body.Should().NotContain(scenario.Photo.StorageKey);
+            Assert.That(body, Does.Not.Contain(scenario.Photo.Id.ToString()));
+            Assert.That(body, Does.Not.Contain(scenario.Photo.StorageKey));
             using var document = JsonDocument.Parse(body);
-            document.RootElement.GetArrayLength().Should().Be(0);
+            Assert.That(document.RootElement.GetArrayLength(), Is.EqualTo(0));
         }
 
         SetAuthorizationHeader(outsider.Id);
         using var outsiderResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
-        outsiderResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(outsiderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [TestCase(false, false)]
@@ -241,23 +239,23 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
             }
 
             using var signedResponse = await Client.GetAsync($"/api/trainer/reporting/photos/{scenario.Photo.Id}/signed-url");
-            signedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(signedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var signedBody = await signedResponse.Content.ReadAsStringAsync();
-            signedBody.Should().NotContain(scenario.Photo.Id.ToString());
-            signedBody.Should().NotContain(scenario.Photo.StorageKey);
+            Assert.That(signedBody, Does.Not.Contain(scenario.Photo.Id.ToString()));
+            Assert.That(signedBody, Does.Not.Contain(scenario.Photo.StorageKey));
 
             using var historyResponse = await Client.GetAsync($"/api/trainer/reporting/photos/history?traineeId={scenario.TraineeId}");
-            historyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var historyBody = await historyResponse.Content.ReadAsStringAsync();
-            historyBody.Should().NotContain(scenario.Photo.Id.ToString());
-            historyBody.Should().NotContain(scenario.Photo.StorageKey);
+            Assert.That(historyBody, Does.Not.Contain(scenario.Photo.Id.ToString()));
+            Assert.That(historyBody, Does.Not.Contain(scenario.Photo.StorageKey));
 
             using var submissionsResponse = await Client.GetAsync($"/api/trainer/trainees/{scenario.TraineeId}/report-submissions");
-            submissionsResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(submissionsResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var submissionsBody = await submissionsResponse.Content.ReadAsStringAsync();
-            submissionsBody.Should().NotContain(scenario.Photo.Id.ToString());
-            submissionsBody.Should().NotContain(scenario.Photo.StorageKey);
-            (await store.ReadAsync(scenario.Photo.StorageKey)).Should().Equal(storedBytes);
+            Assert.That(submissionsBody, Does.Not.Contain(scenario.Photo.Id.ToString()));
+            Assert.That(submissionsBody, Does.Not.Contain(scenario.Photo.StorageKey));
+            Assert.That((await store.ReadAsync(scenario.Photo.StorageKey)), Is.EqualTo(storedBytes));
         }
         finally
         {
@@ -392,10 +390,10 @@ public sealed class ReportSubmissionPhotoHydrationIntegrationTests : Integration
     private static void AssertHydratedPhoto(JsonElement submission, string canonicalStorageKey)
     {
         var hydrated = submission.GetProperty("answers").GetProperty("photos")[0];
-        hydrated.GetProperty("storageKey").GetString().Should().Be(canonicalStorageKey);
-        hydrated.GetProperty("readUrl").GetString().Should().NotBe("https://expired.example/read");
-        hydrated.GetProperty("readUrl").GetString().Should().NotBeNullOrWhiteSpace();
-        hydrated.GetProperty("thumbnailUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        Assert.That(hydrated.GetProperty("storageKey").GetString(), Is.EqualTo(canonicalStorageKey));
+        Assert.That(hydrated.GetProperty("readUrl").GetString(), Is.Not.EqualTo("https://expired.example/read"));
+        Assert.That(string.IsNullOrWhiteSpace(hydrated.GetProperty("readUrl").GetString()), Is.False);
+        Assert.That(hydrated.GetProperty("thumbnailUrl").ValueKind, Is.EqualTo(JsonValueKind.Null));
     }
 
     private static async Task<int> PhotoCountAsync(HttpResponseMessage response)

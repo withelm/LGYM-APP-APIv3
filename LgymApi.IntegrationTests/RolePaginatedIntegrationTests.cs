@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Security;
 
 namespace LgymApi.IntegrationTests;
@@ -17,13 +16,13 @@ public sealed class RolePaginatedIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/roles/paginated", new { page = 1, pageSize = 10 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PaginatedRoleResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().NotBeEmpty();
-        body.Page.Should().Be(1);
-        body.PageSize.Should().Be(10);
-        body.TotalCount.Should().BeGreaterThanOrEqualTo(3);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items, Is.Not.Empty);
+        Assert.That(body.Page, Is.EqualTo(1));
+        Assert.That(body.PageSize, Is.EqualTo(10));
+        Assert.That(body.TotalCount, Is.GreaterThanOrEqualTo(3));
     }
 
     [Test]
@@ -38,13 +37,13 @@ public sealed class RolePaginatedIntegrationTests : IntegrationTestBase
             sortDescriptors = new[] { new { fieldName = "name", descending = false } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PaginatedRoleResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().NotBeEmpty();
-        body.Page.Should().Be(1);
-        body.PageSize.Should().Be(10);
-        body.TotalCount.Should().BeGreaterThanOrEqualTo(3);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items, Is.Not.Empty);
+        Assert.That(body.Page, Is.EqualTo(1));
+        Assert.That(body.PageSize, Is.EqualTo(10));
+        Assert.That(body.TotalCount, Is.GreaterThanOrEqualTo(3));
     }
 
     private async Task AuthenticateAsAdminAsync()
@@ -56,10 +55,10 @@ public sealed class RolePaginatedIntegrationTests : IntegrationTestBase
     private async Task AuthenticateAsync(string name, string password)
     {
         var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
 
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", body.Token);
     }

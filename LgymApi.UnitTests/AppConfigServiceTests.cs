@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Pagination;
 using LgymApi.Application.Platform.ReferenceData.AppConfig;
@@ -26,10 +25,10 @@ public sealed class AppConfigServiceTests
 
         var result = await service.GetLatestByPlatformAsync(Platforms.Android);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeSameAs(config);
-        port.Calls.Should().BeEmpty();
-        repository.LatestLookupCount.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.SameAs(config));
+        Assert.That(port.Calls, Is.Empty);
+        Assert.That(repository.LatestLookupCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -41,10 +40,10 @@ public sealed class AppConfigServiceTests
 
         var result = await service.GetLatestByPlatformAsync(Platforms.Unknown);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidAppConfigError>();
-        port.Calls.Should().BeEmpty();
-        repository.LatestLookupCount.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidAppConfigError>());
+        Assert.That(port.Calls, Is.Empty);
+        Assert.That(repository.LatestLookupCount, Is.EqualTo(0));
     }
 
     [TestCaseSource(nameof(ForbiddenUserIds))]
@@ -57,11 +56,13 @@ public sealed class AppConfigServiceTests
 
         var result = await service.CreateNewAppVersionAsync(userId, ValidCreateInput());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<AppConfigForbiddenError>();
-        port.Calls.Should().ContainSingle().Which.Should().Be(userId.Rebind<ActorReference>());
-        repository.Added.Should().BeEmpty();
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<AppConfigForbiddenError>());
+        var assertedValue82 = (port.Calls).ToArray();
+        Assert.That(assertedValue82, Has.Exactly(1).Items);
+        Assert.That(assertedValue82.Single(), Is.EqualTo(userId.Rebind<ActorReference>()));
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [TestCase(ProtectedOperation.Create)]
@@ -80,7 +81,9 @@ public sealed class AppConfigServiceTests
 
         await InvokeAsync(operation, service, userId, config.Id);
 
-        port.Calls.Should().ContainSingle().Which.Should().Be(userId.Rebind<ActorReference>());
+        var assertedValue83 = (port.Calls).ToArray();
+        Assert.That(assertedValue83, Has.Exactly(1).Items);
+        Assert.That(assertedValue83.Single(), Is.EqualTo(userId.Rebind<ActorReference>()));
     }
 
     [TestCase(ProtectedOperation.Create)]
@@ -97,11 +100,11 @@ public sealed class AppConfigServiceTests
 
         await AssertForbiddenAsync(operation, service, Id<User>.New(), Id<AppConfigEntity>.New());
 
-        port.Calls.Should().ContainSingle();
-        repository.TotalCalls.Should().Be(0);
-        repository.Added.Should().BeEmpty();
-        repository.DeleteCount.Should().Be(0);
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(port.Calls, Has.Exactly(1).Items);
+        Assert.That(repository.TotalCalls, Is.EqualTo(0));
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(repository.DeleteCount, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -114,11 +117,11 @@ public sealed class AppConfigServiceTests
 
         var result = await service.CreateNewAppVersionAsync(Id<User>.New(), ValidCreateInput(Platforms.Unknown));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidAppConfigError>();
-        port.Calls.Should().ContainSingle();
-        repository.Added.Should().BeEmpty();
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidAppConfigError>());
+        Assert.That(port.Calls, Has.Exactly(1).Items);
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [TestCase(ProtectedOperation.Get)]
@@ -133,9 +136,9 @@ public sealed class AppConfigServiceTests
 
         await AssertInvalidConfigIdAsync(operation, service, Id<User>.New());
 
-        port.Calls.Should().ContainSingle();
-        repository.TotalCalls.Should().Be(0);
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(port.Calls, Has.Exactly(1).Items);
+        Assert.That(repository.TotalCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -148,11 +151,11 @@ public sealed class AppConfigServiceTests
 
         var result = await service.UpdateAsync(Id<User>.New(), Id<AppConfigEntity>.New(), ValidUpdateInput(Platforms.Unknown));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidAppConfigError>();
-        port.Calls.Should().ContainSingle();
-        repository.TotalCalls.Should().Be(0);
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidAppConfigError>());
+        Assert.That(port.Calls, Has.Exactly(1).Items);
+        Assert.That(repository.TotalCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [TestCase(ProtectedOperation.Get)]
@@ -167,8 +170,8 @@ public sealed class AppConfigServiceTests
 
         await AssertNotFoundAsync(operation, service, Id<User>.New(), Id<AppConfigEntity>.New());
 
-        port.Calls.Should().ContainSingle();
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(port.Calls, Has.Exactly(1).Items);
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -181,9 +184,9 @@ public sealed class AppConfigServiceTests
 
         var result = await service.CreateNewAppVersionAsync(Id<User>.New(), ValidCreateInput());
 
-        result.IsSuccess.Should().BeTrue();
-        repository.Added.Should().ContainSingle();
-        unitOfWork.SaveChangesCount.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(repository.Added, Has.Exactly(1).Items);
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -199,11 +202,11 @@ public sealed class AppConfigServiceTests
         var update = await service.UpdateAsync(userId, config.Id, ValidUpdateInput());
         var delete = await service.DeleteAsync(userId, config.Id);
 
-        update.IsSuccess.Should().BeTrue();
-        delete.IsSuccess.Should().BeTrue();
-        repository.DeleteCount.Should().Be(1);
-        unitOfWork.SaveChangesCount.Should().Be(2);
-        port.Calls.Should().HaveCount(2);
+        Assert.That(update.IsSuccess, Is.True);
+        Assert.That(delete.IsSuccess, Is.True);
+        Assert.That(repository.DeleteCount, Is.EqualTo(1));
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(2));
+        Assert.That(port.Calls, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -218,9 +221,9 @@ public sealed class AppConfigServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await service.CreateNewAppVersionAsync(Id<User>.New(), ValidCreateInput()));
 
-        exception.Should().BeSameAs(expected);
-        repository.TotalCalls.Should().Be(0);
-        unitOfWork.SaveChangesCount.Should().Be(0);
+        Assert.That(exception, Is.SameAs(expected));
+        Assert.That(repository.TotalCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCount, Is.EqualTo(0));
     }
 
     private static IEnumerable<TestCaseData> ForbiddenUserIds()
@@ -246,19 +249,19 @@ public sealed class AppConfigServiceTests
         switch (operation)
         {
             case ProtectedOperation.Create:
-                (await service.CreateNewAppVersionAsync(userId, ValidCreateInput())).IsSuccess.Should().BeTrue();
+                Assert.That((await service.CreateNewAppVersionAsync(userId, ValidCreateInput())).IsSuccess, Is.True);
                 break;
             case ProtectedOperation.List:
-                (await service.GetPaginatedAsync(userId, new FilterInput())).IsSuccess.Should().BeTrue();
+                Assert.That((await service.GetPaginatedAsync(userId, new FilterInput())).IsSuccess, Is.True);
                 break;
             case ProtectedOperation.Get:
-                (await service.GetByIdAsync(userId, configId)).IsSuccess.Should().BeTrue();
+                Assert.That((await service.GetByIdAsync(userId, configId)).IsSuccess, Is.True);
                 break;
             case ProtectedOperation.Update:
-                (await service.UpdateAsync(userId, configId, ValidUpdateInput())).IsSuccess.Should().BeTrue();
+                Assert.That((await service.UpdateAsync(userId, configId, ValidUpdateInput())).IsSuccess, Is.True);
                 break;
             case ProtectedOperation.Delete:
-                (await service.DeleteAsync(userId, configId)).IsSuccess.Should().BeTrue();
+                Assert.That((await service.DeleteAsync(userId, configId)).IsSuccess, Is.True);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation), operation, null);
@@ -270,19 +273,19 @@ public sealed class AppConfigServiceTests
         switch (operation)
         {
             case ProtectedOperation.Create:
-                (await service.CreateNewAppVersionAsync(userId, ValidCreateInput())).Error.Should().BeOfType<AppConfigForbiddenError>();
+                Assert.That((await service.CreateNewAppVersionAsync(userId, ValidCreateInput())).Error, Is.TypeOf<AppConfigForbiddenError>());
                 break;
             case ProtectedOperation.List:
-                (await service.GetPaginatedAsync(userId, new FilterInput())).Error.Should().BeOfType<AppConfigForbiddenError>();
+                Assert.That((await service.GetPaginatedAsync(userId, new FilterInput())).Error, Is.TypeOf<AppConfigForbiddenError>());
                 break;
             case ProtectedOperation.Get:
-                (await service.GetByIdAsync(userId, configId)).Error.Should().BeOfType<AppConfigForbiddenError>();
+                Assert.That((await service.GetByIdAsync(userId, configId)).Error, Is.TypeOf<AppConfigForbiddenError>());
                 break;
             case ProtectedOperation.Update:
-                (await service.UpdateAsync(userId, configId, ValidUpdateInput())).Error.Should().BeOfType<AppConfigForbiddenError>();
+                Assert.That((await service.UpdateAsync(userId, configId, ValidUpdateInput())).Error, Is.TypeOf<AppConfigForbiddenError>());
                 break;
             case ProtectedOperation.Delete:
-                (await service.DeleteAsync(userId, configId)).Error.Should().BeOfType<AppConfigForbiddenError>();
+                Assert.That((await service.DeleteAsync(userId, configId)).Error, Is.TypeOf<AppConfigForbiddenError>());
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation), operation, null);
@@ -294,13 +297,13 @@ public sealed class AppConfigServiceTests
         switch (operation)
         {
             case ProtectedOperation.Get:
-                (await service.GetByIdAsync(userId, Id<AppConfigEntity>.Empty)).Error.Should().BeOfType<InvalidAppConfigError>();
+                Assert.That((await service.GetByIdAsync(userId, Id<AppConfigEntity>.Empty)).Error, Is.TypeOf<InvalidAppConfigError>());
                 break;
             case ProtectedOperation.Update:
-                (await service.UpdateAsync(userId, Id<AppConfigEntity>.Empty, ValidUpdateInput())).Error.Should().BeOfType<InvalidAppConfigError>();
+                Assert.That((await service.UpdateAsync(userId, Id<AppConfigEntity>.Empty, ValidUpdateInput())).Error, Is.TypeOf<InvalidAppConfigError>());
                 break;
             case ProtectedOperation.Delete:
-                (await service.DeleteAsync(userId, Id<AppConfigEntity>.Empty)).Error.Should().BeOfType<InvalidAppConfigError>();
+                Assert.That((await service.DeleteAsync(userId, Id<AppConfigEntity>.Empty)).Error, Is.TypeOf<InvalidAppConfigError>());
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation), operation, null);
@@ -312,13 +315,13 @@ public sealed class AppConfigServiceTests
         switch (operation)
         {
             case ProtectedOperation.Get:
-                (await service.GetByIdAsync(userId, configId)).Error.Should().BeOfType<AppConfigNotFoundError>();
+                Assert.That((await service.GetByIdAsync(userId, configId)).Error, Is.TypeOf<AppConfigNotFoundError>());
                 break;
             case ProtectedOperation.Update:
-                (await service.UpdateAsync(userId, configId, ValidUpdateInput())).Error.Should().BeOfType<AppConfigNotFoundError>();
+                Assert.That((await service.UpdateAsync(userId, configId, ValidUpdateInput())).Error, Is.TypeOf<AppConfigNotFoundError>());
                 break;
             case ProtectedOperation.Delete:
-                (await service.DeleteAsync(userId, configId)).Error.Should().BeOfType<AppConfigNotFoundError>();
+                Assert.That((await service.DeleteAsync(userId, configId)).Error, Is.TypeOf<AppConfigNotFoundError>());
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation), operation, null);

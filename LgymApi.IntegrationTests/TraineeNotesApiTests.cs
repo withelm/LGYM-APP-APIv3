@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -33,10 +32,10 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             isPinned = true,
         });
 
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<TraineeNoteResponse>();
-        created.Should().NotBeNull();
-        created!.VisibleToTrainee.Should().BeTrue();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.VisibleToTrainee, Is.True);
 
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/notes/{created.Id}/update", new
         {
@@ -46,29 +45,29 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             isPinned = true,
         });
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var historyResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/notes/{created.Id}/history");
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var history = await historyResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryResponse>>();
-        history.Should().NotBeNull();
-        history!.Select(x => x.ChangeType).Should().Contain(new[] { "Created", "Updated" });
+        Assert.That(history, Is.Not.Null);
+        Assert.That(history!.Select(x => x.ChangeType), Is.SupersetOf(new[] { "Created", "Updated" }));
 
         SetAuthorizationHeader(trainee.Id);
         var visibleNotesResponse = await Client.GetAsync("/api/trainee/notes");
-        visibleNotesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(visibleNotesResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var visibleNotes = await visibleNotesResponse.Content.ReadFromJsonAsync<List<TraineeNoteResponse>>();
-        visibleNotes.Should().ContainSingle(x => x.Id == created.Id);
+        Assert.That((visibleNotes).Where(x => x.Id == created.Id), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(trainer.Id);
         var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/notes/{created.Id}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var deleted = JsonDocument.Parse(await deleteResponse.Content.ReadAsStringAsync());
         var originalUiCulture = CultureInfo.CurrentUICulture;
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
         try
         {
-            deleted.RootElement.GetProperty("msg").GetString().Should().Be(Messages.Deleted);
+            Assert.That(deleted.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.Deleted));
         }
         finally
         {
@@ -77,7 +76,7 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         var deletedNoteResponse = await Client.GetAsync($"/api/trainee/notes/{created.Id}");
-        deletedNoteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(deletedNoteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -86,8 +85,8 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync();
 
-        notificationCommand.Should().NotBeNull();
-        notificationCommand!.PayloadJson.Should().Contain(trainee.Id.ToString());
+        Assert.That(notificationCommand, Is.Not.Null);
+        Assert.That(notificationCommand!.PayloadJson, Does.Contain(trainee.Id.ToString()));
     }
 
     [Test]
@@ -106,7 +105,7 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             isPinned = false,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -125,14 +124,14 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             isPinned = false,
         });
 
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         SetAuthorizationHeader(trainee.Id);
         var notesResponse = await Client.GetAsync("/api/trainee/notes");
-        notesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(notesResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var notes = await notesResponse.Content.ReadFromJsonAsync<List<TraineeNoteResponse>>();
-        notes.Should().NotBeNull();
-        notes.Should().BeEmpty();
+        Assert.That(notes, Is.Not.Null);
+        Assert.That(notes, Is.Empty);
     }
 
     [Test]
@@ -148,23 +147,23 @@ public sealed class TraineeNotesApiTests : IntegrationTestBase
             SetAuthorizationHeader(trainer.Id);
 
             var malformedTrainee = await Client.GetAsync("/api/trainer/trainees/not-a-guid/notes");
-            malformedTrainee.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(malformedTrainee.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             using var traineeError = JsonDocument.Parse(await malformedTrainee.Content.ReadAsStringAsync());
-            traineeError.RootElement.GetProperty("msg").GetString().Should().Be(Messages.UserIdRequired);
+            Assert.That(traineeError.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.UserIdRequired));
 
             var malformedNote = await Client.PostAsJsonAsync(
                 $"/api/trainer/trainees/{Id<User>.New()}/notes/not-a-guid/update",
                 new { content = "Ignored" });
-            malformedNote.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(malformedNote.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             using var noteError = JsonDocument.Parse(await malformedNote.Content.ReadAsStringAsync());
-            noteError.RootElement.GetProperty("msg").GetString().Should().Be(Messages.FieldRequired);
+            Assert.That(noteError.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.FieldRequired));
 
             var trainee = await SeedUserAsync("trainee-malformed-visible-note", "trainee-malformed-visible-note@example.com", "password123");
             SetAuthorizationHeader(trainee.Id);
             var malformedVisibleNote = await Client.GetAsync("/api/trainee/notes/not-a-guid");
-            malformedVisibleNote.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            Assert.That(malformedVisibleNote.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             using var visibleError = JsonDocument.Parse(await malformedVisibleNote.Content.ReadAsStringAsync());
-            visibleError.RootElement.GetProperty("msg").GetString().Should().Be(Messages.FieldRequired);
+            Assert.That(visibleError.RootElement.GetProperty("msg").GetString(), Is.EqualTo(Messages.FieldRequired));
         }
         finally
         {

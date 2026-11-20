@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Resources;
 
 namespace LgymApi.UnitTests;
@@ -31,9 +30,9 @@ public sealed class RecurringReportResourceTests
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(cultureName);
 
-            Messages.RecurringReportRequestInProgress.Should().Be(requestInProgress);
-            Messages.RecurringReportAssignmentUnavailable.Should().Be(assignmentUnavailable);
-            Messages.RecurringReportTemplateUnavailable.Should().Be(templateUnavailable);
+            Assert.That(Messages.RecurringReportRequestInProgress, Is.EqualTo(requestInProgress));
+            Assert.That(Messages.RecurringReportAssignmentUnavailable, Is.EqualTo(assignmentUnavailable));
+            Assert.That(Messages.RecurringReportTemplateUnavailable, Is.EqualTo(templateUnavailable));
         }
         finally
         {

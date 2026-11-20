@@ -18,7 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
-using FluentAssertions;
 
 namespace LgymApi.UnitTests;
 
@@ -84,8 +83,8 @@ public sealed class CommandDispatcherTests
         }
 
         // Assert - All correlation IDs should be identical
-        correlationIds.Should().HaveCount(100);
-        correlationIds.Distinct().Should().HaveCount(1, "All 100 identical commands should produce the same correlation ID");
+        Assert.That(correlationIds, Has.Exactly(100).Items);
+        Assert.That(correlationIds.Distinct(), Has.Exactly(1).Items, "All 100 identical commands should produce the same correlation ID");
     }
 
     [Test]
@@ -115,8 +114,8 @@ public sealed class CommandDispatcherTests
 
         // Assert - Should have two different correlation IDs
         var envelopes = _repository.GetAllEnvelopes();
-        envelopes.Should().HaveCount(2);
-        envelopes[0].CorrelationId.Should().NotBe(envelopes[1].CorrelationId, "Different InvitationIds should produce different correlation IDs");
+        Assert.That(envelopes, Has.Exactly(2).Items);
+        Assert.That(envelopes[0].CorrelationId, Is.Not.EqualTo(envelopes[1].CorrelationId), "Different InvitationIds should produce different correlation IDs");
     }
 
     [Test]
@@ -145,7 +144,7 @@ public sealed class CommandDispatcherTests
 
         // Assert - Should have only one envelope (idempotent)
         var envelopes = _repository.GetAllEnvelopes();
-        envelopes.Should().HaveCount(1, "Same InvitationId should produce same correlation ID and be deduplicated");
+        Assert.That(envelopes, Has.Exactly(1).Items, "Same InvitationId should produce same correlation ID and be deduplicated");
     }
 
     [Test]
@@ -173,9 +172,9 @@ public sealed class CommandDispatcherTests
         var act = () => dispatcher.EnqueueAsync(command);
 
         // Assert
-        await act.Should().NotThrowAsync();
-        _unitOfWork.SaveCallCount.Should().Be(1);
-        _repository.GetAllEnvelopes().Should().HaveCount(1);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.Nothing);
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1));
+        Assert.That(_repository.GetAllEnvelopes(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -203,9 +202,9 @@ public sealed class CommandDispatcherTests
         var act = () => dispatcher.EnqueueAsync(command);
 
         // Assert
-        await act.Should().ThrowAsync<DbUpdateException>().WithMessage("boom");
-        _unitOfWork.SaveCallCount.Should().Be(1);
-        _repository.GetAllEnvelopes().Should().HaveCount(1);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<DbUpdateException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("boom").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1));
+        Assert.That(_repository.GetAllEnvelopes(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -234,8 +233,8 @@ public sealed class CommandDispatcherTests
         var act = () => dispatcher.EnqueueAsync(command);
 
         // Assert - edge case: constraint violation but envelope not found must bubble up
-        await act.Should().ThrowAsync<DbUpdateException>();
-        _unitOfWork.SaveCallCount.Should().Be(1);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<DbUpdateException>());
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(1));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -262,11 +261,11 @@ public sealed class CommandDispatcherTests
             envelope.CorrelationId.ToString());
 
         // Then
-        actual.Should().Be(new PersistedCommandVector(
+        Assert.That(actual, Is.EqualTo(new PersistedCommandVector(
             contract.CanonicalId,
             contract.PayloadJson,
             contract.CorrelationInput,
-            contract.CorrelationId));
+            contract.CorrelationId)));
     }
 
     private static Task EnqueueLegacyCommandAsync(CommandDispatcher dispatcher, IActionCommand command) => command switch

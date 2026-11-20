@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -325,14 +324,12 @@ public sealed class ErrorContractConsistencyTests : IntegrationTestBase
 
         // Assert: Should return error response with "msg" field
         // Status code might be 400 (BadRequest) if validation catches it, or 500 if it throws
-        response.IsSuccessStatusCode.Should().BeFalse("invalid input should trigger error");
+        Assert.That(response.IsSuccessStatusCode, Is.False, "invalid input should trigger error");
 
         var json = await _harness.GetResponseJsonAsync(response);
-        json.RootElement.TryGetProperty("msg", out _)
-            .Should().BeTrue("error response must contain 'msg' field");
+        Assert.That(json.RootElement.TryGetProperty("msg", out _), Is.True, "error response must contain 'msg' field");
 
-        json.RootElement.TryGetProperty("message", out _)
-            .Should().BeFalse("error response must not use 'message' field");
+        Assert.That(json.RootElement.TryGetProperty("message", out _), Is.False, "error response must not use 'message' field");
     }
 
     private static string GenerateJwtWithoutSessionClaim(Id<User> userId)

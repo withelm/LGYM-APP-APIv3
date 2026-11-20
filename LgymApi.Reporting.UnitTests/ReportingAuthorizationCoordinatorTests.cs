@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Entities;
@@ -27,8 +26,8 @@ public sealed class ReportingAuthorizationCoordinatorTests
         var t2Source = Submission(Request(t2Id, traineeId, ReportRequestStatus.Submitted, now), traineeId);
         var coordinator = ReportingAuthorizationTestFactory.Create();
 
-        coordinator.CanReadSubmission(returningT1, t1Source, activeT1Facts).Should().BeTrue();
-        coordinator.CanReadSubmission(returningT1, t2Source, activeT1Facts).Should().BeFalse();
+        Assert.That(coordinator.CanReadSubmission(returningT1, t1Source, activeT1Facts), Is.True);
+        Assert.That(coordinator.CanReadSubmission(returningT1, t2Source, activeT1Facts), Is.False);
     }
 
     [Test]
@@ -55,37 +54,37 @@ public sealed class ReportingAuthorizationCoordinatorTests
             ["Admin+Trainer"] = Account(Id<AccountReference>.New(), true, "Admin")
         };
 
-        coordinator.CanReadSubmission(actors["U"], submission, none).Should().BeTrue();
-        coordinator.CanReadSubmission(actors["T1"], submission, active).Should().BeTrue();
-        coordinator.CanReadSubmission(actors["T1"], submission, historical).Should().BeTrue();
-        coordinator.CanReadSubmission(actors["T1"], submission, none).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["T2"], submission, active).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["T3"], submission, historical).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["Admin"], submission, active).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["Admin+Trainer"], submission, historical).Should().BeFalse();
+        Assert.That(coordinator.CanReadSubmission(actors["U"], submission, none), Is.True);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission, active), Is.True);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission, historical), Is.True);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission, none), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["T2"], submission, active), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["T3"], submission, historical), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["Admin"], submission, active), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["Admin+Trainer"], submission, historical), Is.False);
 
         foreach (var status in new[] { ReportRequestStatus.Pending, ReportRequestStatus.Expired, ReportRequestStatus.Cancelled })
         {
             var nonArchiveSubmission = Submission(Request(trainerId, traineeId, status, createdAt), traineeId);
-            coordinator.CanReadSubmission(actors["U"], nonArchiveSubmission, none).Should().BeFalse(status.ToString());
-            coordinator.CanReadSubmission(actors["T1"], nonArchiveSubmission, active).Should().BeFalse(status.ToString());
-            coordinator.CanReadPhoto(actors["T1"], nonArchiveSubmission.ReportRequest, historical).Should().BeFalse(status.ToString());
+            Assert.That(coordinator.CanReadSubmission(actors["U"], nonArchiveSubmission, none), Is.False, status.ToString());
+            Assert.That(coordinator.CanReadSubmission(actors["T1"], nonArchiveSubmission, active), Is.False, status.ToString());
+            Assert.That(coordinator.CanReadPhoto(actors["T1"], nonArchiveSubmission.ReportRequest, historical), Is.False, status.ToString());
         }
 
-        coordinator.CanReadPhoto(actors["U"], request, none).Should().BeTrue();
-        coordinator.CanReadPhoto(actors["T1"], request, active).Should().BeTrue();
-        coordinator.CanReadPhoto(actors["T1"], request, historical).Should().BeTrue();
-        coordinator.CanReadPhoto(actors["T2"], request, active).Should().BeFalse();
-        coordinator.CanReadPhoto(actors["Admin+Trainer"], request, active).Should().BeFalse();
-        coordinator.CanManageOwnedDefinition(actors["T1"], trainerId).Should().BeTrue();
-        coordinator.CanManageOwnedDefinition(actors["Admin+Trainer"], trainerId).Should().BeFalse();
+        Assert.That(coordinator.CanReadPhoto(actors["U"], request, none), Is.True);
+        Assert.That(coordinator.CanReadPhoto(actors["T1"], request, active), Is.True);
+        Assert.That(coordinator.CanReadPhoto(actors["T1"], request, historical), Is.True);
+        Assert.That(coordinator.CanReadPhoto(actors["T2"], request, active), Is.False);
+        Assert.That(coordinator.CanReadPhoto(actors["Admin+Trainer"], request, active), Is.False);
+        Assert.That(coordinator.CanManageOwnedDefinition(actors["T1"], trainerId), Is.True);
+        Assert.That(coordinator.CanManageOwnedDefinition(actors["Admin+Trainer"], trainerId), Is.False);
 
-        coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequestId = Id<ReportRequest>.New() }, active).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["T1"], submission with { TraineeId = Id<AccountReference>.New() }, active).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequest = request with { IsDeleted = true } }, active).Should().BeFalse();
-        coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequest = request with { TrainerId = Id<AccountReference>.Empty } }, active).Should().BeFalse();
-        coordinator.CanReadPhoto(actors["T1"], request with { IsDeleted = true }, active).Should().BeFalse();
-        coordinator.CanReadPhoto(actors["T1"], request with { TrainerId = Id<AccountReference>.Empty }, active).Should().BeFalse();
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequestId = Id<ReportRequest>.New() }, active), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission with { TraineeId = Id<AccountReference>.New() }, active), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequest = request with { IsDeleted = true } }, active), Is.False);
+        Assert.That(coordinator.CanReadSubmission(actors["T1"], submission with { ReportRequest = request with { TrainerId = Id<AccountReference>.Empty } }, active), Is.False);
+        Assert.That(coordinator.CanReadPhoto(actors["T1"], request with { IsDeleted = true }, active), Is.False);
+        Assert.That(coordinator.CanReadPhoto(actors["T1"], request with { TrainerId = Id<AccountReference>.Empty }, active), Is.False);
     }
 
     private static AuthenticatedAccountContext Account(Id<AccountReference> id, bool trainer = false, params string[] extraRoles)

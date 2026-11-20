@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -42,11 +41,11 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
     }
 
     [Test]
@@ -74,7 +73,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -98,7 +97,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -126,7 +125,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{nonExistentPlanId}/createPlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -159,10 +158,10 @@ public sealed class PlanDayTests : IntegrationTestBase
             exercises = new[] { new { exercise = foreignExercise.Id.ToString(), series = 3, reps = "10" } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.PlanDays.CountAsync(planDay => planDay.PlanId == planId)).Should().Be(0);
+        Assert.That((await verificationDatabase.PlanDays.CountAsync(planDay => planDay.PlanId == planId)), Is.EqualTo(0));
     }
 
     [Test]
@@ -177,10 +176,10 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/planDay/not-a-guid/getPlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Message), Is.False);
     }
 
     [Test]
@@ -204,14 +203,14 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        body.Should().NotBeNull();
-        body!.Name.Should().Be("Leg Day");
-        body.Exercises.Should().HaveCount(1);
-        body.Exercises[0].Series.Should().Be(5);
-        body.Exercises[0].Reps.Should().Be("5");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Name, Is.EqualTo("Leg Day"));
+        Assert.That(body.Exercises, Has.Exactly(1).Items);
+        Assert.That(body.Exercises[0].Series, Is.EqualTo(5));
+        Assert.That(body.Exercises[0].Reps, Is.EqualTo("5"));
     }
 
     [Test]
@@ -228,7 +227,7 @@ public sealed class PlanDayTests : IntegrationTestBase
             name = "Przysiad"
         };
         var translationResponse = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{admin.Id}/addGlobalTranslation", translationRequest);
-        translationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(translationResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var planId = await CreatePlanViaEndpointAsync(admin.Id, "Translation Test Plan");
         var planDayId = await CreatePlanDayViaEndpointAsync(admin.Id, planId, "Translated Day", new List<PlanDayExerciseInput>
@@ -240,13 +239,13 @@ public sealed class PlanDayTests : IntegrationTestBase
         request.Headers.AcceptLanguage.ParseAdd("pl-PL");
         var response = await Client.SendAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        body.Should().NotBeNull();
-        body!.Exercises.Should().HaveCount(1);
-        body.Exercises[0].Exercise.Should().NotBeNull();
-        body.Exercises[0].Exercise!.Name.Should().Be("Przysiad");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Exercises, Has.Exactly(1).Items);
+        Assert.That(body.Exercises[0].Exercise, Is.Not.Null);
+        Assert.That(body.Exercises[0].Exercise!.Name, Is.EqualTo("Przysiad"));
     }
 
     [Test]
@@ -274,13 +273,11 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        body.Should().NotBeNull();
-        body!.Exercises.Select(e => e.Exercise?.Id)
-            .Should()
-            .ContainInOrder(exerciseB.ToString(), exerciseC.ToString(), exerciseA.ToString());
+        Assert.That(body, Is.Not.Null);
+        { var orderedItems = (body!.Exercises.Select(e => e.Exercise?.Id)).ToArray(); var previousIndex = -1; foreach (var expectedItem in new[] { exerciseB.ToString(), exerciseC.ToString(), exerciseA.ToString() }) { var nextIndex = Array.FindIndex(orderedItems, previousIndex + 1, item => Equals(item, expectedItem)); Assert.That(nextIndex, Is.GreaterThan(previousIndex), $"Expected {expectedItem} after index {previousIndex}"); previousIndex = nextIndex; } }
     }
 
     [Test]
@@ -297,7 +294,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         var nonExistentId = Domain.ValueObjects.Id<PlanDay>.New();
         var response = await Client.GetAsync($"/api/planDay/{nonExistentId}/getPlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -327,12 +324,12 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayVmResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(pd => pd.Name).Should().Contain(new[] { "Day A", "Day B" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(pd => pd.Name), Is.SupersetOf(new[] { "Day A", "Day B" }));
     }
 
     [Test]
@@ -350,7 +347,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -386,12 +383,12 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var verifyResponse = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
         var updatedPlanDay = await verifyResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        updatedPlanDay!.Name.Should().Be("Updated Name");
-        updatedPlanDay.Exercises.Should().HaveCount(2);
+        Assert.That(updatedPlanDay!.Name, Is.EqualTo("Updated Name"));
+        Assert.That(updatedPlanDay.Exercises, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -427,11 +424,11 @@ public sealed class PlanDayTests : IntegrationTestBase
             exercises = new[] { new { exercise = foreignExercise.Id.ToString(), series = 4, reps = "8" } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persistedExercise = await verificationDatabase.PlanDayExercises.SingleAsync(exercise => exercise.PlanDayId == planDayId);
-        persistedExercise.ExerciseId.Should().Be(ownExercise);
+        Assert.That(persistedExercise.ExerciseId, Is.EqualTo(ownExercise));
     }
 
     [Test]
@@ -469,29 +466,27 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var updateResponse = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var getResponse = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var updatedPlanDay = await getResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        updatedPlanDay.Should().NotBeNull();
-        updatedPlanDay!.Name.Should().Be("Updated Day Name");
-        updatedPlanDay.Exercises.Should().HaveCount(2);
+        Assert.That(updatedPlanDay, Is.Not.Null);
+        Assert.That(updatedPlanDay!.Name, Is.EqualTo("Updated Day Name"));
+        Assert.That(updatedPlanDay.Exercises, Has.Exactly(2).Items);
 
-        updatedPlanDay.Exercises
-            .Should()
-            .OnlyContain(e => e.Exercise != null && e.Exercise.Id != removedExerciseId.ToString());
+        Assert.That((updatedPlanDay.Exercises).All(e => e.Exercise != null && e.Exercise.Id != removedExerciseId.ToString()), Is.True);
 
         var updatedExercise = updatedPlanDay.Exercises
             .Single(e => e.Exercise != null && e.Exercise.Id == updatedExerciseId.ToString());
-        updatedExercise.Series.Should().Be(5);
-        updatedExercise.Reps.Should().Be("6");
+        Assert.That(updatedExercise.Series, Is.EqualTo(5));
+        Assert.That(updatedExercise.Reps, Is.EqualTo("6"));
 
         var addedExercise = updatedPlanDay.Exercises
             .Single(e => e.Exercise != null && e.Exercise.Id == addedExerciseId.ToString());
-        addedExercise.Series.Should().Be(4);
-        addedExercise.Reps.Should().Be("12");
+        Assert.That(addedExercise.Series, Is.EqualTo(4));
+        Assert.That(addedExercise.Reps, Is.EqualTo("12"));
     }
 
     [Test]
@@ -529,16 +524,14 @@ public sealed class PlanDayTests : IntegrationTestBase
         };
 
         var updateResponse = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var getResponse = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var updatedPlanDay = await getResponse.Content.ReadFromJsonAsync<PlanDayVmResponse>();
-        updatedPlanDay.Should().NotBeNull();
-        updatedPlanDay!.Exercises.Select(e => e.Exercise?.Id)
-            .Should()
-            .ContainInOrder(exerciseC.ToString(), exerciseA.ToString(), exerciseB.ToString());
+        Assert.That(updatedPlanDay, Is.Not.Null);
+        { var orderedItems = (updatedPlanDay!.Exercises.Select(e => e.Exercise?.Id)).ToArray(); var previousIndex = -1; foreach (var expectedItem in new[] { exerciseC.ToString(), exerciseA.ToString(), exerciseB.ToString() }) { var nextIndex = Array.FindIndex(orderedItems, previousIndex + 1, item => Equals(item, expectedItem)); Assert.That(nextIndex, Is.GreaterThan(previousIndex), $"Expected {expectedItem} after index {previousIndex}"); previousIndex = nextIndex; } }
 
         var dbContext = GetDbContext();
         var persistedOrders = await dbContext.PlanDayExercises
@@ -547,7 +540,7 @@ public sealed class PlanDayTests : IntegrationTestBase
             .Select(x => x.Order)
             .ToListAsync();
 
-        persistedOrders.Should().Equal(0, 1, 2);
+        Assert.That(persistedOrders, Is.EqualTo(new[] { 0, 1, 2 }));
     }
 
     [Test]
@@ -580,7 +573,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", updateRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -604,10 +597,10 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planDayId}/deletePlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var verifyResponse = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
-        verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(verifyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -624,7 +617,7 @@ public sealed class PlanDayTests : IntegrationTestBase
         var nonExistentId = Domain.ValueObjects.Id<PlanDay>.New();
         var response = await Client.GetAsync($"/api/planDay/{nonExistentId}/deletePlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -656,10 +649,10 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planDayId}/deletePlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.Forbidden));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.Forbidden)));
     }
 
     [Test]
@@ -696,7 +689,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/planDay/{planId}/createPlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -738,7 +731,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -770,7 +763,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planDayId}/getPlanDay");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -802,7 +795,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -827,7 +820,7 @@ public sealed class PlanDayTests : IntegrationTestBase
             name = "Linked Trainer Plan",
             purpose = "Personal"
         });
-        classify.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(classify.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await CreatePlanDayViaEndpointAsync(ownerId, planId, "Linked Trainer Day",
         [
             new PlanDayExerciseInput { ExerciseId = exerciseId.ToString(), Series = 3, Reps = "10" }
@@ -838,9 +831,9 @@ public sealed class PlanDayTests : IntegrationTestBase
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayResult>>();
-        body.Should().ContainSingle(day => day.Name == "Linked Trainer Day");
+        Assert.That((body).Where(day => day.Name == "Linked Trainer Day"), Has.Exactly(1).Items);
     }
 
     [TestCase("Unclassified")]
@@ -857,13 +850,13 @@ public sealed class PlanDayTests : IntegrationTestBase
         {
             _id = planId.ToString(), name = "Private plan", purpose
         });
-        classify.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(classify.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await SeedTrainerRelationshipAsync(trainerId, ownerId);
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -891,7 +884,7 @@ public sealed class PlanDayTests : IntegrationTestBase
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", trainerToken);
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDays");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -923,7 +916,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{ownerId}/getPlanDaysTypes");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -955,7 +948,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDaysInfo");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -979,12 +972,12 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{userId}/getPlanDaysTypes");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayChooseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCountGreaterThanOrEqualTo(1);
-        body!.Should().Contain(pd => pd.Name == "Arms Day");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Count.GreaterThanOrEqualTo(1));
+        Assert.That((body!).Any(pd => pd.Name == "Arms Day"), Is.True);
     }
 
     private async Task SeedTrainerRelationshipAsync(Id<User> trainerId, Id<User> traineeId)
@@ -1014,7 +1007,7 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{userId}/getPlanDaysTypes");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -1039,14 +1032,14 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDaysInfo");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("Info Day");
-        body[0].TotalNumberOfExercises.Should().Be(2);
-        body[0].TotalNumberOfSeries.Should().Be(7);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("Info Day"));
+        Assert.That(body[0].TotalNumberOfExercises, Is.EqualTo(2));
+        Assert.That(body[0].TotalNumberOfSeries, Is.EqualTo(7));
     }
 
     [Test]
@@ -1064,11 +1057,11 @@ public sealed class PlanDayTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/planDay/{planId}/getPlanDaysInfo");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<PlanDayInfoResponse>>();
-        body.Should().NotBeNull();
-        body.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Is.Empty);
     }
 
     private sealed class MessageResponse

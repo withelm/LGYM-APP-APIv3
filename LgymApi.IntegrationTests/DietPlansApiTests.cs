@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
@@ -46,15 +45,15 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             }
         });
 
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<DietPlanResponse>();
-        created.Should().NotBeNull();
-        created!.IsActive.Should().BeTrue();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.IsActive, Is.True);
 
         var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans");
-        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var plans = await listResponse.Content.ReadFromJsonAsync<List<DietPlanResponse>>();
-        plans.Should().ContainSingle(x => x.Id == created.Id && x.IsActive);
+        Assert.That((plans).Where(x => x.Id == created.Id && x.IsActive), Has.Exactly(1).Items);
 
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{created.Id}/update", new
         {
@@ -74,22 +73,22 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             }
         });
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var historyResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{created.Id}/history");
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var history = await historyResponse.Content.ReadFromJsonAsync<List<DietPlanHistoryResponse>>();
-        history.Should().NotBeNull();
-        history!.Count.Should().BeGreaterThanOrEqualTo(2);
-        history.Select(x => x.ChangeType).Should().Contain(new[] { "Created", "Updated" });
+        Assert.That(history, Is.Not.Null);
+        Assert.That(history!.Count, Is.GreaterThanOrEqualTo(2));
+        Assert.That(history.Select(x => x.ChangeType), Is.SupersetOf(new[] { "Created", "Updated" }));
 
         SetAuthorizationHeader(trainee.Id);
         var currentResponse = await Client.GetAsync("/api/trainee/diet-plan/current");
-        currentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(currentResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var current = await currentResponse.Content.ReadFromJsonAsync<DietPlanResponse>();
-        current.Should().NotBeNull();
-        current!.Name.Should().Be("Mass phase v2");
-        current.Meals.Should().HaveCount(2);
+        Assert.That(current, Is.Not.Null);
+        Assert.That(current!.Name, Is.EqualTo("Mass phase v2"));
+        Assert.That(current.Meals, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -108,7 +107,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeCreate);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeCreate));
     }
 
     [Test]
@@ -125,15 +124,15 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans", ValidDietRequest("Unrelated trainee plan")),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeCreate);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeCreate));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans", ValidDietRequest("Anonymous trainee plan")))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeCreate);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeCreate));
     }
 
     [Test]
@@ -147,7 +146,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var beforeCreate = await GetDietPersistenceCountsAsync();
 
@@ -156,7 +155,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeCreate);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeCreate));
     }
 
     [Test]
@@ -173,15 +172,15 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans"),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans"))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
     }
 
     [Test]
@@ -204,8 +203,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
     }
 
     [Test]
@@ -221,7 +220,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var beforeRead = await GetDietPersistenceCountsAsync();
 
@@ -230,8 +229,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
     }
 
     [Test]
@@ -252,9 +251,9 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans");
         var plans = await listResponse.Content.ReadFromJsonAsync<List<DietPlanResponse>>();
-        plans.Should().Contain(x => x.IsActive && x.Id == second.Id);
-        plans.Should().Contain(x => x.IsActive && x.Id == first.Id);
-        (await GetDietPersistenceCountsAsync()).Should().Be((beforeActivation.Plans, beforeActivation.Histories + 1, beforeActivation.Commands + 1));
+        Assert.That((plans).Any(x => x.IsActive && x.Id == second.Id), Is.True);
+        Assert.That((plans).Any(x => x.IsActive && x.Id == first.Id), Is.True);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo((beforeActivation.Plans, beforeActivation.Histories + 1, beforeActivation.Commands + 1)));
     }
 
     [Test]
@@ -312,21 +311,21 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(formerTrainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Owner plan", true);
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        (await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await LinkTrainerAndTraineeAsync(currentTrainer.Id, trainee.Id);
 
         SetAuthorizationHeader(currentTrainer.Id);
         var singleRead = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}");
-        singleRead.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(singleRead.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var document = JsonDocument.Parse(await singleRead.Content.ReadAsStringAsync()))
         {
-            document.RootElement.GetProperty("_id").GetString().Should().Be(plan.Id);
-            document.RootElement.TryGetProperty("id", out _).Should().BeFalse();
-            document.RootElement.GetProperty("name").GetString().Should().Be("Owner plan");
+            Assert.That(document.RootElement.GetProperty("_id").GetString(), Is.EqualTo(plan.Id));
+            Assert.That(document.RootElement.TryGetProperty("id", out _), Is.False);
+            Assert.That(document.RootElement.GetProperty("name").GetString(), Is.EqualTo("Owner plan"));
         }
 
-        (await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/history")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
+        Assert.That((await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/history")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
 
         await AssertExactMessageAsync(
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/delete", null),
@@ -338,8 +337,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             EnglishMessage(() => Messages.DidntFind));
 
         var listAfterDelete = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans");
-        listAfterDelete.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await listAfterDelete.Content.ReadAsStringAsync()).Should().Be("[]");
+        Assert.That(listAfterDelete.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await listAfterDelete.Content.ReadAsStringAsync()), Is.EqualTo("[]"));
     }
 
     [Test]
@@ -371,8 +370,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         await AssertExactMessageAsync(await Client.PostAsync($"{route}/activate", null), HttpStatusCode.NotFound, EnglishMessage(() => Messages.DidntFind));
         await AssertExactMessageAsync(await Client.PostAsync($"{route}/delete", null), HttpStatusCode.NotFound, EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalCounts));
     }
 
     [Test]
@@ -401,21 +400,21 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/history"),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}"))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
         using (var anonymousHistoryResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/history"))
         {
-            anonymousHistoryResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousHistoryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
     }
 
     [Test]
@@ -432,7 +431,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var beforeRead = await GetDietPersistenceCountsAsync();
 
@@ -445,8 +444,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeRead);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeRead));
     }
 
     [Test]
@@ -462,8 +461,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         var emptyPlural = await Client.GetAsync("/api/trainee/diet-plans/current");
-        emptyPlural.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await emptyPlural.Content.ReadAsStringAsync()).Should().Be("[]");
+        Assert.That(emptyPlural.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await emptyPlural.Content.ReadAsStringAsync()), Is.EqualTo("[]"));
         await AssertExactMessageAsync(
             await Client.GetAsync("/api/trainee/diet-plan/current"),
             HttpStatusCode.NotFound,
@@ -475,17 +474,17 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         var plural = await Client.GetAsync("/api/trainee/diet-plans/current");
-        plural.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(plural.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var plans = await plural.Content.ReadFromJsonAsync<List<DietPlanResponse>>();
-        plans.Should().NotBeNull();
-        plans!.Select(plan => plan.Id).Should().Contain(new[] { first.Id, second.Id });
-        plans.Should().OnlyContain(plan => plan.IsActive);
+        Assert.That(plans, Is.Not.Null);
+        Assert.That(plans!.Select(plan => plan.Id), Is.SupersetOf(new[] { first.Id, second.Id }));
+        Assert.That((plans).All(plan => plan.IsActive), Is.True);
 
         var singular = await Client.GetAsync("/api/trainee/diet-plan/current");
-        singular.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(singular.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var current = await singular.Content.ReadFromJsonAsync<DietPlanResponse>();
-        current.Should().NotBeNull();
-        current!.Id.Should().BeOneOf(first.Id, second.Id);
+        Assert.That(current, Is.Not.Null);
+        Assert.That(current!.Id, Is.AnyOf(first.Id, second.Id));
     }
 
     [Test]
@@ -498,8 +497,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         using var singularResponse = await Client.GetAsync("/api/trainee/diet-plan/current");
         using var pluralResponse = await Client.GetAsync("/api/trainee/diet-plans/current");
 
-        singularResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        pluralResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(singularResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(pluralResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -519,10 +518,10 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             $"/api/trainee/diet-plans/{planId}/update",
             ValidDietRequest("Anonymous owner mutation"));
 
-        listResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        detailResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(detailResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -540,13 +539,13 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             $"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update",
             ValidDietRequest("Active trainer updated plan"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var updatedPlan = await response.Content.ReadFromJsonAsync<DietPlanResponse>();
-        updatedPlan.Should().NotBeNull();
-        updatedPlan!.Name.Should().Be("Active trainer updated plan");
+        Assert.That(updatedPlan, Is.Not.Null);
+        Assert.That(updatedPlan!.Name, Is.EqualTo("Active trainer updated plan"));
 
         var persistedPlan = await GetDietPlanSnapshotAsync(plan.Id);
-        persistedPlan.Name.Should().Be("Active trainer updated plan");
+        Assert.That(persistedPlan.Name, Is.EqualTo("Active trainer updated plan"));
     }
 
     [Test]
@@ -571,19 +570,19 @@ public sealed class DietPlansApiTests : IntegrationTestBase
                 ValidDietRequest("Unrelated trainer mutation")),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsJsonAsync(
                    $"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update",
                    ValidDietRequest("Anonymous mutation")))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
     }
 
     [Test]
@@ -597,17 +596,17 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(formerTrainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Foreign trainer update plan", true);
-        (await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await LinkTrainerAndTraineeAsync(currentTrainer.Id, trainee.Id);
         var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
         SetAuthorizationHeader(currentTrainer.Id);
-        (await Client.PostAsJsonAsync(
+        Assert.That((await Client.PostAsJsonAsync(
             $"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update",
-            ValidDietRequest("Foreign trainer mutation"))).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await GetDietPlanSnapshotAsync(plan.Id)).Name.Should().Be("Foreign trainer mutation");
-        (await GetDietPersistenceCountsAsync()).Should().Be((originalPersistenceCounts.Plans, originalPersistenceCounts.Histories + 1, originalPersistenceCounts.Commands + 1));
-        (await GetDietPlanAuthorshipAsync(plan.Id)).Should().Be((formerTrainer.Id, currentTrainer.Id));
+            ValidDietRequest("Foreign trainer mutation"))).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await GetDietPlanSnapshotAsync(plan.Id)).Name, Is.EqualTo("Foreign trainer mutation"));
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo((originalPersistenceCounts.Plans, originalPersistenceCounts.Histories + 1, originalPersistenceCounts.Commands + 1)));
+        Assert.That((await GetDietPlanAuthorshipAsync(plan.Id)), Is.EqualTo((formerTrainer.Id, currentTrainer.Id)));
     }
 
     [Test]
@@ -623,7 +622,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
@@ -632,8 +631,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             ValidDietRequest("Former trainer mutation"));
         await AssertExactMessageAsync(response, HttpStatusCode.NotFound, EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
     }
 
     [Test]
@@ -656,17 +655,17 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/activate", null),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/activate", null))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
     }
 
     [Test]
@@ -680,14 +679,14 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(formerTrainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Foreign trainer activate plan", false);
-        (await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await LinkTrainerAndTraineeAsync(currentTrainer.Id, trainee.Id);
         var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
         SetAuthorizationHeader(currentTrainer.Id);
-        (await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/activate", null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await GetDietPlanSnapshotAsync(plan.Id)).IsActive.Should().BeTrue();
-        (await GetDietPersistenceCountsAsync()).Should().Be((originalPersistenceCounts.Plans, originalPersistenceCounts.Histories + 1, originalPersistenceCounts.Commands + 1));
+        Assert.That((await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/activate", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await GetDietPlanSnapshotAsync(plan.Id)).IsActive, Is.True);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo((originalPersistenceCounts.Plans, originalPersistenceCounts.Histories + 1, originalPersistenceCounts.Commands + 1)));
     }
 
     [Test]
@@ -703,7 +702,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var originalPlan = await GetDietPlanSnapshotAsync(plan.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var originalPersistenceCounts = await GetDietPersistenceCountsAsync();
 
@@ -712,8 +711,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalPersistenceCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalPersistenceCounts));
     }
 
     [Test]
@@ -728,18 +727,18 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         var plan = await CreateDietAsync(trainee.Id, "Former trainer delete plan", true);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         using var response = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/delete", null);
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await response.Content.ReadAsStringAsync()).Should().NotContain("Former trainer delete plan");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("Former trainer delete plan"));
 
         using var verifyScope = Factory.Services.CreateScope();
         var database = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persistedPlan = await database.DietPlans.IgnoreQueryFilters().AsNoTracking().SingleAsync(item => item.Id.ToString() == plan.Id);
-        persistedPlan.Name.Should().Be("Former trainer delete plan");
-        persistedPlan.IsDeleted.Should().BeFalse();
+        Assert.That(persistedPlan.Name, Is.EqualTo("Former trainer delete plan"));
+        Assert.That(persistedPlan.IsDeleted, Is.False);
     }
 
     [Test]
@@ -758,20 +757,20 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         SetAuthorizationHeader(unrelatedTrainer.Id);
         using (var unrelatedResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/delete", null))
         {
-            unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         ClearAuthorizationHeader();
         using (var anonymousResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/delete", null))
         {
-            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
         using var verifyScope = Factory.Services.CreateScope();
         var database = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persistedPlan = await database.DietPlans.IgnoreQueryFilters().AsNoTracking().SingleAsync(item => item.Id.ToString() == plan.Id);
-        persistedPlan.Name.Should().Be("Unrelated trainer delete plan");
-        persistedPlan.IsDeleted.Should().BeFalse();
+        Assert.That(persistedPlan.Name, Is.EqualTo("Unrelated trainer delete plan"));
+        Assert.That(persistedPlan.IsDeleted, Is.False);
     }
 
     [Test]
@@ -794,13 +793,13 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             }),
             HttpStatusCode.BadRequest,
             EnglishMessage(() => Messages.FieldRequired));
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeInvalidShape);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeInvalidShape));
 
         await AssertExactMessageAsync(
             await Client.PostAsJsonAsync($"/api/trainer/trainees/{foreignTrainee.Id}/diet-plans", ValidDietRequest()),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPersistenceCountsAsync()).Should().Be(beforeInvalidShape);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(beforeInvalidShape));
 
         var plan = await CreateDietAsync(trainee.Id, "Deleted failure plan", true);
         await AssertExactMessageAsync(
@@ -813,7 +812,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update", ValidDietRequest()),
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
-        (await GetDietPersistenceCountsAsync()).Should().Be(afterDelete);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(afterDelete));
     }
 
     [Test]
@@ -837,11 +836,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             meals = Array.Empty<object>()
         });
 
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<DietPlanResponse>();
-        created.Should().NotBeNull();
-        created!.Meals.Should().BeEmpty();
-        created.IsActive.Should().BeTrue();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Meals, Is.Empty);
+        Assert.That(created.IsActive, Is.True);
     }
 
     [Test]
@@ -857,11 +856,11 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         var currentResponse = await Client.GetAsync("/api/trainee/diet-plans/current");
-        currentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(currentResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var currentPlans = await currentResponse.Content.ReadFromJsonAsync<List<DietPlanResponse>>();
-        currentPlans.Should().NotBeNull();
-        currentPlans!.Select(x => x.Id).Should().Contain(new[] { trainingDay.Id, restDay.Id });
-        currentPlans.Should().OnlyContain(x => x.IsActive);
+        Assert.That(currentPlans, Is.Not.Null);
+        Assert.That(currentPlans!.Select(x => x.Id), Is.SupersetOf(new[] { trainingDay.Id, restDay.Id }));
+        Assert.That((currentPlans).All(x => x.IsActive), Is.True);
     }
 
     [Test]
@@ -882,7 +881,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             meals = new object[] { new { name = "Meal", order = 0, estimatedCalories = 500 } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -891,9 +890,9 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync();
 
-        notificationCommand.Should().NotBeNull();
-        notificationCommand!.PayloadJson.Should().Contain("Diet Notification v2");
-        notificationCommand.PayloadJson.Should().Contain(trainee.Id.ToString());
+        Assert.That(notificationCommand, Is.Not.Null);
+        Assert.That(notificationCommand!.PayloadJson, Does.Contain("Diet Notification v2"));
+        Assert.That(notificationCommand.PayloadJson, Does.Contain(trainee.Id.ToString()));
     }
 
     [Test]
@@ -909,20 +908,20 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         await LinkTrainerAndTraineeAsync(formerTrainer.Id, trainee.Id);
         SetAuthorizationHeader(formerTrainer.Id);
         var plan = await CreateDietAsync(trainee.Id, "Portable diet", false);
-        (await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainee.Id);
         var list = await Client.GetAsync("/api/trainee/diet-plans");
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await list.Content.ReadFromJsonAsync<List<DietPlanResponse>>())!.Should().ContainSingle(item => item.Id == plan.Id && !item.IsActive);
-        (await Client.GetAsync($"/api/trainee/diet-plans/{plan.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.GetAsync($"/api/trainee/diet-plans/{plan.Id}/history")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(((await list.Content.ReadFromJsonAsync<List<DietPlanResponse>>())!).Where(item => item.Id == plan.Id && !item.IsActive), Has.Exactly(1).Items);
+        Assert.That((await Client.GetAsync($"/api/trainee/diet-plans/{plan.Id}")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Client.GetAsync($"/api/trainee/diet-plans/{plan.Id}/history")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var update = await Client.PostAsJsonAsync($"/api/trainee/diet-plans/{plan.Id}/update", ValidDietRequest("Owner updated diet"));
-        update.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await update.Content.ReadFromJsonAsync<DietPlanResponse>())!.IsActive.Should().BeFalse();
+        Assert.That(update.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await update.Content.ReadFromJsonAsync<DietPlanResponse>())!.IsActive, Is.False);
 
         SetAuthorizationHeader(formerTrainer.Id);
-        (await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That((await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}")).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -949,8 +948,8 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             HttpStatusCode.NotFound,
             EnglishMessage(() => Messages.DidntFind));
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalPlan);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalPlan);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalCounts));
     }
 
     [Test]
@@ -999,15 +998,15 @@ public sealed class DietPlansApiTests : IntegrationTestBase
                    route,
                    BoundaryDietRequest(maximumName, maximumNotes, maximumMealName, maximumMealDescription)))
         {
-            maximumResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(maximumResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         var acceptedSnapshot = await GetDietPlanSnapshotAsync(plan.Id);
-        acceptedSnapshot.Name.Should().HaveLength(120);
-        acceptedSnapshot.Notes.Should().HaveLength(2000);
-        acceptedSnapshot.Meals.Should().ContainSingle();
-        acceptedSnapshot.Meals[0].Name.Should().HaveLength(160);
-        acceptedSnapshot.Meals[0].Description.Should().HaveLength(2000);
+        Assert.That(acceptedSnapshot.Name, Has.Length.EqualTo(120));
+        Assert.That(acceptedSnapshot.Notes, Has.Length.EqualTo(2000));
+        Assert.That(acceptedSnapshot.Meals, Has.Exactly(1).Items);
+        Assert.That(acceptedSnapshot.Meals[0].Name, Has.Length.EqualTo(160));
+        Assert.That(acceptedSnapshot.Meals[0].Description, Has.Length.EqualTo(2000));
         var acceptedCounts = await GetDietPersistenceCountsAsync();
         var invalidRequests = new[]
         {
@@ -1020,9 +1019,9 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         foreach (var invalid in invalidRequests)
         {
             using var response = await Client.PostAsJsonAsync(route, invalid.Request);
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
-            (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(acceptedSnapshot);
-            (await GetDietPersistenceCountsAsync()).Should().Be(acceptedCounts);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), $"{invalid.Field} exceeds its persisted maximum by one character");
+            AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), acceptedSnapshot);
+            Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(acceptedCounts));
         }
     }
 
@@ -1051,14 +1050,14 @@ public sealed class DietPlansApiTests : IntegrationTestBase
         foreach (var invalid in invalidRequests)
         {
             using var createResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans", invalid.Request);
-            createResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
+            Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), $"{invalid.Field} exceeds its persisted maximum by one character");
 
             using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/diet-plans/{plan.Id}/update", invalid.Request);
-            updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{invalid.Field} exceeds its persisted maximum by one character");
+            Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), $"{invalid.Field} exceeds its persisted maximum by one character");
         }
 
-        (await GetDietPlanSnapshotAsync(plan.Id)).Should().BeEquivalentTo(originalSnapshot);
-        (await GetDietPersistenceCountsAsync()).Should().Be(originalCounts);
+        AssertDietPlanSnapshot((await GetDietPlanSnapshotAsync(plan.Id)), originalSnapshot);
+        Assert.That((await GetDietPersistenceCountsAsync()), Is.EqualTo(originalCounts));
     }
 
     [Test]
@@ -1075,9 +1074,9 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             $"/api/trainer/trainees/{owner.Id}/diet-plans/{plan.Id}/update",
             ValidDietRequest("Trainer owner updated diet"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await response.Content.ReadFromJsonAsync<DietPlanResponse>())!.IsActive.Should().BeFalse();
-        (await GetDietPlanSnapshotAsync(plan.Id)).IsActive.Should().BeFalse();
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await response.Content.ReadFromJsonAsync<DietPlanResponse>())!.IsActive, Is.False);
+        Assert.That((await GetDietPlanSnapshotAsync(plan.Id)).IsActive, Is.False);
     }
 
     private async Task<DietPlanResponse> CreateDietAsync(Id<User> traineeId, string name, bool isActive)
@@ -1090,7 +1089,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
             meals = new object[] { new { name = "Meal", order = 0, estimatedCalories = 400 } }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         return (await response.Content.ReadFromJsonAsync<DietPlanResponse>())!;
     }
 
@@ -1142,7 +1141,7 @@ public sealed class DietPlansApiTests : IntegrationTestBase
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Id<DietPlan>.TryParse(dietPlanId, out var planId).Should().BeTrue();
+        Assert.That(Id<DietPlan>.TryParse(dietPlanId, out var planId), Is.True);
         var authorId = await db.DietPlans
             .IgnoreQueryFilters()
             .Where(plan => plan.Id == planId)
@@ -1177,23 +1176,23 @@ public sealed class DietPlansApiTests : IntegrationTestBase
 
     private static async Task AssertExactMessageAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedMessage)
     {
-        response.StatusCode.Should().Be(expectedStatus);
-        (await response.Content.ReadAsStringAsync()).Should().Be(JsonSerializer.Serialize(new { msg = expectedMessage }));
+        Assert.That(response.StatusCode, Is.EqualTo(expectedStatus));
+        Assert.That((await response.Content.ReadAsStringAsync()), Is.EqualTo(JsonSerializer.Serialize(new { msg = expectedMessage })));
     }
 
     private static async Task AssertValidationMessageAsync(HttpResponseMessage response, string expectedMessage)
     {
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var errors = body.RootElement.GetProperty("errors").GetProperty("meals");
-        errors.GetArrayLength().Should().Be(1);
-        errors[0].GetString().Should().Be(expectedMessage);
+        Assert.That(errors.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(errors[0].GetString(), Is.EqualTo(expectedMessage));
     }
 
     private void SetRequestCulture(string culture)
     {
         Client.DefaultRequestHeaders.Remove("Accept-Language");
-        Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", culture).Should().BeTrue();
+        Assert.That(Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", culture), Is.True);
     }
 
     private static string EnglishMessage(Func<string> getMessage) => GetMessageForCulture("en", getMessage);
@@ -1270,6 +1269,14 @@ public sealed class DietPlansApiTests : IntegrationTestBase
     {
         [JsonPropertyName("changeType")]
         public string ChangeType { get; set; } = string.Empty;
+    }
+
+    private static void AssertDietPlanSnapshot(DietPlanSnapshot actual, DietPlanSnapshot expected)
+    {
+        using var assertions = Assert.EnterMultipleScope();
+        Assert.That(actual, Is.EqualTo(expected).UsingPropertiesComparer(
+            options => options.Excluding(nameof(DietPlanSnapshot.Meals))));
+        Assert.That(actual.Meals, Is.EquivalentTo(expected.Meals));
     }
 
     private sealed record DietPlanSnapshot(

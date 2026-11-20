@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Application.Mapping;
@@ -40,10 +39,10 @@ public sealed class NutritionApiMappingProfileTests
 
         foreach (var pair in expectedPairs)
         {
-            registeredMappings.Count(registered => registered == pair).Should().Be(1);
+            Assert.That(registeredMappings.Count(registered => registered == pair), Is.EqualTo(1));
         }
 
-        registeredMappings.Should().OnlyHaveUniqueItems();
+        Assert.That(registeredMappings, Is.Unique);
     }
 
     [Test]
@@ -118,27 +117,25 @@ public sealed class NutritionApiMappingProfileTests
         var plan = mapper.Map<DietPlanReadModel, DietPlanDto>(readModel, mapper.CreateContext());
         var historyDto = mapper.Map<DietPlanHistoryReadModel, DietPlanHistoryDto>(history);
 
-        dietMealInput.Should().Be(new DietMealInput("Dinner", 2, null, 900, 55m, 100.5m, 20.25m));
-        upsertData.Name.Should().Be(request.Name);
-        upsertData.StartDate.Should().Be(request.StartDate);
-        upsertData.EndDate.Should().BeNull();
-        upsertData.EstimatedCalories.Should().Be(2_750);
-        upsertData.ProteinGrams.Should().Be(180.5m);
-        upsertData.CarbsGrams.Should().BeNull();
-        upsertData.FatGrams.Should().Be(72.25m);
-        upsertData.Notes.Should().BeNull();
-        upsertData.IsActive.Should().BeTrue();
-        upsertData.Meals.Should().Equal(
-            new DietMealInput("Dinner", 2, null, 900, 55m, 100.5m, 20.25m),
-            new DietMealInput("Breakfast", 1, "Eggs and oats", null, null, 60m, 10m));
-        dietMeal.Id.Should().Be("00000000-0000-0000-0000-000000000202");
-        JsonSerializer.Serialize(plan).Should().Be("{\"_id\":\"00000000-0000-0000-0000-000000000101\",\"trainerId\":\"00000000-0000-0000-0000-000000000102\",\"traineeId\":\"00000000-0000-0000-0000-000000000103\",\"createdAt\":\"2026-07-23T08:09:10+02:00\",\"updatedAt\":\"2026-07-24T11:12:13-04:00\",\"meals\":[{\"_id\":\"00000000-0000-0000-0000-000000000202\",\"name\":\"Dinner\",\"order\":2,\"description\":null,\"estimatedCalories\":900,\"proteinGrams\":55,\"carbsGrams\":100.5,\"fatGrams\":20.25},{\"_id\":\"00000000-0000-0000-0000-000000000201\",\"name\":\"Breakfast\",\"order\":1,\"description\":\"Eggs and oats\",\"estimatedCalories\":null,\"proteinGrams\":null,\"carbsGrams\":60,\"fatGrams\":10}],\"name\":\"Competition plan\",\"startDate\":\"2026-07-23\",\"endDate\":null,\"notes\":null,\"isActive\":true,\"estimatedCalories\":2750,\"proteinGrams\":180.5,\"carbsGrams\":null,\"fatGrams\":72.25}");
-        historyDto.Id.Should().Be("00000000-0000-0000-0000-000000000203");
-        historyDto.DietPlanId.Should().Be(plan.Id);
-        historyDto.ChangedByUserId.Should().Be(plan.TrainerId);
-        historyDto.ChangeDate.Should().Be(plan.UpdatedAt);
-        historyDto.ChangeType.Should().Be("Updated");
-        historyDto.SnapshotJson.Should().Be("{\"Name\":\"Competition plan\"}");
+        Assert.That(dietMealInput, Is.EqualTo(new DietMealInput("Dinner", 2, null, 900, 55m, 100.5m, 20.25m)));
+        Assert.That(upsertData.Name, Is.EqualTo(request.Name));
+        Assert.That(upsertData.StartDate, Is.EqualTo(request.StartDate));
+        Assert.That(upsertData.EndDate, Is.Null);
+        Assert.That(upsertData.EstimatedCalories, Is.EqualTo(2_750));
+        Assert.That(upsertData.ProteinGrams, Is.EqualTo(180.5m));
+        Assert.That(upsertData.CarbsGrams, Is.Null);
+        Assert.That(upsertData.FatGrams, Is.EqualTo(72.25m));
+        Assert.That(upsertData.Notes, Is.Null);
+        Assert.That(upsertData.IsActive, Is.True);
+        Assert.That(upsertData.Meals, Is.EqualTo(new[] { new DietMealInput("Dinner", 2, null, 900, 55m, 100.5m, 20.25m), new DietMealInput("Breakfast", 1, "Eggs and oats", null, null, 60m, 10m) }));
+        Assert.That(dietMeal.Id, Is.EqualTo("00000000-0000-0000-0000-000000000202"));
+        Assert.That(JsonSerializer.Serialize(plan), Is.EqualTo("{\"_id\":\"00000000-0000-0000-0000-000000000101\",\"trainerId\":\"00000000-0000-0000-0000-000000000102\",\"traineeId\":\"00000000-0000-0000-0000-000000000103\",\"createdAt\":\"2026-07-23T08:09:10+02:00\",\"updatedAt\":\"2026-07-24T11:12:13-04:00\",\"meals\":[{\"_id\":\"00000000-0000-0000-0000-000000000202\",\"name\":\"Dinner\",\"order\":2,\"description\":null,\"estimatedCalories\":900,\"proteinGrams\":55,\"carbsGrams\":100.5,\"fatGrams\":20.25},{\"_id\":\"00000000-0000-0000-0000-000000000201\",\"name\":\"Breakfast\",\"order\":1,\"description\":\"Eggs and oats\",\"estimatedCalories\":null,\"proteinGrams\":null,\"carbsGrams\":60,\"fatGrams\":10}],\"name\":\"Competition plan\",\"startDate\":\"2026-07-23\",\"endDate\":null,\"notes\":null,\"isActive\":true,\"estimatedCalories\":2750,\"proteinGrams\":180.5,\"carbsGrams\":null,\"fatGrams\":72.25}"));
+        Assert.That(historyDto.Id, Is.EqualTo("00000000-0000-0000-0000-000000000203"));
+        Assert.That(historyDto.DietPlanId, Is.EqualTo(plan.Id));
+        Assert.That(historyDto.ChangedByUserId, Is.EqualTo(plan.TrainerId));
+        Assert.That(historyDto.ChangeDate, Is.EqualTo(plan.UpdatedAt));
+        Assert.That(historyDto.ChangeType, Is.EqualTo("Updated"));
+        Assert.That(historyDto.SnapshotJson, Is.EqualTo("{\"Name\":\"Competition plan\"}"));
     }
 
     [Test]
@@ -190,17 +187,15 @@ public sealed class NutritionApiMappingProfileTests
         var scheduleDto = mapper.Map<SupplementScheduleEntryReadModel, SupplementScheduleEntryDto>(schedule);
         var complianceDto = mapper.Map<SupplementComplianceSummaryReadModel, SupplementComplianceSummaryDto>(compliance);
 
-        itemInput.Should().Be(new SupplementPlanItemInput("Magnesium", "400 mg", "21:30", 127, 0));
-        upsertData.Name.Should().Be("Night stack");
-        upsertData.Notes.Should().BeNull();
-        upsertData.Items.Should().Equal(
-            new SupplementPlanItemInput("Magnesium", "400 mg", "21:30", 127, 0),
-            new SupplementPlanItemInput("Vitamin D", "2000 IU", "08:00", 65, 2));
-        item.Id.Should().Be("00000000-0000-0000-0000-000000000401");
-        item.DaysOfWeekMask.Should().Be(127);
-        JsonSerializer.Serialize(plan).Should().Be("{\"_id\":\"00000000-0000-0000-0000-000000000301\",\"trainerId\":\"00000000-0000-0000-0000-000000000302\",\"traineeId\":\"00000000-0000-0000-0000-000000000303\",\"name\":\"Night stack\",\"notes\":null,\"isActive\":true,\"createdAt\":\"2026-07-01T06:30:00+00:00\",\"items\":[{\"_id\":\"00000000-0000-0000-0000-000000000401\",\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":127,\"order\":0},{\"_id\":\"00000000-0000-0000-0000-000000000402\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"daysOfWeekMask\":65,\"order\":2}]}");
-        JsonSerializer.Serialize(scheduleDto).Should().Be("{\"planItemId\":\"00000000-0000-0000-0000-000000000402\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"intakeDate\":\"2026-07-03\",\"taken\":true,\"takenAt\":\"2026-07-03T08:05:00+00:00\"}");
-        JsonSerializer.Serialize(complianceDto).Should().Be("{\"traineeId\":\"00000000-0000-0000-0000-000000000303\",\"fromDate\":\"2026-07-01\",\"toDate\":\"2026-07-03\",\"plannedDoses\":3,\"takenDoses\":1,\"adherenceRate\":33.33}");
+        Assert.That(itemInput, Is.EqualTo(new SupplementPlanItemInput("Magnesium", "400 mg", "21:30", 127, 0)));
+        Assert.That(upsertData.Name, Is.EqualTo("Night stack"));
+        Assert.That(upsertData.Notes, Is.Null);
+        Assert.That(upsertData.Items, Is.EqualTo(new[] { new SupplementPlanItemInput("Magnesium", "400 mg", "21:30", 127, 0), new SupplementPlanItemInput("Vitamin D", "2000 IU", "08:00", 65, 2) }));
+        Assert.That(item.Id, Is.EqualTo("00000000-0000-0000-0000-000000000401"));
+        Assert.That(item.DaysOfWeekMask, Is.EqualTo(127));
+        Assert.That(JsonSerializer.Serialize(plan), Is.EqualTo("{\"_id\":\"00000000-0000-0000-0000-000000000301\",\"trainerId\":\"00000000-0000-0000-0000-000000000302\",\"traineeId\":\"00000000-0000-0000-0000-000000000303\",\"name\":\"Night stack\",\"notes\":null,\"isActive\":true,\"createdAt\":\"2026-07-01T06:30:00+00:00\",\"items\":[{\"_id\":\"00000000-0000-0000-0000-000000000401\",\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":127,\"order\":0},{\"_id\":\"00000000-0000-0000-0000-000000000402\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"daysOfWeekMask\":65,\"order\":2}]}"));
+        Assert.That(JsonSerializer.Serialize(scheduleDto), Is.EqualTo("{\"planItemId\":\"00000000-0000-0000-0000-000000000402\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"intakeDate\":\"2026-07-03\",\"taken\":true,\"takenAt\":\"2026-07-03T08:05:00+00:00\"}"));
+        Assert.That(JsonSerializer.Serialize(complianceDto), Is.EqualTo("{\"traineeId\":\"00000000-0000-0000-0000-000000000303\",\"fromDate\":\"2026-07-01\",\"toDate\":\"2026-07-03\",\"plannedDoses\":3,\"takenDoses\":1,\"adherenceRate\":33.33}"));
     }
 
     [Test]
@@ -226,8 +221,7 @@ public sealed class NutritionApiMappingProfileTests
 
         var action = () => mapper.Map<DietPlanReadModel, DietPlanDto>(source, mapper.CreateContext());
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Mapping from DietMealReadModel to DietMealDto is not registered.");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Mapping from DietMealReadModel to DietMealDto is not registered.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -252,7 +246,7 @@ public sealed class NutritionApiMappingProfileTests
 
         foreach (var (type, propertyName) in idProperties)
         {
-            type.GetProperty(propertyName)!.PropertyType.Should().Be(typeof(string));
+            Assert.That(type.GetProperty(propertyName)!.PropertyType, Is.EqualTo(typeof(string)));
         }
     }
 
@@ -277,7 +271,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
     private static Id<TEntity> ParseId<TEntity>(string value)
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

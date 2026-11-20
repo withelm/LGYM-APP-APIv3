@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Security.Cryptography;
 using System.Text;
 using LgymApi.Domain.ValueObjects;
@@ -70,12 +69,12 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert
-        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope");
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope");
 
         var envelope = _repository.Envelopes.First();
-        envelope.Status.Should().Be(ActionExecutionStatus.Pending);
-        envelope.CommandTypeFullName.Should().Be("Tests.BackgroundActionDispatcher.TestCommand");
-        envelope.PayloadJson.Should().Contain("test-single");
+        Assert.That(envelope.Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        Assert.That(envelope.CommandTypeFullName, Is.EqualTo("Tests.BackgroundActionDispatcher.TestCommand"));
+        Assert.That(envelope.PayloadJson, Does.Contain("test-single"));
     }
 
     [Test]
@@ -96,7 +95,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert
-        _repository.Envelopes.Count.Should().Be(1, "Should persist exactly one envelope despite multiple handlers");
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should persist exactly one envelope despite multiple handlers");
     }
 
     [Test]
@@ -114,8 +113,8 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert - Zero-handler path: safe no-op, no failure, no enqueue
-        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope when no handlers registered");
-        _unitOfWork.SaveCallCount.Should().Be(0);
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope when no handlers registered");
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -137,7 +136,7 @@ public sealed class BackgroundActionDispatcherTests
         // Assert - Deterministic correlation ID should deduplicate second dispatch
 
         // Assert - Idempotency check: duplicate envelope should not enqueue
-        _repository.Envelopes.Count.Should().Be(1, "Should not create duplicate envelope for identical command");
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1), "Should not create duplicate envelope for identical command");
     }
 
     [Test]
@@ -152,7 +151,7 @@ public sealed class BackgroundActionDispatcherTests
 
         // Act & Assert
         var action = async () => await dispatcher.EnqueueAsync<TestCommand>(null!);
-        await action.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<ArgumentNullException>());
     }
 
     [Test]
@@ -171,8 +170,8 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(derivedCommand);
 
         // Assert - Zero-handler path because exact-type matching only
-        _repository.Envelopes.Count.Should().Be(0, "Should not persist envelope for derived command when only base handler exists");
-        _unitOfWork.SaveCallCount.Should().Be(0);
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(0), "Should not persist envelope for derived command when only base handler exists");
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -186,10 +185,9 @@ public sealed class BackgroundActionDispatcherTests
         var dispatcher = CreateDispatcher();
         var action = () => dispatcher.EnqueueAsync(new UnregisteredCommand());
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*absent from the closed command registry*");
-        _repository.Envelopes.Should().BeEmpty();
-        _unitOfWork.SaveCallCount.Should().Be(0);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*absent from the closed command registry*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(_repository.Envelopes, Is.Empty);
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -215,10 +213,9 @@ public sealed class BackgroundActionDispatcherTests
 
         var action = () => dispatcher.EnqueueAsync(new CanonicalNameCollisionCommand());
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*absent from the closed command registry*");
-        _repository.Envelopes.Should().BeEmpty();
-        _unitOfWork.SaveCallCount.Should().Be(0);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*absent from the closed command registry*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(_repository.Envelopes, Is.Empty);
+        Assert.That(_unitOfWork.SaveCallCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -237,7 +234,7 @@ public sealed class BackgroundActionDispatcherTests
         await dispatcher.EnqueueAsync(command);
 
         // Assert - envelope is persisted for the committed-intent dispatcher.
-        _repository.Envelopes.Count.Should().Be(1);
+        Assert.That(_repository.Envelopes.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -251,10 +248,10 @@ public sealed class BackgroundActionDispatcherTests
 
         await CreateDispatcher().EnqueueAsync(new TestCommand { Value = "canonical-log" });
 
-        logger.Messages.Should().Contain(message =>
-            message.Contains("Tests.BackgroundActionDispatcher.TestCommand", StringComparison.Ordinal));
-        logger.Messages.Should().NotContain(message =>
-            message.Contains(typeof(TestCommand).FullName!, StringComparison.Ordinal));
+        Assert.That((logger.Messages).Any(message =>
+            message.Contains("Tests.BackgroundActionDispatcher.TestCommand", StringComparison.Ordinal)), Is.True);
+        Assert.That((logger.Messages).Any(message =>
+            message.Contains(typeof(TestCommand).FullName!, StringComparison.Ordinal)), Is.False);
     }
 
     private CommandDispatcher CreateDispatcher()

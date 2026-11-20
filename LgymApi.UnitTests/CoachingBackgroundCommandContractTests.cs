@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -28,31 +27,32 @@ public sealed class CoachingBackgroundCommandContractTests
 
         Assert.Multiple(() =>
         {
-            commandType.Assembly.Should().BeSameAs(typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly);
-            commandType.Namespace.Should().Be(CommandsNamespace);
-            commandType.IsPublic.Should().BeTrue();
-            commandType.IsSealed.Should().BeTrue();
-            commandType.GetInterfaces().Should().Equal(typeof(IActionCommand));
-            commandType.GetConstructors().Should().ContainSingle(constructor => constructor.GetParameters().Length == 0);
-            properties.Select(property => property.Name).Should().Equal(expected.Properties.Select(property => property.Name));
-            commandType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly).Should().BeEmpty();
-            commandType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                .Where(method => !method.IsSpecialName)
-                .Should().BeEmpty();
+            Assert.That(commandType.Assembly, Is.SameAs(typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly));
+            Assert.That(commandType.Namespace, Is.EqualTo(CommandsNamespace));
+            Assert.That(commandType.IsPublic, Is.True);
+            Assert.That(commandType.IsSealed, Is.True);
+            Assert.That(commandType.GetInterfaces(), Is.EqualTo(new[] { typeof(IActionCommand) }));
+            Assert.That((commandType.GetConstructors()).Where(constructor => constructor.GetParameters().Length == 0), Has.Exactly(1).Items);
+            Assert.That(properties.Select(property => property.Name), Is.EqualTo(expected.Properties.Select(property => property.Name)));
+            Assert.That(commandType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly), Is.Empty);
+            Assert.That(commandType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                .Where(method => !method.IsSpecialName), Is.Empty);
         });
 
         foreach (var expectedProperty in expected.Properties)
         {
             var property = properties.Single(candidate => candidate.Name == expectedProperty.Name);
-            property.PropertyType.Should().Be(expectedProperty.Type);
-            property.GetMethod!.IsPublic.Should().BeTrue();
-            property.SetMethod!.ReturnParameter.GetRequiredCustomModifiers().Should().Contain(typeof(IsExternalInit));
+            Assert.That(property.PropertyType, Is.EqualTo(expectedProperty.Type));
+            Assert.That(property.GetMethod!.IsPublic, Is.True);
+            Assert.That(property.SetMethod!.ReturnParameter.GetRequiredCustomModifiers(), Does.Contain(typeof(IsExternalInit)));
         }
 
         var command = JsonSerializer.Deserialize(expected.PayloadJson, commandType, SharedSerializationOptions.Current);
 
-        command.Should().NotBeNull().And.BeOfType(commandType);
-        JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current).Should().Be(expected.PayloadJson);
+        var assertedChain33 = command;
+        Assert.That(assertedChain33, Is.Not.Null);
+        Assert.That(assertedChain33, Is.TypeOf(commandType));
+        Assert.That(JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current), Is.EqualTo(expected.PayloadJson));
     }
 
     [Test]
@@ -62,13 +62,13 @@ public sealed class CoachingBackgroundCommandContractTests
         var noteTitle = commandType.GetProperty("NoteTitle", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!;
         var nullPayload = "{\"traineeNoteId\":\"00000000-0000-0000-0000-000000000010\",\"traineeId\":\"00000000-0000-0000-0000-000000000011\",\"trainerId\":\"00000000-0000-0000-0000-000000000012\",\"triggeredAt\":\"2026-07-18T12:34:57+00:00\"}";
 
-        new NullabilityInfoContext().Create(noteTitle).WriteState.Should().Be(NullabilityState.Nullable);
+        Assert.That(new NullabilityInfoContext().Create(noteTitle).WriteState, Is.EqualTo(NullabilityState.Nullable));
 
         var command = JsonSerializer.Deserialize(nullPayload, commandType, SharedSerializationOptions.Current);
 
-        command.Should().NotBeNull();
-        noteTitle.GetValue(command).Should().BeNull();
-        JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current).Should().Be(nullPayload);
+        Assert.That(command, Is.Not.Null);
+        Assert.That(noteTitle.GetValue(command), Is.Null);
+        Assert.That(JsonSerializer.Serialize(command, commandType, SharedSerializationOptions.Current), Is.EqualTo(nullPayload));
     }
 
     [Test]
@@ -80,19 +80,21 @@ public sealed class CoachingBackgroundCommandContractTests
         {
             var commandType = GetCommandType(expected.TypeName);
             var contract = registry.Contracts.Single(candidate => candidate.RuntimeType == commandType);
-            var handlerType = contract.ExpectedHandlerTypes.Should().ContainSingle().Subject;
+            var assertedValue86 = (contract.ExpectedHandlerTypes).ToArray();
+            Assert.That(assertedValue86, Has.Exactly(1).Items);
+            var handlerType = assertedValue86.Single();
 
-            contract.CanonicalId.Should().Be(expected.CanonicalId);
-            contract.ReadAlias.Should().Be($"{CommandsNamespace}.{expected.TypeName}");
-            handlerType.FullName.Should().Be(expected.HandlerTypeFullName);
-            ResolveDeliveryChannel(handlerType).Should().Be(expected.Channel);
+            Assert.That(contract.CanonicalId, Is.EqualTo(expected.CanonicalId));
+            Assert.That(contract.ReadAlias, Is.EqualTo($"{CommandsNamespace}.{expected.TypeName}"));
+            Assert.That(handlerType.FullName, Is.EqualTo(expected.HandlerTypeFullName));
+            Assert.That(ResolveDeliveryChannel(handlerType), Is.EqualTo(expected.Channel));
 
             if (expected.EmailPayloadTypeFullName is not null)
             {
                 var emailPayloadType = GetEmailPayloadType(handlerType);
-                emailPayloadType.FullName.Should().Be(expected.EmailPayloadTypeFullName);
+                Assert.That(emailPayloadType.FullName, Is.EqualTo(expected.EmailPayloadTypeFullName));
                 var payload = (IEmailPayload)Activator.CreateInstance(emailPayloadType)!;
-                payload.NotificationType.Value.Should().Be(expected.DeliveryKey);
+                Assert.That(payload.NotificationType.Value, Is.EqualTo(expected.DeliveryKey));
             }
         }
     }
@@ -164,7 +166,7 @@ public sealed class CoachingBackgroundCommandContractTests
     private static Type GetCommandType(string typeName)
     {
         var commandType = typeof(LgymApi.Application.ServiceCollectionExtensions).Assembly.GetType($"{CommandsNamespace}.{typeName}");
-        commandType.Should().NotBeNull($"{typeName} must be owned by the Coaching Application module");
+        Assert.That(commandType, Is.Not.Null, $"{typeName} must be owned by the Coaching Application module");
         return commandType!;
     }
 

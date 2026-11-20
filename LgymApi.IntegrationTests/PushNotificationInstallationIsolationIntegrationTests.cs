@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
 using LgymApi.BackgroundWorker.Push;
@@ -31,7 +30,7 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
             environment = "testing",
             permissionStatus = "authorized"
         });
-        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(register.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         Id<PushNotificationMessage> messageId;
         using (var scope = Factory.Services.CreateScope())
@@ -62,13 +61,13 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
                 .ProcessAsync(messageId.ToString());
         }
 
-        Factory.PushSender.Attempts.Should().BeEmpty();
+        Assert.That(Factory.PushSender.Attempts, Is.Empty);
         using var assertionScope = Factory.Services.CreateScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var message = await assertionDatabase.PushNotificationMessages.SingleAsync(item => item.Id == messageId);
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
-        message.ProviderStatus.Should().Be("InstallationSessionInvalid");
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Permanent));
+        Assert.That(message.ProviderStatus, Is.EqualTo("InstallationSessionInvalid"));
     }
 
     [Test]
@@ -89,7 +88,7 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
             environment = "testing",
             permissionStatus = "authorized"
         });
-        registerAResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(registerAResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         Id<PushInstallation> installationId;
         Id<PushNotificationMessage> aMessageId;
@@ -98,7 +97,7 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var installation = await db.PushInstallations.SingleAsync(item => item.InstallationId == installationKey);
             installationId = installation.Id;
-            installation.UserId.Should().Be(userA.Id);
+            Assert.That(installation.UserId, Is.EqualTo(userA.Id));
 
             var pushNotifications = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
             await pushNotifications.EnqueueAsync(new EnqueuePushNotificationInput(
@@ -116,15 +115,15 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
         }
 
         var logoutResponse = await Client.PostAsync("/api/logout", null);
-        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var loggedOutInstallation = await db.PushInstallations.SingleAsync(item => item.InstallationId == installationKey);
-            loggedOutInstallation.Id.Should().Be(installationId);
-            loggedOutInstallation.UserId.Should().BeNull();
-            loggedOutInstallation.SessionId.Should().BeNull();
+            Assert.That(loggedOutInstallation.Id, Is.EqualTo(installationId));
+            Assert.That(loggedOutInstallation.UserId, Is.Null);
+            Assert.That(loggedOutInstallation.SessionId, Is.Null);
         }
 
         await LoginAndAuthorizeAsync("push-isolation-b", "pass123");
@@ -136,16 +135,16 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
             environment = "testing",
             permissionStatus = "authorized"
         });
-        registerBResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(registerBResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         Id<PushNotificationMessage> bMessageId;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var reboundInstallation = await db.PushInstallations.SingleAsync(item => item.InstallationId == installationKey);
-            reboundInstallation.Id.Should().Be(installationId);
-            reboundInstallation.UserId.Should().Be(userB.Id);
-            reboundInstallation.SessionId.Should().NotBeNull();
+            Assert.That(reboundInstallation.Id, Is.EqualTo(installationId));
+            Assert.That(reboundInstallation.UserId, Is.EqualTo(userB.Id));
+            Assert.That(reboundInstallation.SessionId, Is.Not.Null);
 
             var pushNotifications = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
             await pushNotifications.EnqueueAsync(new EnqueuePushNotificationInput(
@@ -169,30 +168,30 @@ public sealed class PushNotificationInstallationIsolationIntegrationTests : Inte
             await handler.ProcessAsync(bMessageId.ToString());
         }
 
-        Factory.PushSender.Attempts.Should().ContainSingle();
-        Factory.PushSender.Attempts.Single().Target.InstallationId.Should().Be(installationId);
-        Factory.PushSender.Attempts.Single().Payload.EventId.Should().Be(bEventId);
+        Assert.That(Factory.PushSender.Attempts, Has.Exactly(1).Items);
+        Assert.That(Factory.PushSender.Attempts.Single().Target.InstallationId, Is.EqualTo(installationId));
+        Assert.That(Factory.PushSender.Attempts.Single().Payload.EventId, Is.EqualTo(bEventId));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var aMessage = await db.PushNotificationMessages.SingleAsync(message => message.Id == aMessageId);
             var bMessage = await db.PushNotificationMessages.SingleAsync(message => message.Id == bMessageId);
-            aMessage.Status.Should().Be(PushNotificationStatus.Failed);
-            aMessage.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
-            aMessage.ProviderStatus.Should().Be("InstallationUserMismatch");
-            aMessage.NextAttemptAt.Should().BeNull();
-            aMessage.SchedulerJobId.Should().BeNull();
-            bMessage.Status.Should().Be(PushNotificationStatus.Skipped);
+            Assert.That(aMessage.Status, Is.EqualTo(PushNotificationStatus.Failed));
+            Assert.That(aMessage.FailureKind, Is.EqualTo(PushNotificationFailureKind.Permanent));
+            Assert.That(aMessage.ProviderStatus, Is.EqualTo("InstallationUserMismatch"));
+            Assert.That(aMessage.NextAttemptAt, Is.Null);
+            Assert.That(aMessage.SchedulerJobId, Is.Null);
+            Assert.That(bMessage.Status, Is.EqualTo(PushNotificationStatus.Skipped));
         }
     }
 
     private async Task LoginAndAuthorizeAsync(string name, string password)
     {
         var response = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var login = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        login.Should().NotBeNull();
+        Assert.That(login, Is.Not.Null);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.Token);
     }
 

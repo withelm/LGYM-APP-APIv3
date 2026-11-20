@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.AdminManagement.Models;
 using System.Net;
 using LgymApi.Application.BuildingBlocks.Errors;
@@ -48,9 +47,9 @@ public sealed class RoleServiceTests
         var result = await _service.GetRolesAsync();
         var roles = result.Value;
 
-        roles.Should().HaveCount(1);
-        roles[0].Name.Should().Be("Coach");
-        roles[0].PermissionClaims.Should().BeEquivalentTo(_roleRepository.RoleClaims[_roleRepository.Roles.First().Id]);
+        Assert.That(roles, Has.Exactly(1).Items);
+        Assert.That(roles[0].Name, Is.EqualTo("Coach"));
+        Assert.That(roles[0].PermissionClaims, Is.EquivalentTo(_roleRepository.RoleClaims[_roleRepository.Roles.First().Id]));
     }
 
     [Test]
@@ -59,9 +58,9 @@ public sealed class RoleServiceTests
         var emptyId = default(Id<Role>);
         var result = await _service.GetRoleAsync(emptyId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidRoleError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidRoleError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -78,15 +77,15 @@ public sealed class RoleServiceTests
 
         var result = roleResult.Value;
 
-        result.Name.Should().Be("Coach");
-        result.Description.Should().Be("Training tools");
-        result.PermissionClaims.Should().Equal(new[]
+        Assert.That(result.Name, Is.EqualTo("Coach"));
+        Assert.That(result.Description, Is.EqualTo("Training tools"));
+        Assert.That(result.PermissionClaims, Is.EqualTo(new[]
         {
              AuthConstants.Permissions.ManageAppConfig,
              AuthConstants.Permissions.ManageUserRoles
-         });
-        _roleRepository.Roles.Any(r => r.Id == result.Id).Should().BeTrue();
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+         }));
+        Assert.That(_roleRepository.Roles.Any(r => r.Id == result.Id), Is.True);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -94,9 +93,9 @@ public sealed class RoleServiceTests
     {
         var result = await _service.CreateRoleAsync("Coach", null, ["invalid.claim"]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidRoleError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidRoleError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -111,9 +110,9 @@ public sealed class RoleServiceTests
             null,
             [AuthConstants.Permissions.ManageUserRoles]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<RoleForbiddenError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<RoleForbiddenError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -129,10 +128,10 @@ public sealed class RoleServiceTests
             ManageGlobalExercisesClaim);
 
         var updated = _roleRepository.Roles.Single(r => r.Id == roleId);
-        updated.Name.Should().Be("Senior Coach");
-        updated.Description.Should().Be("New desc");
-        _roleRepository.RoleClaims[updated.Id].Should().Equal(ManageGlobalExercisesClaim);
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(updated.Name, Is.EqualTo("Senior Coach"));
+        Assert.That(updated.Description, Is.EqualTo("New desc"));
+        Assert.That(_roleRepository.RoleClaims[updated.Id], Is.EqualTo(ManageGlobalExercisesClaim));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -143,9 +142,9 @@ public sealed class RoleServiceTests
 
         var result = await _service.DeleteRoleAsync(userRole.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<RoleForbiddenError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<RoleForbiddenError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -156,8 +155,8 @@ public sealed class RoleServiceTests
 
         await _service.DeleteRoleAsync(role.Id);
 
-        _roleRepository.Roles.Any(r => r.Id == role.Id).Should().BeFalse();
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(_roleRepository.Roles.Any(r => r.Id == role.Id), Is.False);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -172,9 +171,9 @@ public sealed class RoleServiceTests
 
         await _service.UpdateUserRolesAsync((Id<User>)userId, [" coach ", "ANALYST", "coach"]);
 
-        _roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles).Should().BeTrue();
-        roles!.Should().BeEquivalentTo(new[] { coach.Id, analyst.Id });
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(_roleRepository.UserRoleAssignments.TryGetValue(userId, out var roles), Is.True);
+        Assert.That(roles!, Is.EquivalentTo(new[] { coach.Id, analyst.Id }));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -182,10 +181,10 @@ public sealed class RoleServiceTests
     {
         var result = await _service.UpdateUserRolesAsync(Id<User>.New(), ["Coach"]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<RoleNotFoundError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.NotFound);
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<RoleNotFoundError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.NotFound));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -196,10 +195,10 @@ public sealed class RoleServiceTests
 
         var result = await _service.UpdateUserRolesAsync((Id<User>)userId, ["UnknownRole"]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidRoleError>();
-        result.Error.HttpStatusCode.Should().Be((int)HttpStatusCode.BadRequest);
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidRoleError>());
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo((int)HttpStatusCode.BadRequest));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -207,9 +206,9 @@ public sealed class RoleServiceTests
     {
         var claims = _service.GetAvailablePermissionClaims();
 
-        claims.Select(c => c.ClaimValue).Should().Equal(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList());
-        claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType).Should().BeTrue();
-        claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)).Should().BeTrue();
+        Assert.That(claims.Select(c => c.ClaimValue), Is.EqualTo(AuthConstants.Permissions.All.OrderBy(c => c, StringComparer.Ordinal).ToList()));
+        Assert.That(claims.All(c => c.ClaimType == AuthConstants.PermissionClaimType), Is.True);
+        Assert.That(claims.All(c => !string.IsNullOrWhiteSpace(c.DisplayName)), Is.True);
     }
 
     private sealed class InMemoryUserRepository : IUserRepository

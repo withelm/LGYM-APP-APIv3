@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -36,13 +35,13 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?page=2&pageSize=2");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("page").GetInt32().Should().Be(2);
-        body.GetProperty("pageSize").GetInt32().Should().Be(2);
-        body.GetProperty("total").GetInt32().Should().Be(3);
-        body.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("_id").GetString()).Should().Equal(charlie.Id.ToString());
+        Assert.That(body.GetProperty("page").GetInt32(), Is.EqualTo(2));
+        Assert.That(body.GetProperty("pageSize").GetInt32(), Is.EqualTo(2));
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(3));
+        Assert.That(body.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("_id").GetString()), Is.EqualTo(new[] { charlie.Id.ToString() }));
     }
 
     [Test]
@@ -59,16 +58,16 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=2");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("page").GetInt32().Should().Be(1);
-        body.GetProperty("pageSize").GetInt32().Should().Be(2);
-        body.GetProperty("total").GetInt32().Should().Be(3);
+        Assert.That(body.GetProperty("page").GetInt32(), Is.EqualTo(1));
+        Assert.That(body.GetProperty("pageSize").GetInt32(), Is.EqualTo(2));
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(3));
 
         var items = body.GetProperty("items").EnumerateArray().ToArray();
-        items.Should().HaveCount(2);
-        items.Select(x => x.GetProperty("name").GetString()).Should().Equal("alpha-page", "beta-page");
+        Assert.That(items, Has.Exactly(2).Items);
+        Assert.That(items.Select(x => x.GetProperty("name").GetString()), Is.EqualTo(new[] { "alpha-page", "beta-page" }));
     }
 
     [Test]
@@ -85,11 +84,11 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=1&pageSize=50");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
         var items = body.GetProperty("items").EnumerateArray().ToArray();
-        items.Select(x => x.GetProperty("name").GetString()).Should().Equal("Alpha Name", "Beta Name", "Zeta Name");
+        Assert.That(items.Select(x => x.GetProperty("name").GetString()), Is.EqualTo(new[] { "Alpha Name", "Beta Name", "Zeta Name" }));
     }
 
     [Test]
@@ -105,11 +104,11 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?search=match&page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(1);
-        body.GetProperty("items").EnumerateArray().Should().ContainSingle(x => x.GetProperty("_id").GetString() == matching.Id.ToString());
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(1));
+        Assert.That((body.GetProperty("items").EnumerateArray()).Where(x => x.GetProperty("_id").GetString() == matching.Id.ToString()), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -126,14 +125,14 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(2);
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(2));
 
         var items = body.GetProperty("items").EnumerateArray().ToArray();
-        items.Select(x => x.GetProperty("_id").GetString()).Should().Contain(new[] { linked.Id.ToString(), pending.Id.ToString() });
-        items.Select(x => x.GetProperty("_id").GetString()).Should().NotContain(revoked.Id.ToString());
+        Assert.That(items.Select(x => x.GetProperty("_id").GetString()), Is.SupersetOf(new[] { linked.Id.ToString(), pending.Id.ToString() }));
+        Assert.That(items.Select(x => x.GetProperty("_id").GetString()), Does.Not.Contain(revoked.Id.ToString()));
     }
 
     [Test]
@@ -150,14 +149,14 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?page=2&pageSize=2");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("page").GetInt32().Should().Be(2);
-        body.GetProperty("pageSize").GetInt32().Should().Be(2);
-        body.GetProperty("total").GetInt32().Should().Be(2);
-        body.GetProperty("items").EnumerateArray().Should().NotContain(x => x.GetProperty("_id").GetString() == revoked.Id.ToString());
-        body.GetProperty("items").EnumerateArray().Should().BeEmpty();
+        Assert.That(body.GetProperty("page").GetInt32(), Is.EqualTo(2));
+        Assert.That(body.GetProperty("pageSize").GetInt32(), Is.EqualTo(2));
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(2));
+        Assert.That((body.GetProperty("items").EnumerateArray()).Any(x => x.GetProperty("_id").GetString() == revoked.Id.ToString()), Is.False);
+        Assert.That(body.GetProperty("items").EnumerateArray(), Is.Empty);
     }
 
     [Test]
@@ -174,14 +173,14 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?search=match&page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(2);
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(2));
 
         var itemIds = body.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("_id").GetString()).ToArray();
-        itemIds.Should().Contain(new[] { linked.Id.ToString(), pending.Id.ToString() });
-        itemIds.Should().NotContain(revoked.Id.ToString());
+        Assert.That(itemIds, Is.SupersetOf(new[] { linked.Id.ToString(), pending.Id.ToString() }));
+        Assert.That(itemIds, Does.Not.Contain(revoked.Id.ToString()));
     }
 
     [Test]
@@ -198,11 +197,11 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?status=NoRelationship&page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(0);
-        body.GetProperty("items").EnumerateArray().Should().BeEmpty();
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(0));
+        Assert.That(body.GetProperty("items").EnumerateArray(), Is.Empty);
     }
 
     [Test]
@@ -216,10 +215,10 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?page=99999&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("items").EnumerateArray().Should().BeEmpty();
+        Assert.That(body.GetProperty("items").EnumerateArray(), Is.Empty);
     }
 
     [Test]
@@ -267,15 +266,17 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?status=InvitationExpired&page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(1);
-        var item = body.GetProperty("items").EnumerateArray().Should().ContainSingle().Subject;
-        item.GetProperty("_id").GetString().Should().Be(trainee.Id.ToString());
-        item.GetProperty("status").GetString().Should().Be("InvitationExpired");
-        item.GetProperty("hasPendingInvitation").GetBoolean().Should().BeFalse();
-        item.GetProperty("hasExpiredInvitation").GetBoolean().Should().BeTrue();
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(1));
+        var assertedValue182 = (body.GetProperty("items").EnumerateArray()).ToArray();
+        Assert.That(assertedValue182, Has.Exactly(1).Items);
+        var item = assertedValue182.Single();
+        Assert.That(item.GetProperty("_id").GetString(), Is.EqualTo(trainee.Id.ToString()));
+        Assert.That(item.GetProperty("status").GetString(), Is.EqualTo("InvitationExpired"));
+        Assert.That(item.GetProperty("hasPendingInvitation").GetBoolean(), Is.False);
+        Assert.That(item.GetProperty("hasExpiredInvitation").GetBoolean(), Is.True);
     }
 
     [Test]
@@ -335,11 +336,11 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/trainer/trainees?search=mIxEd&sortBy=name&sortDirection=asc&page=2&pageSize=1");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await ParseDashboardResponseAsync(response);
-        body.GetProperty("total").GetInt32().Should().Be(2);
-        body.GetProperty("items").EnumerateArray().Should().ContainSingle(item => item.GetProperty("_id").GetString() == matchingByEmail.Id.ToString());
+        Assert.That(body.GetProperty("total").GetInt32(), Is.EqualTo(2));
+        Assert.That((body.GetProperty("items").EnumerateArray()).Where(item => item.GetProperty("_id").GetString() == matchingByEmail.Id.ToString()), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -408,18 +409,17 @@ public sealed class TrainerDashboardGridifyPaginationTests : IntegrationTestBase
         var statusResponse = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
 
         // Assert
-        defaultResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        statusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(defaultResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(statusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var defaultBody = await ParseDashboardResponseAsync(defaultResponse);
         var duplicateIds = new[] { firstDuplicate, secondDuplicate }
             .OrderBy(user => user.Id)
             .Select(user => user.Id.ToString());
-        defaultBody.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()).Should().Equal(duplicateIds);
+        Assert.That(defaultBody.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(duplicateIds));
 
         var statusBody = await ParseDashboardResponseAsync(statusResponse);
-        statusBody.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("status").GetString())
-            .Should().Equal("Linked", "Linked", "InvitationPending", "InvitationExpired");
+        Assert.That(statusBody.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("status").GetString()), Is.EqualTo(new[] { "Linked", "Linked", "InvitationPending", "InvitationExpired" }));
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)

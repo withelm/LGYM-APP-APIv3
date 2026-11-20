@@ -2,7 +2,6 @@ using System.Net;
 using System.Reflection;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Options;
 using LgymApi.Infrastructure.Services;
@@ -25,11 +24,11 @@ public sealed class CloudflareR2PhotoStorageProviderTests
 
         var result = await provider.GenerateSignedUploadUrlAsync("photos/key.jpg", "image/jpeg", TimeSpan.FromMinutes(10));
 
-        result.Should().Be("https://upload.example.com");
-        captured.Should().NotBeNull();
-        captured!.Verb.Should().Be(HttpVerb.PUT);
-        captured.ContentType.Should().Be("image/jpeg");
-        captured.Key.Should().Be("photos/key.jpg");
+        Assert.That(result, Is.EqualTo("https://upload.example.com"));
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.Verb, Is.EqualTo(HttpVerb.PUT));
+        Assert.That(captured.ContentType, Is.EqualTo("image/jpeg"));
+        Assert.That(captured.Key, Is.EqualTo("photos/key.jpg"));
     }
 
     [Test]
@@ -42,8 +41,8 @@ public sealed class CloudflareR2PhotoStorageProviderTests
 
         var result = await provider.GenerateSignedReadUrlAsync("photos/key.jpg", TimeSpan.FromMinutes(5));
 
-        result.Should().Be("https://read.example.com");
-        captured!.Verb.Should().Be(HttpVerb.GET);
+        Assert.That(result, Is.EqualTo("https://read.example.com"));
+        Assert.That(captured!.Verb, Is.EqualTo(HttpVerb.GET));
     }
 
     [Test]
@@ -56,7 +55,7 @@ public sealed class CloudflareR2PhotoStorageProviderTests
 
         var action = async () => await provider.DeleteAsync("photos/key.jpg");
 
-        await action.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.Nothing);
     }
 
     [Test]
@@ -74,10 +73,10 @@ public sealed class CloudflareR2PhotoStorageProviderTests
 
         var result = await provider.GetMetadataAsync("photos/key.png");
 
-        result.Should().NotBeNull();
-        result!.SizeBytes.Should().Be(1234);
-        result.ContentType.Should().Be("image/png");
-        result.ETag.Should().Be("etag");
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.SizeBytes, Is.EqualTo(1234));
+        Assert.That(result.ContentType, Is.EqualTo("image/png"));
+        Assert.That(result.ETag, Is.EqualTo("etag"));
     }
 
     [Test]
@@ -90,7 +89,7 @@ public sealed class CloudflareR2PhotoStorageProviderTests
 
         var result = await provider.GetMetadataAsync("photos/missing.png");
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     private static CloudflareR2PhotoStorageProvider CreateProvider(IAmazonS3 client)

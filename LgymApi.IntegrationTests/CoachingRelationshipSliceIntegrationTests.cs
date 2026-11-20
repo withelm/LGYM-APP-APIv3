@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Relationships.DetachFromTrainer;
 using LgymApi.Application.Coaching.Relationships.GetCurrentTrainer;
 using LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
@@ -43,14 +42,14 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         {
             var useCase = actionScope.ServiceProvider.GetRequiredService<IUnlinkTraineeUseCase>();
             var result = await useCase.ExecuteAsync(new UnlinkTraineeCommand(trainer.Id, trainee.Id));
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().BeFalse();
-        (await verificationDatabase.CommandEnvelopes.CountAsync(envelope =>
-            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))).Should().Be(1);
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.False);
+        Assert.That((await verificationDatabase.CommandEnvelopes.CountAsync(envelope =>
+            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))), Is.EqualTo(1));
     }
 
     [Test]
@@ -75,14 +74,14 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         {
             var useCase = actionScope.ServiceProvider.GetRequiredService<IDetachFromTrainerUseCase>();
             var result = await useCase.ExecuteAsync(new DetachFromTrainerCommand(trainee.Id));
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)).Should().BeFalse();
-        (await verificationDatabase.CommandEnvelopes.CountAsync(envelope =>
-            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))).Should().Be(1);
+        Assert.That((await verificationDatabase.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == trainee.Id)), Is.False);
+        Assert.That((await verificationDatabase.CommandEnvelopes.CountAsync(envelope =>
+            envelope.CommandTypeFullName.Contains("TrainerRelationshipEndedInAppNotificationCommand"))), Is.EqualTo(1));
     }
 
     [Test]
@@ -110,12 +109,12 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         var useCase = actionScope.ServiceProvider.GetRequiredService<IGetCurrentTrainerUseCase>();
         var result = await useCase.ExecuteAsync(new GetCurrentTrainerQuery(trainee.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TrainerId.Should().Be(trainer.Id);
-        result.Value.Name.Should().Be(trainer.Name);
-        result.Value.Email.Should().Be(trainer.Email.Value);
-        result.Value.Avatar.Should().Be(trainer.Avatar);
-        result.Value.LinkedAt.Should().Be(linkedAt);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TrainerId, Is.EqualTo(trainer.Id));
+        Assert.That(result.Value.Name, Is.EqualTo(trainer.Name));
+        Assert.That(result.Value.Email, Is.EqualTo(trainer.Email.Value));
+        Assert.That(result.Value.Avatar, Is.EqualTo(trainer.Avatar));
+        Assert.That(result.Value.LinkedAt, Is.EqualTo(linkedAt));
     }
 
     [Test]
@@ -145,21 +144,21 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
 
         SetAuthorizationHeader(trainee.Id);
         using var ownerResponse = await Client.GetAsync("/api/trainee/trainer");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerProfile = await ownerResponse.Content.ReadFromJsonAsync<TraineeTrainerProfileResponse>();
-        ownerProfile.Should().NotBeNull();
-        ownerProfile!.TrainerId.Should().Be(trainer.Id.ToString());
-        ownerProfile.Name.Should().Be(trainer.Name);
-        ownerProfile.Email.Should().Be(trainer.Email.Value);
-        ownerProfile.LinkedAt.Should().Be(linkedAt);
+        Assert.That(ownerProfile, Is.Not.Null);
+        Assert.That(ownerProfile!.TrainerId, Is.EqualTo(trainer.Id.ToString()));
+        Assert.That(ownerProfile.Name, Is.EqualTo(trainer.Name));
+        Assert.That(ownerProfile.Email, Is.EqualTo(trainer.Email.Value));
+        Assert.That(ownerProfile.LinkedAt, Is.EqualTo(linkedAt));
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var otherResponse = await Client.GetAsync("/api/trainee/trainer");
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var otherResponseText = await otherResponse.Content.ReadAsStringAsync();
-        otherResponseText.Should().NotContain(trainer.Id.ToString());
-        otherResponseText.Should().NotContain(trainer.Name);
-        otherResponseText.Should().NotContain(trainer.Email.Value);
+        Assert.That(otherResponseText, Does.Not.Contain(trainer.Id.ToString()));
+        Assert.That(otherResponseText, Does.Not.Contain(trainer.Name));
+        Assert.That(otherResponseText, Does.Not.Contain(trainer.Email.Value));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -172,19 +171,19 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
 
         SetAuthorizationHeader(trainee.Id);
         using var formerResponse = await Client.GetAsync("/api/trainee/trainer");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var formerResponseText = await formerResponse.Content.ReadAsStringAsync();
-        formerResponseText.Should().NotContain(trainer.Id.ToString());
-        formerResponseText.Should().NotContain(trainer.Name);
-        formerResponseText.Should().NotContain(trainer.Email.Value);
+        Assert.That(formerResponseText, Does.Not.Contain(trainer.Id.ToString()));
+        Assert.That(formerResponseText, Does.Not.Contain(trainer.Name));
+        Assert.That(formerResponseText, Does.Not.Contain(trainer.Email.Value));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainee/trainer");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(trainer.Id.ToString());
-        anonymousResponseText.Should().NotContain(trainer.Name);
-        anonymousResponseText.Should().NotContain(trainer.Email.Value);
+        Assert.That(anonymousResponseText, Does.Not.Contain(trainer.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(trainer.Name));
+        Assert.That(anonymousResponseText, Does.Not.Contain(trainer.Email.Value));
     }
 
     [Test]
@@ -212,8 +211,8 @@ public sealed class CoachingRelationshipSliceIntegrationTests : IntegrationTestB
         var useCase = actionScope.ServiceProvider.GetRequiredService<IGetCurrentTrainerUseCase>();
         var result = await useCase.ExecuteAsync(new GetCurrentTrainerQuery(trainee.Id));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
     }
 
     private sealed class TraineeTrainerProfileResponse

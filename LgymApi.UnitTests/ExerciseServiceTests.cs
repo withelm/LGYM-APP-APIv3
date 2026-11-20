@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Exercise;
 using LgymApi.Application.Features.Exercise.Models;
 using LgymApi.Application.Repositories;
@@ -58,7 +57,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.AddExerciseAsync(actor, "Squat", BodyParts.Quads, null, null);
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -70,7 +69,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.AddExerciseAsync(manager, "Squat", BodyParts.Quads, null, null);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).AddAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == null),
             Arg.Any<CancellationToken>());
@@ -87,7 +86,7 @@ public sealed class ExerciseServiceTests
             actor,
             new AddUserExerciseInput(victimId, "Squat", BodyParts.Quads, null, null));
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -102,7 +101,7 @@ public sealed class ExerciseServiceTests
             actor,
             new AddUserExerciseInput(accountId, "Squat", BodyParts.Quads, null, null));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).AddAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == accountId),
             Arg.Any<CancellationToken>());
@@ -119,7 +118,7 @@ public sealed class ExerciseServiceTests
             manager,
             new AddUserExerciseWithFormulaInput(targetId, "Squat", BodyParts.Quads, ExerciseEloFormula.VolumeWeighted, null, null));
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _accounts.DidNotReceive().GetByIdAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
         await _exercises.DidNotReceive().AddAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -135,7 +134,7 @@ public sealed class ExerciseServiceTests
             manager,
             new AddUserExerciseWithFormulaInput(manager.Id, "Squat", BodyParts.Quads, ExerciseEloFormula.VolumeWeighted, null, null));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).AddAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == manager.Id && exercise.EloFormula == ExerciseEloFormula.VolumeWeighted),
             Arg.Any<CancellationToken>());
@@ -148,7 +147,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.DeleteExerciseAsync(actor, Id<AccountReference>.New(), Id<Exercise>.New());
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _exercises.DidNotReceive().FindOwnedByAccountAsync(Arg.Any<Id<Exercise>>(), Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
         await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -164,7 +163,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.DeleteExerciseAsync(actor, accountId, exerciseId);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).UpdateAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.Id == exerciseId && exercise.IsDeleted),
             Arg.Any<CancellationToken>());
@@ -181,7 +180,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.DeleteExerciseAsync(manager, managerId, exerciseId);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).UpdateAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.Id == exerciseId && exercise.OwnerId == null && exercise.IsDeleted),
             Arg.Any<CancellationToken>());
@@ -197,7 +196,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.DeleteExerciseAsync(manager, manager.Id, exerciseId);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.DidNotReceive().FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
     }
 
@@ -208,7 +207,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.GetAllUserExercisesAsync(actor, Id<AccountReference>.New(), []);
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _exercises.DidNotReceive().GetAccountExercisesAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<CancellationToken>());
     }
 
@@ -219,7 +218,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.GetExerciseByBodyPartAsync(actor, Id<AccountReference>.New(), BodyParts.Chest, []);
 
-        result.Error.Should().BeOfType<ExerciseForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseForbiddenError>());
         await _exercises.DidNotReceive().GetByBodyPartAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<BodyParts>(), Arg.Any<CancellationToken>());
     }
 
@@ -232,7 +231,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.GetExerciseAsync(actor, exerciseId, []);
 
-        result.Error.Should().BeOfType<ExerciseNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseNotFoundError>());
         await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>());
     }
 
@@ -245,7 +244,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.GetExerciseAsync(manager, exerciseId, []);
 
-        result.Error.Should().BeOfType<ExerciseNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseNotFoundError>());
         await _exercises.Received(1).FindVisibleToAccountAsync(exerciseId, manager.Id, Arg.Any<CancellationToken>());
         await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>());
     }
@@ -261,7 +260,7 @@ public sealed class ExerciseServiceTests
             actor,
             new UpdateExerciseInput(exerciseId, "Changed", BodyParts.Back, null, null));
 
-        result.Error.Should().BeOfType<ExerciseNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<ExerciseNotFoundError>());
         await _exercises.DidNotReceive().UpdateAsync(Arg.Any<WorkoutExerciseWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -275,7 +274,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.UpdateExerciseAsync(manager, new UpdateExerciseInput(exerciseId, "Changed", BodyParts.Back, null, null));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.DidNotReceive().FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
         await _exercises.Received(1).UpdateAsync(
             Arg.Is<WorkoutExerciseWriteModel>(exercise => exercise.OwnerId == manager.Id && exercise.Name == "Changed"),
@@ -292,7 +291,7 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.AddGlobalTranslationAsync(context, new AddGlobalTranslationInput(accountId, exerciseId, "pl-PL", "Przysiad"));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _exercises.Received(1).FindGlobalByIdAsync(exerciseId, Arg.Any<CancellationToken>());
         await _exercises.DidNotReceive().FindUnrestrictedByIdAsync(exerciseId, Arg.Any<CancellationToken>());
         await _exercises.Received(1).UpsertTranslationAsync(exerciseId, "pl-pl", "Przysiad", Arg.Any<CancellationToken>());
@@ -354,12 +353,12 @@ public sealed class ExerciseServiceTests
 
         var result = await _service.GetExerciseScoresFromTrainingByExerciseAsync(accountId, exerciseId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].TrainingName.Should().BeEmpty();
-        result.Value[0].GymName.Should().Be("History Gym");
-        result.Value[0].SeriesScores.Should().ContainSingle();
-        result.Value[0].SeriesScores[0].Score!.Weight.Should().Be(100);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].TrainingName, Is.Empty);
+        Assert.That(result.Value[0].GymName, Is.EqualTo("History Gym"));
+        Assert.That(result.Value[0].SeriesScores, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].SeriesScores[0].Score!.Weight, Is.EqualTo(100));
     }
 
     private static WorkoutExercisePersistenceModel Model(Id<Exercise> id, Id<AccountReference>? ownerId)

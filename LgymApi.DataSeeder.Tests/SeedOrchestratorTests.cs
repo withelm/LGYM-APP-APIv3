@@ -40,8 +40,8 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, seedContext, seedOptions, CancellationToken.None);
 
-        (await context.Exercises.CountAsync()).Should().Be(0);
-        seedContext.Exercises.Should().BeEmpty();
+        Assert.That((await context.Exercises.CountAsync()), Is.EqualTo(0));
+        Assert.That(seedContext.Exercises, Is.Empty);
     }
 
     [Test]
@@ -75,8 +75,8 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, seedContext, seedOptions, CancellationToken.None);
 
-        seedContext.AdminUser?.Name.Should().Be("Admin");
-        seedContext.TesterUser?.Name.Should().Be("Tester");
+        Assert.That(seedContext.AdminUser?.Name, Is.EqualTo("Admin"));
+        Assert.That(seedContext.TesterUser?.Name, Is.EqualTo("Tester"));
     }
 
     [Test]
@@ -96,7 +96,7 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, new SeedContext(), new SeedOptions { SeedDemoData = true }, CancellationToken.None);
 
-        executionOrder.Should().Equal(10, 20, 30);
+        Assert.That(executionOrder, Is.EqualTo(new[] { 10, 20, 30 }));
     }
 
     [Test]
@@ -115,15 +115,15 @@ public sealed class SeedOrchestratorTests
             var action = async () => await new SeedOrchestrator(Array.Empty<IEntitySeeder>())
                 .RunAsync(context, new SeedContext(), new SeedOptions(), CancellationToken.None);
 
-            await action.Should().ThrowAsync<Exception>();
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<Exception>());
         }
         finally
         {
             Console.SetOut(originalOut);
         }
 
-        output.ToString().Should().Contain("API startup owns EF Core migrations");
-        output.ToString().Should().NotContain("Ensuring non-relational test database is created...");
+        Assert.That(output.ToString(), Does.Contain("API startup owns EF Core migrations"));
+        Assert.That(output.ToString(), Does.Not.Contain("Ensuring non-relational test database is created..."));
     }
 
     [Test]
@@ -142,15 +142,14 @@ public sealed class SeedOrchestratorTests
             var action = async () => await new SeedOrchestrator(Array.Empty<IEntitySeeder>())
                 .RunAsync(context, new SeedContext(), new SeedOptions { DropDatabase = true }, CancellationToken.None);
 
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("Relational database deletion requires migrations to be enabled so the schema can be recreated.");
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Relational database deletion requires migrations to be enabled so the schema can be recreated.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
         finally
         {
             Console.SetOut(originalOut);
         }
 
-        output.ToString().Should().NotContain("Dropping existing database...");
+        Assert.That(output.ToString(), Does.Not.Contain("Dropping existing database..."));
     }
 
     [Test]
@@ -177,11 +176,11 @@ public sealed class SeedOrchestratorTests
 
         await orchestrator.RunAsync(context, new SeedContext(), seedOptions, CancellationToken.None);
 
-        (await context.Users.CountAsync()).Should().Be(firstUserCount);
-        (await context.Roles.CountAsync()).Should().Be(firstRoleCount);
-        (await context.RoleClaims.CountAsync()).Should().Be(firstRoleClaimCount);
-        (await context.Roles.SingleAsync(role => role.Name == "Admin")).Id.Should().Be(ParseSeedId<Role>(IdentitySeedIds.AdminRole));
-        (await context.RoleClaims.SingleAsync(claim => claim.ClaimValue == AuthConstants.Permissions.AdminAccess)).Id.Should().Be(ParseSeedId<RoleClaim>(IdentitySeedIds.AdminAccessClaim));
+        Assert.That((await context.Users.CountAsync()), Is.EqualTo(firstUserCount));
+        Assert.That((await context.Roles.CountAsync()), Is.EqualTo(firstRoleCount));
+        Assert.That((await context.RoleClaims.CountAsync()), Is.EqualTo(firstRoleClaimCount));
+        Assert.That((await context.Roles.SingleAsync(role => role.Name == "Admin")).Id, Is.EqualTo(ParseSeedId<Role>(IdentitySeedIds.AdminRole)));
+        Assert.That((await context.RoleClaims.SingleAsync(claim => claim.ClaimValue == AuthConstants.Permissions.AdminAccess)).Id, Is.EqualTo(ParseSeedId<RoleClaim>(IdentitySeedIds.AdminAccessClaim)));
     }
 
     private sealed class FakeLegacyPasswordService : ILegacyPasswordService

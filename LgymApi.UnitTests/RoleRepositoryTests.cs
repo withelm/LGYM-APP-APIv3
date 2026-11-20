@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -27,8 +26,8 @@ public sealed class RoleRepositoryTests
         var exists = await repository.ExistsByNameAsync(" admin ");
         var existsExcludingSame = await repository.ExistsByNameAsync("ADMIN", adminRole.Id);
 
-        exists.Should().BeTrue();
-        existsExcludingSame.Should().BeFalse();
+        Assert.That(exists, Is.True);
+        Assert.That(existsExcludingSame, Is.False);
     }
 
     [Test]
@@ -39,7 +38,7 @@ public sealed class RoleRepositoryTests
 
         var roles = await repository.GetByNamesAsync([]);
 
-        roles.Should().BeEmpty();
+        Assert.That(roles, Is.Empty);
     }
 
     [Test]
@@ -61,7 +60,7 @@ public sealed class RoleRepositoryTests
         await db.SaveChangesAsync();
 
         var roleIds = await db.UserRoles.Where(x => x.UserId == userId).Select(x => x.RoleId).ToListAsync();
-        roleIds.Should().BeEquivalentTo([existingRole.Id, missingRole.Id]);
+        Assert.That(roleIds, Is.EquivalentTo(new[] { existingRole.Id, missingRole.Id }));
     }
 
     [Test]
@@ -89,7 +88,7 @@ public sealed class RoleRepositoryTests
             .Select(x => x.ClaimValue)
             .ToListAsync();
 
-        claims.Should().Equal("app.config.manage", "users.roles.manage");
+        Assert.That(claims, Is.EqualTo(new[] { "app.config.manage", "users.roles.manage" }));
     }
 
     private static RoleRepository CreateRoleRepository(AppDbContext db) =>

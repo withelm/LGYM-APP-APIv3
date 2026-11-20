@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -58,10 +57,7 @@ public sealed class Issue313EfLinqOrderingTests
 
         var result = await repository.GetByPlanDayIdAsync(planDayId);
 
-        result.Select(x => x.ExerciseId).Should().Equal(
-            exerciseAId,
-            exerciseBId,
-            exerciseCId);
+        Assert.That(result.Select(x => x.ExerciseId), Is.EqualTo(new[] { exerciseAId, exerciseBId, exerciseCId }));
     }
 
     [Test]
@@ -164,10 +160,6 @@ public sealed class Issue313EfLinqOrderingTests
 
         var result = await repository.GetByTrainingIdsAsync(new List<Id<Training>> { trainingBId, trainingAId });
 
-        result.Select(score => (score.TrainingId, score.Order, score.Id)).Should().Equal(
-            (trainingAId, 0, trainingScoreA1Id),
-            (trainingAId, 0, trainingScoreA2Id),
-            (trainingAId, 1, trainingScoreA3Id),
-            (trainingBId, 0, trainingScoreB1Id));
+        Assert.That(result.Select(score => (score.TrainingId, score.Order, score.Id)), Is.EqualTo(new[] { (trainingAId, 0, trainingScoreA1Id), (trainingAId, 0, trainingScoreA2Id), (trainingAId, 1, trainingScoreA3Id), (trainingBId, 0, trainingScoreB1Id) }));
     }
 }

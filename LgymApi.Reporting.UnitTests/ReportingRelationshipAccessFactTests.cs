@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Persistence;
 using LgymApi.Domain.Enums;
 
@@ -16,9 +15,9 @@ public sealed class ReportingRelationshipAccessFactTests
             false,
             [new ReportingRelationshipPeriodFact(start, end)]);
 
-        access.HadRelationshipAt(start).Should().BeTrue();
-        access.HadRelationshipAt(end.AddTicks(-1)).Should().BeTrue();
-        access.HadRelationshipAt(end).Should().BeFalse();
+        Assert.That(access.HadRelationshipAt(start), Is.True);
+        Assert.That(access.HadRelationshipAt(end.AddTicks(-1)), Is.True);
+        Assert.That(access.HadRelationshipAt(end), Is.False);
     }
 
     [Test]
@@ -32,8 +31,8 @@ public sealed class ReportingRelationshipAccessFactTests
                 end,
                 CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration)]);
 
-        access.HadRelationshipAt(end.AddYears(-10)).Should().BeFalse();
-        access.HadRelationshipAt(end).Should().BeFalse();
+        Assert.That(access.HadRelationshipAt(end.AddYears(-10)), Is.False);
+        Assert.That(access.HadRelationshipAt(end), Is.False);
     }
 
     [Test]
@@ -48,8 +47,8 @@ public sealed class ReportingRelationshipAccessFactTests
                 end,
                 CoachingEpisodeStartProvenance.ExistingActiveLinkObservedDuringMigration)]);
 
-        access.HadRelationshipAt(occurredBeforeObservation).Should().BeFalse();
-        access.CanReadTrainerAuthoredRecordAt(occurredBeforeObservation).Should().BeTrue();
-        access.CanReadTrainerAuthoredRecordAt(end).Should().BeFalse();
+        Assert.That(access.HadRelationshipAt(occurredBeforeObservation), Is.False);
+        Assert.That(access.CanReadTrainerAuthoredRecordAt(occurredBeforeObservation), Is.True);
+        Assert.That(access.CanReadTrainerAuthoredRecordAt(end), Is.False);
     }
 }

@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -36,9 +35,9 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/measurements/add", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body!.Message.Should().Be("Created");
+        Assert.That(body!.Message, Is.EqualTo("Created"));
     }
 
     [Test]
@@ -52,7 +51,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
             }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -60,7 +59,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
     {
         var response = await Client.GetAsync($"/api/measurements/{Id<UserEntity>.New()}/trends");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -80,7 +79,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/getHistory?bodyPart=Waist&unit=Centimeters");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
         var originalCulture = CultureInfo.CurrentCulture;
@@ -89,12 +88,12 @@ public sealed class MeasurementsTests : IntegrationTestBase
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            body!.Measurements.Should().HaveCount(2);
-            body.Measurements[0].Value.Should().Be(120.0);
-            body.Measurements[1].Value.Should().Be(110.0);
-            body.Measurements[0].Unit!.Id.Should().Be(MeasurementUnits.Centimeters.ToString());
-            body.Measurements[0].Unit!.Name.Should().Be(LgymApi.Resources.Enums.MeasurementUnits_Centimeters);
-            body.Measurements[0].Unit!.DisplayName.Should().Be(LgymApi.Resources.Enums.MeasurementUnits_Centimeters);
+            Assert.That(body!.Measurements, Has.Exactly(2).Items);
+            Assert.That(body.Measurements[0].Value, Is.EqualTo(120.0));
+            Assert.That(body.Measurements[1].Value, Is.EqualTo(110.0));
+            Assert.That(body.Measurements[0].Unit!.Id, Is.EqualTo(MeasurementUnits.Centimeters.ToString()));
+            Assert.That(body.Measurements[0].Unit!.Name, Is.EqualTo(LgymApi.Resources.Enums.MeasurementUnits_Centimeters));
+            Assert.That(body.Measurements[0].Unit!.DisplayName, Is.EqualTo(LgymApi.Resources.Enums.MeasurementUnits_Centimeters));
         }
         finally
         {
@@ -120,12 +119,12 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=BodyWeight&unit=Kilograms");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body!.FirstMeasurementValue.Should().Be(80.0);
-        body.LastMeasurementValue.Should().Be(94.1);
-        body.Difference.Should().Be(14.1);
-        body.Direction.Should().Be("up");
+        Assert.That(body!.FirstMeasurementValue, Is.EqualTo(80.0));
+        Assert.That(body.LastMeasurementValue, Is.EqualTo(94.1));
+        Assert.That(body.Difference, Is.EqualTo(14.1));
+        Assert.That(body.Direction, Is.EqualTo("up"));
     }
 
     [Test]
@@ -144,10 +143,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Waist&unit=Centimeters");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body!.Difference.Should().Be(3.4);
-        body.Direction.Should().Be("down");
+        Assert.That(body!.Difference, Is.EqualTo(3.4));
+        Assert.That(body.Direction, Is.EqualTo("down"));
     }
 
     [Test]
@@ -166,10 +165,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=BodyFat&unit=Percent");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body!.Difference.Should().Be(0.0);
-        body.Direction.Should().Be("same");
+        Assert.That(body!.Difference, Is.EqualTo(0.0));
+        Assert.That(body.Direction, Is.EqualTo("same"));
     }
 
     [Test]
@@ -187,10 +186,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Neck&unit=Centimeters");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body!.Direction.Should().Be("insufficient_data");
-        body.Points.Should().Be(1);
+        Assert.That(body!.Direction, Is.EqualTo("insufficient_data"));
+        Assert.That(body.Points, Is.EqualTo(1));
     }
 
     [Test]
@@ -206,10 +205,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trend?bodyPart=Bmi&unit=Bmi");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
-        body!.Direction.Should().Be("insufficient_data");
-        body.Points.Should().Be(0);
+        Assert.That(body!.Direction, Is.EqualTo("insufficient_data"));
+        Assert.That(body.Points, Is.EqualTo(0));
     }
 
     [Test]
@@ -232,7 +231,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/measurements/{userId}/trends");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MeasurementTrendsResponse>();
         var originalCulture = CultureInfo.CurrentCulture;
         var originalUiCulture = CultureInfo.CurrentUICulture;
@@ -241,17 +240,23 @@ public sealed class MeasurementsTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
 
-            var bodyWeightTrend = body!.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyWeight.ToString() && x.Direction == "up").Which;
-            bodyWeightTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyWeight);
-            bodyWeightTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyWeight);
+            var assertedValue49 = (body!.Trends).Where(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyWeight.ToString() && x.Direction == "up").ToArray();
+            Assert.That(assertedValue49, Has.Exactly(1).Items);
+            var bodyWeightTrend = assertedValue49.Single();
+            Assert.That(bodyWeightTrend.BodyPart!.Name, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_BodyWeight));
+            Assert.That(bodyWeightTrend.BodyPart.DisplayName, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_BodyWeight));
 
-            var waistTrend = body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.Waist.ToString() && x.Direction == "down").Which;
-            waistTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_Waist);
-            waistTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_Waist);
+            var assertedValue50 = (body.Trends).Where(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.Waist.ToString() && x.Direction == "down").ToArray();
+            Assert.That(assertedValue50, Has.Exactly(1).Items);
+            var waistTrend = assertedValue50.Single();
+            Assert.That(waistTrend.BodyPart!.Name, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_Waist));
+            Assert.That(waistTrend.BodyPart.DisplayName, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_Waist));
 
-            var bodyFatTrend = body.Trends.Should().ContainSingle(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyFat.ToString() && x.Direction == "insufficient_data").Which;
-            bodyFatTrend.BodyPart!.Name.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyFat);
-            bodyFatTrend.BodyPart.DisplayName.Should().Be(LgymApi.Resources.Enums.BodyParts_BodyFat);
+            var assertedValue51 = (body.Trends).Where(x => x.BodyPart != null && x.BodyPart.Id == BodyParts.BodyFat.ToString() && x.Direction == "insufficient_data").ToArray();
+            Assert.That(assertedValue51, Has.Exactly(1).Items);
+            var bodyFatTrend = assertedValue51.Single();
+            Assert.That(bodyFatTrend.BodyPart!.Name, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_BodyFat));
+            Assert.That(bodyFatTrend.BodyPart.DisplayName, Is.EqualTo(LgymApi.Resources.Enums.BodyParts_BodyFat));
         }
         finally
         {
@@ -282,10 +287,10 @@ public sealed class MeasurementsTests : IntegrationTestBase
             }
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var historyResponse = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>($"/api/measurements/{userId}/getHistory");
-        historyResponse!.Measurements.Should().HaveCount(3);
+        Assert.That(historyResponse!.Measurements, Has.Exactly(3).Items);
     }
 
     [Test]
@@ -303,7 +308,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
             value = 75.5,
             unit = MeasurementUnits.Kilograms.ToString()
         });
-        addResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var db = GetDbContext();
         var measurementId = await db.Measurements
@@ -313,17 +318,17 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         SetAuthorizationHeader(otherUser.Id);
         var forbiddenResponse = await Client.GetAsync($"/api/measurements:/{measurementId}/getMeasurementDetail");
-        forbiddenResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(forbiddenResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         SetAuthorizationHeader(owner.Id);
         var detailResponse = await Client.GetAsync($"/api/measurements:/{measurementId}/getMeasurementDetail");
-        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(detailResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var detailJson = JsonDocument.Parse(await detailResponse.Content.ReadAsStringAsync());
-        detailJson.RootElement.GetProperty("user").GetString().Should().Be(owner.Id.ToString());
-        detailJson.RootElement.GetProperty("value").GetDouble().Should().Be(75.5);
-        detailJson.RootElement.GetProperty("bodyPart").GetProperty("id").GetString().Should().Be(BodyParts.BodyWeight.ToString());
-        detailJson.RootElement.GetProperty("unit").GetProperty("id").GetString().Should().Be(MeasurementUnits.Kilograms.ToString());
+        Assert.That(detailJson.RootElement.GetProperty("user").GetString(), Is.EqualTo(owner.Id.ToString()));
+        Assert.That(detailJson.RootElement.GetProperty("value").GetDouble(), Is.EqualTo(75.5));
+        Assert.That(detailJson.RootElement.GetProperty("bodyPart").GetProperty("id").GetString(), Is.EqualTo(BodyParts.BodyWeight.ToString()));
+        Assert.That(detailJson.RootElement.GetProperty("unit").GetProperty("id").GetString(), Is.EqualTo(MeasurementUnits.Kilograms.ToString()));
     }
 
     [Test]
@@ -334,7 +339,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/measurements:/not-a-guid/getMeasurementDetail");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -353,8 +358,8 @@ public sealed class MeasurementsTests : IntegrationTestBase
 
         using var ownerHistory = await Client.GetAsync($"/api/measurements/{owner.Id}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
         using var ownerList = await Client.GetAsync($"/api/measurements/{owner.Id}/list");
-        ownerHistory.StatusCode.Should().Be(HttpStatusCode.OK);
-        ownerList.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerHistory.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(ownerList.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(attacker.Id);
         var foreignResponses = new[]
@@ -369,7 +374,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
         {
             using (response)
             {
-                response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
             }
         }
     }
@@ -433,7 +438,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var activeHistory = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>(
             $"/api/measurements/{trainee.Id}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
-        activeHistory!.Measurements.Should().HaveCount(4, "an active coach has full measurement access");
+        Assert.That(activeHistory!.Measurements, Has.Exactly(4).Items, "an active coach has full measurement access");
 
         using (var database = GetDbContext())
         {
@@ -454,21 +459,23 @@ public sealed class MeasurementsTests : IntegrationTestBase
         var trustedDetailResponse = await Client.GetAsync($"/api/measurements:/{trustedReportId}/getMeasurementDetail");
         var incompleteDetailResponse = await Client.GetAsync($"/api/measurements:/{incompleteReportId}/getMeasurementDetail");
 
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        trendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        trendsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        trustedDetailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        incompleteDetailResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(trendResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(trendsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(trustedDetailResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(incompleteDetailResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var history = await historyResponse.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
         var list = await listResponse.Content.ReadFromJsonAsync<MeasurementsHistoryResponse>();
         var trend = await trendResponse.Content.ReadFromJsonAsync<MeasurementTrendResponse>();
         var trends = await trendsResponse.Content.ReadFromJsonAsync<MeasurementTrendsResponse>();
-        history!.Measurements.Select(measurement => measurement.Value).Should().Equal(71, 73);
-        list!.Measurements.Select(measurement => measurement.Value).Should().Equal(73, 71);
-        trend!.Points.Should().Be(2);
-        trends!.Trends.Should().ContainSingle().Which.Points.Should().Be(2);
+        Assert.That(history!.Measurements.Select(measurement => measurement.Value), Is.EqualTo(new[] { 71, 73 }));
+        Assert.That(list!.Measurements.Select(measurement => measurement.Value), Is.EqualTo(new[] { 73, 71 }));
+        Assert.That(trend!.Points, Is.EqualTo(2));
+        var assertedValue52 = (trends!.Trends).ToArray();
+        Assert.That(assertedValue52, Has.Exactly(1).Items);
+        Assert.That(assertedValue52.Single().Points, Is.EqualTo(2));
     }
 
     [Test]
@@ -510,8 +517,8 @@ public sealed class MeasurementsTests : IntegrationTestBase
             subject.IsDeleted = true;
             await database.SaveChangesAsync();
 
-            (await database.Measurements.CountAsync(measurement => measurement.UserId == trainee.Id)).Should().Be(1);
-            (await database.CoachingEpisodes.CountAsync(episode => episode.Id == episodeId)).Should().Be(1);
+            Assert.That((await database.Measurements.CountAsync(measurement => measurement.UserId == trainee.Id)), Is.EqualTo(1));
+            Assert.That((await database.CoachingEpisodes.CountAsync(episode => episode.Id == episodeId)), Is.EqualTo(1));
         }
 
         SetAuthorizationHeader(trainer.Id);
@@ -528,7 +535,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
         {
             using (response)
             {
-                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             }
         }
     }
@@ -567,7 +574,7 @@ public sealed class MeasurementsTests : IntegrationTestBase
             unit = unit.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     private sealed class MessageResponse

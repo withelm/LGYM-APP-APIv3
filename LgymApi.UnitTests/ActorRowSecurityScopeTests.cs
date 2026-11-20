@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -24,7 +23,7 @@ public sealed class ActorRowSecurityScopeTests
 
         var action = async () => await factory.BeginAsync(Id<ActorReference>.Empty);
 
-        await action.Should().ThrowAsync<ArgumentException>().WithMessage("Actor ID cannot be empty.*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Actor ID cannot be empty.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }
 
@@ -37,8 +36,8 @@ public sealed class ActorRowSecurityScopeTests
 
         await using var transaction = await factory.BeginAsync(Id<ActorReference>.New());
 
-        transaction.GetType().Name.Should().Be("NoOpUnitOfWorkTransaction");
-        dbContext.Database.CurrentTransaction.Should().BeNull();
+        Assert.That(transaction.GetType().Name, Is.EqualTo("NoOpUnitOfWorkTransaction"));
+        Assert.That(dbContext.Database.CurrentTransaction, Is.Null);
     }
 
     [Test]
@@ -54,10 +53,9 @@ public sealed class ActorRowSecurityScopeTests
 
         var action = async () => await factory.BeginAsync(Id<ActorReference>.New());
 
-        await action.Should().ThrowAsync<NotSupportedException>()
-            .WithMessage("Actor row-security scopes require the PostgreSQL Npgsql provider.");
-        dbContext.Database.CurrentTransaction.Should().BeNull();
-        dbContext.Entry(envelope).State.Should().Be(EntityState.Added);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<NotSupportedException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Actor row-security scopes require the PostgreSQL Npgsql provider.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(dbContext.Database.CurrentTransaction, Is.Null);
+        Assert.That(dbContext.Entry(envelope).State, Is.EqualTo(EntityState.Added));
     }
 
     [Test]
@@ -75,9 +73,9 @@ public sealed class ActorRowSecurityScopeTests
 
         var action = async () => await factory.BeginAsync(Id<ActorReference>.New(), cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        dbContext.Database.CurrentTransaction.Should().BeNull();
-        dbContext.Entry(envelope).State.Should().Be(EntityState.Added);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(dbContext.Database.CurrentTransaction, Is.Null);
+        Assert.That(dbContext.Entry(envelope).State, Is.EqualTo(EntityState.Added));
     }
 
     private static AppDbContext CreateInMemoryContext()

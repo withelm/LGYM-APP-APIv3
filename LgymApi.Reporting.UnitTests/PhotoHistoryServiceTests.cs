@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
@@ -34,8 +33,8 @@ public sealed class PhotoHistoryServiceTests
 
         var result = await service.GetPhotoHistoryAsync(otherUser, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId), RequestId = requestId });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingForbiddenError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -55,8 +54,8 @@ public sealed class PhotoHistoryServiceTests
 
         var result = await service.GetPhotoHistoryAsync(trainer, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId), RequestId = requestId });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -77,9 +76,9 @@ public sealed class PhotoHistoryServiceTests
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), reportingRepository: repo, photoStorageProvider: storageProvider);
         var result = await service.GetPhotoHistoryAsync(trainee, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId), RequestId = requestId });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
-        result.Value[0].ViewType.Should().Be("Front");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].ViewType, Is.EqualTo("Front"));
     }
 
     [Test]
@@ -105,9 +104,9 @@ public sealed class PhotoHistoryServiceTests
             photoStorageProvider: storageProvider);
         var result = await service.GetPhotoHistoryAsync(trainer, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId), RequestId = requestId });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(1);
-        result.Value[0].ViewType.Should().Be("Side");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].ViewType, Is.EqualTo("Side"));
     }
 
     [Test]
@@ -143,8 +142,8 @@ public sealed class PhotoHistoryServiceTests
 
         var result = await service.GetPhotoHistoryAsync(successor, new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId) });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.Empty);
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -194,8 +193,8 @@ public sealed class PhotoHistoryServiceTests
             PhotoServiceTestFactory.CreateUser(sourceTrainerId, "source-trainer@example.com"),
             new GetPhotoHistoryCommand { TraineeId = ReportingTestData.AccountId(traineeId) });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle(item => item.Id == sourcePhoto.Id);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That((result.Value).Where(item => item.Id == sourcePhoto.Id), Has.Exactly(1).Items);
         await storageProvider.Received(1).GenerateSignedReadUrlAsync(sourcePhoto.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
         await storageProvider.Received(1).GenerateSignedReadUrlAsync(sourcePhoto.ThumbnailStorageKey!, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(otherPhoto.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
@@ -208,8 +207,8 @@ public sealed class PhotoHistoryServiceTests
         var currentUser = PhotoServiceTestFactory.CreateUser(Id<User>.New(), "user@example.com");
         var service = PhotoServiceTestFactory.CreateService();
         var result = await service.GetPhotoHistoryAsync(currentUser, new GetPhotoHistoryCommand());
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -219,8 +218,8 @@ public sealed class PhotoHistoryServiceTests
         var requestId = Id<ReportRequest>.New();
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(null));
         var result = await service.GetPhotoHistoryAsync(currentUser, new GetPhotoHistoryCommand { RequestId = requestId });
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
     }
 
     [Test]
@@ -241,8 +240,8 @@ public sealed class PhotoHistoryServiceTests
         var service = PhotoServiceTestFactory.CreateService(findRequestById: (_, _) => Task.FromResult<ReportRequest?>(request), reportingRepository: repo, photoStorageProvider: storageProvider);
         var result = await service.GetPhotoHistoryAsync(trainee, new GetPhotoHistoryCommand { RequestId = requestId });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value[0].ThumbnailUrl.Should().Be("https://storage.example.com/thumb-url");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value[0].ThumbnailUrl, Is.EqualTo("https://storage.example.com/thumb-url"));
     }
 
     [Test]
@@ -263,8 +262,8 @@ public sealed class PhotoHistoryServiceTests
             PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
             new GetPhotoHistoryCommand { RequestId = requestId });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -293,7 +292,7 @@ public sealed class PhotoHistoryServiceTests
             PhotoServiceTestFactory.CreateUser(traineeId, "trainee@example.com"),
             new GetPhotoHistoryCommand { RequestId = requestId });
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 }

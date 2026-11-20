@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Authorization;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.ValueObjects;
@@ -20,7 +19,7 @@ public sealed class AuthorizationKernelTests
         using var scope = provider.CreateScope();
         var evaluator = scope.ServiceProvider.GetRequiredService<IAuthorizationEvaluator<TestContext>>();
 
-        evaluator.Evaluate(CreateActor(), new TestContext()).Should().Be(AuthorizationDecision.Allow);
+        Assert.That(evaluator.Evaluate(CreateActor(), new TestContext()), Is.EqualTo(AuthorizationDecision.Allow));
     }
 
     [Test]
@@ -28,7 +27,7 @@ public sealed class AuthorizationKernelTests
     {
         var evaluator = new AuthorizationPolicyEvaluator<TestContext>([]);
 
-        evaluator.Evaluate(CreateActor(), new TestContext()).Should().Be(AuthorizationDecision.Deny);
+        Assert.That(evaluator.Evaluate(CreateActor(), new TestContext()), Is.EqualTo(AuthorizationDecision.Deny));
     }
 
     [Test]
@@ -36,7 +35,7 @@ public sealed class AuthorizationKernelTests
     {
         var evaluator = new AuthorizationPolicyEvaluator<TestContext>([new DenyPolicy()]);
 
-        evaluator.Evaluate(CreateActor(), new TestContext()).Should().Be(AuthorizationDecision.Deny);
+        Assert.That(evaluator.Evaluate(CreateActor(), new TestContext()), Is.EqualTo(AuthorizationDecision.Deny));
     }
 
     [Test]
@@ -47,8 +46,8 @@ public sealed class AuthorizationKernelTests
 
         var act = () => services.AddAuthorizationPolicy<TestContext, DenyPolicy>();
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*TestContext*");
+        Assert.That(() => act(), Throws.InstanceOf<InvalidOperationException>()
+            .With.Message.Contains("TestContext").IgnoreCase);
     }
 
     [Test]
@@ -56,7 +55,7 @@ public sealed class AuthorizationKernelTests
     {
         var act = () => new AuthorizationActor(Id<ActorReference>.Empty);
 
-        act.Should().Throw<ArgumentException>();
+        Assert.That(() => act(), Throws.InstanceOf<ArgumentException>());
     }
 
     private static AuthorizationActor CreateActor() => new(Id<ActorReference>.New());

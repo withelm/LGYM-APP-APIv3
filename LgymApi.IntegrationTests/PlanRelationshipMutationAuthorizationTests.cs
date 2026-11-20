@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -40,19 +39,19 @@ public sealed class PlanRelationshipMutationAuthorizationTests : IntegrationTest
         var path = operation == "unassign" ? "unassign" : $"{target.Id}/{operation}";
         using var response = await Client.PostAsJsonAsync($"/api/trainer/trainees/{owner.Id}/plans/{path}", new { name = "Intrusion" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var plans = await dbVerify.Plans.IgnoreQueryFilters().AsNoTracking().Where(p => p.UserId == owner.Id).ToListAsync();
-        plans.Should().HaveCount(2);
+        Assert.That(plans, Has.Exactly(2).Items);
         var persistedTarget = plans.Single(p => p.Id == target.Id);
-        persistedTarget.Name.Should().Be("Target");
-        persistedTarget.Purpose.Should().Be(PlanPurpose.Personal);
-        persistedTarget.IsDeleted.Should().BeFalse();
-        persistedTarget.IsActive.Should().BeFalse();
+        Assert.That(persistedTarget.Name, Is.EqualTo("Target"));
+        Assert.That(persistedTarget.Purpose, Is.EqualTo(PlanPurpose.Personal));
+        Assert.That(persistedTarget.IsDeleted, Is.False);
+        Assert.That(persistedTarget.IsActive, Is.False);
         var persistedActive = plans.Single(p => p.Id == active.Id);
-        persistedActive.Name.Should().Be("Active");
-        persistedActive.IsActive.Should().BeTrue();
-        persistedActive.IsDeleted.Should().BeFalse();
+        Assert.That(persistedActive.Name, Is.EqualTo("Active"));
+        Assert.That(persistedActive.IsActive, Is.True);
+        Assert.That(persistedActive.IsDeleted, Is.False);
     }
 }

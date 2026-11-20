@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,7 +17,7 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
 
         var action = () => ValidateRuntimeAsync(environment, includePolicies: true);
 
-        await action.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.Nothing);
     }
 
     [Test]
@@ -31,7 +30,7 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
 
         var action = () => ValidateRuntimeAsync(environment, includePolicies: false);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -44,7 +43,7 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
 
         var action = () => ValidateRuntimeAsync(environment, includePolicies: false);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -55,7 +54,7 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
 
         var action = () => ValidateRuntimeAsync(environment, includePolicies: true);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -70,10 +69,8 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
             environment.MaintenanceRole,
             environment.RuntimeRole);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Tutorial RLS activation command failed with exit code *");
-        (await ReadRlsStatesAsync(environment.MaintenanceConnectionString)).Should()
-            .OnlyContain(state => !state.Enabled && !state.Forced);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Tutorial RLS activation command failed with exit code *").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(((await ReadRlsStatesAsync(environment.MaintenanceConnectionString))).All(state => !state.Enabled && !state.Forced), Is.True);
     }
 
     [Test]
@@ -90,10 +87,8 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
             environment.RuntimeRole,
             targetEnvironment: "Staging");
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Tutorial RLS activation command failed with exit code *");
-        (await ReadRlsStatesAsync(environment.MaintenanceConnectionString)).Should()
-            .OnlyContain(state => !state.Enabled && !state.Forced);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Tutorial RLS activation command failed with exit code *").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(((await ReadRlsStatesAsync(environment.MaintenanceConnectionString))).All(state => !state.Enabled && !state.Forced), Is.True);
     }
 
     private static async Task ValidateRuntimeAsync(
@@ -157,7 +152,7 @@ public sealed class PostgreSqlRuntimeGuardHardeningTests
             states.Add(new RlsState(reader.GetBoolean(0), reader.GetBoolean(1)));
         }
 
-        states.Should().HaveCount(2);
+        Assert.That(states, Has.Exactly(2).Items);
         return states;
     }
 

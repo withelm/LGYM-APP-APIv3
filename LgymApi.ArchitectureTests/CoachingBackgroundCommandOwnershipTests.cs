@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -17,33 +16,29 @@ public sealed class CoachingBackgroundCommandOwnershipTests
         var commandsDirectory = Path.Combine(repoRoot, CommandsDirectory);
         var expected = ExpectedCommands;
 
-        Directory.Exists(commandsDirectory).Should().BeTrue();
-        Directory.GetFiles(commandsDirectory, "*.cs")
+        Assert.That(Directory.Exists(commandsDirectory), Is.True);
+        Assert.That(Directory.GetFiles(commandsDirectory, "*.cs")
             .Select(Path.GetFileName)
-            .OrderBy(fileName => fileName, StringComparer.Ordinal)
-            .Should().Equal(expected.Select(command => command.FileName).OrderBy(fileName => fileName, StringComparer.Ordinal));
+            .OrderBy(fileName => fileName, StringComparer.Ordinal), Is.EqualTo(expected.Select(command => command.FileName).OrderBy(fileName => fileName, StringComparer.Ordinal)));
 
         foreach (var command in expected)
         {
             var sourcePath = Path.Combine(commandsDirectory, command.FileName);
-            File.Exists(sourcePath).Should().BeTrue();
+            Assert.That(File.Exists(sourcePath), Is.True);
 
             var root = CSharpSyntaxTree.ParseText(File.ReadAllText(sourcePath)).GetCompilationUnitRoot();
-            root.Members.OfType<BaseNamespaceDeclarationSyntax>().Single().Name.ToString().Should().Be(CommandsNamespace);
+            Assert.That(root.Members.OfType<BaseNamespaceDeclarationSyntax>().Single().Name.ToString(), Is.EqualTo(CommandsNamespace));
 
             var declaration = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
-            declaration.Identifier.ValueText.Should().Be(command.TypeName);
-            declaration.Modifiers.Select(modifier => modifier.ValueText).Should().Equal("public", "sealed");
-            declaration.BaseList!.Types.Select(baseType => baseType.Type.ToString()).Should().Equal("IActionCommand");
-            declaration.AttributeLists.Should().BeEmpty();
-            declaration.Members.OfType<ConstructorDeclarationSyntax>().Should().BeEmpty();
+            Assert.That(declaration.Identifier.ValueText, Is.EqualTo(command.TypeName));
+            Assert.That(declaration.Modifiers.Select(modifier => modifier.ValueText), Is.EqualTo(new[] { "public", "sealed" }));
+            Assert.That(declaration.BaseList!.Types.Select(baseType => baseType.Type.ToString()), Is.EqualTo(new[] { "IActionCommand" }));
+            Assert.That(declaration.AttributeLists, Is.Empty);
+            Assert.That(declaration.Members.OfType<ConstructorDeclarationSyntax>(), Is.Empty);
             var properties = declaration.Members.OfType<PropertyDeclarationSyntax>().ToArray();
-            properties.Select(property => property.Identifier.ValueText)
-                .Should().Equal(command.Properties.Select(property => property.Name));
-            properties.Select(property => property.Type.ToString())
-                .Should().Equal(command.Properties.Select(property => property.Type));
-            properties.Select(property => property.AccessorList!.Accessors.Select(accessor => accessor.Keyword.ValueText))
-                .Should().AllSatisfy(accessors => accessors.Should().Equal("get", "init"));
+            Assert.That(properties.Select(property => property.Identifier.ValueText), Is.EqualTo(command.Properties.Select(property => property.Name)));
+            Assert.That(properties.Select(property => property.Type.ToString()), Is.EqualTo(command.Properties.Select(property => property.Type)));
+            Assert.Multiple(() => { foreach (var accessors in properties.Select(property => property.AccessorList!.Accessors.Select(accessor => accessor.Keyword.ValueText))) { Assert.That(accessors, Is.EqualTo(new[] { "get", "init" })); } });
         }
     }
 

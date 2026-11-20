@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -68,10 +67,10 @@ public sealed class PushRetentionCleanupIntegrationTests
             var messageCleanup = scope.ServiceProvider.GetRequiredService<IPushNotificationMessageRetentionCleanupService>();
             var installationCleanup = scope.ServiceProvider.GetRequiredService<IDisabledPushInstallationRetentionCleanupService>();
 
-            (await messageCleanup.CleanupAsync()).Should().Be(4);
-            (await messageCleanup.CleanupAsync()).Should().Be(0);
-            (await installationCleanup.CleanupAsync()).Should().Be(4);
-            (await installationCleanup.CleanupAsync()).Should().Be(0);
+            Assert.That((await messageCleanup.CleanupAsync()), Is.EqualTo(4));
+            Assert.That((await messageCleanup.CleanupAsync()), Is.EqualTo(0));
+            Assert.That((await installationCleanup.CleanupAsync()), Is.EqualTo(4));
+            Assert.That((await installationCleanup.CleanupAsync()), Is.EqualTo(0));
         }
 
         using (var scope = factory.Services.CreateScope())
@@ -80,9 +79,11 @@ public sealed class PushRetentionCleanupIntegrationTests
             var installations = await database.PushInstallations.AsNoTracking().ToListAsync();
             var messages = await database.PushNotificationMessages.AsNoTracking().ToListAsync();
 
-            installations.Select(installation => installation.Id).Should().Contain(activeInstallationId).And.Contain(disassociatedInstallationId);
-            installations.Select(installation => installation.Id).Should().NotContain(disabledInstallationId);
-            messages.Should().ContainSingle(message => message.Id == retainedMessageId);
+            var assertedChain16 = installations.Select(installation => installation.Id);
+            Assert.That(assertedChain16, Does.Contain(activeInstallationId));
+            Assert.That(assertedChain16, Does.Contain(disassociatedInstallationId));
+            Assert.That(installations.Select(installation => installation.Id), Does.Not.Contain(disabledInstallationId));
+            Assert.That((messages).Where(message => message.Id == retainedMessageId), Has.Exactly(1).Items);
         }
     }
 
@@ -117,8 +118,8 @@ public sealed class PushRetentionCleanupIntegrationTests
         {
             var cleanup = scope.ServiceProvider.GetRequiredService<IInAppNotificationRetentionCleanupService>();
 
-            (await cleanup.CleanupAsync()).Should().Be(4);
-            (await cleanup.CleanupAsync()).Should().Be(0);
+            Assert.That((await cleanup.CleanupAsync()), Is.EqualTo(4));
+            Assert.That((await cleanup.CleanupAsync()), Is.EqualTo(0));
         }
 
         using (var scope = factory.Services.CreateScope())
@@ -126,7 +127,9 @@ public sealed class PushRetentionCleanupIntegrationTests
             var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var notifications = await database.InAppNotifications.IgnoreQueryFilters().AsNoTracking().ToListAsync();
 
-            notifications.Select(notification => notification.Id).Should().ContainSingle().Which.Should().Be(retainedId);
+            var assertedValue61 = (notifications.Select(notification => notification.Id)).ToArray();
+            Assert.That(assertedValue61, Has.Exactly(1).Items);
+            Assert.That(assertedValue61.Single(), Is.EqualTo(retainedId));
         }
     }
 
