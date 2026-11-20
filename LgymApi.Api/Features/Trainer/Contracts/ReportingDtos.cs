@@ -172,6 +172,14 @@ public sealed class UpdateReportSubmissionFeedbackRequest : IDto
     public Dictionary<string, string?> TrainerFieldComments { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
+public sealed class ReportSubmissionArchiveDto : IResultDto
+{
+    [JsonPropertyName("items")]
+    public List<ReportSubmissionDto> Items { get; set; } = [];
+    [JsonPropertyName("nextPage")]
+    public int? NextPage { get; set; }
+}
+
 public sealed class ReportSubmissionDto : IResultDto
 {
     [JsonPropertyName("_id")]

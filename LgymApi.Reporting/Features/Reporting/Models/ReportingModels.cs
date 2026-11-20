@@ -92,6 +92,12 @@ public sealed class ReportRequestResult
     public string? DefinitionSnapshotProvenance { get; set; }
 }
 
+public sealed class ReportSubmissionArchiveResult
+{
+    public List<ReportSubmissionResult> Items { get; set; } = [];
+    public int? NextPage { get; set; }
+}
+
 public sealed class ReportSubmissionResult
 {
     public LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.ReportSubmission> Id { get; set; }

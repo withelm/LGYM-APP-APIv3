@@ -84,6 +84,7 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests
 
     private sealed class LockAttemptPersistence(IReportRequestSubmissionPersistence inner) : IReportRequestSubmissionPersistence
     {
+        public Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSourceTrainerSubmissionsAsync(Id<AccountReference> trainer, int offset, int limit, CancellationToken ct = default) => inner.ListSourceTrainerSubmissionsAsync(trainer, offset, limit, ct);
         public TaskCompletionSource<bool> LockAttempted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<ReportSubmissionPersistenceModel?> FindSubmissionForTraineeForUpdateAsync(Id<ReportSubmission> id, Id<AccountReference> trainee, CancellationToken ct = default)

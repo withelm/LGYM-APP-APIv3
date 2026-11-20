@@ -15,6 +15,25 @@ public sealed class ReportRequestSubmissionPersistenceRepository : IReportReques
 
     public ReportRequestSubmissionPersistenceRepository(AppDbContext dbContext) => _dbContext = dbContext;
 
+    public async Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSourceTrainerSubmissionsAsync(
+        Id<AccountReference> trainerId, int offset, int limit, CancellationToken cancellationToken = default)
+    {
+        var entities = await SubmissionQuery()
+            .AsNoTracking()
+            .Where(submission => submission.ReportRequest.TrainerId == ReportingPersistenceAccountIds.ToPersisted(trainerId)
+                && submission.TraineeId == submission.ReportRequest.TraineeId
+                && !submission.Trainee.IsDeleted
+                && submission.Trainee.DeletionState == AccountDeletionState.Active
+                && (submission.ReportRequest.Status == ReportRequestStatus.Submitted
+                    || submission.ReportRequest.Status == ReportRequestStatus.Completed))
+            .OrderByDescending(submission => submission.CreatedAt)
+            .ThenByDescending(submission => submission.Id)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+        return entities.Select(ReportingPersistenceProjection.Submission).ToList();
+    }
+
     public async Task AddRequestAsync(NewReportRequestPersistenceModel request, CancellationToken cancellationToken = default)
     {
         await _dbContext.ReportRequests.AddAsync(new ReportRequest

@@ -9,7 +9,7 @@ namespace LgymApi.ArchitectureTests;
 [TestFixture]
 public sealed class ModulePublicSurfaceGuardTests
 {
-    private const int ManifestEntryCount = 877;
+    private const int ManifestEntryCount = 878;
 
     private static readonly Lazy<IReadOnlySet<SurfaceEntry>> AllowedSurfaceStore = new(ReadManifest);
 
@@ -33,6 +33,7 @@ public sealed class ModulePublicSurfaceGuardTests
 
     private static readonly string[] ReviewedManifestRows =
     [
+        "LgymApi.Reporting/Features/Reporting/Models/ReportingModels.cs\tLgymApi.Application.Features.Reporting.Models.ReportSubmissionArchiveResult",
         "LgymApi.Identity/Contracts/AccountDeletion/AccountDeletionScheduledCommand.cs\tLgymApi.Identity.Contracts.AccountDeletion.AccountDeletionScheduledCommand",
         "LgymApi.Identity/Contracts/AccountDeletion/AccountDeletionScheduledCommand.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionScheduleConfirmation",
         "LgymApi.Identity/Contracts/AccountDeletion/IAccountDeletionSynchronization.cs\tLgymApi.Identity.Contracts.AccountDeletion.IAccountDeletionSynchronization",

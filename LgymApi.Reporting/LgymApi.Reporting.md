@@ -1,5 +1,7 @@
 # LgymApi.Reporting.csproj
 
+- Source-trainer archive discovery uses bounded persistence candidate pages, then the same per-record source/episode authorization as scoped submission reads. Continuation advances over candidates even when policy filters the whole page. Capabilities and photo hydration run only on authorized results.
+
 - Purpose: Reporting use cases, focused persistence ports, API adapters, reporting mapping profiles, and owner-facing registration facade.
 - Compatibility: source retains established `LgymApi.Application.Reporting.*` and `LgymApi.Application.Features.Reporting.*` namespaces so API, Worker, persisted command, and mapper contracts are unchanged.
 - Dependencies: direct references are limited to Authorization, Domain, Identity, Platform, and Resources; Reporting must not reference Application, API, Infrastructure, Worker, Coaching, or Training Planning.

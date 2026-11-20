@@ -1,5 +1,8 @@
 # LgymApi.Api.csproj
 
+- Simple page-based GET collections use one `[FromQuery] PaginationQueryVm` from `Features/Common/Contracts`, rather than separate pagination arguments. It supplies `Page` (1-based, default 1) and `PageSize` (default 20, maximum 100), validated by the API model validator. Keep the existing `PaginatedRequest` pipeline for collections supporting filter groups and sort descriptors.
+- `GET /api/trainer/report-submissions` returns source-trainer archive `items` and nullable `nextPage`. Follow `nextPage` even for an empty authorization-filtered page, keeping `PageSize` unchanged. Every request rechecks source access and uses existing Reporting protocol negotiation.
+
 - Reporting submission responses preserve the legacy nested `request.status = Submitted` contract when Reporting stores the new internal `Completed` feedback-read state.
 - Reporting submission responses add `canEditFeedback` and `canMarkFeedbackRead` advisory lifecycle capabilities; mutation endpoints still recheck authorization and concurrency.
 - Purpose: ASP.NET Core HTTP entrypoint.

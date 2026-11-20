@@ -577,6 +577,8 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
     {
         public Id<ReportRequest>? FailedAttemptRequestId { get; private set; }
 
+        public Task<IReadOnlyList<ReportSubmissionPersistenceModel>> ListSourceTrainerSubmissionsAsync(Id<LgymApi.Identity.Contracts.AccountReference> trainer, int offset, int limit, CancellationToken ct = default) => inner.ListSourceTrainerSubmissionsAsync(trainer, offset, limit, ct);
+
         public Task AddRequestAsync(NewReportRequestPersistenceModel request, CancellationToken cancellationToken = default)
         {
             if (request.RecurringReportAssignmentId == failingAssignmentId)
