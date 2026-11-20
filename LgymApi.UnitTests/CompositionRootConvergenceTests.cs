@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Logging;
 using LgymApi.BackgroundWorker.Jobs;
@@ -87,7 +86,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateCentralComposition(services, expectedSchedulerType);
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [TestCase(true)]
@@ -103,29 +102,29 @@ public sealed class CompositionRootConvergenceTests
             using var scope = provider.CreateScope();
             var scopedServices = scope.ServiceProvider;
 
-            scopedServices.GetRequiredService<IAppConfigService>().Should().BeOfType<AppConfigService>();
-            scopedServices.GetRequiredService<IAppConfigAuthorizationPort>().Should().BeOfType<AppConfigAuthorizationAdapter>();
-            scopedServices.GetRequiredService<IEnumService>().Should().BeOfType<EnumService>();
-            provider.GetRequiredService<IUnitConverter<WeightUnits>>().Should().BeOfType<LinearUnitConverter<WeightUnits>>();
-            provider.GetRequiredService<IUnitConverter<HeightUnits>>().Should().BeOfType<LinearUnitConverter<HeightUnits>>();
-            scopedServices.GetRequiredService<IAppConfigRepository>().Should().BeOfType<AppConfigRepository>();
-            scopedServices.GetRequiredService<ICommittedIntentDispatcher>().Should().BeOfType<CommittedIntentDispatcher>();
-            scopedServices.GetRequiredService<IUnitOfWork>().Should().BeOfType<EfUnitOfWork>();
-            scopedServices.GetRequiredService<ICommandEnvelopeRepository>().Should().BeOfType<CommandEnvelopeRepository>();
-            scopedServices.GetRequiredService<IApiIdempotencyRecordRepository>().Should().BeOfType<ApiIdempotencyRecordRepository>();
-            provider.GetRequiredService<IEmailNotificationsFeature>().Should().BeOfType<EmailNotificationsFeature>();
-            provider.GetRequiredService<IEmailMetrics>().Should().BeOfType<EmailMetrics>();
-            scopedServices.GetRequiredService<IEmailTemplateComposerFactory>().Should().BeOfType<EmailTemplateComposerFactory>();
-            provider.GetRequiredService<ApplicationMapper>().Should().BeOfType<Mapper>();
-            provider.GetRequiredService<IMapperRegistry>().Should().BeOfType<MapperRegistry>();
-            provider.GetRequiredService<PaginationPolicy>().Should().BeEquivalentTo(new PaginationPolicy
+            Assert.That(scopedServices.GetRequiredService<IAppConfigService>(), Is.TypeOf<AppConfigService>());
+            Assert.That(scopedServices.GetRequiredService<IAppConfigAuthorizationPort>(), Is.TypeOf<AppConfigAuthorizationAdapter>());
+            Assert.That(scopedServices.GetRequiredService<IEnumService>(), Is.TypeOf<EnumService>());
+            Assert.That(provider.GetRequiredService<IUnitConverter<WeightUnits>>(), Is.TypeOf<LinearUnitConverter<WeightUnits>>());
+            Assert.That(provider.GetRequiredService<IUnitConverter<HeightUnits>>(), Is.TypeOf<LinearUnitConverter<HeightUnits>>());
+            Assert.That(scopedServices.GetRequiredService<IAppConfigRepository>(), Is.TypeOf<AppConfigRepository>());
+            Assert.That(scopedServices.GetRequiredService<ICommittedIntentDispatcher>(), Is.TypeOf<CommittedIntentDispatcher>());
+            Assert.That(scopedServices.GetRequiredService<IUnitOfWork>(), Is.TypeOf<EfUnitOfWork>());
+            Assert.That(scopedServices.GetRequiredService<ICommandEnvelopeRepository>(), Is.TypeOf<CommandEnvelopeRepository>());
+            Assert.That(scopedServices.GetRequiredService<IApiIdempotencyRecordRepository>(), Is.TypeOf<ApiIdempotencyRecordRepository>());
+            Assert.That(provider.GetRequiredService<IEmailNotificationsFeature>(), Is.TypeOf<EmailNotificationsFeature>());
+            Assert.That(provider.GetRequiredService<IEmailMetrics>(), Is.TypeOf<EmailMetrics>());
+            Assert.That(scopedServices.GetRequiredService<IEmailTemplateComposerFactory>(), Is.TypeOf<EmailTemplateComposerFactory>());
+            Assert.That(provider.GetRequiredService<ApplicationMapper>(), Is.TypeOf<Mapper>());
+            Assert.That(provider.GetRequiredService<IMapperRegistry>(), Is.TypeOf<MapperRegistry>());
+            Assert.That(provider.GetRequiredService<PaginationPolicy>(), Is.EqualTo(new PaginationPolicy
             {
                 MaxPageSize = 100,
                 DefaultPageSize = 20,
                 DefaultSortField = "id",
                 TieBreakerField = "id"
-            });
-            scopedServices.GetRequiredService<IQueryPaginationService>().Should().BeOfType<QueryPaginationFacade>();
+            }).UsingPropertiesComparer());
+            Assert.That(scopedServices.GetRequiredService<IQueryPaginationService>(), Is.TypeOf<QueryPaginationFacade>());
 
             var expectedEmailSenderType = isTesting ? typeof(DummyEmailSender) : typeof(SmtpEmailSender);
             var expectedPhotoStorageType = isTesting ? typeof(LocalPhotoStorageProvider) : typeof(CloudflareR2PhotoStorageProvider);
@@ -133,27 +132,26 @@ public sealed class CompositionRootConvergenceTests
             var expectedActionSchedulerType = isTesting ? typeof(NoOpActionMessageScheduler) : typeof(HangfireActionMessageScheduler);
             var expectedPushSchedulerType = isTesting ? typeof(NoOpPushBackgroundScheduler) : typeof(HangfirePushBackgroundScheduler);
 
-            scopedServices.GetRequiredService<IEmailSender>().Should().BeOfType(expectedEmailSenderType);
-            scopedServices.GetRequiredService<IPhotoStorageProvider>().Should().BeOfType(expectedPhotoStorageType);
-            scopedServices.GetRequiredService<IReportPhotoPersistence>().Should().BeOfType<ReportPhotoPersistenceRepository>();
-            scopedServices.GetRequiredService<IPushProviderSender>().Should().BeOfType<FcmPushSender>();
-            scopedServices.GetRequiredService<IEmailBackgroundScheduler>().Should().BeOfType(expectedEmailSchedulerType);
-            scopedServices.GetRequiredService<IActionMessageScheduler>().Should().BeOfType(expectedActionSchedulerType);
-            scopedServices.GetRequiredService<IPushBackgroundScheduler>().Should().BeOfType(expectedPushSchedulerType);
-            scopedServices.GetRequiredService<ITokenService>().Should().BeOfType<TokenService>();
-            scopedServices.GetRequiredService<IGoogleTokenValidator>().Should().BeOfType<GoogleTokenValidator>();
-            scopedServices.GetRequiredService<ILegacyPasswordService>().Should().BeOfType<LegacyPasswordService>();
-            scopedServices.GetRequiredService<IUserSessionStore>().Should().BeOfType<UserSessionStore>();
-            scopedServices.GetRequiredService<IInAppNotificationPushPublisher>()
-                .Should().BeOfType<LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>();
+            Assert.That(scopedServices.GetRequiredService<IEmailSender>(), Is.TypeOf(expectedEmailSenderType));
+            Assert.That(scopedServices.GetRequiredService<IPhotoStorageProvider>(), Is.TypeOf(expectedPhotoStorageType));
+            Assert.That(scopedServices.GetRequiredService<IReportPhotoPersistence>(), Is.TypeOf<ReportPhotoPersistenceRepository>());
+            Assert.That(scopedServices.GetRequiredService<IPushProviderSender>(), Is.TypeOf<FcmPushSender>());
+            Assert.That(scopedServices.GetRequiredService<IEmailBackgroundScheduler>(), Is.TypeOf(expectedEmailSchedulerType));
+            Assert.That(scopedServices.GetRequiredService<IActionMessageScheduler>(), Is.TypeOf(expectedActionSchedulerType));
+            Assert.That(scopedServices.GetRequiredService<IPushBackgroundScheduler>(), Is.TypeOf(expectedPushSchedulerType));
+            Assert.That(scopedServices.GetRequiredService<ITokenService>(), Is.TypeOf<TokenService>());
+            Assert.That(scopedServices.GetRequiredService<IGoogleTokenValidator>(), Is.TypeOf<GoogleTokenValidator>());
+            Assert.That(scopedServices.GetRequiredService<ILegacyPasswordService>(), Is.TypeOf<LegacyPasswordService>());
+            Assert.That(scopedServices.GetRequiredService<IUserSessionStore>(), Is.TypeOf<UserSessionStore>());
+            Assert.That(scopedServices.GetRequiredService<IInAppNotificationPushPublisher>(), Is.TypeOf<LgymApi.Api.Features.InAppNotification.SignalRNotificationPushPublisher>());
 
             if (isTesting)
             {
-                provider.GetService<JobStorage>().Should().BeNull();
+                Assert.That(provider.GetService<JobStorage>(), Is.Null);
             }
             else
             {
-                provider.GetRequiredService<JobStorage>().GetType().FullName.Should().Be("Hangfire.PostgreSql.PostgreSqlStorage");
+                Assert.That(provider.GetRequiredService<JobStorage>().GetType().FullName, Is.EqualTo("Hangfire.PostgreSql.PostgreSqlStorage"));
             }
         });
     }
@@ -167,7 +165,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => typeof(ActionMessageJob).GetCustomAttribute<AutomaticRetryAttribute>();
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [Test]
@@ -178,8 +176,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IAppConfigRepository).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IAppConfigRepository).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -190,8 +187,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IAppConfigAuthorizationPort).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IAppConfigAuthorizationPort).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -202,8 +198,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IEmailNotificationsFeature).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IEmailNotificationsFeature).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -214,8 +209,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IEmailMetrics).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IEmailMetrics).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -226,8 +220,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IEmailSender).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IEmailSender).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -239,10 +232,8 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage(
-                $"*{typeof(IEmailTemplateComposerFactory).FullName}*"
-                + $"*{typeof(EmailTemplateComposerFactory).FullName}*factory or instance*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IEmailTemplateComposerFactory).FullName}*"
+                + $"*{typeof(EmailTemplateComposerFactory).FullName}*factory or instance*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -258,8 +249,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: false);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(JobStorage).FullName}*factory*instance*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(JobStorage).FullName}*factory*instance*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -270,8 +260,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*Testing*{typeof(JobStorage).FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*Testing*{typeof(JobStorage).FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -282,8 +271,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateFullHostComposition(services, isTesting: true);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(ApplicationMapper).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(ApplicationMapper).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -295,8 +283,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateCentralComposition(services, typeof(NoOpPushBackgroundScheduler));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IPasswordRecoveryEmailScheduler).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IPasswordRecoveryEmailScheduler).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -307,8 +294,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateCentralComposition(services, typeof(NoOpPushBackgroundScheduler));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(ICommandDispatcher).FullName}*exactly once*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(ICommandDispatcher).FullName}*exactly once*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -320,8 +306,7 @@ public sealed class CompositionRootConvergenceTests
 
         var action = () => ValidateCentralComposition(services, typeof(NoOpPushBackgroundScheduler));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IPushBackgroundScheduler).FullName}*{typeof(NoOpPushBackgroundScheduler).FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IPushBackgroundScheduler).FullName}*{typeof(NoOpPushBackgroundScheduler).FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static void WithRestoredHangfireLogProvider(
@@ -523,31 +508,19 @@ public sealed class CompositionRootConvergenceTests
 
         ValidateImplementationCollection(services, typeof(IEmailTemplateComposer), ServiceLifetime.Scoped, expectedCount: 7);
         ValidateImplementationCollection(services, typeof(IMappingProfile), ServiceLifetime.Singleton, expectedCount: 49);
-        services.Count(descriptor => descriptor.ServiceType == typeof(IAccountLookupService)).Should().Be(1);
-        services.Count(descriptor => descriptor.ServiceType == typeof(IAccountAccessReader)).Should().Be(1);
-        services.Count(descriptor => descriptor.ServiceType == typeof(IAccountSessionValidator)).Should().Be(1);
-        services.Count(descriptor => descriptor.ServiceType == typeof(IAuthenticatedAccountContextResolver)).Should().Be(1);
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(EnumLookupMappingProfile));
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(PlanExerciseWorkoutAdapterMappingProfile));
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(ManagedPlanCollaborationMappingProfile));
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(IdentityApiAdapterMappingProfile));
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(NutritionApiAdapterMappingProfile));
-        services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))
-            .Should()
-            .ContainSingle(descriptor => descriptor.ImplementationType == typeof(PlanApiAdapterMappingProfile));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IAccountLookupService)), Is.EqualTo(1));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IAccountAccessReader)), Is.EqualTo(1));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IAccountSessionValidator)), Is.EqualTo(1));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IAuthenticatedAccountContextResolver)), Is.EqualTo(1));
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(EnumLookupMappingProfile)), Has.Exactly(1).Items);
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(PlanExerciseWorkoutAdapterMappingProfile)), Has.Exactly(1).Items);
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(ManagedPlanCollaborationMappingProfile)), Has.Exactly(1).Items);
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(IdentityApiAdapterMappingProfile)), Has.Exactly(1).Items);
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(NutritionApiAdapterMappingProfile)), Has.Exactly(1).Items);
+        Assert.That((services.Where(descriptor => descriptor.ServiceType == typeof(IMappingProfile))).Where(descriptor => descriptor.ImplementationType == typeof(PlanApiAdapterMappingProfile)), Has.Exactly(1).Items);
 
         var hangfireServerDescriptors = services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService)).ToArray();
-        hangfireServerDescriptors.Should().HaveCount(isTesting ? 0 : 1);
+        Assert.That(hangfireServerDescriptors, Has.Exactly(isTesting ? 0 : 1).Items);
         if (isTesting)
         {
             if (services.Any(descriptor => descriptor.ServiceType == typeof(JobStorage)))
@@ -614,8 +587,8 @@ public sealed class CompositionRootConvergenceTests
             typeof(FcmPushSender));
 
         var registry = CommandContractRegistry.CreateDefault();
-        registry.Contracts.Should().HaveCount(19);
-        registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count).Should().Be(20);
+        Assert.That(registry.Contracts, Has.Exactly(19).Items);
+        Assert.That(registry.Contracts.Sum(contract => contract.ExpectedHandlerTypes.Count), Is.EqualTo(20));
         BackgroundActionRegistrationValidator.Validate(services, registry);
     }
 
@@ -679,10 +652,10 @@ public sealed class CompositionRootConvergenceTests
         ServiceLifetime expectedLifetime)
     {
         var descriptor = GetSingleDescriptor(services, serviceType);
-        descriptor.Lifetime.Should().Be(expectedLifetime);
-        descriptor.ImplementationInstance.Should().NotBeNull();
-        descriptor.ImplementationType.Should().BeNull();
-        descriptor.ImplementationFactory.Should().BeNull();
+        Assert.That(descriptor.Lifetime, Is.EqualTo(expectedLifetime));
+        Assert.That(descriptor.ImplementationInstance, Is.Not.Null);
+        Assert.That(descriptor.ImplementationType, Is.Null);
+        Assert.That(descriptor.ImplementationFactory, Is.Null);
     }
 
     private static ServiceDescriptor GetSingleDescriptor(IServiceCollection services, Type serviceType)
@@ -704,10 +677,10 @@ public sealed class CompositionRootConvergenceTests
         int expectedCount)
     {
         var descriptors = services.Where(descriptor => descriptor.ServiceType == serviceType).ToArray();
-        descriptors.Should().HaveCount(expectedCount);
-        descriptors.Should().OnlyContain(descriptor => descriptor.Lifetime == expectedLifetime);
-        descriptors.Should().OnlyContain(descriptor => descriptor.ImplementationType != null);
-        descriptors.Select(descriptor => descriptor.ImplementationType).Should().OnlyHaveUniqueItems();
+        Assert.That(descriptors, Has.Exactly(expectedCount).Items);
+        Assert.That((descriptors).All(descriptor => descriptor.Lifetime == expectedLifetime), Is.True);
+        Assert.That((descriptors).All(descriptor => descriptor.ImplementationType != null), Is.True);
+        Assert.That(descriptors.Select(descriptor => descriptor.ImplementationType), Is.Unique);
     }
 
     private sealed class TestHostApplicationLifetime : IHostApplicationLifetime, IDisposable

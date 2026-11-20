@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -21,10 +20,10 @@ internal sealed class PostgreSqlAccountFinalizationFairnessTests : PostgreSqlInt
         var blockedIds = Enumerable.Range(1, 100)
             .Select(i =>
             {
-                Id<User>.TryParse($"00000000-0000-0000-0000-{i:x12}", out var id).Should().BeTrue();
+                Assert.That(Id<User>.TryParse($"00000000-0000-0000-0000-{i:x12}", out var id), Is.True);
                 return id;
             }).ToArray();
-        Id<User>.TryParse("ffffffff-ffff-ffff-ffff-ffffffffffff", out var laterId).Should().BeTrue();
+        Assert.That(Id<User>.TryParse("ffffffff-ffff-ffff-ffff-ffffffffffff", out var laterId), Is.True);
         var participantId = Id<User>.New();
 
         await using (var setup = Factory.Services.CreateAsyncScope())
@@ -50,8 +49,8 @@ internal sealed class PostgreSqlAccountFinalizationFairnessTests : PostgreSqlInt
 
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Users.IgnoreQueryFilters().CountAsync(user => blockedIds.Contains(user.Id) && user.DeletionState == AccountDeletionState.PendingDeletion)).Should().Be(100);
-        (await database.TraineeNotes.IgnoreQueryFilters().CountAsync(note => note.TraineeId == participantId)).Should().Be(100);
-        (await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == laterId)).DeletionState.Should().Be(AccountDeletionState.PermanentlyDeleted);
+        Assert.That((await database.Users.IgnoreQueryFilters().CountAsync(user => blockedIds.Contains(user.Id) && user.DeletionState == AccountDeletionState.PendingDeletion)), Is.EqualTo(100));
+        Assert.That((await database.TraineeNotes.IgnoreQueryFilters().CountAsync(note => note.TraineeId == participantId)), Is.EqualTo(100));
+        Assert.That((await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == laterId)).DeletionState, Is.EqualTo(AccountDeletionState.PermanentlyDeleted));
     }
 }

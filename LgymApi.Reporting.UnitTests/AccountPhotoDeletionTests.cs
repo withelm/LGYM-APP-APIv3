@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -29,8 +28,8 @@ public sealed class AccountPhotoDeletionTests
 
         var stage = () => persistence.StageAccountAsync(user.Id.Rebind<AccountReference>(), user.DeletionGeneration.Value, default);
 
-        await stage.Should().ThrowAsync<InvalidOperationException>();
-        (await database.PhotoDeletionWorkItems.CountAsync()).Should().Be(0);
+        await Assert.ThatAsync(async () => { await stage(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That((await database.PhotoDeletionWorkItems.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -65,8 +64,8 @@ public sealed class AccountPhotoDeletionTests
             await service.ProcessPendingAsync();
             await service.ProcessPendingAsync();
 
-            foreach (var key in keys) (await store.ReadAsync(key)).Should().BeNull();
-            (await database.PhotoDeletionWorkItems.CountAsync(item => item.CompletedAtUtc == null)).Should().Be(0);
+            foreach (var key in keys) Assert.That((await store.ReadAsync(key)), Is.Null);
+            Assert.That((await database.PhotoDeletionWorkItems.CountAsync(item => item.CompletedAtUtc == null)), Is.EqualTo(0));
         }
         finally
         {
@@ -96,19 +95,19 @@ public sealed class AccountPhotoDeletionTests
             var service = new AccountPhotoDeletionService(new PhotoDeletionPersistence(database), failingStorage,
                 Substitute.For<IPhotoStorageInventory>(), new EfUnitOfWork(database), TimeProvider.System);
 
-            await ((Func<Task>)(() => service.ProcessPendingAsync())).Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await (((Func<Task>)(() => service.ProcessPendingAsync())))(); }, Throws.InstanceOf<InvalidOperationException>());
         }
 
         await using var retryDatabase = new AppDbContext(options);
-        (await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == itemId)).CompletedAtUtc.Should().BeNull();
-        (await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == successfulId)).CompletedAtUtc.Should().NotBeNull();
+        Assert.That((await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == itemId)).CompletedAtUtc, Is.Null);
+        Assert.That((await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == successfulId)).CompletedAtUtc, Is.Not.Null);
         var storage = Substitute.For<IPhotoStorageProvider>();
         var clock = Substitute.For<TimeProvider>();
         clock.GetUtcNow().Returns(DateTimeOffset.UtcNow.AddMinutes(6));
         var retry = new AccountPhotoDeletionService(new PhotoDeletionPersistence(retryDatabase), storage,
             Substitute.For<IPhotoStorageInventory>(), new EfUnitOfWork(retryDatabase), clock);
         await retry.ProcessPendingAsync();
-        (await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == itemId)).CompletedAtUtc.Should().NotBeNull();
+        Assert.That((await retryDatabase.PhotoDeletionWorkItems.SingleAsync(item => item.Id == itemId)).CompletedAtUtc, Is.Not.Null);
         await storage.Received(1).DeleteAsync("photos/retry.jpg", Arg.Any<CancellationToken>());
     }
 

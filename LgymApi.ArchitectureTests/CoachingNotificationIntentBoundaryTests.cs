@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Notifications;
 using LgymApi.Application.Notifications.Contracts.Events;
 using LgymApi.Domain.Entities;
@@ -29,35 +28,32 @@ public sealed class CoachingNotificationIntentBoundaryTests
             .OrderBy(type => type.Name)
             .ToArray();
 
-        discovered.Should().BeEquivalentTo(IntentTypes);
+        Assert.That(discovered, Is.EquivalentTo(IntentTypes).UsingPropertiesComparer());
         foreach (var intentType in IntentTypes)
         {
-            intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Should().NotContain(property => property.Name.Contains("Message", StringComparison.Ordinal));
-            intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Should().NotContain(property =>
+            Assert.That((intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)).Any(property => property.Name.Contains("Message", StringComparison.Ordinal)), Is.False);
+            Assert.That((intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)).Any(property =>
                     property.Name.Contains("Token", StringComparison.Ordinal) ||
                     property.Name.Contains("Payload", StringComparison.Ordinal) ||
-                    property.Name.Contains("Repository", StringComparison.Ordinal));
-            intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(property => property.PropertyType.FullName)
-                .Should().NotContain(name => name!.Contains("BackgroundWorker", StringComparison.Ordinal) || name.Contains("Common", StringComparison.Ordinal));
-            intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(property => property.PropertyType)
-                .Should().NotContain(type => type == typeof(NotificationMessage) || type == typeof(PushInstallation) || type == typeof(PushNotificationMessage));
-            intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(property => property.PropertyType)
-                .Should().NotContain(type => type == typeof(User) || type == typeof(TrainerInvitation) || type == typeof(TraineeNote));
+                    property.Name.Contains("Repository", StringComparison.Ordinal)), Is.False);
+            Assert.That((intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(property => property.PropertyType.FullName)).Any(name => name!.Contains("BackgroundWorker", StringComparison.Ordinal) || name.Contains("Common", StringComparison.Ordinal)), Is.False);
+            Assert.That((intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(property => property.PropertyType)).Any(type => type == typeof(NotificationMessage) || type == typeof(PushInstallation) || type == typeof(PushNotificationMessage)), Is.False);
+            Assert.That((intentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(property => property.PropertyType)).Any(type => type == typeof(User) || type == typeof(TrainerInvitation) || type == typeof(TraineeNote)), Is.False);
         }
     }
 
     [Test]
     public void CoachingNotificationReadContract_ExposesOnlyTypedInvitationFacts()
     {
-        var method = typeof(ICoachingNotificationReadService).GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle().Subject;
+        var assertedValue2 = (typeof(ICoachingNotificationReadService).GetMethods(BindingFlags.Public | BindingFlags.Instance)).ToArray();
+        Assert.That(assertedValue2, Has.Exactly(1).Items);
+        var method = assertedValue2.Single();
 
-        method.ReturnType.FullName.Should().NotContain("BackgroundWorker");
-        method.GetParameters().Select(parameter => parameter.ParameterType).Should().Contain(typeof(LgymApi.Domain.ValueObjects.Id<TrainerInvitation>));
-        method.GetParameters().Select(parameter => parameter.ParameterType).Should().NotContain(typeof(TrainerInvitation));
+        Assert.That(method.ReturnType.FullName, Does.Not.Contain("BackgroundWorker"));
+        Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Does.Contain(typeof(LgymApi.Domain.ValueObjects.Id<TrainerInvitation>)));
+        Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Does.Not.Contain(typeof(TrainerInvitation)));
     }
 }

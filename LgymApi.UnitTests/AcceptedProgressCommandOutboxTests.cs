@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
@@ -55,20 +54,22 @@ public sealed class AcceptedProgressCommandOutboxTests
             CommandEnvelopeStageResultTypeName,
             "T5 must add CommandEnvelopeStageResult so callers can distinguish newly staged and existing envelopes.");
 
-        writerType.IsInterface.Should().BeTrue();
+        Assert.That(writerType.IsInterface, Is.True);
         var method = writerType.GetMethod("StageAsync", BindingFlags.Public | BindingFlags.Instance);
-        method.Should().NotBeNull("ICommandOutboxWriter must expose StageAsync<TCommand>.");
-        method!.IsGenericMethodDefinition.Should().BeTrue();
-        method.GetParameters().Select(parameter => parameter.Name).Should().Equal("command", "cancellationToken");
-        method.GetParameters()[1].IsOptional.Should().BeTrue();
+        Assert.That(method, Is.Not.Null, "ICommandOutboxWriter must expose StageAsync<TCommand>.");
+        Assert.That(method!.IsGenericMethodDefinition, Is.True);
+        Assert.That(method.GetParameters().Select(parameter => parameter.Name), Is.EqualTo(new[] { "command", "cancellationToken" }));
+        Assert.That(method.GetParameters()[1].IsOptional, Is.True);
 
-        var genericParameter = method.GetGenericArguments().Should().ContainSingle().Subject;
-        genericParameter.GenericParameterAttributes.Should().Be(GenericParameterAttributes.ReferenceTypeConstraint);
-        genericParameter.GetGenericParameterConstraints().Should().Equal(actionCommandType);
-        method.ReturnType.Should().Be(typeof(Task<>).MakeGenericType(resultType));
-        resultType.GetProperty("EnvelopeId", BindingFlags.Public | BindingFlags.Instance).Should().NotBeNull();
-        resultType.GetProperty("Envelope", BindingFlags.Public | BindingFlags.Instance).Should().BeNull();
-        resultType.GetProperty("WasExisting", BindingFlags.Public | BindingFlags.Instance).Should().NotBeNull();
+        var assertedValue76 = (method.GetGenericArguments()).ToArray();
+        Assert.That(assertedValue76, Has.Exactly(1).Items);
+        var genericParameter = assertedValue76.Single();
+        Assert.That(genericParameter.GenericParameterAttributes, Is.EqualTo(GenericParameterAttributes.ReferenceTypeConstraint));
+        Assert.That(genericParameter.GetGenericParameterConstraints(), Is.EqualTo(new[] { actionCommandType }));
+        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task<>).MakeGenericType(resultType)));
+        Assert.That(resultType.GetProperty("EnvelopeId", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+        Assert.That(resultType.GetProperty("Envelope", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+        Assert.That(resultType.GetProperty("WasExisting", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
     }
 
     [Test]
@@ -88,18 +89,18 @@ public sealed class AcceptedProgressCommandOutboxTests
         var firstResult = await InvokeStageAsync(writer, command, cancellationSource.Token);
         var duplicateResult = await InvokeStageAsync(writer, command, cancellationSource.Token);
 
-        runtime.StageInvocations.Should().HaveCount(2);
-        runtime.StageInvocations.Should().OnlyContain(invocation =>
+        Assert.That(runtime.StageInvocations, Has.Exactly(2).Items);
+        Assert.That((runtime.StageInvocations).All(invocation =>
             invocation.Request.CommandId == "Tests.AcceptedProgress.StageCommand"
             && invocation.Request.PayloadJson == JsonSerializer.Serialize(command, SharedSerializationOptions.Current)
-            && invocation.CancellationToken == cancellationSource.Token);
-        runtime.PersistInvocations.Should().BeEmpty();
-        unitOfWork.SaveCallCount.Should().Be(0, "StageAsync must leave commit timing to its caller");
-        scheduler.Enqueued.Should().BeEmpty("committed-intent dispatch must not run before the caller commits its UoW");
-        GetEnvelopeId(firstResult).Should().Be("stage-envelope-id");
-        GetEnvelopeId(duplicateResult).Should().Be("stage-envelope-id");
-        GetWasExisting(firstResult).Should().BeFalse();
-        GetWasExisting(duplicateResult).Should().BeTrue();
+            && invocation.CancellationToken == cancellationSource.Token), Is.True);
+        Assert.That(runtime.PersistInvocations, Is.Empty);
+        Assert.That(unitOfWork.SaveCallCount, Is.EqualTo(0), "StageAsync must leave commit timing to its caller");
+        Assert.That(scheduler.Enqueued, Is.Empty, "committed-intent dispatch must not run before the caller commits its UoW");
+        Assert.That(GetEnvelopeId(firstResult), Is.EqualTo("stage-envelope-id"));
+        Assert.That(GetEnvelopeId(duplicateResult), Is.EqualTo("stage-envelope-id"));
+        Assert.That(GetWasExisting(firstResult), Is.False);
+        Assert.That(GetWasExisting(duplicateResult), Is.True);
     }
 
     [Test]
@@ -117,10 +118,10 @@ public sealed class AcceptedProgressCommandOutboxTests
 
         await InvokeStageAsync(writer, new TestStageCommand { Value = "no-handler" }, cancellationSource.Token);
 
-        runtime.StageInvocations.Should().BeEmpty("StageAsync must validate exact handler availability before staging");
-        runtime.PersistInvocations.Should().BeEmpty();
-        unitOfWork.SaveCallCount.Should().Be(0);
-        scheduler.Enqueued.Should().BeEmpty();
+        Assert.That(runtime.StageInvocations, Is.Empty, "StageAsync must validate exact handler availability before staging");
+        Assert.That(runtime.PersistInvocations, Is.Empty);
+        Assert.That(unitOfWork.SaveCallCount, Is.EqualTo(0));
+        Assert.That(scheduler.Enqueued, Is.Empty);
     }
 
     [TestCase(ReportSubmissionAcceptedProgressConsumeOutcome.Applied)]
@@ -154,9 +155,9 @@ public sealed class AcceptedProgressCommandOutboxTests
 
         var action = () => ExecuteAcceptedProgressHandlerAsync(handler, CreateValidPayload());
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Message.Should().Contain(outcome.ToString());
-        exception.Which.Message.Length.Should().BeLessThanOrEqualTo(256);
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception.Message, Does.Contain(outcome.ToString()));
+        Assert.That(exception.Message.Length, Is.LessThanOrEqualTo(256));
     }
 
     [TestCase(true)]
@@ -207,7 +208,7 @@ public sealed class AcceptedProgressCommandOutboxTests
 
         var action = () => ExecuteAcceptedProgressHandlerAsync(handler, CreateValidPayload());
 
-        await action.Should().ThrowAsync<TimeoutException>().WithMessage("temporary consumer outage");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<TimeoutException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("temporary consumer outage").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private object CreateWriter(
@@ -241,10 +242,12 @@ public sealed class AcceptedProgressCommandOutboxTests
         }
 
         _serviceProvider = services.BuildServiceProvider();
-        var implementationType = typeof(CommandDispatcher).Assembly.GetExportedTypes()
+        var implementationTypes = typeof(CommandDispatcher).Assembly.GetExportedTypes()
             .Where(type => !type.IsAbstract && !type.IsInterface && writerPort.IsAssignableFrom(type))
-            .Should().ContainSingle("T5 must provide exactly one runtime implementation of ICommandOutboxWriter.")
-            .Subject;
+            .ToArray();
+        Assert.That(implementationTypes, Has.Exactly(1).Items,
+            "T5 must provide exactly one runtime implementation of ICommandOutboxWriter.");
+        var implementationType = implementationTypes.Single();
 
         return ActivatorUtilities.CreateInstance(_serviceProvider, implementationType);
     }
@@ -258,7 +261,7 @@ public sealed class AcceptedProgressCommandOutboxTests
             AcceptedProgressCommandTypeName,
             "T6 must add the Reporting-owned ReportSubmissionAcceptedProgressCommand.");
         var actionInterface = typeof(IBackgroundAction<>).MakeGenericType(commandType);
-        handlerType.Should().BeAssignableTo(actionInterface);
+        Assert.That(actionInterface.IsAssignableFrom(handlerType), Is.True);
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -280,7 +283,7 @@ public sealed class AcceptedProgressCommandOutboxTests
         var task = method.MakeGenericMethod(typeof(TestStageCommand))
             .Invoke(writer, [command, cancellationToken]) as Task;
 
-        task.Should().NotBeNull("StageAsync must return a Task<CommandEnvelopeStageResult>.");
+        Assert.That(task, Is.Not.Null, "StageAsync must return a Task<CommandEnvelopeStageResult>.");
         await task!;
         return task.GetType().GetProperty("Result")!.GetValue(task)!;
     }
@@ -298,7 +301,7 @@ public sealed class AcceptedProgressCommandOutboxTests
             ?? throw new AssertionException("The accepted-progress handler must implement IBackgroundAction<TCommand>.");
         var task = executeMethod.Invoke(handler, [command, CancellationToken.None]) as Task;
 
-        task.Should().NotBeNull();
+        Assert.That(task, Is.Not.Null);
         await task!;
     }
 
@@ -309,9 +312,8 @@ public sealed class AcceptedProgressCommandOutboxTests
         var command = Activator.CreateInstance(commandType)
             ?? throw new AssertionException("ReportSubmissionAcceptedProgressCommand must be instantiable.");
         var eventProperty = commandType.GetProperty("Event", BindingFlags.Public | BindingFlags.Instance);
-        eventProperty.Should().NotBeNull(
-            "ReportSubmissionAcceptedProgressCommand must carry its nested accepted-progress Event.");
-        eventProperty!.PropertyType.Should().Be(typeof(ReportSubmissionAcceptedProgressPayload));
+        Assert.That(eventProperty, Is.Not.Null, "ReportSubmissionAcceptedProgressCommand must carry its nested accepted-progress Event.");
+        Assert.That(eventProperty!.PropertyType, Is.EqualTo(typeof(ReportSubmissionAcceptedProgressPayload)));
         eventProperty.SetValue(command, payload);
         return command;
     }
@@ -324,28 +326,28 @@ public sealed class AcceptedProgressCommandOutboxTests
     private static bool GetWasExisting(object result)
     {
         var wasExisting = result.GetType().GetProperty("WasExisting", BindingFlags.Public | BindingFlags.Instance)?.GetValue(result);
-        wasExisting.Should().BeOfType<bool>();
+        Assert.That(wasExisting, Is.TypeOf<bool>());
         return (bool)wasExisting!;
     }
 
     private static Type GetRequiredReportingType(string typeName, string because)
     {
         var type = typeof(LgymApi.Application.Reporting.ServiceCollectionExtensions).Assembly.GetType(typeName);
-        type.Should().NotBeNull(because);
+        Assert.That(type, Is.Not.Null, because);
         return type!;
     }
 
     private static Type GetRequiredPlatformType(string typeName, string because)
     {
         var type = typeof(IActionCommand).Assembly.GetType(typeName);
-        type.Should().NotBeNull(because);
+        Assert.That(type, Is.Not.Null, because);
         return type!;
     }
 
     private static Type GetRequiredWorkerType(string typeName, string because)
     {
         var type = typeof(CommandDispatcher).Assembly.GetType(typeName);
-        type.Should().NotBeNull(because);
+        Assert.That(type, Is.Not.Null, because);
         return type!;
     }
 
@@ -366,7 +368,7 @@ public sealed class AcceptedProgressCommandOutboxTests
     private static Id<TEntity> ParseId<TEntity>(string value)
         where TEntity : class
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

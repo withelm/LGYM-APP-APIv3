@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.Sessions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Adapters;
@@ -41,13 +40,12 @@ public sealed class PushInstallationSessionDisassociationAdapterTests
 
         services.AddNotificationsModule();
 
-        var productionRepositoryRegistration = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IPushInstallationRepository))
-            .Should()
-            .ContainSingle()
-            .Which;
-        productionRepositoryRegistration.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        productionRepositoryRegistration.ImplementationType!.Name.Should().Be("PushInstallationRepository");
+        var assertedValue144 = (services
+                    .Where(descriptor => descriptor.ServiceType == typeof(IPushInstallationRepository))).ToArray();
+        Assert.That(assertedValue144, Has.Exactly(1).Items);
+        var productionRepositoryRegistration = assertedValue144.Single();
+        Assert.That(productionRepositoryRegistration.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+        Assert.That(productionRepositoryRegistration.ImplementationType!.Name, Is.EqualTo("PushInstallationRepository"));
 
         services.AddScoped<IPushInstallationRepository>(_ => pushInstallationRepository);
         services.AddScoped<IPushInstallationPersistenceConflictClassifier>(_ => new NoRegistrationConflictClassifier());
@@ -57,16 +55,14 @@ public sealed class PushInstallationSessionDisassociationAdapterTests
             .Where(descriptor => descriptor.ServiceType == typeof(IAccountSessionDisassociationPort))
             .ToArray();
 
-        registrations.Should().ContainSingle();
-        registrations[0].Lifetime.Should().Be(ServiceLifetime.Scoped);
-        registrations[0].ImplementationType.Should().Be(typeof(PushInstallationSessionDisassociationAdapter));
+        Assert.That(registrations, Has.Exactly(1).Items);
+        Assert.That(registrations[0].Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+        Assert.That(registrations[0].ImplementationType, Is.EqualTo(typeof(PushInstallationSessionDisassociationAdapter)));
 
         using var provider = services.BuildServiceProvider(validateScopes: true);
         using var scope = provider.CreateScope();
         var adapter = scope.ServiceProvider.GetRequiredService<IAccountSessionDisassociationPort>();
-        adapter
-            .Should()
-            .BeOfType<PushInstallationSessionDisassociationAdapter>();
+        Assert.That(adapter, Is.TypeOf<PushInstallationSessionDisassociationAdapter>());
 
         var accountId = Id<AccountReference>.New();
         var sessionId = Id<AccountSessionReference>.New();
@@ -74,14 +70,12 @@ public sealed class PushInstallationSessionDisassociationAdapterTests
 
         await adapter.StageDisassociateAsync(accountId, sessionId, cancellationSource.Token);
 
-        pushInstallationRepository.Calls
+        Assert.That(pushInstallationRepository.Calls
             .Where(call =>
                 call.Method == nameof(IPushInstallationRepository.DisassociateForSessionAsync)
                 && call.Argument is ValueTuple<Id<AccountSessionReference>, DateTimeOffset> arguments
                 && arguments.Item1 == sessionId
-                && call.CancellationToken == cancellationSource.Token)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationSource.Token), Has.Exactly(1).Items);
     }
 
     private sealed class NoRegistrationConflictClassifier : IPushInstallationPersistenceConflictClassifier

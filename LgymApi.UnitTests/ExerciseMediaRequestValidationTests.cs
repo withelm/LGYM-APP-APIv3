@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.Exercise.Validation;
 using LgymApi.Application.WorkoutProgress.ExerciseMedia;
@@ -16,9 +15,9 @@ public sealed class ExerciseMediaRequestValidationTests
     public void FileOnlyShape_IsBoundedWithoutClientManifest(int size, bool valid)
     {
         var request = new ExerciseMediaUploadDto { File = new FormFile(Stream.Null, 0, size, "file", "untrusted.exe") { Headers = new HeaderDictionary(), ContentType = "application/octet-stream" } };
-        new ExerciseMediaUploadValidator().Validate(request).IsValid.Should().Be(valid);
+        Assert.That(new ExerciseMediaUploadValidator().Validate(request).IsValid, Is.EqualTo(valid));
     }
 
     [Test]
-    public void MissingFile_IsRejected() => new ExerciseMediaUploadValidator().Validate(new ExerciseMediaUploadDto()).IsValid.Should().BeFalse();
+    public void MissingFile_IsRejected() => Assert.That(new ExerciseMediaUploadValidator().Validate(new ExerciseMediaUploadDto()).IsValid, Is.False);
 }

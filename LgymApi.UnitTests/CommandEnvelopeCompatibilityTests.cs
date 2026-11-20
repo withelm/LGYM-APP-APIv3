@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Runtime;
 using LgymApi.BackgroundWorker.Actions;
@@ -21,16 +20,16 @@ public sealed class CommandEnvelopeCompatibilityTests
         var descriptor = registry.DescribeForWrite(type);
         var contract = registry.Contracts.Single(row => row.RuntimeType == type);
 
-        descriptor.CanonicalId.Should().Be(canonicalId);
-        contract.ReadAlias.Should().Be(type.FullName);
-        contract.ExpectedHandlerTypes.Should().Equal(typeof(AccountDeletionScheduledCommandHandler));
+        Assert.That(descriptor.CanonicalId, Is.EqualTo(canonicalId));
+        Assert.That(contract.ReadAlias, Is.EqualTo(type.FullName));
+        Assert.That(contract.ExpectedHandlerTypes, Is.EqualTo(new[] { typeof(AccountDeletionScheduledCommandHandler) }));
         foreach (var id in new[] { canonicalId, type.FullName! })
         {
             var resolved = registry.Resolve(id);
             var command = JsonSerializer.Deserialize(payload, resolved.RuntimeType, SharedSerializationOptions.Current);
-            resolved.RuntimeType.Should().Be(type);
-            command.Should().BeOfType<AccountDeletionScheduledCommand>();
-            JsonSerializer.Serialize(command, resolved.RuntimeType, SharedSerializationOptions.Current).Should().Be(payload);
+            Assert.That(resolved.RuntimeType, Is.EqualTo(type));
+            Assert.That(command, Is.TypeOf<AccountDeletionScheduledCommand>());
+            Assert.That(JsonSerializer.Serialize(command, resolved.RuntimeType, SharedSerializationOptions.Current), Is.EqualTo(payload));
         }
     }
 
@@ -43,10 +42,11 @@ public sealed class CommandEnvelopeCompatibilityTests
             resolvedDescriptor.RuntimeType,
             SharedSerializationOptions.Current);
 
-        resolvedDescriptor.CanonicalId.Should().Be(contract.CanonicalId);
-        command.Should().NotBeNull().And.BeOfType(resolvedDescriptor.RuntimeType);
-        JsonSerializer.Serialize(command, resolvedDescriptor.RuntimeType, SharedSerializationOptions.Current)
-            .Should().Be(contract.PayloadJson);
+        Assert.That(resolvedDescriptor.CanonicalId, Is.EqualTo(contract.CanonicalId));
+        var assertedChain36 = command;
+        Assert.That(assertedChain36, Is.Not.Null);
+        Assert.That(assertedChain36, Is.TypeOf(resolvedDescriptor.RuntimeType));
+        Assert.That(JsonSerializer.Serialize(command, resolvedDescriptor.RuntimeType, SharedSerializationOptions.Current), Is.EqualTo(contract.PayloadJson));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -64,9 +64,9 @@ public sealed class CommandEnvelopeCompatibilityTests
             runtimeType,
             SharedSerializationOptions.Current);
 
-        persistedId.Should().Be(contract.CanonicalId);
-        payloadJson.Should().Be(contract.PayloadJson);
-        $"{persistedId}|{payloadJson}".Should().Be(contract.CorrelationInput);
+        Assert.That(persistedId, Is.EqualTo(contract.CanonicalId));
+        Assert.That(payloadJson, Is.EqualTo(contract.PayloadJson));
+        Assert.That($"{persistedId}|{payloadJson}", Is.EqualTo(contract.CorrelationInput));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -74,27 +74,25 @@ public sealed class CommandEnvelopeCompatibilityTests
     {
         var resolvedDescriptor = CommandContractRegistry.CreateDefault().Resolve(contract.FutureClrNameReadAlias);
 
-        resolvedDescriptor.CanonicalId.Should().Be(contract.CanonicalId);
-        resolvedDescriptor.RuntimeType.FullName.Should().Be(contract.FutureClrNameReadAlias);
+        Assert.That(resolvedDescriptor.CanonicalId, Is.EqualTo(contract.CanonicalId));
+        Assert.That(resolvedDescriptor.RuntimeType.FullName, Is.EqualTo(contract.FutureClrNameReadAlias));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
     public void NewAlias_ToOldReader_IsUnsupported_AndNoWriterEmitsAlias(LegacyCommandContract contract)
     {
-        LegacyCommandContractManifest.ResolveForLegacyReader(contract.CanonicalId)
-            .Should().Be(contract.CommandType);
+        Assert.That(LegacyCommandContractManifest.ResolveForLegacyReader(contract.CanonicalId), Is.EqualTo(contract.CommandType));
 
         var oldReader = () => LegacyCommandContractManifest.ResolveForLegacyReader(contract.FutureClrNameReadAlias);
 
-        oldReader.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { oldReader(); }, Throws.InstanceOf<InvalidOperationException>());
         var registry = CommandContractRegistry.CreateDefault();
         var runtimeType = contract.CommandType;
 
-        registry.Contracts.Select(row => row.CanonicalId)
-            .Should().NotContain(contract.FutureClrNameReadAlias);
-        registry.DescribeForWrite(runtimeType).CanonicalId
-            .Should().Be(contract.CanonicalId)
-            .And.NotBe(contract.FutureClrNameReadAlias);
+        Assert.That(registry.Contracts.Select(row => row.CanonicalId), Does.Not.Contain(contract.FutureClrNameReadAlias));
+        var assertedChain37 = registry.DescribeForWrite(runtimeType).CanonicalId;
+        Assert.That(assertedChain37, Is.EqualTo(contract.CanonicalId));
+        Assert.That(assertedChain37, Is.Not.EqualTo(contract.FutureClrNameReadAlias));
     }
 
     [Test]
@@ -102,7 +100,6 @@ public sealed class CommandEnvelopeCompatibilityTests
     {
         var action = () => CommandContractRegistry.CreateDefault().Resolve("Unknown.Command");
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Unknown durable command identifier 'Unknown.Command'.");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Unknown durable command identifier 'Unknown.Command'.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 }

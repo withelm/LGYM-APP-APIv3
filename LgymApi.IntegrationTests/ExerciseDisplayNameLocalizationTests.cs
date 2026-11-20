@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -30,14 +29,14 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
 
         using (var globalResponse = await Client.GetAsync($"/api/exercise/{scenario.GlobalExerciseId}/getExercise"))
         {
-            globalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(globalResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await globalResponse.Content.ReadAsStringAsync());
             AssertNames(body.RootElement, "Bench Press", "Wyciskanie na lawce");
         }
 
         using (var customResponse = await Client.GetAsync($"/api/exercise/{scenario.CustomExerciseId}/getExercise"))
         {
-            customResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(customResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await customResponse.Content.ReadAsStringAsync());
             AssertNames(body.RootElement, "Custom Row", "Custom Row");
         }
@@ -46,7 +45,7 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
                    $"/api/{trainee.Id}/getTrainingByDate",
                    new { createdAt = scenario.TrainingDate }))
         {
-            trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(trainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await trainingResponse.Content.ReadAsStringAsync());
             var exercises = body.RootElement[0].GetProperty("exercises");
             AssertNames(FindExerciseDetails(exercises, scenario.GlobalExerciseId), "Bench Press", "Wyciskanie na lawce");
@@ -55,7 +54,7 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
 
         using (var recordsResponse = await Client.GetAsync($"/api/mainRecords/{trainee.Id}/getLastMainRecords"))
         {
-            recordsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(recordsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await recordsResponse.Content.ReadAsStringAsync());
             AssertNames(FindExerciseDetails(body.RootElement, scenario.GlobalExerciseId), "Bench Press", "Wyciskanie na lawce");
             AssertNames(FindExerciseDetails(body.RootElement, scenario.CustomExerciseId), "Custom Row", "Custom Row");
@@ -64,7 +63,7 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
         SetAcceptLanguage("pl;q=0.1, en;q=0.9");
         using (var fallbackResponse = await Client.GetAsync($"/api/exercise/{scenario.GlobalExerciseId}/getExercise"))
         {
-            fallbackResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(fallbackResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using var body = JsonDocument.Parse(await fallbackResponse.Content.ReadAsStringAsync());
             AssertNames(body.RootElement, "Bench Press", "Bench Press");
         }
@@ -74,7 +73,7 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
         using var trainerResponse = await Client.PostAsJsonAsync(
             $"/api/trainer/trainees/{trainee.Id}/trainings/by-date",
             new { createdAt = scenario.TrainingDate });
-        trainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var trainerBody = JsonDocument.Parse(await trainerResponse.Content.ReadAsStringAsync());
         var trainerExercises = trainerBody.RootElement[0].GetProperty("exercises");
         AssertNames(FindExerciseDetails(trainerExercises, scenario.GlobalExerciseId), "Bench Press", "Wyciskanie na lawce");
@@ -215,8 +214,8 @@ public sealed class ExerciseDisplayNameLocalizationTests : IntegrationTestBase
         string expectedName,
         string expectedDisplayName)
     {
-        exercise.GetProperty("name").GetString().Should().Be(expectedName);
-        exercise.GetProperty("displayName").GetString().Should().Be(expectedDisplayName);
+        Assert.That(exercise.GetProperty("name").GetString(), Is.EqualTo(expectedName));
+        Assert.That(exercise.GetProperty("displayName").GetString(), Is.EqualTo(expectedDisplayName));
     }
 
     private sealed record Scenario(

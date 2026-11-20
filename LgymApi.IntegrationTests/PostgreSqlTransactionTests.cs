@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.TrainingPlanning.Errors;
 using LgymApi.Application.Repositories;
@@ -38,13 +37,13 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
                 await database.ApiIdempotencyRecords.AddAsync(CreateProbe(idempotencyKey));
                 await unitOfWork.SaveChangesAsync();
 
-                (await ExistsInFreshContextAsync(idempotencyKey)).Should().BeFalse();
+                Assert.That((await ExistsInFreshContextAsync(idempotencyKey)), Is.False);
 
                 await transaction.CommitAsync();
             }
         }
 
-        (await ExistsInFreshContextAsync(idempotencyKey)).Should().BeTrue();
+        Assert.That((await ExistsInFreshContextAsync(idempotencyKey)), Is.True);
     }
 
     [Test]
@@ -74,11 +73,11 @@ internal sealed class PostgreSqlTransactionTests : PostgreSqlIntegrationTestBase
 
             var action = () => copyPlanUseCase.ExecuteAsync(new CopyPlanCommand(currentUser.Id, "missing-share-code"));
 
-            await action.Should().ThrowAsync<InvalidOperationException>();
-            exerciseClone.Calls.Should().Be(1);
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+            Assert.That(exerciseClone.Calls, Is.EqualTo(1));
         }
 
-        (await ExistsInFreshContextAsync(idempotencyKey)).Should().BeFalse();
+        Assert.That((await ExistsInFreshContextAsync(idempotencyKey)), Is.False);
     }
 
     private async Task<bool> ExistsInFreshContextAsync(string idempotencyKey)

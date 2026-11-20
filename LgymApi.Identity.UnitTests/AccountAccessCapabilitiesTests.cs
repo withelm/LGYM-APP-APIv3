@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Authorization;
 using LgymApi.Domain.Security;
 using LgymApi.Domain.ValueObjects;
@@ -23,9 +22,9 @@ public sealed class AccountAccessCapabilitiesTests
 
         var result = service.GetCapabilities(Account());
 
-        result.Application.Should().Be(new AccountAccessApplicationCapabilities(false, false, false, false, false));
-        result.Extensions.Should().Be(new AccountAccessOwnerExtensions(
-            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false)));
+        Assert.That(result.Application, Is.EqualTo(new AccountAccessApplicationCapabilities(false, false, false, false, false)));
+        Assert.That(result.Extensions, Is.EqualTo(new AccountAccessOwnerExtensions(
+            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false))));
     }
 
     [Test]
@@ -39,8 +38,8 @@ public sealed class AccountAccessCapabilitiesTests
 
         var result = service.GetCapabilities(account);
 
-        result.AccountId.Should().Be(account.Id);
-        result.Application.Should().Be(new AccountAccessApplicationCapabilities(false, false, true, false, true));
+        Assert.That(result.AccountId, Is.EqualTo(account.Id));
+        Assert.That(result.Application, Is.EqualTo(new AccountAccessApplicationCapabilities(false, false, true, false, true)));
     }
 
     [Test]
@@ -51,9 +50,9 @@ public sealed class AccountAccessCapabilitiesTests
 
         var result = service.GetCapabilities(Account());
 
-        result.Extensions.Reporting.IsAvailable.Should().BeTrue();
-        result.Extensions.Coaching.IsAvailable.Should().BeFalse();
-        result.Application.Should().Be(new AccountAccessApplicationCapabilities(false, false, false, false, false));
+        Assert.That(result.Extensions.Reporting.IsAvailable, Is.True);
+        Assert.That(result.Extensions.Coaching.IsAvailable, Is.False);
+        Assert.That(result.Application, Is.EqualTo(new AccountAccessApplicationCapabilities(false, false, false, false, false)));
     }
 
     [Test]
@@ -66,8 +65,8 @@ public sealed class AccountAccessCapabilitiesTests
 
         var result = service.GetCapabilities(Account());
 
-        result.Extensions.Should().Be(new AccountAccessOwnerExtensions(
-            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false)));
+        Assert.That(result.Extensions, Is.EqualTo(new AccountAccessOwnerExtensions(
+            new(false), new(false), new(false), new(false, false, false, false, false), new(false), new(false, false, false, false))));
     }
 
     private static IAccountAccessOwnerCapabilityExtension Extension(AccountAccessCapabilityOwner owner)

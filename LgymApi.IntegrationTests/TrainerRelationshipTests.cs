@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -43,12 +42,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
                 traineeId = trainee.Id.ToString()
             });
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var body = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-            body.Should().NotBeNull();
-            body!.Status.Should().Be("Pending");
-            body.TraineeId.Should().Be(trainee.Id.ToString());
-            body.Code.Should().NotBeNullOrWhiteSpace();
+            Assert.That(body, Is.Not.Null);
+            Assert.That(body!.Status, Is.EqualTo("Pending"));
+            Assert.That(body.TraineeId, Is.EqualTo(trainee.Id.ToString()));
+            Assert.That(string.IsNullOrWhiteSpace(body.Code), Is.False);
         }
         finally
         {
@@ -69,13 +68,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             traineeId = trainee.Id.ToString()
         });
         ClearIdempotencyKey();
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Process pending commands to trigger handler execution
         await ProcessPendingCommandsAsync();
 
         var invitation = await response.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        invitation.Should().NotBeNull();
+        Assert.That(invitation, Is.Not.Null);
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -86,9 +85,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         }
 
         var log = await db.NotificationMessages.FirstOrDefaultAsync(x => x.CorrelationId == correlationId);
-        log.Should().NotBeNull();
-        log!.Status.Should().Be(EmailNotificationStatus.Pending);
-        log.Recipient.Value.Should().Be("trainee-email-log@example.com");
+        Assert.That(log, Is.Not.Null);
+        Assert.That(log!.Status, Is.EqualTo(EmailNotificationStatus.Pending));
+        Assert.That(log.Recipient.Value, Is.EqualTo("trainee-email-log@example.com"));
     }
 
     [Test]
@@ -108,7 +107,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         // Process pending commands to trigger handler execution
         await ProcessPendingCommandsAsync();
-        invitation.Should().NotBeNull();
+        Assert.That(invitation, Is.Not.Null);
 
         Domain.ValueObjects.Id<NotificationMessage> notificationId;
         using (var scope = Factory.Services.CreateScope())
@@ -134,13 +133,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
-            log.Status.Should().Be(EmailNotificationStatus.Sent);
-            log.SentAt.Should().NotBeNull();
-            log.Attempts.Should().BeGreaterThanOrEqualTo(1);
+            Assert.That(log.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+            Assert.That(log.SentAt, Is.Not.Null);
+            Assert.That(log.Attempts, Is.GreaterThanOrEqualTo(1));
         }
 
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
-        Factory.EmailSender.SentMessages[0].To.Should().Be("trainee-email-job@example.com");
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
+        Assert.That(Factory.EmailSender.SentMessages[0].To, Is.EqualTo("trainee-email-job@example.com"));
     }
 
     [Test]
@@ -181,9 +180,9 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             await handler.ProcessAsync(notificationId.ToString());
         }
 
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
-        Factory.EmailSender.SentMessages[0].Subject.Should().Contain("Zaproszenie");
-        Factory.EmailSender.SentMessages[0].Body.Should().Contain("Akceptuj");
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
+        Assert.That(Factory.EmailSender.SentMessages[0].Subject, Does.Contain("Zaproszenie"));
+        Assert.That(Factory.EmailSender.SentMessages[0].Body, Does.Contain("Akceptuj"));
     }
 
     [Test]
@@ -222,20 +221,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             var act = async () => await handler.ProcessAsync(notificationId.ToString());
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
         }
 
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
-            log.Status.Should().Be(EmailNotificationStatus.Failed);
-            log.Attempts.Should().Be(1);
-            log.LastError.Should().NotBeNullOrWhiteSpace();
-            log.SentAt.Should().BeNull();
+            Assert.That(log.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+            Assert.That(log.Attempts, Is.EqualTo(1));
+            Assert.That(string.IsNullOrWhiteSpace(log.LastError), Is.False);
+            Assert.That(log.SentAt, Is.Null);
         }
 
-        Factory.EmailSender.SentMessages.Should().BeEmpty();
+        Assert.That(Factory.EmailSender.SentMessages, Is.Empty);
     }
 
     [Test]
@@ -274,7 +273,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var handler = scope.ServiceProvider.GetRequiredService<IEmailJobHandler>();
             var act = async () => await handler.ProcessAsync(notificationId.ToString());
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
             await handler.ProcessAsync(notificationId.ToString());
         }
 
@@ -282,14 +281,14 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
             var log = await db.NotificationMessages.FirstAsync(x => x.Id == notificationId);
-            log.Status.Should().Be(EmailNotificationStatus.Sent);
-            log.Attempts.Should().Be(2);
-            log.SentAt.Should().NotBeNull();
-            log.LastError.Should().BeNull();
-            log.LastAttemptAt.Should().NotBeNull();
+            Assert.That(log.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+            Assert.That(log.Attempts, Is.EqualTo(2));
+            Assert.That(log.SentAt, Is.Not.Null);
+            Assert.That(log.LastError, Is.Null);
+            Assert.That(log.LastAttemptAt, Is.Not.Null);
         }
 
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -315,11 +314,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         // Process pending commands to trigger handler execution
         await ProcessPendingCommandsAsync();
 
-        second.StatusCode.Should().Be(HttpStatusCode.OK);
-        firstBody.Should().NotBeNull();
-        secondBody.Should().NotBeNull();
-        secondBody!.Id.Should().Be(firstBody!.Id);
-        secondBody.Code.Should().Be(firstBody.Code);
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(firstBody, Is.Not.Null);
+        Assert.That(secondBody, Is.Not.Null);
+        Assert.That(secondBody!.Id, Is.EqualTo(firstBody!.Id));
+        Assert.That(secondBody.Code, Is.EqualTo(firstBody.Code));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -329,7 +328,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         }
         var logsCount = await db.NotificationMessages
             .CountAsync(x => x.CorrelationId == correlationId);
-        logsCount.Should().Be(1);
+        Assert.That(logsCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -351,11 +350,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 20 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PaginatedTrainerInvitationResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Count.Should().Be(2);
-        body.Items.Select(x => x.TraineeId).Should().BeEquivalentTo(new[] { traineeA.Id.ToString(), traineeB.Id.ToString() });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items.Count, Is.EqualTo(2));
+        Assert.That(body.Items.Select(x => x.TraineeId), Is.EquivalentTo(new[] { traineeA.Id.ToString(), traineeB.Id.ToString() }));
     }
 
     [Test]
@@ -367,7 +366,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var response = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 20 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -378,7 +377,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var response = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 20 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -423,16 +422,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainerA.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        body.Should().NotBeNull();
-        body!.Total.Should().Be(2);
-        body.Items.Select(x => x.Id).Should().BeEquivalentTo(new[]
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Total, Is.EqualTo(2));
+        Assert.That(body.Items.Select(x => x.Id), Is.EquivalentTo(new[]
         {
             traineeLinkedToA.Id.ToString(),
             traineeInvitedByA.Id.ToString()
-        });
-        body.Items.Should().NotContain(x => x.Id == traineeLinkedToB.Id.ToString());
+        }));
+        Assert.That((body.Items).Any(x => x.Id == traineeLinkedToB.Id.ToString()), Is.False);
     }
 
     [Test]
@@ -480,31 +479,31 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
 
         var filtered = await Client.GetAsync("/api/trainer/trainees?search=gamma&status=InvitationExpired&sortBy=name&sortDirection=desc&page=1&pageSize=10");
-        filtered.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(filtered.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var filteredBody = await filtered.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
 
-        filteredBody.Should().NotBeNull();
-        filteredBody!.Total.Should().Be(1);
-        filteredBody.Items.Should().ContainSingle();
-        filteredBody.Items[0].Id.Should().Be(expired.Id.ToString());
-        filteredBody.Items[0].Status.Should().Be("InvitationExpired");
-        filteredBody.Items[0].HasExpiredInvitation.Should().BeTrue();
-        filteredBody.Items[0].HasPendingInvitation.Should().BeFalse();
-        filteredBody.Items[0].IsLinked.Should().BeFalse();
+        Assert.That(filteredBody, Is.Not.Null);
+        Assert.That(filteredBody!.Total, Is.EqualTo(1));
+        Assert.That(filteredBody.Items, Has.Exactly(1).Items);
+        Assert.That(filteredBody.Items[0].Id, Is.EqualTo(expired.Id.ToString()));
+        Assert.That(filteredBody.Items[0].Status, Is.EqualTo("InvitationExpired"));
+        Assert.That(filteredBody.Items[0].HasExpiredInvitation, Is.True);
+        Assert.That(filteredBody.Items[0].HasPendingInvitation, Is.False);
+        Assert.That(filteredBody.Items[0].IsLinked, Is.False);
 
         var full = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=1&pageSize=10");
-        full.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(full.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var fullBody = await full.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        fullBody.Should().NotBeNull();
-        fullBody!.Items.Select(x => x.Name).Should().Equal("Alpha Linked", "Beta Pending", "Gamma Expired");
+        Assert.That(fullBody, Is.Not.Null);
+        Assert.That(fullBody!.Items.Select(x => x.Name), Is.EqualTo(new[] { "Alpha Linked", "Beta Pending", "Gamma Expired" }));
 
         var linkedItem = fullBody.Items.Single(x => x.Id == linked.Id.ToString());
-        linkedItem.Status.Should().Be("Linked");
-        linkedItem.IsLinked.Should().BeTrue();
+        Assert.That(linkedItem.Status, Is.EqualTo("Linked"));
+        Assert.That(linkedItem.IsLinked, Is.True);
 
         var pendingItem = fullBody.Items.Single(x => x.Id == pending.Id.ToString());
-        pendingItem.Status.Should().Be("InvitationPending");
-        pendingItem.HasPendingInvitation.Should().BeTrue();
+        Assert.That(pendingItem.Status, Is.EqualTo("InvitationPending"));
+        Assert.That(pendingItem.HasPendingInvitation, Is.True);
     }
 
     [Test]
@@ -535,15 +534,15 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=name&sortDirection=asc&page=2&pageSize=10");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        body.Should().NotBeNull();
-        body!.Total.Should().Be(35);
-        body.Page.Should().Be(2);
-        body.PageSize.Should().Be(10);
-        body.Items.Count.Should().Be(10);
-        body.Items.First().Name.Should().Be("trainee-10");
-        body.Items.Last().Name.Should().Be("trainee-19");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Total, Is.EqualTo(35));
+        Assert.That(body.Page, Is.EqualTo(2));
+        Assert.That(body.PageSize, Is.EqualTo(10));
+        Assert.That(body.Items.Count, Is.EqualTo(10));
+        Assert.That(body.Items.First().Name, Is.EqualTo("trainee-10"));
+        Assert.That(body.Items.Last().Name, Is.EqualTo("trainee-19"));
     }
 
     [Test]
@@ -591,10 +590,10 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Select(x => x.Name).Should().Equal("Zulu Linked", "Alpha Pending", "Mike Expired");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items.Select(x => x.Name), Is.EqualTo(new[] { "Zulu Linked", "Alpha Pending", "Mike Expired" }));
     }
 
     [Test]
@@ -634,11 +633,11 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.GetAsync("/api/trainer/trainees?search=omega");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        body.Should().NotBeNull();
-        body!.Total.Should().Be(1);
-        body.Items.Should().ContainSingle(x => x.Id == matching.Id.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Total, Is.EqualTo(1));
+        Assert.That((body.Items).Where(x => x.Id == matching.Id.ToString()), Has.Exactly(1).Items);
     }
 
     [TestCase("sortBy=unknown", nameof(Messages.DashboardSortByInvalid), TestName = "GetDashboardTrainees_WithInvalidSortBy_ReturnsBadRequestWithResourceMessage")]
@@ -656,7 +655,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/trainer/trainees?{queryString}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var responseBody = await response.Content.ReadAsStringAsync();
         var originalCulture = CultureInfo.CurrentCulture;
         var originalUiCulture = CultureInfo.CurrentUICulture;
@@ -665,7 +664,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             var expectedMessage = typeof(Messages).GetProperty(expectedMessagePropertyName)!.GetValue(null) as string;
-            responseBody.Should().Contain(expectedMessage!);
+            Assert.That(responseBody, Does.Contain(expectedMessage!));
         }
         finally
         {
@@ -686,7 +685,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/trainer/trainees?pageSize={pageSize}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var responseBody = await response.Content.ReadAsStringAsync();
         var originalCulture = CultureInfo.CurrentCulture;
         var originalUiCulture = CultureInfo.CurrentUICulture;
@@ -694,7 +693,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            responseBody.Should().Contain(Messages.DashboardPageSizeRange);
+            Assert.That(responseBody, Does.Contain(Messages.DashboardPageSizeRange));
         }
         finally
         {
@@ -791,23 +790,23 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
 
         var datesResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/trainings/dates");
-        datesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(datesResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var dates = await datesResponse.Content.ReadFromJsonAsync<List<DateTime>>();
-        dates.Should().NotBeNull();
-        dates!.Count.Should().Be(2);
+        Assert.That(dates, Is.Not.Null);
+        Assert.That(dates!.Count, Is.EqualTo(2));
 
         var byDateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date", new
         {
             createdAt = trackedDay
         });
-        byDateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(byDateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var byDate = await byDateResponse.Content.ReadFromJsonAsync<List<TrainingByDateDetailsResponse>>();
-        byDate.Should().NotBeNull();
-        byDate!.Count.Should().Be(1);
-        byDate[0].Gym.Should().Be("Gym A");
-        byDate[0].Exercises.Should().ContainSingle();
-        byDate[0].Exercises[0].ExerciseDetails.Name.Should().Be("Bench Press");
-        byDate[0].Exercises[0].ExerciseDetails.Id.Should().Be(exerciseId.ToString());
+        Assert.That(byDate, Is.Not.Null);
+        Assert.That(byDate!.Count, Is.EqualTo(1));
+        Assert.That(byDate[0].Gym, Is.EqualTo("Gym A"));
+        Assert.That(byDate[0].Exercises, Has.Exactly(1).Items);
+        Assert.That(byDate[0].Exercises[0].ExerciseDetails.Name, Is.EqualTo("Bench Press"));
+        Assert.That(byDate[0].Exercises[0].ExerciseDetails.Id, Is.EqualTo(exerciseId.ToString()));
     }
 
     [Test]
@@ -884,20 +883,20 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             exerciseId = exerciseId.ToString()
         });
-        progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(progressResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var progress = await progressResponse.Content.ReadFromJsonAsync<List<ExerciseScoresChartDataResponse>>();
-        progress.Should().NotBeNull();
-        progress!.Count.Should().Be(2);
-        progress.Select(x => x.ExerciseId).Should().OnlyContain(x => x == exerciseId.ToString());
-        progress.Select(x => x.ExerciseId).Should().OnlyContain(id => IsCanonicalId<Exercise>(id));
+        Assert.That(progress, Is.Not.Null);
+        Assert.That(progress!.Count, Is.EqualTo(2));
+        Assert.That((progress.Select(x => x.ExerciseId)).All(x => x == exerciseId.ToString()), Is.True);
+        Assert.That((progress.Select(x => x.ExerciseId)).All(id => IsCanonicalId<Exercise>(id)), Is.True);
 
         var eloResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/elo/chart");
-        eloResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(eloResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var elo = await eloResponse.Content.ReadFromJsonAsync<List<EloRegistryChartResponse>>();
-        elo.Should().NotBeNull();
-        elo!.Count.Should().BeGreaterThanOrEqualTo(3);
-        elo.Select(x => x.Id).Should().Contain(firstEloRegistryId.ToString(), secondEloRegistryId.ToString());
-        elo.Select(x => x.Id).Should().OnlyContain(id => IsCanonicalId<EloRegistry>(id));
+        Assert.That(elo, Is.Not.Null);
+        Assert.That(elo!.Count, Is.GreaterThanOrEqualTo(3));
+        Assert.That(elo.Select(x => x.Id), Does.Contain(firstEloRegistryId.ToString()), secondEloRegistryId.ToString());
+        Assert.That((elo.Select(x => x.Id)).All(id => IsCanonicalId<EloRegistry>(id)), Is.True);
     }
 
     private static bool IsCanonicalId<TEntity>(string value)
@@ -946,12 +945,12 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
 
         var response = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/main-records/history");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var records = await response.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
-        records.Should().NotBeNull();
-        records!.Count.Should().Be(2);
-        records.Select(x => x.Weight).Should().Contain(ExpectedMainRecordWeights);
+        Assert.That(records, Is.Not.Null);
+        Assert.That(records!.Count, Is.EqualTo(2));
+        Assert.That(records.Select(x => x.Weight), Is.SupersetOf(ExpectedMainRecordWeights));
     }
 
     [Test]
@@ -988,10 +987,10 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         foreach (var response in responses)
         {
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-            body.Should().NotBeNull();
-            body!.Message.Should().NotBeNullOrWhiteSpace();
+            Assert.That(body, Is.Not.Null);
+            Assert.That(string.IsNullOrWhiteSpace(body!.Message), Is.False);
         }
     }
 
@@ -1011,7 +1010,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
 
         var invalidTraineeResponse = await Client.GetAsync("/api/trainer/trainees/not-a-guid/trainings/dates");
-        invalidTraineeResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(invalidTraineeResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var invalidTraineeBody = await invalidTraineeResponse.Content.ReadAsStringAsync();
         var originalCulture = CultureInfo.CurrentCulture;
         var originalUiCulture = CultureInfo.CurrentUICulture;
@@ -1019,7 +1018,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            invalidTraineeBody.Should().Contain(Messages.UserIdRequired);
+            Assert.That(invalidTraineeBody, Does.Contain(Messages.UserIdRequired));
         }
         finally
         {
@@ -1031,13 +1030,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             exerciseId = "not-a-guid"
         });
-        invalidExerciseResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(invalidExerciseResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var invalidExerciseBody = await invalidExerciseResponse.Content.ReadAsStringAsync();
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            invalidExerciseBody.Should().Contain(Messages.ExerciseIdRequired);
+            Assert.That(invalidExerciseBody, Does.Contain(Messages.ExerciseIdRequired));
         }
         finally
         {
@@ -1049,13 +1048,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             exerciseId = string.Empty
         });
-        emptyExerciseResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(emptyExerciseResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var emptyExerciseBody = await emptyExerciseResponse.Content.ReadAsStringAsync();
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            emptyExerciseBody.Should().Contain(Messages.ExerciseIdRequired);
+            Assert.That(emptyExerciseBody, Does.Contain(Messages.ExerciseIdRequired));
         }
         finally
         {
@@ -1113,7 +1112,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
         using (var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         var responses = await Task.WhenAll(
@@ -1127,18 +1126,18 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             using (response)
             {
-                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-                (await response.Content.ReadAsStringAsync()).Should().NotContain("Former relationship");
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+                Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("Former relationship"));
             }
         }
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDatabase = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verifyDatabase.TrainerTraineeLinks.AsNoTracking().CountAsync(link => link.TrainerId == trainer.Id && link.TraineeId == trainee.Id)).Should().Be(0);
-        (await verifyDatabase.Trainings.AsNoTracking().CountAsync(training => training.UserId == trainee.Id)).Should().Be(1);
-        (await verifyDatabase.ExerciseScores.AsNoTracking().CountAsync(score => score.UserId == trainee.Id)).Should().Be(1);
-        (await verifyDatabase.EloRegistries.AsNoTracking().CountAsync(entry => entry.Id == eloRegistryId && entry.UserId == trainee.Id)).Should().Be(1);
-        (await verifyDatabase.MainRecords.AsNoTracking().CountAsync(record => record.Id == mainRecordId && record.UserId == trainee.Id)).Should().Be(1);
+        Assert.That((await verifyDatabase.TrainerTraineeLinks.AsNoTracking().CountAsync(link => link.TrainerId == trainer.Id && link.TraineeId == trainee.Id)), Is.EqualTo(0));
+        Assert.That((await verifyDatabase.Trainings.AsNoTracking().CountAsync(training => training.UserId == trainee.Id)), Is.EqualTo(1));
+        Assert.That((await verifyDatabase.ExerciseScores.AsNoTracking().CountAsync(score => score.UserId == trainee.Id)), Is.EqualTo(1));
+        Assert.That((await verifyDatabase.EloRegistries.AsNoTracking().CountAsync(entry => entry.Id == eloRegistryId && entry.UserId == trainee.Id)), Is.EqualTo(1));
+        Assert.That((await verifyDatabase.MainRecords.AsNoTracking().CountAsync(record => record.Id == mainRecordId && record.UserId == trainee.Id)), Is.EqualTo(1));
     }
 
     [Test]
@@ -1163,7 +1162,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             using (response)
             {
-                response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             }
         }
     }
@@ -1186,18 +1185,18 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         var acceptResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/accept", null);
 
-        acceptResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(acceptResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
-        link.Should().NotBeNull();
-        link!.EpisodeId.Should().NotBeNull();
+        Assert.That(link, Is.Not.Null);
+        Assert.That(link!.EpisodeId, Is.Not.Null);
         var episode = await db.CoachingEpisodes.SingleAsync(candidate => candidate.Id == link.EpisodeId);
-        episode.StartedAt.Should().NotBeNull();
-        episode.StartedAtProvenance.Should().Be(CoachingEpisodeStartProvenance.ServerAcceptedInvitation);
-        episode.EndedAt.Should().BeNull();
-        episode.AuthorizationRevision.Should().Be(0);
+        Assert.That(episode.StartedAt, Is.Not.Null);
+        Assert.That(episode.StartedAtProvenance, Is.EqualTo(CoachingEpisodeStartProvenance.ServerAcceptedInvitation));
+        Assert.That(episode.EndedAt, Is.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(0));
     }
 
     [Test]
@@ -1218,7 +1217,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         var rejectResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/reject", null);
-        rejectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(rejectResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -1227,8 +1226,8 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             throw new InvalidOperationException($"Failed to parse invitation ID: {invitation.Id}");
         }
         var invitationEntity = await db.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
-        invitationEntity.Status.ToString().Should().Be("Rejected");
-        invitationEntity.RespondedAt.Should().NotBeNull();
+        Assert.That(invitationEntity.Status.ToString(), Is.EqualTo("Rejected"));
+        Assert.That(invitationEntity.RespondedAt, Is.Not.Null);
     }
 
     [Test]
@@ -1244,17 +1243,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         ClearIdempotencyKey();
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        invitation.Should().NotBeNull();
+        Assert.That(invitation, Is.Not.Null);
 
         SetAuthorizationHeader(wrongUser.Id);
         using var rejectResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/reject", null);
-        rejectResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(rejectResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Id<TrainerInvitation>.TryParse(invitation.Id, out var invitationId).Should().BeTrue();
-        (await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId)).Status
-            .Should().Be(TrainerInvitationStatus.Pending);
+        Assert.That(Id<TrainerInvitation>.TryParse(invitation.Id, out var invitationId), Is.True);
+        Assert.That((await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId)).Status, Is.EqualTo(TrainerInvitationStatus.Pending));
     }
 
     [Test]
@@ -1269,17 +1267,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         var createResponse = await Client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         ClearIdempotencyKey();
         var invitation = await createResponse.Content.ReadFromJsonAsync<TrainerInvitationResponse>();
-        invitation.Should().NotBeNull();
+        Assert.That(invitation, Is.Not.Null);
 
         ClearAuthorizationHeader();
         using var rejectResponse = await Client.PostAsync($"/api/trainee/invitations/{invitation!.Id}/reject", null);
-        rejectResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(rejectResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Id<TrainerInvitation>.TryParse(invitation.Id, out var invitationId).Should().BeTrue();
-        (await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId)).Status
-            .Should().Be(TrainerInvitationStatus.Pending);
+        Assert.That(Id<TrainerInvitation>.TryParse(invitation.Id, out var invitationId), Is.True);
+        Assert.That((await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitationId)).Status, Is.EqualTo(TrainerInvitationStatus.Pending));
     }
 
     [Test]
@@ -1306,16 +1303,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         var response = await Client.PostAsync($"/api/trainee/invitations/{invitationId}/accept", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Invitation has expired.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Invitation has expired."));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invitation = await verifyDb.TrainerInvitations.FirstAsync(i => i.Id == invitationId);
-        invitation.Status.ToString().Should().Be("Expired");
-        invitation.RespondedAt.Should().NotBeNull();
+        Assert.That(invitation.Status.ToString(), Is.EqualTo("Expired"));
+        Assert.That(invitation.RespondedAt, Is.Not.Null);
     }
 
     [Test]
@@ -1333,10 +1330,10 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         });
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Message), Is.False);
     }
 
     [Test]
@@ -1350,7 +1347,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             traineeId = Id<User>.New().ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -1383,27 +1380,27 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         SetAuthorizationHeader(otherTrainer.Id);
         var foreignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         SetAuthorizationHeader(ordinaryUser.Id);
         var ordinaryResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         ClearAuthorizationHeader();
         var anonymousResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         SetAuthorizationHeader(trainer.Id);
         var response = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await verifyDb.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
-        link.Should().BeNull();
+        Assert.That(link, Is.Null);
         var episode = await verifyDb.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
         var formerResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -1437,21 +1434,21 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainer.Id);
 
         var beforeUnlinkResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        beforeUnlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(beforeUnlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var beforeUnlink = await beforeUnlinkResponse.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        beforeUnlink.Should().NotBeNull();
-        beforeUnlink!.Total.Should().Be(1);
-        beforeUnlink.Items.Should().ContainSingle(x => x.Id == trainee.Id.ToString());
+        Assert.That(beforeUnlink, Is.Not.Null);
+        Assert.That(beforeUnlink!.Total, Is.EqualTo(1));
+        Assert.That((beforeUnlink.Items).Where(x => x.Id == trainee.Id.ToString()), Has.Exactly(1).Items);
 
         var unlinkResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/unlink", null);
-        unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var afterUnlinkResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        afterUnlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(afterUnlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var afterUnlink = await afterUnlinkResponse.Content.ReadFromJsonAsync<TrainerDashboardTraineesResponse>();
-        afterUnlink.Should().NotBeNull();
-        afterUnlink!.Total.Should().Be(0);
-        afterUnlink.Items.Should().NotContain(x => x.Id == trainee.Id.ToString());
+        Assert.That(afterUnlink, Is.Not.Null);
+        Assert.That(afterUnlink!.Total, Is.EqualTo(0));
+        Assert.That((afterUnlink.Items).Any(x => x.Id == trainee.Id.ToString()), Is.False);
     }
 
     [Test]
@@ -1480,15 +1477,15 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         var response = await Client.PostAsync("/api/trainee/trainer/detach", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await verifyDb.TrainerTraineeLinks.FirstOrDefaultAsync(x => x.TrainerId == trainer.Id && x.TraineeId == trainee.Id);
-        link.Should().BeNull();
+        Assert.That(link, Is.Null);
         var episode = await verifyDb.CoachingEpisodes.SingleAsync(candidate => candidate.Id == episodeId);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
     }
 
     [Test]
@@ -1499,7 +1496,7 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         using var response = await Client.PostAsync("/api/trainee/trainer/detach", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -1526,19 +1523,19 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         {
             name = "Trainer Owned Plan"
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         var createdPlan = await createResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
-        createdPlan.Should().NotBeNull();
-        createdPlan!.Name.Should().Be("Trainer Owned Plan");
-        createdPlan.IsActive.Should().BeFalse();
+        Assert.That(createdPlan, Is.Not.Null);
+        Assert.That(createdPlan!.Name, Is.EqualTo("Trainer Owned Plan"));
+        Assert.That(createdPlan.IsActive, Is.False);
 
-        Id<Plan>.TryParse(createdPlan.Id, out var createdPlanId).Should().BeTrue();
+        Assert.That(Id<Plan>.TryParse(createdPlan.Id, out var createdPlanId), Is.True);
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/update", new { name = "Updated Trainer Plan" });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var updatedPlan = await updateResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
-        updatedPlan.Should().NotBeNull();
-        updatedPlan!.Name.Should().Be("Updated Trainer Plan");
+        Assert.That(updatedPlan, Is.Not.Null);
+        Assert.That(updatedPlan!.Name, Is.EqualTo("Updated Trainer Plan"));
 
         var trainerExerciseId = await CreateExerciseViaEndpointAsync(trainer.Id, templateExerciseName, BodyParts.Chest);
         await CreatePlanDayViaEndpointAsync(
@@ -1548,63 +1545,63 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             [new PlanDayExerciseInput { ExerciseId = trainerExerciseId.ToString(), Series = 4, Reps = "10" }]);
 
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/assign", null);
-        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(assignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainer.Id);
         var traineePlansResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/plans");
-        traineePlansResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(traineePlansResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var traineePlans = await traineePlansResponse.Content.ReadFromJsonAsync<List<TrainerManagedPlanResponse>>();
-        traineePlans.Should().NotBeNull();
-        traineePlans!.Should().ContainSingle();
-        traineePlans.Single().Id.Should().NotBe(createdPlan.Id);
-        traineePlans.Single().Name.Should().Be(updatedPlan.Name);
-        traineePlans.Single().IsActive.Should().BeTrue();
+        Assert.That(traineePlans, Is.Not.Null);
+        Assert.That(traineePlans!, Has.Exactly(1).Items);
+        Assert.That(traineePlans.Single().Id, Is.Not.EqualTo(createdPlan.Id));
+        Assert.That(traineePlans.Single().Name, Is.EqualTo(updatedPlan.Name));
+        Assert.That(traineePlans.Single().IsActive, Is.True);
 
         SetAuthorizationHeader(trainee.Id);
         var activeResponse = await Client.GetAsync("/api/trainee/plan/active");
-        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(activeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var activePlan = await activeResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
-        activePlan.Should().NotBeNull();
-        activePlan!.Id.Should().NotBe(createdPlan.Id);
-        activePlan.Name.Should().Be(updatedPlan.Name);
-        activePlan.IsActive.Should().BeTrue();
+        Assert.That(activePlan, Is.Not.Null);
+        Assert.That(activePlan!.Id, Is.Not.EqualTo(createdPlan.Id));
+        Assert.That(activePlan.Name, Is.EqualTo(updatedPlan.Name));
+        Assert.That(activePlan.IsActive, Is.True);
 
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Id<Plan>.TryParse(activePlan.Id, out var traineePlanId).Should().BeTrue();
+            Assert.That(Id<Plan>.TryParse(activePlan.Id, out var traineePlanId), Is.True);
 
             var copiedPlan = await db.Plans.FirstAsync(p => p.Id == traineePlanId);
-            copiedPlan.UserId.Should().Be(trainee.Id);
+            Assert.That(copiedPlan.UserId, Is.EqualTo(trainee.Id));
 
             var copiedPlanDay = await db.PlanDays
                 .Include(pd => pd.Exercises)
                 .ThenInclude(pde => pde.Exercise)
                 .FirstAsync(pd => pd.PlanId == traineePlanId && !pd.IsDeleted);
 
-            copiedPlanDay.Name.Should().Be("Template Day");
-            copiedPlanDay.Exercises.Should().ContainSingle();
-            copiedPlanDay.Exercises.Single().Series.Should().Be(4);
-            copiedPlanDay.Exercises.Single().Reps.Should().Be("10");
-            copiedPlanDay.Exercises.Single().Exercise.Should().NotBeNull();
-            copiedPlanDay.Exercises.Single().Exercise!.Name.Should().Be(templateExerciseName);
-            copiedPlanDay.Exercises.Single().Exercise!.UserId.Should().Be(trainee.Id);
+            Assert.That(copiedPlanDay.Name, Is.EqualTo("Template Day"));
+            Assert.That(copiedPlanDay.Exercises, Has.Exactly(1).Items);
+            Assert.That(copiedPlanDay.Exercises.Single().Series, Is.EqualTo(4));
+            Assert.That(copiedPlanDay.Exercises.Single().Reps, Is.EqualTo("10"));
+            Assert.That(copiedPlanDay.Exercises.Single().Exercise, Is.Not.Null);
+            Assert.That(copiedPlanDay.Exercises.Single().Exercise!.Name, Is.EqualTo(templateExerciseName));
+            Assert.That(copiedPlanDay.Exercises.Single().Exercise!.UserId, Is.EqualTo(trainee.Id));
 
             var trainerPlan = await db.Plans.FirstAsync(p => p.Id == createdPlanId);
-            trainerPlan.UserId.Should().Be(trainer.Id);
+            Assert.That(trainerPlan.UserId, Is.EqualTo(trainer.Id));
         }
 
         SetAuthorizationHeader(trainer.Id);
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
-        unassignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(trainee.Id);
         var noActiveResponse = await Client.GetAsync("/api/trainee/plan/active");
-        noActiveResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(noActiveResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         SetAuthorizationHeader(trainer.Id);
         var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{createdPlan.Id}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [TestCase(PlanPurpose.Unclassified)]
@@ -1637,26 +1634,26 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainee.Id);
         using var ownerResponse = await Client.GetAsync("/api/trainee/plan/active");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerPlan = await ownerResponse.Content.ReadFromJsonAsync<TrainerManagedPlanResponse>();
-        ownerPlan.Should().NotBeNull();
-        ownerPlan!.Id.Should().Be(plan.Id.ToString());
-        ownerPlan.Name.Should().Be(plan.Name);
-        ownerPlan.IsActive.Should().BeTrue();
+        Assert.That(ownerPlan, Is.Not.Null);
+        Assert.That(ownerPlan!.Id, Is.EqualTo(plan.Id.ToString()));
+        Assert.That(ownerPlan.Name, Is.EqualTo(plan.Name));
+        Assert.That(ownerPlan.IsActive, Is.True);
 
         SetAuthorizationHeader(otherTrainee.Id);
         using var otherResponse = await Client.GetAsync("/api/trainee/plan/active");
-        otherResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(otherResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var otherResponseText = await otherResponse.Content.ReadAsStringAsync();
-        otherResponseText.Should().NotContain(plan.Id.ToString());
-        otherResponseText.Should().NotContain(plan.Name);
+        Assert.That(otherResponseText, Does.Not.Contain(plan.Id.ToString()));
+        Assert.That(otherResponseText, Does.Not.Contain(plan.Name));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainee/plan/active");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(plan.Id.ToString());
-        anonymousResponseText.Should().NotContain(plan.Name);
+        Assert.That(anonymousResponseText, Does.Not.Contain(plan.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(plan.Name));
     }
 
     [Test]
@@ -1698,16 +1695,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
 
         SetAuthorizationHeader(trainerA.Id);
         using var foreignCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans", new { name = "Foreign create" });
-        foreignCreateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var assignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/assign", null);
-        assignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(assignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignDeleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/delete", null);
-        foreignDeleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignDeleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignUpdateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/update", new { name = "Blocked update" });
-        foreignUpdateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignUpdateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignUnassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
-        foreignUnassignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignUnassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -1719,13 +1716,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
         }
 
         using var formerCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans", new { name = "Former create" });
-        formerCreateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var formerUnassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
-        formerUnassignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerUnassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var formerDeleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/delete", null);
-        formerDeleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerDeleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var formerUpdateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{planId}/update", new { name = "Blocked former update" });
-        formerUpdateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerUpdateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -1745,16 +1742,16 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             name = "Forbidden plan"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.Unauthorized));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.Unauthorized)));
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/unassign", null);
-        unassignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(unassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{Id<Plan>.New()}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/plans/{Id<Plan>.New()}/update", new { name = "Forbidden update" });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -1772,13 +1769,13 @@ public sealed class TrainerRelationshipTests : IntegrationTestBase
             name = "Anonymous plan"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var unassignResponse = await Client.PostAsync($"/api/trainer/trainees/{Id<User>.New()}/plans/unassign", null);
-        unassignResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(unassignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{Id<User>.New()}/plans/{Id<Plan>.New()}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{Id<User>.New()}/plans/{Id<Plan>.New()}/update", new { name = "Anonymous update" });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private static async Task LinkTrainerAndTraineeAsync(AppDbContext db, Id<User> trainerId, Id<User> traineeId)

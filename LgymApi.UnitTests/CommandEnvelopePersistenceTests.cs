@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -59,9 +58,9 @@ public class CommandEnvelopePersistenceTests
         // Assert
         var retrieved = await _context.CommandEnvelopes
             .FirstOrDefaultAsync(e => e.Id == envelope.Id);
-        retrieved.Should().NotBeNull();
-        retrieved!.CorrelationId.Should().Be(correlationId);
-        retrieved.Status.Should().Be(ActionExecutionStatus.Pending);
+        Assert.That(retrieved, Is.Not.Null);
+        Assert.That(retrieved!.CorrelationId, Is.EqualTo(correlationId));
+        Assert.That(retrieved.Status, Is.EqualTo(ActionExecutionStatus.Pending));
     }
 
     [Test]
@@ -116,11 +115,11 @@ public class CommandEnvelopePersistenceTests
             .OrderBy(l => l.AttemptNumber)
             .ToListAsync();
 
-        logs.Should().HaveCount(2);
-        logs[0].AttemptNumber.Should().Be(1);
-        logs[0].Status.Should().Be(ActionExecutionStatus.Failed);
-        logs[1].AttemptNumber.Should().Be(2);
-        logs[1].Status.Should().Be(ActionExecutionStatus.Processing);
+        Assert.That(logs, Has.Exactly(2).Items);
+        Assert.That(logs[0].AttemptNumber, Is.EqualTo(1));
+        Assert.That(logs[0].Status, Is.EqualTo(ActionExecutionStatus.Failed));
+        Assert.That(logs[1].AttemptNumber, Is.EqualTo(2));
+        Assert.That(logs[1].Status, Is.EqualTo(ActionExecutionStatus.Processing));
     }
 
     [Test]
@@ -143,15 +142,15 @@ public class CommandEnvelopePersistenceTests
 
         // Act - transition from Pending to Processing
         var retrieved = await _context.CommandEnvelopes.FindAsync(envelope.Id);
-        retrieved.Should().NotBeNull();
+        Assert.That(retrieved, Is.Not.Null);
         retrieved!.Status = ActionExecutionStatus.Processing;
         retrieved.LastAttemptAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
 
         // Assert - transition persisted
         var final = await _context.CommandEnvelopes.FindAsync(envelope.Id);
-        final!.Status.Should().Be(ActionExecutionStatus.Processing);
-        final.LastAttemptAt.Should().NotBeNull();
+        Assert.That(final!.Status, Is.EqualTo(ActionExecutionStatus.Processing));
+        Assert.That(final.LastAttemptAt, Is.Not.Null);
     }
 
     [Test]
@@ -174,15 +173,15 @@ public class CommandEnvelopePersistenceTests
 
         // Act - mark as completed
         var retrieved = await _context.CommandEnvelopes.FindAsync(envelope.Id);
-        retrieved.Should().NotBeNull();
+        Assert.That(retrieved, Is.Not.Null);
         retrieved!.Status = ActionExecutionStatus.Completed;
         retrieved.CompletedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
 
         // Assert
         var final = await _context.CommandEnvelopes.FindAsync(envelope.Id);
-        final!.Status.Should().Be(ActionExecutionStatus.Completed);
-        final.CompletedAt.Should().NotBeNull();
+        Assert.That(final!.Status, Is.EqualTo(ActionExecutionStatus.Completed));
+        Assert.That(final.CompletedAt, Is.Not.Null);
     }
 
     [Test]
@@ -221,8 +220,8 @@ public class CommandEnvelopePersistenceTests
 
         // Assert
         var retrieved = await _context.ActionExecutionLogs.FirstAsync();
-        retrieved.ErrorMessage.Should().Be("Connection timeout");
-        retrieved.ErrorDetails.Should().Contain("TimeoutException");
+        Assert.That(retrieved.ErrorMessage, Is.EqualTo("Connection timeout"));
+        Assert.That(retrieved.ErrorDetails, Does.Contain("TimeoutException"));
     }
 
     [Test]
@@ -263,8 +262,8 @@ public class CommandEnvelopePersistenceTests
             .Where(e => e.CorrelationId == correlationId)
             .ToListAsync();
 
-        related.Should().HaveCount(2);
-        related.Select(e => e.CommandTypeFullName).Distinct().ToList().Should().HaveCount(2);
+        Assert.That(related, Has.Exactly(2).Items);
+        Assert.That(related.Select(e => e.CommandTypeFullName).Distinct().ToList(), Has.Exactly(2).Items);
     }
 
     [Test]
@@ -320,7 +319,7 @@ public class CommandEnvelopePersistenceTests
             .ToListAsync();
 
         // Assert
-        readyForWork.Should().HaveCount(1);
-        readyForWork[0].CommandTypeFullName.Should().Be("Cmd1, Asm");
+        Assert.That(readyForWork, Has.Exactly(1).Items);
+        Assert.That(readyForWork[0].CommandTypeFullName, Is.EqualTo("Cmd1, Asm"));
     }
 }

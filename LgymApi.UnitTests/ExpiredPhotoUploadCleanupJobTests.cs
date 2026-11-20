@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.BackgroundWorker.Jobs;
 using NSubstitute;

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Validation;
@@ -30,8 +29,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)).Should().BeTrue();
+        Assert.That(result.IsValid, Is.False);
+        Assert.That(result.Errors.Any(e => e.PropertyName.Contains("Order", StringComparison.Ordinal)), Is.True);
     }
 
     [Test]
@@ -45,7 +44,7 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeTrue();
+        Assert.That(result.IsValid, Is.True);
     }
 
     [Test]
@@ -74,8 +73,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Fields[0].ModuleConfig");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "Fields[0].ModuleConfig"), Is.True);
     }
 
     [TestCase("Foo")]
@@ -105,8 +104,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Fields[0].ModuleConfig");
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == "Fields[0].ModuleConfig"), Is.True);
     }
 
     [Test]
@@ -122,8 +121,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(request.TemplateId));
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == nameof(request.TemplateId)), Is.True);
     }
 
     [Test]
@@ -139,8 +138,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(request.TemplateId));
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == nameof(request.TemplateId)), Is.True);
     }
 
     [Test]
@@ -156,8 +155,8 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(request.IntervalValue));
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.PropertyName == nameof(request.IntervalValue)), Is.True);
     }
 
     [Test]
@@ -174,7 +173,7 @@ public sealed class ReportingValidatorsTests
 
         var result = validator.Validate(request);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.ErrorMessage == Messages.InvalidDateRange);
+        Assert.That(result.IsValid, Is.False);
+        Assert.That((result.Errors).Any(x => x.ErrorMessage == Messages.InvalidDateRange), Is.True);
     }
 }

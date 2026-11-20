@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -79,15 +78,14 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
             serviceProvider.GetRequiredService<ICommandOutboxWriter>(),
             observedUnitOfWork,
             NullLogger<RecurringReportAssignmentService>.Instance);
-        service.GetType().GetConstructors().Single().GetParameters()
-            .Should().NotContain(parameter => parameter.ParameterType == typeof(ICommandDispatcher));
+        Assert.That((service.GetType().GetConstructors().Single().GetParameters()).Any(parameter => parameter.ParameterType == typeof(ICommandDispatcher)), Is.False);
 
         await service.ProcessDueAssignmentsAsync(cancellationToken);
 
-        observedUnitOfWork.SaveChangesCalls.Should().Be(2);
-        observedUnitOfWork.CommitCalls.Should().Be(1);
-        observedUnitOfWork.RollbackCalls.Should().Be(1);
-        requestPersistence.FailedAttemptRequestId.Should().NotBeNull();
+        Assert.That(observedUnitOfWork.SaveChangesCalls, Is.EqualTo(2));
+        Assert.That(observedUnitOfWork.CommitCalls, Is.EqualTo(1));
+        Assert.That(observedUnitOfWork.RollbackCalls, Is.EqualTo(1));
+        Assert.That(requestPersistence.FailedAttemptRequestId, Is.Not.Null);
 
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -103,19 +101,18 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        assignments.Should().HaveCount(2);
-        assignments.Single(assignment => assignment.Id == scenario.FirstAssignmentId)
-            .CurrentReportRequestId.Should().Be(scenario.FirstCurrentRequestId);
+        Assert.That(assignments, Has.Exactly(2).Items);
+        Assert.That(assignments.Single(assignment => assignment.Id == scenario.FirstAssignmentId)
+            .CurrentReportRequestId, Is.EqualTo(scenario.FirstCurrentRequestId));
         var secondAssignment = assignments.Single(assignment => assignment.Id == scenario.SecondAssignmentId);
-        secondAssignment.CurrentReportRequestId.Should().NotBe(scenario.SecondCurrentRequestId);
-        requests.Should().HaveCount(3);
-        requests.Should().NotContain(request => request.Id == requestPersistence.FailedAttemptRequestId);
-        requests.Should().ContainSingle(request => request.Id == secondAssignment.CurrentReportRequestId);
-        envelopes.Should().ContainSingle();
-        envelopes[0].CommandTypeFullName.Should().Be(
-            "LgymApi.BackgroundWorker.Common.Commands.ReportRequestCreatedInAppNotificationCommand");
-        envelopes[0].PayloadJson.Should().Contain(secondAssignment.CurrentReportRequestId!.Value.ToString());
-        envelopes[0].PayloadJson.Should().NotContain(requestPersistence.FailedAttemptRequestId!.Value.ToString());
+        Assert.That(secondAssignment.CurrentReportRequestId, Is.Not.EqualTo(scenario.SecondCurrentRequestId));
+        Assert.That(requests, Has.Exactly(3).Items);
+        Assert.That((requests).Any(request => request.Id == requestPersistence.FailedAttemptRequestId), Is.False);
+        Assert.That((requests).Where(request => request.Id == secondAssignment.CurrentReportRequestId), Has.Exactly(1).Items);
+        Assert.That(envelopes, Has.Exactly(1).Items);
+        Assert.That(envelopes[0].CommandTypeFullName, Is.EqualTo("LgymApi.BackgroundWorker.Common.Commands.ReportRequestCreatedInAppNotificationCommand"));
+        Assert.That(envelopes[0].PayloadJson, Does.Contain(secondAssignment.CurrentReportRequestId!.Value.ToString()));
+        Assert.That(envelopes[0].PayloadJson, Does.Not.Contain(requestPersistence.FailedAttemptRequestId!.Value.ToString()));
     }
 
     [Test]
@@ -145,12 +142,12 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var completionBeforeRelease = async () =>
             await blockedReload.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
 
-        await completionBeforeRelease.Should().ThrowAsync<TimeoutException>();
+        await Assert.ThatAsync(async () => { await completionBeforeRelease(); }, Throws.InstanceOf<TimeoutException>());
 
         await lockingTransaction.CommitAsync(cancellationToken);
 
         var blockedResult = await blockedReload.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
-        blockedResult!.Note.Should().Be("committed by locking transaction");
+        Assert.That(blockedResult!.Note, Is.EqualTo("committed by locking transaction"));
         AssertCompleteGraph(blockedResult);
         await blockedTransaction.CommitAsync(cancellationToken);
     }
@@ -167,7 +164,7 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var firstDatabase = firstScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var firstRepository = new ReportRequestSubmissionPersistenceRepository(firstDatabase);
         await using var firstTransaction = await firstDatabase.Database.BeginTransactionAsync(cancellationToken);
-        (await firstRepository.FindSubmissionForTraineeForUpdateAsync(scenario.SubmissionId, scenario.TraineeId, cancellationToken)).Should().NotBeNull();
+        Assert.That((await firstRepository.FindSubmissionForTraineeForUpdateAsync(scenario.SubmissionId, scenario.TraineeId, cancellationToken)), Is.Not.Null);
 
         await using var secondScope = Factory.Services.CreateAsyncScope();
         var secondDatabase = secondScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -176,9 +173,9 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var secondRead = secondRepository.FindSubmissionForTraineeForUpdateAsync(scenario.SubmissionId, scenario.TraineeId, cancellationToken);
 
         Func<Task> waitForSecondRead = () => secondRead.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
-        await waitForSecondRead.Should().ThrowAsync<TimeoutException>();
+        await Assert.ThatAsync(async () => { await waitForSecondRead(); }, Throws.InstanceOf<TimeoutException>());
         await firstTransaction.CommitAsync(cancellationToken);
-        (await secondRead.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)).Should().NotBeNull();
+        Assert.That((await secondRead.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)), Is.Not.Null);
         await secondTransaction.CommitAsync(cancellationToken);
     }
 
@@ -194,7 +191,7 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var readDatabase = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var readRepository = new ReportRequestSubmissionPersistenceRepository(readDatabase);
         await using var readTransaction = await readDatabase.Database.BeginTransactionAsync(cancellationToken);
-        (await readRepository.FindSubmissionForTraineeForUpdateAsync(scenario.SubmissionId, scenario.TraineeId, cancellationToken)).Should().NotBeNull();
+        Assert.That((await readRepository.FindSubmissionForTraineeForUpdateAsync(scenario.SubmissionId, scenario.TraineeId, cancellationToken)), Is.Not.Null);
 
         await using var editScope = Factory.Services.CreateAsyncScope();
         var editDatabase = editScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -203,9 +200,9 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var edit = editRepository.FindSubmissionForTrainerForUpdateAsync(scenario.SubmissionId, scenario.TrainerId, scenario.TraineeId, cancellationToken);
 
         Func<Task> waitForEdit = () => edit.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
-        await waitForEdit.Should().ThrowAsync<TimeoutException>();
+        await Assert.ThatAsync(async () => { await waitForEdit(); }, Throws.InstanceOf<TimeoutException>());
         await readTransaction.CommitAsync(cancellationToken);
-        (await edit.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)).Should().NotBeNull();
+        Assert.That((await edit.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)), Is.Not.Null);
         await editTransaction.CommitAsync(cancellationToken);
     }
 
@@ -483,10 +480,10 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
         var changes = await database.RecurringReportScheduleChanges.AsNoTracking()
             .Where(change => change.RecurringReportAssignmentId == scenario.AssignmentId)
             .ToListAsync();
-        assignment.IsActive.Should().Be(expectedActive);
-        assignment.ScheduleRevision.Should().Be(expectedRevision);
-        changes.Single(change => change.Id == scenario.OverrideId).Status.Should().Be(expectedOverrideStatus);
-        changes.Single(change => change.Id == scenario.ProposalId).Status.Should().Be(expectedProposalStatus);
+        Assert.That(assignment.IsActive, Is.EqualTo(expectedActive));
+        Assert.That(assignment.ScheduleRevision, Is.EqualTo(expectedRevision));
+        Assert.That(changes.Single(change => change.Id == scenario.OverrideId).Status, Is.EqualTo(expectedOverrideStatus));
+        Assert.That(changes.Single(change => change.Id == scenario.ProposalId).Status, Is.EqualTo(expectedProposalStatus));
     }
 
     private static AssignmentGraph CreateDueAssignmentGraph(
@@ -540,12 +537,12 @@ public sealed class PostgreSqlRecurringReportProcessingTests : PostgreSqlIntegra
 
     private static void AssertCompleteGraph(RecurringReportAssignmentPersistenceModel? result)
     {
-        result.Should().NotBeNull();
-        result!.IsDeleted.Should().BeFalse();
-        result.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest.Should().NotBeNull();
-        result.CurrentReportRequest!.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest.Submission.Should().NotBeNull();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.IsDeleted, Is.False);
+        Assert.That(result.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest, Is.Not.Null);
+        Assert.That(result.CurrentReportRequest!.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest.Submission, Is.Not.Null);
     }
 
     private sealed record ProcessingScenario(

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -49,9 +48,9 @@ internal sealed class PostgreSqlCoachingTraineeNoteConcurrencyTests : PostgreSql
         var hidingSnapshot = await hidingNotes.FindNoteByIdAsync(noteId);
         var staleSnapshot = await staleNotes.FindNoteByIdAsync(noteId);
 
-        hidingSnapshot.Should().NotBeNull();
-        staleSnapshot.Should().NotBeNull();
-        hidingSnapshot!.UpdatedAt.Should().Be(staleSnapshot!.UpdatedAt);
+        Assert.That(hidingSnapshot, Is.Not.Null);
+        Assert.That(staleSnapshot, Is.Not.Null);
+        Assert.That(hidingSnapshot!.UpdatedAt, Is.EqualTo(staleSnapshot!.UpdatedAt));
         var expectedUpdatedAt = hidingSnapshot.UpdatedAt;
         var hiddenAt = DateTimeOffset.UtcNow;
 
@@ -101,7 +100,7 @@ internal sealed class PostgreSqlCoachingTraineeNoteConcurrencyTests : PostgreSql
             "Updated"));
 
         var staleSave = () => staleUnitOfWork.SaveChangesAsync();
-        await staleSave.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await staleSave(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -113,10 +112,10 @@ internal sealed class PostgreSqlCoachingTraineeNoteConcurrencyTests : PostgreSql
             .ToListAsync();
         var visibleHistory = await verificationNotes.GetVisibleHistoryAsync(trainee.Id, noteId);
 
-        persistedNote.VisibleToTrainee.Should().BeFalse();
-        persistedNote.Content.Should().Be("Hidden content");
-        persistedHistory.Should().ContainSingle(entry => entry.Id == hidingHistoryId && !entry.NewVisibleToTrainee);
-        persistedHistory.Should().NotContain(entry => entry.Id == staleHistoryId || entry.NewContent == "Stale restored content");
-        visibleHistory.Should().BeNull();
+        Assert.That(persistedNote.VisibleToTrainee, Is.False);
+        Assert.That(persistedNote.Content, Is.EqualTo("Hidden content"));
+        Assert.That((persistedHistory).Where(entry => entry.Id == hidingHistoryId && !entry.NewVisibleToTrainee), Has.Exactly(1).Items);
+        Assert.That((persistedHistory).Any(entry => entry.Id == staleHistoryId || entry.NewContent == "Stale restored content"), Is.False);
+        Assert.That(visibleHistory, Is.Null);
     }
 }

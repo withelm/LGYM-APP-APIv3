@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Api.Features.Tutorial.Contracts;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Enums;
@@ -42,7 +41,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var registerResponse = await Client.PostAsJsonAsync("/api/register", registerRequest);
         ClearIdempotencyKey();
 
-        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(registerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -50,7 +49,7 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         var tutorial = await db.UserTutorialProgresses
             .AsNoTracking()
             .SingleAsync(progress => progress.UserId == registeredUser.Id && progress.TutorialType == TutorialType.OnboardingDemo);
-        tutorial.IsCompleted.Should().BeFalse();
+        Assert.That(tutorial.IsCompleted, Is.False);
 
         // Login to get token and user info
         var loginRequest = new
@@ -60,13 +59,13 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         };
 
         var loginResponse = await Client.PostAsJsonAsync("/api/login", loginRequest);
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(SharedSerializationOptions.Current);
-        loginBody.Should().NotBeNull();
-        loginBody!.Token.Should().NotBeNullOrWhiteSpace();
-        loginBody.User.Should().NotBeNull();
-        loginBody.User!.HasActiveTutorials.Should().BeTrue();
+        Assert.That(loginBody, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(loginBody!.Token), Is.False);
+        Assert.That(loginBody.User, Is.Not.Null);
+        Assert.That(loginBody.User!.HasActiveTutorials, Is.True);
     }
 
     [Test]
@@ -81,15 +80,15 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
 
         // Get active tutorials
         var response = await Client.GetAsync("/api/tutorials/active");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].TutorialType.Should().Be(TutorialType.OnboardingDemo);
-        body[0].IsCompleted.Should().BeFalse();
-        body[0].TotalSteps.Should().Be(6);
-        body[0].CompletedSteps.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].TutorialType, Is.EqualTo(TutorialType.OnboardingDemo));
+        Assert.That(body[0].IsCompleted, Is.False);
+        Assert.That(body[0].TotalSteps, Is.EqualTo(6));
+        Assert.That(body[0].CompletedSteps, Is.Empty);
     }
 
     [Test]
@@ -104,14 +103,14 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
 
         // Get tutorial progress
         var response = await Client.GetAsync("/api/tutorials/OnboardingDemo");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
-        body.Should().NotBeNull();
-        body!.TutorialType.Should().Be(TutorialType.OnboardingDemo);
-        body.IsCompleted.Should().BeFalse();
-        body.CompletedSteps.Should().BeEmpty();
-        body.RemainingSteps.Should().HaveCount(6);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.TutorialType, Is.EqualTo(TutorialType.OnboardingDemo));
+        Assert.That(body.IsCompleted, Is.False);
+        Assert.That(body.CompletedSteps, Is.Empty);
+        Assert.That(body.RemainingSteps, Has.Exactly(6).Items);
     }
 
     [Test]
@@ -131,18 +130,18 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         };
 
         var completeResponse = await PostAsJsonWithApiOptionsAsync("/api/tutorials/completeStep", completeStepRequest);
-        completeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(completeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Get updated progress
         var progressResponse = await Client.GetAsync("/api/tutorials/OnboardingDemo");
-        progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(progressResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
-        progress.Should().NotBeNull();
-        progress!.CompletedSteps.Should().HaveCount(1);
-        progress!.CompletedSteps.Should().Contain(TutorialStep.CreateArea);
-        progress.RemainingSteps.Should().HaveCount(5);
-        progress.IsCompleted.Should().BeFalse();
+        Assert.That(progress, Is.Not.Null);
+        Assert.That(progress!.CompletedSteps, Has.Exactly(1).Items);
+        Assert.That(progress!.CompletedSteps, Does.Contain(TutorialStep.CreateArea));
+        Assert.That(progress.RemainingSteps, Has.Exactly(5).Items);
+        Assert.That(progress.IsCompleted, Is.False);
     }
 
     [Test]
@@ -161,23 +160,23 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
         };
 
         var completeResponse = await PostAsJsonWithApiOptionsAsync("/api/tutorials/complete", completeTutorialRequest);
-        completeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(completeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Get active tutorials - should be empty
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
-        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(activeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
-        activeTutorials.Should().NotBeNull();
-        activeTutorials.Should().BeEmpty();
+        Assert.That(activeTutorials, Is.Not.Null);
+        Assert.That(activeTutorials, Is.Empty);
 
         // Check token - hasActiveTutorials should be false
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
-        checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(checkTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(SharedSerializationOptions.Current);
-        tokenUser.Should().NotBeNull();
-        tokenUser!.HasActiveTutorials.Should().BeFalse();
+        Assert.That(tokenUser, Is.Not.Null);
+        Assert.That(tokenUser!.HasActiveTutorials, Is.False);
     }
 
     [Test]
@@ -208,33 +207,33 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
             };
 
             var stepResponse = await PostAsJsonWithApiOptionsAsync("/api/tutorials/completeStep", completeStepRequest);
-            stepResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(stepResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         // Get tutorial progress - should be completed
         var progressResponse = await Client.GetAsync("/api/tutorials/OnboardingDemo");
-        progressResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(progressResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var progress = await progressResponse.Content.ReadFromJsonAsync<TutorialProgressDto>(SharedSerializationOptions.Current);
-        progress.Should().NotBeNull();
-        progress!.CompletedSteps.Should().HaveCount(6);
-        progress.IsCompleted.Should().BeTrue();
+        Assert.That(progress, Is.Not.Null);
+        Assert.That(progress!.CompletedSteps, Has.Exactly(6).Items);
+        Assert.That(progress.IsCompleted, Is.True);
 
         // Get active tutorials - should be empty
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
-        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(activeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
-        activeTutorials.Should().NotBeNull();
-        activeTutorials.Should().BeEmpty();
+        Assert.That(activeTutorials, Is.Not.Null);
+        Assert.That(activeTutorials, Is.Empty);
 
         // Check token - hasActiveTutorials should be false
         var checkTokenResponse = await Client.GetAsync("/api/checkToken");
-        checkTokenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(checkTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var tokenUser = await checkTokenResponse.Content.ReadFromJsonAsync<UserDto>(SharedSerializationOptions.Current);
-        tokenUser.Should().NotBeNull();
-        tokenUser!.HasActiveTutorials.Should().BeFalse();
+        Assert.That(tokenUser, Is.Not.Null);
+        Assert.That(tokenUser!.HasActiveTutorials, Is.False);
     }
 
     [Test]
@@ -252,19 +251,19 @@ public sealed class TutorialIntegrationTests : IntegrationTestBase
 
         // Complete tutorial first time
         var firstResponse = await PostAsJsonWithApiOptionsAsync("/api/tutorials/complete", completeTutorialRequest);
-        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Complete tutorial second time - should not fail
         var secondResponse = await PostAsJsonWithApiOptionsAsync("/api/tutorials/complete", completeTutorialRequest);
-        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(secondResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Verify still completed and active list is empty
         var activeResponse = await Client.GetAsync("/api/tutorials/active");
-        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(activeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var activeTutorials = await activeResponse.Content.ReadFromJsonAsync<List<TutorialProgressDto>>(SharedSerializationOptions.Current);
-        activeTutorials.Should().NotBeNull();
-        activeTutorials.Should().BeEmpty();
+        Assert.That(activeTutorials, Is.Not.Null);
+        Assert.That(activeTutorials, Is.Empty);
     }
 }
 

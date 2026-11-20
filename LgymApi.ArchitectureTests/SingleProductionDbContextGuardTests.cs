@@ -21,22 +21,23 @@ public sealed class SingleProductionDbContextGuardTests
     private static readonly string[] ExpectedSolutionPlatforms = ["Any CPU", "x64", "x86"];
     private static readonly IReadOnlyDictionary<string, string> ApprovedProjectFileLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "784fc7ec545ef354f14b14c3f9925298fed54a73429f78399fef9fd1b7ef7838",
+        ["LgymApi.DataSeeder.Tests/LgymApi.DataSeeder.Tests.csproj"] = "72b1ed06fcd1b74388dd968eaf3a56286575ff299d1209e42ca4b54b376d439c",
         ["LgymApi.Api/LgymApi.Api.csproj"] = "874e79fdd00d04c02203ca7c1937c6195c9906cc84aeff517876b5b8428711df",
-        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "583b80cc08387417b6f5c92b3a3a31eba558d12b7e32fefe82a523878b545a14",
+        ["LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj"] = "7fb609506f2be1fa807a9e3a0aff65be1e0fdc4ef3e4d5d79f6fcdc0c08ecfc9",
         ["LgymApi.Authorization/LgymApi.Authorization.csproj"] = "0c39e15658290889c3dd0b540c854a9971d4f4e87b920c9460ab985936b96545",
-        ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "c300f972bd132330f0ead1dac11bd40168b7ebc28184cf0f249373eaabb09eca",
+        ["LgymApi.Authorization.UnitTests/LgymApi.Authorization.UnitTests.csproj"] = "05079d2d5a7f05000b108bc32c2939f10ed8b32c821916d6c4709c6bf702a30e",
         ["LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj"] = "9e37345ff9459e13b1cec859b2b394cee1961bfea379c0936b8861b1a23efe10",
         ["LgymApi.Infrastructure/LgymApi.Infrastructure.csproj"] = "951d7c86c428c1bf87ed83f78c4d4d82a254a341de345ffa8e3452b4ed6271fe",
         ["LgymApi.Application/LgymApi.Application.csproj"] = "afacd804b7178a428a230ce11d5d500a46214afdb73726f608818c8247b913c7",
         ["LgymApi.Identity/LgymApi.Identity.csproj"] = "5fe4c97db85e1ce49ce16156a8f0f33ddf1716e207fc58aaef743f2489cb8752",
-        ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "c7e286bce4f001c43b3458ae8e2265677d19f4f2f16738766124afadda874199",
+        ["LgymApi.Identity.UnitTests/LgymApi.Identity.UnitTests.csproj"] = "4a5e6923a4a8dd663d33f8a73678ef69a292d2a063078756b99e895a0f59e8f8",
+        ["LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj"] = "ff49f73a64ac26e7dd87b757507ffe29dd2a3bf1c8c6f4e226327d43fffc7a6c",
         ["LgymApi.Notifications/LgymApi.Notifications.csproj"] = "a9c932f78098834604f3ad34a628d8f6ad435de1db2c64168b4dfb059eb162bd",
-        ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "cc06ce973e9fe252b5f59fa2b17a5d63bc9a3ff1a2a056e593e87e48bf09f83d",
-        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "76afea8337dfa625eb9e1ac0e24473f1e5fb37363556d9767bf2645646785af9",
+        ["LgymApi.Notifications.UnitTests/LgymApi.Notifications.UnitTests.csproj"] = "962e4d444174b03dc786539b2575aaa2bb8fd69bef080a9dfa70141e570670ce",
+        ["LgymApi.UnitTests/LgymApi.UnitTests.csproj"] = "caa49f0ae5ea793522d003b2c839838bf456b6717222dc642e027d9972978fc3",
         ["LgymApi.Reporting/LgymApi.Reporting.csproj"] = "2a5fdd38868cdc785710932c29a9f65b471d4c5874c7f48aa217ce0bc3fb3dca",
-        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "0fd8c2b1cf75a57e9843059405736c14c762cf72801ecf1bf735fadc9656d2d2",
-        ["LgymApi.TrainingPlanning.UnitTests/LgymApi.TrainingPlanning.UnitTests.csproj"] = "0bbb183860a4bd3861666948e7206da25ba28feeafe1dd84aace35e7b36c0845"
+        ["LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj"] = "ca22564d340ac5cbda40a2c4a07af35b3ec8c238d395cf68b01b4a77bf448254",
+        ["LgymApi.TrainingPlanning.UnitTests/LgymApi.TrainingPlanning.UnitTests.csproj"] = "a0e3d9a5836b976ccf7a5c24ac8562cbf2654e034350f528a50feda4ebe6cf3b"
     };
     private static readonly IReadOnlyDictionary<string, string> ApprovedRetentionMigrationLedger = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {

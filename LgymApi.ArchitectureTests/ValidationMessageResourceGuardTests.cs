@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,7 +19,7 @@ public sealed class ValidationMessageResourceGuardTests
         var repoRoot = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var apiRoot = Path.Combine(repoRoot, "LgymApi.Api");
 
-        Directory.Exists(apiRoot).Should().BeTrue($"LgymApi.Api root '{apiRoot}' not found.");
+        Assert.That(Directory.Exists(apiRoot), Is.True, $"LgymApi.Api root '{apiRoot}' not found.");
 
         var validatorFiles = Directory
             .EnumerateFiles(apiRoot, "*Validator.cs", SearchOption.AllDirectories)
@@ -28,7 +27,7 @@ public sealed class ValidationMessageResourceGuardTests
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
-        validatorFiles.Should().NotBeEmpty("No validator files found for validation message resource guard test.");
+        Assert.That(validatorFiles, Is.Not.Empty, "No validator files found for validation message resource guard test.");
 
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
         var violations = new List<Violation>();
@@ -58,10 +57,7 @@ public sealed class ValidationMessageResourceGuardTests
             return fileCompare != 0 ? fileCompare : a.Line.CompareTo(b.Line);
         });
 
-        violations
-            .Should()
-            .BeEmpty(
-                $"Validators must use Messages resource keys, not hardcoded strings. " +
+        Assert.That(violations, Is.Empty, $"Validators must use Messages resource keys, not hardcoded strings. " +
                 $"Found {violations.Count} violations:\n" +
                 string.Join(Environment.NewLine, violations.Select(v => v.ToString())));
     }

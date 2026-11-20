@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Configuration;
 using LgymApi.Infrastructure.Data;
 using Microsoft.AspNetCore.Builder;
@@ -26,9 +25,9 @@ public sealed class StartupMigrationBootstrapPostgreSqlTests
 
         var action = () => StartupMigrationBootstrap.ApplyAsync(app, "Testing");
 
-        await action.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.Nothing);
         await using var verification = CreateDbContext(environment.RuntimeConnectionString);
-        (await verification.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
+        Assert.That((await verification.Database.GetPendingMigrationsAsync()), Is.Empty);
     }
 
     private static WebApplication CreateApp(PostgreSqlTutorialRowSecurityTestEnvironment environment)

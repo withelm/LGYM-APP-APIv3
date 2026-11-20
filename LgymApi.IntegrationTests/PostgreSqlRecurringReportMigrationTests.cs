@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -33,8 +32,8 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         {
             var migrations = migrationContext.Database.GetMigrations().ToList();
 
-            migrations.Should().Contain(PreRepairMigrationId);
-            migrations.Should().NotContain(OrphanRepairMigrationId);
+            Assert.That(migrations, Does.Contain(PreRepairMigrationId));
+            Assert.That(migrations, Does.Not.Contain(OrphanRepairMigrationId));
 
             await MigrateAsync(migrationContext, PreRepairMigrationId);
         }
@@ -42,10 +41,10 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using var verificationContext = CreateDbContext(lease);
         var history = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
 
-        history.Should().Contain(PreRepairMigrationId);
-        history.Should().NotContain(OrphanRepairMigrationId);
+        Assert.That(history, Does.Contain(PreRepairMigrationId));
+        Assert.That(history, Does.Not.Contain(OrphanRepairMigrationId));
         var indexIsUnique = await GetIndexIsUniqueAsync(verificationContext);
-        indexIsUnique.Should().BeTrue();
+        Assert.That(indexIsUnique, Is.True);
         TestContext.Progress.WriteLine(
             $"Baseline target: index unique={indexIsUnique}; history={string.Join(',', history.TakeLast(1))}");
     }
@@ -75,15 +74,15 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using (var schemaContext = CreateDbContext(lease))
         {
             var indexIsUnique = await GetIndexIsUniqueAsync(schemaContext);
-            indexIsUnique.Should().BeFalse();
-            schemaContext.Database.HasPendingModelChanges().Should().BeFalse();
+            Assert.That(indexIsUnique, Is.False);
+            Assert.That(schemaContext.Database.HasPendingModelChanges(), Is.False);
 
             var migrations = schemaContext.Database.GetMigrations().ToList();
             var repairMigrationId = GetRepairMigrationId(migrations);
-            migrations.IndexOf(PreRepairMigrationId).Should().Be(migrations.IndexOf(repairMigrationId) - 1);
+            Assert.That(migrations.IndexOf(PreRepairMigrationId), Is.EqualTo(migrations.IndexOf(repairMigrationId) - 1));
 
             var history = (await schemaContext.Database.GetAppliedMigrationsAsync()).ToList();
-            history.Should().Contain(repairMigrationId);
+            Assert.That(history, Does.Contain(repairMigrationId));
             TestContext.Progress.WriteLine(
                 $"Forward repair from unique: index unique={indexIsUnique}; history={string.Join(',', history.TakeLast(2))}");
         }
@@ -95,11 +94,9 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         }
 
         await using var verificationContext = CreateDbContext(lease);
-        (await verificationContext.ReportRequests
+        Assert.That((await verificationContext.ReportRequests
                 .AsNoTracking()
-                .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId))
-            .Should()
-            .Be(2);
+                .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId)), Is.EqualTo(2));
     }
 
     [Test]
@@ -123,15 +120,13 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using (var verificationContext = CreateDbContext(lease))
         {
             var indexIsUnique = await GetIndexIsUniqueAsync(verificationContext);
-            indexIsUnique.Should().BeFalse();
+            Assert.That(indexIsUnique, Is.False);
             var repairMigrationId = GetRepairMigrationId(verificationContext.Database.GetMigrations());
             var history = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
-            history.Should().Contain(repairMigrationId);
-            (await verificationContext.ReportRequests
+            Assert.That(history, Does.Contain(repairMigrationId));
+            Assert.That((await verificationContext.ReportRequests
                     .AsNoTracking()
-                    .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId))
-                .Should()
-                .Be(1);
+                    .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId)), Is.EqualTo(1));
             TestContext.Progress.WriteLine(
                 $"Forward repair from non-unique: index unique={indexIsUnique}; history={string.Join(',', history.TakeLast(2))}");
         }
@@ -143,11 +138,9 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         }
 
         await using var countContext = CreateDbContext(lease);
-        (await countContext.ReportRequests
+        Assert.That((await countContext.ReportRequests
                 .AsNoTracking()
-                .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId))
-            .Should()
-            .Be(2);
+                .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId)), Is.EqualTo(2));
     }
 
     [Test]
@@ -178,19 +171,18 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         {
             Func<Task> downgrade = () => MigrateAsync(downgradeContext, PreRepairMigrationId);
 
-            await downgrade.Should().ThrowAsync<NotSupportedException>()
-                .WithMessage("*restoring uniqueness is unsafe after multiple history rows*");
+            await Assert.ThatAsync(async () => { await downgrade(); }, Throws.InstanceOf<NotSupportedException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*restoring uniqueness is unsafe after multiple history rows*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
 
         await using var verificationContext = CreateDbContext(lease);
         var indexIsUnique = await GetIndexIsUniqueAsync(verificationContext);
-        indexIsUnique.Should().BeFalse();
+        Assert.That(indexIsUnique, Is.False);
         var history = (await verificationContext.Database.GetAppliedMigrationsAsync()).ToList();
-        history.Should().Contain(repairMigrationId);
+        Assert.That(history, Does.Contain(repairMigrationId));
         var requestCount = await verificationContext.ReportRequests
                 .AsNoTracking()
                 .CountAsync(request => request.RecurringReportAssignmentId == seed.AssignmentId);
-        requestCount.Should().Be(2);
+        Assert.That(requestCount, Is.EqualTo(2));
         TestContext.Progress.WriteLine(
             $"Rejected downgrade: index unique={indexIsUnique}; requests={requestCount}; history={string.Join(',', history.TakeLast(2))}");
     }
@@ -204,7 +196,7 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         await using (var baselineContext = CreateDbContext(lease))
         {
             var migrations = baselineContext.Database.GetMigrations().ToList();
-            migrations.IndexOf(PreviousMigrationId).Should().Be(migrations.IndexOf(ReceiptMigrationId) - 1);
+            Assert.That(migrations.IndexOf(PreviousMigrationId), Is.EqualTo(migrations.IndexOf(ReceiptMigrationId) - 1));
             await MigrateAsync(baselineContext, PreviousMigrationId);
             seed = await SeedMigrationPreservationDataAsync(baselineContext);
         }
@@ -223,18 +215,18 @@ public sealed class PostgreSqlRecurringReportMigrationTests
 
         Assert.Multiple(() =>
         {
-            data.SubmissionRequestId.Should().Be(seed.RequestId);
-            data.SubmissionTraineeId.Should().Be(seed.TraineeId);
-            data.SubmissionPayloadJson.Should().Be(seed.PayloadJson);
-            data.MeasurementUserId.Should().Be(seed.TraineeId);
-            data.MeasurementBodyPart.Should().Be(seed.BodyPart.ToString());
-            data.MeasurementUnit.Should().Be(seed.Unit);
-            data.MeasurementValue.Should().Be(seed.Value);
-            data.MeasurementCreatedAt.Should().Be(seed.CreatedAtUtc);
-            appliedMigrations.Should().Contain(ReceiptMigrationId);
+            Assert.That(data.SubmissionRequestId, Is.EqualTo(seed.RequestId));
+            Assert.That(data.SubmissionTraineeId, Is.EqualTo(seed.TraineeId));
+            Assert.That(data.SubmissionPayloadJson, Is.EqualTo(seed.PayloadJson));
+            Assert.That(data.MeasurementUserId, Is.EqualTo(seed.TraineeId));
+            Assert.That(data.MeasurementBodyPart, Is.EqualTo(seed.BodyPart.ToString()));
+            Assert.That(data.MeasurementUnit, Is.EqualTo(seed.Unit));
+            Assert.That(data.MeasurementValue, Is.EqualTo(seed.Value));
+            Assert.That(data.MeasurementCreatedAt, Is.EqualTo(seed.CreatedAtUtc));
+            Assert.That(appliedMigrations, Does.Contain(ReceiptMigrationId));
         });
-        (await TableExistsAsync(verificationContext, ReceiptTableName)).Should().BeTrue();
-        (await GetIndexIsUniqueAsync(verificationContext, ReceiptIndexName)).Should().BeTrue();
+        Assert.That((await TableExistsAsync(verificationContext, ReceiptTableName)), Is.True);
+        Assert.That((await GetIndexIsUniqueAsync(verificationContext, ReceiptIndexName)), Is.True);
         TestContext.Progress.WriteLine(
             $"Receipt migration preservation: submission={seed.SubmissionId}; measurement={seed.MeasurementId}; table={ReceiptTableName}; uniqueIndex={ReceiptIndexName}");
     }
@@ -253,7 +245,7 @@ public sealed class PostgreSqlRecurringReportMigrationTests
             .Where(migration => migration.EndsWith(RepairMigrationName, StringComparison.Ordinal))
             .ToList();
 
-        matchingMigrations.Should().ContainSingle();
+        Assert.That(matchingMigrations, Has.Exactly(1).Items);
         return matchingMigrations[0];
     }
 
@@ -408,8 +400,8 @@ public sealed class PostgreSqlRecurringReportMigrationTests
         }
         catch (PostgresException exception)
         {
-            exception.SqlState.Should().Be("23505");
-            exception.ConstraintName.Should().Be(RecurringAssignmentIndexName);
+            Assert.That(exception.SqlState, Is.EqualTo("23505"));
+            Assert.That(exception.ConstraintName, Is.EqualTo(RecurringAssignmentIndexName));
             TestContext.Progress.WriteLine(
                 $"Pre-repair duplicate signature: SQLSTATE {exception.SqlState}; constraint {exception.ConstraintName}");
         }

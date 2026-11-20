@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Options;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Common.Notifications;
@@ -26,11 +25,11 @@ public sealed class EmailTemplateRenderingCompatibilityTests
 
         var message = factory.ComposeMessage(renderCase.Payload.NotificationType, payloadJson);
 
-        message.To.Should().Be(renderCase.Payload.RecipientEmail);
-        message.Subject.Should().Be(renderCase.ExpectedSubject);
-        message.Body.Should().Contain(renderCase.ExpectedBodyFragment);
-        message.Subject.Should().NotContain("{{");
-        message.Body.Should().NotContain("{{");
+        Assert.That(message.To, Is.EqualTo(renderCase.Payload.RecipientEmail));
+        Assert.That(message.Subject, Is.EqualTo(renderCase.ExpectedSubject));
+        Assert.That(message.Body, Does.Contain(renderCase.ExpectedBodyFragment));
+        Assert.That(message.Subject, Does.Not.Contain("{{"));
+        Assert.That(message.Body, Does.Not.Contain("{{"));
     }
 
     private static IEnumerable<TestCaseData> RenderCases()
@@ -165,7 +164,7 @@ public sealed class EmailTemplateRenderingCompatibilityTests
 
     private static Id<TEntity> ParseId<TEntity>(string value)
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

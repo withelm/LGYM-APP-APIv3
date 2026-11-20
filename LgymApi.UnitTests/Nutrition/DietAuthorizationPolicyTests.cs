@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Nutrition.DietPlans;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.Entities;
@@ -16,10 +15,10 @@ public sealed class DietAuthorizationPolicyTests
         var traineeId = Id<User>.New();
         var plan = new DietPlan { TrainerId = Id<User>.New(), TraineeId = traineeId };
 
-        DietPlanAccess.IsOwnedByTrainee(plan, traineeId).Should().BeTrue();
-        DietPlanAccess.IsOwnedByTrainee(plan, Id<User>.New()).Should().BeFalse();
+        Assert.That(DietPlanAccess.IsOwnedByTrainee(plan, traineeId), Is.True);
+        Assert.That(DietPlanAccess.IsOwnedByTrainee(plan, Id<User>.New()), Is.False);
         plan.IsDeleted = true;
-        DietPlanAccess.IsOwnedByTrainee(plan, traineeId).Should().BeFalse();
+        Assert.That(DietPlanAccess.IsOwnedByTrainee(plan, traineeId), Is.False);
     }
 
     [Test]
@@ -29,11 +28,11 @@ public sealed class DietAuthorizationPolicyTests
         var actor = new AuthorizationActor(ownerId.Rebind<ActorReference>());
         var policy = new DietPlanAuthorizationPolicy();
 
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Read)).IsAllowed.Should().BeTrue();
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.ReadHistory)).IsAllowed.Should().BeTrue();
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Update)).IsAllowed.Should().BeTrue();
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Create)).IsAllowed.Should().BeFalse();
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Activate)).IsAllowed.Should().BeFalse();
-        policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Delete)).IsAllowed.Should().BeFalse();
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Read)).IsAllowed, Is.True);
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.ReadHistory)).IsAllowed, Is.True);
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Update)).IsAllowed, Is.True);
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Create)).IsAllowed, Is.False);
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Activate)).IsAllowed, Is.False);
+        Assert.That(policy.Evaluate(actor, new DietPlanAuthorizationContext(ownerId.Rebind<ActorReference>(), false, false, DietPlanAction.Delete)).IsAllowed, Is.False);
     }
 }

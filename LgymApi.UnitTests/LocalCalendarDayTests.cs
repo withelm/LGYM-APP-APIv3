@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
 
 namespace LgymApi.UnitTests;
@@ -17,14 +16,14 @@ public sealed class LocalCalendarDayTests
     {
         var range = new LocalCalendarDay(DateOnly.Parse(date), timeZone).ToUtcTimeRange();
 
-        range.FromUtc.Should().Be(DateTimeOffset.Parse(expectedFrom));
-        range.ToUtc.Should().Be(DateTimeOffset.Parse(expectedTo));
+        Assert.That(range.FromUtc, Is.EqualTo(DateTimeOffset.Parse(expectedFrom)));
+        Assert.That(range.ToUtc, Is.EqualTo(DateTimeOffset.Parse(expectedTo)));
     }
 
     [Test]
     public void IsValid_RejectsUnknownZone()
     {
-        LocalCalendarDay.IsValid(new DateOnly(2026, 10, 22), "Not/AZone").Should().BeFalse();
+        Assert.That(LocalCalendarDay.IsValid(new DateOnly(2026, 10, 22), "Not/AZone"), Is.False);
     }
 
     [TestCase("Pacific Standard Time")]
@@ -35,7 +34,7 @@ public sealed class LocalCalendarDayTests
     {
         var create = () => new LocalCalendarDay(new DateOnly(2026, 10, 22), timeZone);
 
-        create.Should().Throw<ArgumentException>();
+        Assert.That(() => { create(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -43,8 +42,8 @@ public sealed class LocalCalendarDayTests
     {
         var create = () => new LocalCalendarDay(new DateOnly(2011, 12, 29), "Pacific/Apia");
 
-        create.Should().Throw<ArgumentException>();
-        LocalCalendarDay.IsValid(new DateOnly(2011, 12, 29), "Pacific/Apia").Should().BeFalse();
+        Assert.That(() => { create(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(LocalCalendarDay.IsValid(new DateOnly(2011, 12, 29), "Pacific/Apia"), Is.False);
     }
 
     [TestCase("Etc/UTC", "9999-12-31")]
@@ -57,8 +56,8 @@ public sealed class LocalCalendarDayTests
         var localDate = DateOnly.Parse(date);
         var create = () => new LocalCalendarDay(localDate, timeZone);
 
-        create.Should().Throw<ArgumentException>();
-        LocalCalendarDay.IsValid(localDate, timeZone).Should().BeFalse();
+        Assert.That(() => { create(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(LocalCalendarDay.IsValid(localDate, timeZone), Is.False);
     }
 
     [TestCase(0)]
@@ -69,6 +68,6 @@ public sealed class LocalCalendarDayTests
 
         var create = () => new UtcTimeRange(instant, instant.AddHours(hours));
 
-        create.Should().Throw<ArgumentException>();
+        Assert.That(() => { create(); }, Throws.InstanceOf<ArgumentException>());
     }
 }

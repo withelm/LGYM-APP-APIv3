@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -39,12 +38,12 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(plan => plan.Name).Should().Equal("Newest", "Older");
-        result.Value[0].Items.Select(item => item.SupplementName).Should().Equal("Earlier", "Later");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(plan => plan.Name), Is.EqualTo(new[] { "Newest", "Older" }));
+        Assert.That(result.Value[0].Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Earlier", "Later" }));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
         await dependencies.Plans.Received(1).ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -58,10 +57,10 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
-        result.Error.Should().BeOfType<SupplementationForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
-        result.Error.HttpStatusCode.Should().Be(403);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(result.Error, Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
+        Assert.That(result.Error.HttpStatusCode, Is.EqualTo(403));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -75,10 +74,10 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, Id<UserEntity>.Empty, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -93,9 +92,9 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-        result.Error.Should().BeOfType<SupplementationNotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(result.Error, Is.TypeOf<SupplementationNotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -115,10 +114,10 @@ public sealed class GetTraineeSupplementPlansUseCaseTests
             new GetTraineeSupplementPlansQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
         await dependencies.Plans.Received(1).ListPlansByTrainerAndTraineeAsync(trainerId, traineeId, cancellationToken);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     private static SupplementPlan CreatePlan(

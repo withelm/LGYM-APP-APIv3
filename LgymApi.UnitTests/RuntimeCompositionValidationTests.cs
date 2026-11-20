@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using Hangfire.Logging;
 using LgymApi.Application;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -62,8 +61,7 @@ public sealed class RuntimeCompositionValidationTests
 
         var action = () => ValidateModuleDescriptorCardinality(services);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IDuplicateDescriptorFixture).FullName}*exactly once*2*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IDuplicateDescriptorFixture).FullName}*exactly once*2*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -76,18 +74,19 @@ public sealed class RuntimeCompositionValidationTests
                 services.AddHttpContextAccessor();
                 services.AddSingleton<IHostApplicationLifetime, TestHostApplicationLifetime>();
             });
-        var descriptor = services
-            .Where(service => service.ServiceType == typeof(ICommandOutboxWriter))
-            .Should().ContainSingle().Subject;
+        var assertedValue151 = (services
+                    .Where(service => service.ServiceType == typeof(ICommandOutboxWriter))).ToArray();
+        Assert.That(assertedValue151, Has.Exactly(1).Items);
+        var descriptor = assertedValue151.Single();
 
-        descriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        descriptor.ImplementationType.Should().Be(typeof(CommandOutboxWriter));
+        Assert.That(descriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+        Assert.That(descriptor.ImplementationType, Is.EqualTo(typeof(CommandOutboxWriter)));
         WithRestoredHangfireLogProvider(services, provider =>
         {
             using var scope = provider.CreateScope();
-            scope.ServiceProvider.GetServices<ICommandOutboxWriter>()
-                .Should().ContainSingle()
-                .Which.Should().BeOfType<CommandOutboxWriter>();
+            var assertedValue152 = (scope.ServiceProvider.GetServices<ICommandOutboxWriter>()).ToArray();
+            Assert.That(assertedValue152, Has.Exactly(1).Items);
+            Assert.That(assertedValue152.Single(), Is.TypeOf<CommandOutboxWriter>());
         });
     }
 
@@ -104,8 +103,7 @@ public sealed class RuntimeCompositionValidationTests
             ValidateScopes = true
         });
 
-        action.Should().Throw<AggregateException>()
-            .WithMessage("*Cannot consume scoped service*from singleton*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<AggregateException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Cannot consume scoped service*from singleton*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static IConfiguration CreateConfiguration(bool isTesting)
@@ -162,10 +160,7 @@ public sealed class RuntimeCompositionValidationTests
 
         foreach (var facade in facades)
         {
-            facade.Type.GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Should().Contain(
-                    method => method.Name == facade.MethodName,
-                    $"the closed composition facade '{facade.Type.FullName}' must publish '{facade.MethodName}'");
+            Assert.That((facade.Type.GetMethods(BindingFlags.Public | BindingFlags.Static)).Any(method => method.Name == facade.MethodName), Is.True, $"the closed composition facade '{facade.Type.FullName}' must publish '{facade.MethodName}'");
         }
     }
 
@@ -241,7 +236,7 @@ public sealed class RuntimeCompositionValidationTests
         foreach (var serviceType in serviceTypes)
         {
             var resolved = serviceProvider.GetServices(serviceType).Cast<object>().ToArray();
-            resolved.Should().NotBeEmpty(serviceType.FullName);
+            Assert.That(resolved, Is.Not.Empty, serviceType.FullName);
         }
     }
 
@@ -249,12 +244,11 @@ public sealed class RuntimeCompositionValidationTests
     {
         var controllerTypes = GetApiControllerTypes();
 
-        controllerTypes.Should().HaveCount(37);
-        controllerTypes.Should().Contain(typeof(LgymApi.Api.Features.User.Controllers.AccountRecoveryController));
+        Assert.That(controllerTypes, Has.Exactly(37).Items);
+        Assert.That(controllerTypes, Does.Contain(typeof(LgymApi.Api.Features.User.Controllers.AccountRecoveryController)));
         foreach (var controllerType in controllerTypes)
         {
-            serviceProvider.GetRequiredService(controllerType)
-                .Should().BeAssignableTo<ControllerBase>(controllerType.FullName);
+            Assert.That(serviceProvider.GetRequiredService(controllerType), Is.InstanceOf<ControllerBase>(), controllerType.FullName);
         }
     }
 
@@ -292,17 +286,11 @@ public sealed class RuntimeCompositionValidationTests
         };
         var integrationAdapters = services.Where(descriptor => retainedIntegrationContracts.Contains(descriptor.ServiceType.FullName!)).ToArray();
 
-        integrationAdapters.Should().HaveCount(4);
-        integrationAdapters.GroupBy(descriptor => descriptor.ServiceType).Should().OnlyContain(group => group.Count() == 1);
-        integrationAdapters.Should().OnlyContain(descriptor => descriptor.Lifetime == ServiceLifetime.Scoped);
-        integrationAdapters.Select(descriptor => descriptor.ImplementationType).Distinct().Should().HaveCount(3);
-        integrationAdapters.Select(descriptor => descriptor.ImplementationType!.Name).Should().BeEquivalentTo(
-            [
-                "PushInstallationSessionDisassociationAdapter",
-                "CoachingEmailNotificationSchedulerAdapter",
-                "CoachingEmailNotificationSchedulerAdapter",
-                "PasswordRecoveryEmailSchedulerAdapter"
-            ]);
+        Assert.That(integrationAdapters, Has.Exactly(4).Items);
+        Assert.That((integrationAdapters.GroupBy(descriptor => descriptor.ServiceType)).All(group => group.Count() == 1), Is.True);
+        Assert.That((integrationAdapters).All(descriptor => descriptor.Lifetime == ServiceLifetime.Scoped), Is.True);
+        Assert.That(integrationAdapters.Select(descriptor => descriptor.ImplementationType).Distinct(), Has.Exactly(3).Items);
+        Assert.That(integrationAdapters.Select(descriptor => descriptor.ImplementationType!.Name), Is.EquivalentTo(new[] { "PushInstallationSessionDisassociationAdapter", "CoachingEmailNotificationSchedulerAdapter", "CoachingEmailNotificationSchedulerAdapter", "PasswordRecoveryEmailSchedulerAdapter" }));
     }
 
     private static bool IsApplicationApiAdapterNamespace(string? namespaceName)
@@ -320,12 +308,10 @@ public sealed class RuntimeCompositionValidationTests
         int expectedCount,
         string boundary)
     {
-        descriptors.Should().HaveCount(expectedCount, boundary);
-        descriptors.GroupBy(descriptor => descriptor.ServiceType).Should().OnlyContain(group => group.Count() == 1, boundary);
-        descriptors.Should().OnlyContain(descriptor => descriptor.Lifetime == ServiceLifetime.Scoped, boundary);
-        descriptors.Should().OnlyContain(
-            descriptor => descriptor.ImplementationType != null && descriptor.ImplementationType.IsNotPublic,
-            boundary);
+        Assert.That(descriptors, Has.Exactly(expectedCount).Items, boundary);
+        Assert.That((descriptors.GroupBy(descriptor => descriptor.ServiceType)).All(group => group.Count() == 1), Is.True, boundary);
+        Assert.That((descriptors).All(descriptor => descriptor.Lifetime == ServiceLifetime.Scoped), Is.True, boundary);
+        Assert.That((descriptors).All(descriptor => descriptor.ImplementationType != null && descriptor.ImplementationType.IsNotPublic), Is.True, boundary);
     }
 
     private sealed record FacadeMethodExpectation(Type Type, string MethodName);

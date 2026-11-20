@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
@@ -59,19 +58,19 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        plan.IsActive.Should().BeTrue();
-        stagedHistory.Should().NotBeNull();
-        stagedHistory!.DietPlanId.Should().Be(plan.Id);
-        stagedHistory.ChangedByUserId.Should().Be(trainerId);
-        stagedHistory.ChangeType.Should().Be("Activated");
-        stagedHistory.SnapshotJson.Should().Contain("\"IsActive\":true");
-        notification.Should().NotBeNull();
-        notification!.DietPlanId.Should().Be(plan.Id);
-        notification.TraineeId.Should().Be(traineeId);
-        notification.TrainerId.Should().Be(trainerId);
-        notification.DietPlanName.Should().Be(plan.Name);
-        operations.Should().Equal("access", "plan", "history", "save", "notification");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.IsActive, Is.True);
+        Assert.That(stagedHistory, Is.Not.Null);
+        Assert.That(stagedHistory!.DietPlanId, Is.EqualTo(plan.Id));
+        Assert.That(stagedHistory.ChangedByUserId, Is.EqualTo(trainerId));
+        Assert.That(stagedHistory.ChangeType, Is.EqualTo("Activated"));
+        Assert.That(stagedHistory.SnapshotJson, Does.Contain("\"IsActive\":true"));
+        Assert.That(notification, Is.Not.Null);
+        Assert.That(notification!.DietPlanId, Is.EqualTo(plan.Id));
+        Assert.That(notification.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(notification.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(notification.DietPlanName, Is.EqualTo(plan.Name));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "plan", "history", "save", "notification" }));
         await dependencies.Plans.DidNotReceive().GetPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>());
     }
 
@@ -92,9 +91,9 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planToActivate.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        existingActivePlan.IsActive.Should().BeTrue();
-        plans.Count(plan => plan.IsActive).Should().Be(2);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(existingActivePlan.IsActive, Is.True);
+        Assert.That(plans.Count(plan => plan.IsActive), Is.EqualTo(2));
         await dependencies.Plans.DidNotReceive().ListPlansByTraineeAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<CancellationToken>());
@@ -114,8 +113,8 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
     }
@@ -131,8 +130,8 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        result.Error.Should().BeOfType<NotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
     }
@@ -147,8 +146,8 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var emptyTraineeResult = await emptyTraineeDependencies.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, Id<DietPlan>.New()));
 
-        emptyTraineeResult.Error.Should().BeOfType<BadRequestError>();
-        emptyTraineeResult.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(emptyTraineeResult.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(emptyTraineeResult.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await emptyTraineeDependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -160,8 +159,8 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var emptyPlanResult = await emptyPlanDependencies.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.Empty));
 
-        emptyPlanResult.Error.Should().BeOfType<BadRequestError>();
-        emptyPlanResult.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(emptyPlanResult.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(emptyPlanResult.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await emptyPlanDependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(
             Arg.Any<Id<DietPlan>>(),
             Arg.Any<CancellationToken>());
@@ -174,7 +173,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var missingPlanResult = await missingPlanDependencies.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        missingPlanResult.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(missingPlanResult.Error, Is.TypeOf<NotFoundError>());
         await AssertNoWritesAsync(missingPlanDependencies);
 
         var foreignPlanDependencies = new Dependencies();
@@ -184,7 +183,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
         var foreignPlanResult = await foreignPlanDependencies.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        foreignPlanResult.Error.Should().BeOfType<NotFoundError>();
+        Assert.That(foreignPlanResult.Error, Is.TypeOf<NotFoundError>());
         await AssertNoWritesAsync(foreignPlanDependencies);
     }
 
@@ -203,7 +202,7 @@ public sealed class ActivateTraineeDietPlanUseCaseTests
 
         Func<Task> act = () => dependencies.CreateUseCase().ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("commit failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
     }
 

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Repositories;
@@ -36,8 +35,8 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         var command = new AccountDeletionScheduledCommand(
             missingAccount ? Id<AccountReference>.Empty : Id<AccountReference>.New(),
             missingAccount ? Id<CorrelationScope>.New() : Id<CorrelationScope>.Empty);
-        await ((Func<Task>)(() => confirmation.ExecuteAsync(command))).Should().ThrowAsync<ArgumentException>();
-        (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.CountAsync()).Should().Be(0);
+        await Assert.ThatAsync(async () => { await (((Func<Task>)(() => confirmation.ExecuteAsync(command))))(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.CountAsync()), Is.EqualTo(0));
     }
 
     [TestCase(false)]
@@ -54,8 +53,8 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         }
         await scope.ServiceProvider.GetRequiredService<IAccountDeletionScheduleConfirmation>()
             .ExecuteAsync(new AccountDeletionScheduledCommand(accountId, Id<CorrelationScope>.New()));
-        (await db.Users.IgnoreQueryFilters().CountAsync()).Should().Be(exists ? 1 : 0);
-        (await db.Users.IgnoreQueryFilters().AnyAsync(account => account.DeletionScheduledGeneration != null)).Should().BeFalse();
+        Assert.That((await db.Users.IgnoreQueryFilters().CountAsync()), Is.EqualTo(exists ? 1 : 0));
+        Assert.That((await db.Users.IgnoreQueryFilters().AnyAsync(account => account.DeletionScheduledGeneration != null)), Is.False);
     }
 
     [Test]
@@ -73,17 +72,17 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         await using var verification = Factory.Services.CreateAsyncScope();
         var db = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var account = await db.Users.SingleAsync(account => account.Id == user.Id);
-        account.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        account.DeletionScheduledGeneration.Should().BeNull();
-        (await db.UserSessions.SingleAsync(session => session.Id == sessionId)).RevokedAtUtc.Should().NotBeNull();
+        Assert.That(account.DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That(account.DeletionScheduledGeneration, Is.Null);
+        Assert.That((await db.UserSessions.SingleAsync(session => session.Id == sessionId)).RevokedAtUtc, Is.Not.Null);
         var envelope = await db.CommandEnvelopes.SingleAsync(envelope => envelope.CommandTypeFullName == CommandId);
         var command = JsonSerializer.Deserialize<AccountDeletionScheduledCommand>(envelope.PayloadJson, SharedSerializationOptions.Current)!;
-        command.AccountId.Should().Be(user.Id.Rebind<AccountReference>());
-        command.DeletionGeneration.Should().Be(account.DeletionGeneration!.Value);
+        Assert.That(command.AccountId, Is.EqualTo(user.Id.Rebind<AccountReference>()));
+        Assert.That(command.DeletionGeneration, Is.EqualTo(account.DeletionGeneration!.Value));
         var duplicate = await verification.ServiceProvider.GetRequiredService<ICommandOutboxWriter>().StageAsync(command);
-        duplicate.WasExisting.Should().BeTrue();
-        duplicate.EnvelopeId.Should().Be(envelope.Id.ToString());
-        (await db.CommandEnvelopes.CountAsync(envelope => envelope.CommandTypeFullName == CommandId)).Should().Be(1);
+        Assert.That(duplicate.WasExisting, Is.True);
+        Assert.That(duplicate.EnvelopeId, Is.EqualTo(envelope.Id.ToString()));
+        Assert.That((await db.CommandEnvelopes.CountAsync(envelope => envelope.CommandTypeFullName == CommandId)), Is.EqualTo(1));
     }
 
     [TestCase(false)]
@@ -109,17 +108,15 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
                 request.ServiceProvider.GetRequiredService<ILegacyPasswordService>(), TimeProvider.System,
                 new AccountDeletionSynchronization(db), request.ServiceProvider.GetRequiredService<IAccountRecoveryEmailOutbox>(), outbox);
 
-            await ((Func<Task>)(() => deletion.RequestAsync(user.Id.Rebind<AccountReference>())))
-                .Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage(failAtCommit ? "injected commit failure" : "Account deletion scheduling intent could not be staged.");
+            await Assert.ThatAsync(async () => { await (((Func<Task>)(() => deletion.RequestAsync(user.Id.Rebind<AccountReference>()))))(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(failAtCommit ? "injected commit failure" : "Account deletion scheduling intent could not be staged.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
         var account = await database.Users.SingleAsync(account => account.Id == user.Id);
-        account.DeletionState.Should().Be(AccountDeletionState.Active);
-        account.DeletionGeneration.Should().BeNull();
-        (await database.UserSessions.SingleAsync(session => session.Id == sessionId)).RevokedAtUtc.Should().BeNull();
-        (await database.CommandEnvelopes.CountAsync(envelope => envelope.CommandTypeFullName == CommandId)).Should().Be(0);
+        Assert.That(account.DeletionState, Is.EqualTo(AccountDeletionState.Active));
+        Assert.That(account.DeletionGeneration, Is.Null);
+        Assert.That((await database.UserSessions.SingleAsync(session => session.Id == sessionId)).RevokedAtUtc, Is.Null);
+        Assert.That((await database.CommandEnvelopes.CountAsync(envelope => envelope.CommandTypeFullName == CommandId)), Is.EqualTo(0));
     }
 
     [Test]
@@ -142,7 +139,7 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         {
             await before.ServiceProvider.GetRequiredService<IAccountFinalizationService>().ProcessDueAsync();
             var db = before.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await db.Users.SingleAsync(account => account.Id == user.Id)).DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
+            Assert.That((await db.Users.SingleAsync(account => account.Id == user.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
             var envelope = await db.CommandEnvelopes.SingleAsync(envelope => envelope.Id == envelopeId);
             envelope.Status = ActionExecutionStatus.Pending;
             await db.SaveChangesAsync();
@@ -156,15 +153,14 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
         var confirmed = await database.Users.SingleAsync(account => account.Id == user.Id);
-        confirmed.DeletionScheduledGeneration.Should().Be(confirmed.DeletionGeneration);
+        Assert.That(confirmed.DeletionScheduledGeneration, Is.EqualTo(confirmed.DeletionGeneration));
         var revision = confirmed.LifecycleRevision;
         await verify.ServiceProvider.GetRequiredService<IAccountDeletionScheduleConfirmation>()
             .ExecuteAsync(new AccountDeletionScheduledCommand(user.Id.Rebind<AccountReference>(), confirmed.DeletionGeneration!.Value));
         await database.Entry(confirmed).ReloadAsync();
-        confirmed.LifecycleRevision.Should().Be(revision);
-        (await new AccountFinalizationStore(database).FindDueAsync(DateTimeOffset.UtcNow, 100))
-            .Should().ContainSingle(candidate => candidate.AccountId == user.Id.Rebind<AccountReference>());
-        (await database.CommandEnvelopes.SingleAsync(envelope => envelope.Id == envelopeId)).Status.Should().Be(ActionExecutionStatus.Completed);
+        Assert.That(confirmed.LifecycleRevision, Is.EqualTo(revision));
+        Assert.That(((await new AccountFinalizationStore(database).FindDueAsync(DateTimeOffset.UtcNow, 100))).Where(candidate => candidate.AccountId == user.Id.Rebind<AccountReference>()), Has.Exactly(1).Items);
+        Assert.That((await database.CommandEnvelopes.SingleAsync(envelope => envelope.Id == envelopeId)).Status, Is.EqualTo(ActionExecutionStatus.Completed));
     }
 
     [Test]
@@ -189,15 +185,14 @@ internal sealed class PostgreSqlAccountDeletionSchedulingTests : PostgreSqlInteg
         await using (var verify = Factory.Services.CreateAsyncScope())
         {
             var db = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await db.Users.SingleAsync(account => account.Id == user.Id)).DeletionScheduledGeneration.Should().BeNull();
-            (await db.CommandEnvelopes.Where(envelope => envelope.CommandTypeFullName == CommandId).Select(envelope => envelope.CorrelationId).Distinct().CountAsync())
-                .Should().Be(2);
+            Assert.That((await db.Users.SingleAsync(account => account.Id == user.Id)).DeletionScheduledGeneration, Is.Null);
+            Assert.That((await db.CommandEnvelopes.Where(envelope => envelope.CommandTypeFullName == CommandId).Select(envelope => envelope.CorrelationId).Distinct().CountAsync()), Is.EqualTo(2));
         }
         await using (var current = Factory.Services.CreateAsyncScope())
             await current.ServiceProvider.GetRequiredService<IActionMessageJob>().ExecuteAsync(currentId.ToString());
         await using var final = Factory.Services.CreateAsyncScope();
         var restored = await final.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(account => account.Id == user.Id);
-        restored.DeletionScheduledGeneration.Should().Be(restored.DeletionGeneration);
+        Assert.That(restored.DeletionScheduledGeneration, Is.EqualTo(restored.DeletionGeneration));
     }
 
     private async Task<Id<UserSession>> SeedSessionAsync(Id<User> userId)

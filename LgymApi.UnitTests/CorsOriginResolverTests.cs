@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Configuration;
 using NUnit.Framework;
 
@@ -26,7 +25,7 @@ public sealed class CorsOriginResolverTests
     {
         var result = CorsOriginResolver.ResolveAllowedOrigins(null, isDevelopment: true);
 
-        result.Should().Equal(ExpectedDevelopmentOrigins);
+        Assert.That(result, Is.EqualTo(ExpectedDevelopmentOrigins));
     }
 
     [Test]
@@ -34,7 +33,7 @@ public sealed class CorsOriginResolverTests
     {
         var result = CorsOriginResolver.ResolveAllowedOrigins(Array.Empty<string>(), isDevelopment: false);
 
-        result.Should().BeEmpty();
+        Assert.That(result, Is.Empty);
     }
 
     [Test]
@@ -51,6 +50,6 @@ public sealed class CorsOriginResolverTests
 
         var result = CorsOriginResolver.ResolveAllowedOrigins(configuredOrigins, isDevelopment: true);
 
-        result.Should().Equal(ExpectedNormalizedConfiguredOrigins);
+        Assert.That(result, Is.EqualTo(ExpectedNormalizedConfiguredOrigins));
     }
 }

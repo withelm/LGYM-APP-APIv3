@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -58,19 +57,25 @@ public sealed class NotificationDeletionRetentionTests
 
         using (var scope = factory.Services.CreateScope())
         {
-            (await scope.ServiceProvider.GetRequiredService<IPushNotificationMessageRetentionCleanupService>().CleanupAsync()).Should().Be(1);
-            (await scope.ServiceProvider.GetRequiredService<IDisabledPushInstallationRetentionCleanupService>().CleanupAsync()).Should().Be(1);
-            (await scope.ServiceProvider.GetRequiredService<IInAppNotificationRetentionCleanupService>().CleanupAsync()).Should().Be(1);
-            (await scope.ServiceProvider.GetRequiredService<IStalePushInstallationCleanupService>().CleanupAsync()).Should().Be(1);
+            Assert.That((await scope.ServiceProvider.GetRequiredService<IPushNotificationMessageRetentionCleanupService>().CleanupAsync()), Is.EqualTo(1));
+            Assert.That((await scope.ServiceProvider.GetRequiredService<IDisabledPushInstallationRetentionCleanupService>().CleanupAsync()), Is.EqualTo(1));
+            Assert.That((await scope.ServiceProvider.GetRequiredService<IInAppNotificationRetentionCleanupService>().CleanupAsync()), Is.EqualTo(1));
+            Assert.That((await scope.ServiceProvider.GetRequiredService<IStalePushInstallationCleanupService>().CleanupAsync()), Is.EqualTo(1));
         }
 
         using var verification = factory.Services.CreateScope();
         var result = verification.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await result.PushNotificationMessages.Select(x => x.Id).ToListAsync()).Should().Contain(protectedMessage).And.NotContain(activeMessage);
-        (await result.InAppNotifications.Select(x => x.Id).ToListAsync()).Should().Contain(protectedNotification).And.NotContain(activeNotification);
+        var assertedChain9 = (await result.PushNotificationMessages.Select(x => x.Id).ToListAsync());
+        Assert.That(assertedChain9, Does.Contain(protectedMessage));
+        Assert.That(assertedChain9, Does.Not.Contain(activeMessage));
+        var assertedChain10 = (await result.InAppNotifications.Select(x => x.Id).ToListAsync());
+        Assert.That(assertedChain10, Does.Contain(protectedNotification));
+        Assert.That(assertedChain10, Does.Not.Contain(activeNotification));
         var installations = await result.PushInstallations.ToListAsync();
-        installations.Select(x => x.Id).Should().Contain(protectedInstallation).And.NotContain(activeInstallation);
-        installations.Single(x => x.Id == protectedStale).DisabledAt.Should().BeNull();
-        installations.Single(x => x.Id == activeStale).DisabledAt.Should().NotBeNull();
+        var assertedChain11 = installations.Select(x => x.Id);
+        Assert.That(assertedChain11, Does.Contain(protectedInstallation));
+        Assert.That(assertedChain11, Does.Not.Contain(activeInstallation));
+        Assert.That(installations.Single(x => x.Id == protectedStale).DisabledAt, Is.Null);
+        Assert.That(installations.Single(x => x.Id == activeStale).DisabledAt, Is.Not.Null);
     }
 }

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Infrastructure.Services;
 
 namespace LgymApi.UnitTests;
@@ -15,7 +14,7 @@ public sealed class LegacyPasswordServiceTests
     {
         var result = _service.Verify(password, hash, salt, null, null, null);
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -31,7 +30,7 @@ public sealed class LegacyPasswordServiceTests
             created.KeyLength,
             created.Digest);
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     [Test]
@@ -47,7 +46,7 @@ public sealed class LegacyPasswordServiceTests
             created.KeyLength * 8,
             created.Digest);
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     [Test]
@@ -61,6 +60,6 @@ public sealed class LegacyPasswordServiceTests
             LegacyPasswordConstants.KeyLength,
             LegacyPasswordConstants.Digest);
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 }

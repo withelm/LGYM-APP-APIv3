@@ -28,7 +28,7 @@ public sealed class ProgramMainTests
 
             var code = await Program.Main(Array.Empty<string>());
 
-            code.Should().Be(1);
+            Assert.That(code, Is.EqualTo(1));
         }
         finally
         {
@@ -62,7 +62,7 @@ public sealed class ProgramMainTests
 
             var code = await Program.Main(Array.Empty<string>());
 
-            code.Should().Be(0);
+            Assert.That(code, Is.EqualTo(0));
         }
         finally
         {
@@ -81,15 +81,15 @@ public sealed class ProgramMainTests
     [TestCase(new string[0], SeederMode.Seed)]
     public void TryParseMode_RecognizesSupportedOfflineModes(string[] args, SeederMode expectedMode)
     {
-        Program.TryParseMode(args, out var mode).Should().BeTrue();
-        mode.Should().Be(expectedMode);
+        Assert.That(Program.TryParseMode(args, out var mode), Is.True);
+        Assert.That(mode, Is.EqualTo(expectedMode));
     }
 
     [Test]
     public void TryParseMode_RejectsUnknownOrCombinedModes()
     {
-        Program.TryParseMode(["--migrate-only", "--prepare-hangfire"], out _).Should().BeFalse();
-        Program.TryParseMode(["--unknown"], out _).Should().BeFalse();
+        Assert.That(Program.TryParseMode(["--migrate-only", "--prepare-hangfire"], out _), Is.False);
+        Assert.That(Program.TryParseMode(["--unknown"], out _), Is.False);
     }
 
     [Test]
@@ -103,8 +103,8 @@ public sealed class ProgramMainTests
 
             var code = await Program.Main(["--help"]);
 
-            code.Should().Be(0);
-            output.ToString().Should().Contain("reporting-photo-types --dry-run");
+            Assert.That(code, Is.EqualTo(0));
+            Assert.That(output.ToString(), Does.Contain("reporting-photo-types --dry-run"));
         }
         finally
         {
@@ -115,13 +115,13 @@ public sealed class ProgramMainTests
     [Test]
     public void ReportingMigrationCommand_ApplyRequiresFingerprintAndExactFenceAcknowledgement()
     {
-        ReportingPhotoTypesMigrationCommand.TryParse(
+        Assert.That(ReportingPhotoTypesMigrationCommand.TryParse(
             ["reporting-photo-types", "--apply"],
             out _,
-            out var missingGuardError).Should().BeFalse();
-        missingGuardError.Should().Contain("acknowledge-external-fence");
+            out var missingGuardError), Is.False);
+        Assert.That(missingGuardError, Does.Contain("acknowledge-external-fence"));
 
-        ReportingPhotoTypesMigrationCommand.TryParse(
+        Assert.That(ReportingPhotoTypesMigrationCommand.TryParse(
             [
                 "reporting-photo-types",
                 "--apply",
@@ -129,10 +129,10 @@ public sealed class ProgramMainTests
                 $"--acknowledge-external-fence={ReportingPhotoTypesMigrationCommand.ExternalFenceAcknowledgement}"
             ],
             out var options,
-            out _).Should().BeTrue();
-        options!.Mode.Should().Be(ReportingPhotoTypesMigrationMode.Apply);
-        options.ExpectedFingerprint.Should().Be("ABC");
-        options.ExternalFenceAcknowledged.Should().BeTrue();
+            out _), Is.True);
+        Assert.That(options!.Mode, Is.EqualTo(ReportingPhotoTypesMigrationMode.Apply));
+        Assert.That(options.ExpectedFingerprint, Is.EqualTo("ABC"));
+        Assert.That(options.ExternalFenceAcknowledged, Is.True);
     }
 
     private static string CreateTempRepo(bool withBaseSettings, bool includeConnection = true)

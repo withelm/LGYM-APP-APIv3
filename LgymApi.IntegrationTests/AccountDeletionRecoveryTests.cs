@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications.Contracts.Email;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
@@ -43,37 +42,37 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         var firstSession = Client.DefaultRequestHeaders.Authorization;
         SetAuthorizationHeader(user.Id);
         var secondSession = Client.DefaultRequestHeaders.Authorization;
-        (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.GetAsync("/api/deleteAccount")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.GetAsync("/api/account/access")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Client.GetAsync("/api/deleteAccount")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         foreach (var session in new[] { firstSession, secondSession })
         {
             Client.DefaultRequestHeaders.Authorization = session;
-            (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-            (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            Assert.That((await Client.GetAsync("/api/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That((await Client.GetAsync("/api/account/access")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
         ClearAuthorizationHeader();
-        (await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That((await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var token = await RecoveryTokenAsync(Client, user.Name);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await Client.GetAsync("/api/account/access")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That((await Client.GetAsync("/api/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await Client.GetAsync("/api/account/access")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         ClearAuthorizationHeader();
 
         var cancellation = await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token });
 
-        cancellation.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(cancellation.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var login = await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" });
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var verify = Factory.Services.CreateScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
         var restored = await database.Users.SingleAsync(account => account.Id == user.Id);
-        restored.Name.Should().Be(user.Name);
-        restored.Email.Should().Be(user.Email);
-        restored.DeletionState.Should().Be(AccountDeletionState.Active);
-        (await database.Measurements.SingleAsync(measurement => measurement.UserId == user.Id)).Value.Should().Be(77);
-        (await database.TrainerTraineeLinks.CountAsync(link => link.TraineeId == user.Id && link.TrainerId == trainer.Id)).Should().Be(1);
+        Assert.That(restored.Name, Is.EqualTo(user.Name));
+        Assert.That(restored.Email, Is.EqualTo(user.Email));
+        Assert.That(restored.DeletionState, Is.EqualTo(AccountDeletionState.Active));
+        Assert.That((await database.Measurements.SingleAsync(measurement => measurement.UserId == user.Id)).Value, Is.EqualTo(77));
+        Assert.That((await database.TrainerTraineeLinks.CountAsync(link => link.TraineeId == user.Id && link.TrainerId == trainer.Id)), Is.EqualTo(1));
         Client.DefaultRequestHeaders.Authorization = firstSession;
-        (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That((await Client.GetAsync("/api/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -86,12 +85,12 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         ClearAuthorizationHeader();
         var token = await RecoveryTokenAsync(Client, user.Name);
 
-        (await Client.PostAsJsonAsync(Recovery + "/logout", new { recoveryToken = token })).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsJsonAsync(Recovery + "/logout", new { recoveryToken = token })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        (await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token })).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         using var scope = Factory.Services.CreateScope();
-        (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(account => account.Id == user.Id))
-            .DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
+        Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(account => account.Id == user.Id))
+            .DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
     }
 
     [TestCase("cancel", -1, HttpStatusCode.OK)]
@@ -121,7 +120,7 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         var token = await RecoveryTokenAsync(client, user.Name);
         clock.Now = deadline.AddSeconds(secondsFromDeadline);
 
-        (await client.PostAsJsonAsync(Recovery + "/" + action, new { recoveryToken = token })).StatusCode.Should().Be(expected);
+        Assert.That((await client.PostAsJsonAsync(Recovery + "/" + action, new { recoveryToken = token })).StatusCode, Is.EqualTo(expected));
     }
 
     [TestCase("cancel", false)]
@@ -141,9 +140,9 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         var token = await RecoveryTokenAsync(Client, user.Name);
         var supplied = tampered ? (token[0] == '0' ? "1" : "0") + token[1..] : new string('0', 64);
 
-        (await Client.PostAsJsonAsync(Recovery + "/" + action, new { recoveryToken = supplied })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.PostAsJsonAsync(Recovery + "/" + action, new { recoveryToken = supplied })).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
-        (await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token })).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = token })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -161,10 +160,10 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         await scope.ServiceProvider.GetRequiredService<IAccountDeletionService>().RequestAsync(user.Id.Rebind<AccountReference>());
 
         await db.Entry(pending).ReloadAsync();
-        pending.DeletionGeneration.Should().Be(generation);
-        pending.DeletionEffectiveAt.Should().Be(deadline);
-        pending.DeletionEffectiveAt.Should().Be(pending.DeletionRequestedAt!.Value.AddDays(30));
-        (await db.UserSessions.Where(session => session.UserId == user.Id).AllAsync(session => session.RevokedAtUtc != null)).Should().BeTrue();
+        Assert.That(pending.DeletionGeneration, Is.EqualTo(generation));
+        Assert.That(pending.DeletionEffectiveAt, Is.EqualTo(deadline));
+        Assert.That(pending.DeletionEffectiveAt, Is.EqualTo(pending.DeletionRequestedAt!.Value.AddDays(30)));
+        Assert.That((await db.UserSessions.Where(session => session.UserId == user.Id).AllAsync(session => session.RevokedAtUtc != null)), Is.True);
     }
 
     [Test]
@@ -188,26 +187,26 @@ public sealed class AccountDeletionRecoveryTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync(Recovery + "/email", new { email = user.Email.Value });
         var unknown = await Client.PostAsJsonAsync(Recovery + "/email", new { email = "unknown-recovery@example.test" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        unknown.StatusCode.Should().Be(response.StatusCode);
-        (await unknown.Content.ReadAsStringAsync()).Should().Be(await response.Content.ReadAsStringAsync());
-        (await response.Content.ReadAsStringAsync()).Should().NotContain("recoveryToken");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(unknown.StatusCode, Is.EqualTo(response.StatusCode));
+        Assert.That((await unknown.Content.ReadAsStringAsync()), Is.EqualTo(await response.Content.ReadAsStringAsync()));
+        Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("recoveryToken"));
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var notification = await database.NotificationMessages.SingleAsync(message => message.Type == EmailNotificationTypes.AccountRecovery);
         var payload = JsonSerializer.Deserialize<AccountRecoveryEmail>(notification.PayloadJson, SharedSerializationOptions.Current)!;
         await scope.ServiceProvider.GetRequiredService<IEmailJobExecutionPort>().ProcessAsync(notification.Id.ToString());
-        Factory.EmailSender.SentMessages.Should().ContainSingle(message => message.To == user.Email.Value && message.Body.Contains(payload.RecoveryToken));
-        (await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = payload.RecoveryToken })).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((Factory.EmailSender.SentMessages).Where(message => message.To == user.Email.Value && message.Body.Contains(payload.RecoveryToken)), Has.Exactly(1).Items);
+        Assert.That((await Client.PostAsJsonAsync(Recovery + "/cancel", new { recoveryToken = payload.RecoveryToken })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         database.ChangeTracker.Clear();
-        (await database.Users.SingleAsync(account => account.Id == user.Id)).DeletionState.Should().Be(AccountDeletionState.Active);
-        (await database.UserExternalLogins.SingleAsync(login => login.UserId == user.Id)).ProviderKey.Should().Be("recovery-provider-subject");
+        Assert.That((await database.Users.SingleAsync(account => account.Id == user.Id)).DeletionState, Is.EqualTo(AccountDeletionState.Active));
+        Assert.That((await database.UserExternalLogins.SingleAsync(login => login.UserId == user.Id)).ProviderKey, Is.EqualTo("recovery-provider-subject"));
     }
 
     private static async Task<string> RecoveryTokenAsync(HttpClient client, string name)
     {
         var response = await client.PostAsJsonAsync(Recovery + "/login", new { name, password = "password123" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("recoveryToken").GetString()!;
     }

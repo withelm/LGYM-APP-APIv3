@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
 using LgymApi.Application.Coaching.Contracts.Access;
@@ -39,7 +38,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(
             new UnlinkTraineeCommand(trainerId, traineeId));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await links.Received(1).RemoveAsync(
             Arg.Is<CoachingEpisodeAuthorizationGrant>(grant => grant.LinkId == link.Id),
             Arg.Any<CancellationToken>());
@@ -61,8 +60,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(
             new UnlinkTraineeCommand(trainerId, traineeId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
         await links.DidNotReceive().FindByTrainerAndTraineeAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -82,8 +81,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(
             new UnlinkTraineeCommand(trainerId, Id<User>.Empty));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
         await userAccess.Received(1).IsTrainerAsync(trainerId, Arg.Any<CancellationToken>());
         await links.DidNotReceive().FindByTrainerAndTraineeAsync(
             Arg.Any<Id<User>>(),
@@ -105,8 +104,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(
             new UnlinkTraineeCommand(trainerId, traineeId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
         await links.DidNotReceive().RemoveAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -136,8 +135,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(
             new DetachFromTrainerCommand(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        operations.Should().Equal("remove", "stage", "commit", "enqueue");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(operations, Is.EqualTo(new[] { "remove", "stage", "commit", "enqueue" }));
         await Outbox(services).Received(1).StageAsync(
             Arg.Is<RelationshipEndedReportCancellationCommand>(command => command.EpisodeId == link.EpisodeId),
             Arg.Any<CancellationToken>());
@@ -164,7 +163,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             .AndDoes(_ => staged = true);
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ =>
         {
-            staged.Should().BeTrue();
+            Assert.That(staged, Is.True);
             return Task.FromException<int>(new InvalidOperationException("commit failed"));
         });
 
@@ -172,7 +171,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
             ? () => Resolve<IUnlinkTraineeUseCase>(services).ExecuteAsync(new UnlinkTraineeCommand(trainerId, traineeId))
             : () => Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(new DetachFromTrainerCommand(traineeId));
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("commit failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await Outbox(services).Received(1).StageAsync(
             Arg.Is<RelationshipEndedReportCancellationCommand>(command => command.EpisodeId == link.EpisodeId),
             Arg.Any<CancellationToken>());
@@ -189,8 +188,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(
             new DetachFromTrainerCommand(traineeId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
         await links.DidNotReceive().RemoveAsync(Arg.Any<CoachingEpisodeAuthorizationGrant>(), Arg.Any<CancellationToken>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
@@ -209,7 +208,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         Func<Task> act = () => Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(
             new DetachFromTrainerCommand(traineeId));
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("commit failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
@@ -227,7 +226,7 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         Func<Task> act = () => Resolve<IDetachFromTrainerUseCase>(services).ExecuteAsync(
             new DetachFromTrainerCommand(traineeId));
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("dispatch failed");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("dispatch failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await commands.Received(1).EnqueueAsync(Arg.Any<TrainerRelationshipEndedInAppNotificationCommand>());
     }
@@ -246,13 +245,13 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IGetCurrentTrainerUseCase>(services).ExecuteAsync(
             new GetCurrentTrainerQuery(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(new CurrentTrainerReadModel(
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(new CurrentTrainerReadModel(
             trainerId,
             "Trainer",
             "trainer@example.test",
             "avatar.jpg",
-            linkedAt));
+            linkedAt)));
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -266,8 +265,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IGetCurrentTrainerUseCase>(services).ExecuteAsync(
             new GetCurrentTrainerQuery(traineeId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
         await accounts.DidNotReceive().GetByIdAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
     }
 
@@ -283,8 +282,8 @@ public sealed class CoachingRelationshipLifecycleSliceTests
         var result = await Resolve<IGetCurrentTrainerUseCase>(services).ExecuteAsync(
             new GetCurrentTrainerQuery(traineeId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
     }
 
     private static ServiceCollection CreateServices(

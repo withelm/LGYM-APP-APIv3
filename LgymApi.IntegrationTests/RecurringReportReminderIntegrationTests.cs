@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Notifications;
@@ -51,7 +50,7 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
         await AssertVisibleCountAsync(scenario.TraineeId, 1);
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var notifications = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().InAppNotifications;
-        (await notifications.CountAsync(item => item.RecipientId == scenario.TraineeId)).Should().Be(1);
+        Assert.That((await notifications.CountAsync(item => item.RecipientId == scenario.TraineeId)), Is.EqualTo(1));
     }
 
     [TestCase(true)]
@@ -79,10 +78,10 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
             new CreateInAppNotificationInput(scenario.TraineeId, scenario.TrainerId, key, false,
                 "Reminder", "/reports", InAppNotificationTypes.ReportRequestReceived));
 
-        result.IsSuccess.Should().BeTrue();
-        probe.Should().NotBeNull();
-        probe!.PublisherTransaction.Should().BeTrue();
-        probe.BridgeTransaction.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(probe, Is.Not.Null);
+        Assert.That(probe!.PublisherTransaction, Is.True);
+        Assert.That(probe.BridgeTransaction, Is.False);
     }
 
     private sealed class DeliveryTransactionProbe(AppDbContext database) : IInAppNotificationPushPublisher, INotificationEventBridge
@@ -116,15 +115,14 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
             ? $"/api/trainer/trainees/{scenario.TraineeId}/unlink"
             : "/api/trainee/trainer/detach";
         using var response = await Client.PostAsync(unlinkUrl, null);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await DeliverAsync(envelopeId);
         await AssertVisibleCountAsync(scenario.TraineeId, 0);
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.InAppNotifications.CountAsync(item => item.RecipientId == scenario.TraineeId)).Should().Be(0);
-        (await database.CommandEnvelopes.SingleAsync(item => item.Id == envelopeId)).Status
-            .Should().Be(ActionExecutionStatus.Completed);
+        Assert.That((await database.InAppNotifications.CountAsync(item => item.RecipientId == scenario.TraineeId)), Is.EqualTo(0));
+        Assert.That((await database.CommandEnvelopes.SingleAsync(item => item.Id == envelopeId)).Status, Is.EqualTo(ActionExecutionStatus.Completed));
     }
 
     [TestCase(true, true)]
@@ -165,7 +163,7 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
                 "Reminder", "/reports", InAppNotificationTypes.ReportRequestReceived), token);
         try
         {
-            (await gate.ReminderReached.Task.WaitAsync(TimeSpan.FromSeconds(10), token)).Should().BeTrue();
+            Assert.That((await gate.ReminderReached.Task.WaitAsync(TimeSpan.FromSeconds(10), token)), Is.True);
             var unlink = unlinkScope.ServiceProvider.GetRequiredService<IUnlinkTraineeUseCase>()
                 .ExecuteAsync(new UnlinkTraineeCommand(scenario.TrainerId, scenario.TraineeId), token);
             await gate.UnlinkReached.Task.WaitAsync(TimeSpan.FromSeconds(10), token);
@@ -173,18 +171,18 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
             if (unlinkFirst)
             {
                 gate.ReleaseUnlink.TrySetResult();
-                (await unlink.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess.Should().BeTrue();
+                Assert.That((await unlink.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess, Is.True);
                 await unlinkTransaction.CommitAsync(token);
                 gate.ReleaseReminder.TrySetResult();
                 var conflict = async () => await reminder.WaitAsync(TimeSpan.FromSeconds(10), token);
-                await conflict.Should().ThrowAsync<DbUpdateConcurrencyException>();
+                await Assert.ThatAsync(async () => { await conflict(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
             }
             else
             {
                 gate.ReleaseReminder.TrySetResult();
-                (await reminder.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess.Should().BeTrue();
+                Assert.That((await reminder.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess, Is.True);
                 gate.ReleaseUnlink.TrySetResult();
-                (await unlink.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess.Should().BeTrue();
+                Assert.That((await unlink.WaitAsync(TimeSpan.FromSeconds(10), token)).IsSuccess, Is.True);
                 await unlinkTransaction.CommitAsync(token);
             }
         }
@@ -196,12 +194,11 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
 
         await using var checkScope = Factory.Services.CreateAsyncScope();
         var db = checkScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.InAppNotifications.CountAsync(item => item.RecipientId == scenario.TraineeId && item.DeliveryKey == deliveryKey, token))
-            .Should().Be(unlinkFirst ? 0 : 1);
-        (await db.TrainerTraineeLinks.AnyAsync(item => item.TraineeId == scenario.TraineeId, token)).Should().BeFalse();
+        Assert.That((await db.InAppNotifications.CountAsync(item => item.RecipientId == scenario.TraineeId && item.DeliveryKey == deliveryKey, token)), Is.EqualTo(unlinkFirst ? 0 : 1));
+        Assert.That((await db.TrainerTraineeLinks.AnyAsync(item => item.TraineeId == scenario.TraineeId, token)), Is.False);
         var episode = await db.CoachingEpisodes.SingleAsync(item => item.TraineeId == scenario.TraineeId, token);
-        episode.EndedAt.Should().NotBeNull();
-        episode.AuthorizationRevision.Should().Be(1);
+        Assert.That(episode.EndedAt, Is.Not.Null);
+        Assert.That(episode.AuthorizationRevision, Is.EqualTo(1));
     }
 
     private async Task<(Id<User> TrainerId, Id<User> TraineeId)> SeedScenarioAsync(bool upcoming)
@@ -260,7 +257,9 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
         }
         await using var readScope = Factory.Services.CreateAsyncScope();
         var envelopes = await readScope.ServiceProvider.GetRequiredService<AppDbContext>().CommandEnvelopes.AsNoTracking().ToArrayAsync();
-        return envelopes.Should().ContainSingle().Subject.Id;
+        var assertedValue63 = (envelopes).ToArray();
+        Assert.That(assertedValue63, Has.Exactly(1).Items);
+        return assertedValue63.Single().Id;
     }
 
     private async Task DeliverAsync(Id<CommandEnvelope> envelopeId)
@@ -273,9 +272,9 @@ public sealed partial class RecurringReportReminderIntegrationTests : PostgreSql
     {
         SetAuthorizationHeader(traineeId);
         using var response = await Client.GetAsync($"/api/{traineeId}/notifications");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        document.RootElement.GetProperty("items").GetArrayLength().Should().Be(count);
+        Assert.That(document.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(count));
     }
 
     private sealed class RaceGate

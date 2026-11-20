@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -15,7 +14,7 @@ public sealed class IdParsingExtensionsTests
 
         var actual = expected.ToString().ToIdOrEmpty<User>();
 
-        actual.Should().Be(expected);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -24,8 +23,8 @@ public sealed class IdParsingExtensionsTests
         var fromNull = ((string?)null).ToIdOrEmpty<User>();
         var fromInvalid = "not-a-guid".ToIdOrEmpty<User>();
 
-        fromNull.IsEmpty.Should().BeTrue();
-        fromInvalid.IsEmpty.Should().BeTrue();
+        Assert.That(fromNull.IsEmpty, Is.True);
+        Assert.That(fromInvalid.IsEmpty, Is.True);
     }
 
     [Test]
@@ -35,7 +34,7 @@ public sealed class IdParsingExtensionsTests
 
         var actual = expected.ToString().ToNullableId<Exercise>();
 
-        actual.Should().Be(expected);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -44,7 +43,7 @@ public sealed class IdParsingExtensionsTests
         var fromNull = ((string?)null).ToNullableId<Exercise>();
         var fromInvalid = "invalid".ToNullableId<Exercise>();
 
-        fromNull.Should().BeNull();
-        fromInvalid.Should().BeNull();
+        Assert.That(fromNull, Is.Null);
+        Assert.That(fromInvalid, Is.Null);
     }
 }

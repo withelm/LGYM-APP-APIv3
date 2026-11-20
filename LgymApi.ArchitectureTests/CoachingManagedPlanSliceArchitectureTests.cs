@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.ManagedPlans.Assign;
 using LgymApi.Application.Coaching.ManagedPlans.Create;
@@ -37,9 +36,9 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -51,7 +50,7 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == slice.Contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == slice.Contract), Is.EqualTo(1));
         }
     }
 
@@ -71,8 +70,8 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
 
         foreach (var model in models)
         {
-            model.IsSealed.Should().BeTrue();
-            model.GetProperties().Select(property => property.PropertyType).Should().OnlyContain(type => IsAllowedInputType(type));
+            Assert.That(model.IsSealed, Is.True);
+            Assert.That((model.GetProperties().Select(property => property.PropertyType)).All(type => IsAllowedInputType(type)), Is.True);
         }
     }
 
@@ -91,26 +90,26 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
                     .SelectMany(method => method.GetParameters().Select(parameter => parameter.ParameterType))))
             .ToArray();
 
-        exposedTypes.Select(type => type.FullName).Should().NotContain("LgymApi.Application.Repositories.IUserRepository");
-        exposedTypes.Should().NotContain(typeof(Plan));
-        exposedTypes.Should().NotContain(typeof(User));
+        Assert.That(exposedTypes.Select(type => type.FullName), Does.Not.Contain("LgymApi.Application.Repositories.IUserRepository"));
+        Assert.That(exposedTypes, Does.Not.Contain(typeof(Plan)));
+        Assert.That(exposedTypes, Does.Not.Contain(typeof(User)));
 
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var directory = Path.Combine(root, "LgymApi.Application", "Coaching", "ManagedPlans");
         var source = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
             .Select(File.ReadAllText)
             .ToArray();
-        source.Should().NotContain(text => text.Contains("LgymApi.Application.Repositories", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("IPlanRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("IPlanDayRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("IUserRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("LgymApi.Domain.Entities.Plan", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("LgymApi.Domain.Entities.User", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("LgymApi.Application.TrainingPlanning.ManagedPlans", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("TrainerRelationshipService", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("LgymApi.Infrastructure", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("SaveChangesAsync", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("BeginTransactionAsync", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("LgymApi.Application.Repositories", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("IPlanRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("IPlanDayRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("IUserRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("LgymApi.Domain.Entities.Plan", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("LgymApi.Domain.Entities.User", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("LgymApi.Application.TrainingPlanning.ManagedPlans", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("TrainerRelationshipService", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("LgymApi.Infrastructure", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("SaveChangesAsync", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("BeginTransactionAsync", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -124,20 +123,20 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        useCases.Should().OnlyContain(source => source.Contains("_mapper.CreateContext()", StringComparison.Ordinal));
-        useCases.Should().NotContain(source => source.Contains("new Owner", StringComparison.Ordinal));
-        profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length.Should().Be(8);
+        Assert.That((useCases).All(source => source.Contains("_mapper.CreateContext()", StringComparison.Ordinal)), Is.True);
+        Assert.That((useCases).Any(source => source.Contains("new Owner", StringComparison.Ordinal)), Is.False);
+        Assert.That(profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length, Is.EqualTo(8));
     }
 
     [Test]
     public void TrainingPlanningManagedPlanOwner_DoesNotDependOnCoaching()
     {
         var sourceFiles = ArchitectureTestHelpers.EnumerateProductionSourceFiles("LgymApi.TrainingPlanning");
-        sourceFiles.Should().NotBeEmpty();
+        Assert.That(sourceFiles, Is.Not.Empty);
         var source = sourceFiles
             .Select(File.ReadAllText);
 
-        source.Should().NotContain(text => text.Contains("LgymApi.Application.Coaching", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("LgymApi.Application.Coaching", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -151,12 +150,12 @@ public sealed class CoachingManagedPlanSliceArchitectureTests
             .Where(path => !Path.GetFileName(path).StartsWith("I", StringComparison.Ordinal))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
-        useCaseFiles.Should().HaveCount(7);
+        Assert.That(useCaseFiles, Has.Exactly(7).Items);
         var useCaseSources = useCaseFiles
             .Select(File.ReadAllText);
 
-        useCaseSources.Should().OnlyContain(source =>
-            source.Contains("LgymApi.Application.TrainingPlanning.Errors", StringComparison.Ordinal));
+        Assert.That((useCaseSources).All(source =>
+            source.Contains("LgymApi.Application.TrainingPlanning.Errors", StringComparison.Ordinal)), Is.True);
     }
 
     private static bool IsAllowedInputType(Type type)

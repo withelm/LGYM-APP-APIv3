@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.Accounts;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Adapters;
@@ -33,12 +32,11 @@ public sealed class PushInstallationAccountCleanupAdapterTests
 
         services.AddNotificationsModule();
 
-        var registration = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IAccountPushInstallationCleanupPort))
-            .Should()
-            .ContainSingle()
-            .Which;
-        registration.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        registration.ImplementationType.Should().Be(typeof(PushInstallationAccountCleanupAdapter));
+        var assertedValue143 = (services
+                    .Where(descriptor => descriptor.ServiceType == typeof(IAccountPushInstallationCleanupPort))).ToArray();
+        Assert.That(assertedValue143, Has.Exactly(1).Items);
+        var registration = assertedValue143.Single();
+        Assert.That(registration.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+        Assert.That(registration.ImplementationType, Is.EqualTo(typeof(PushInstallationAccountCleanupAdapter)));
     }
 }

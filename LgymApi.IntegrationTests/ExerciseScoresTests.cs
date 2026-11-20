@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -30,11 +29,11 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
-        body.Should().NotBeNull();
-        body.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Is.Empty);
     }
 
     [Test]
@@ -74,19 +73,19 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var chartRequest = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", chartRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCountGreaterThanOrEqualTo(1);
-        body!.Select(entry => entry.ExerciseId).Should().OnlyContain(id => id == exerciseId.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Count.GreaterThanOrEqualTo(1));
+        Assert.That((body!.Select(entry => entry.ExerciseId)).All(id => id == exerciseId.ToString()), Is.True);
 
         var repeatResponse = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", chartRequest);
-        repeatResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(repeatResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var repeatBody = await repeatResponse.Content.ReadFromJsonAsync<List<ChartDataEntry>>();
-        repeatBody.Should().NotBeNull();
-        repeatBody!.Select(entry => entry.Id).Should().Equal(body.Select(entry => entry.Id));
-        repeatBody.Select(entry => entry.ExerciseId).Should().Equal(body.Select(entry => entry.ExerciseId));
+        Assert.That(repeatBody, Is.Not.Null);
+        Assert.That(repeatBody!.Select(entry => entry.Id), Is.EqualTo(body.Select(entry => entry.Id)));
+        Assert.That(repeatBody.Select(entry => entry.ExerciseId), Is.EqualTo(body.Select(entry => entry.ExerciseId)));
         TestContext.Progress.WriteLine(System.Text.Json.JsonSerializer.Serialize(body));
     }
 
@@ -112,7 +111,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync($"/api/exerciseScores/{otherUserId}/getExerciseScoresChartData", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -131,7 +130,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             exerciseId = "not-a-uuid"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -156,13 +155,13 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
-        body.Should().NotBeNull();
-        body!.ExerciseId.Should().Be(exerciseId.ToString());
-        body.SeriesScores.Should().HaveCount(3);
-        body.SeriesScores.Should().AllSatisfy(s => s.Score.Should().BeNull());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.ExerciseId, Is.EqualTo(exerciseId.ToString()));
+        Assert.That(body.SeriesScores, Has.Exactly(3).Items);
+        Assert.Multiple(() => { foreach (var s in body.SeriesScores) { Assert.That(s.Score, Is.Null); } });
     }
 
     [Test]
@@ -187,7 +186,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -234,13 +233,13 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
-        body.Should().NotBeNull();
-        body!.SeriesScores[0].Score.Should().NotBeNull();
-        body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
-        body.SeriesScores[0].Score!.GymName.Should().Be("LastScores Gym");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.SeriesScores[0].Score, Is.Not.Null);
+        Assert.That(body.SeriesScores[0].Score!.Weight, Is.EqualTo(60.0));
+        Assert.That(body.SeriesScores[0].Score!.GymName, Is.EqualTo("LastScores Gym"));
     }
 
     [Test]
@@ -270,7 +269,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             series = 1
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -303,7 +302,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
                 new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 60.0, unit = WeightUnits.Kilograms.ToString() }
             }
         });
-        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await ReassignGymOwnerAsync(gymId, foreignOwner.Id);
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/exercise/{userId}/getLastExerciseScores", new
@@ -314,11 +313,11 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             gymId = gymId.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<LastExerciseScoresResponse>();
-        body!.SeriesScores.Should().ContainSingle();
-        body.SeriesScores[0].Score!.Weight.Should().Be(60.0);
-        body.SeriesScores[0].Score!.GymName.Should().BeNull();
+        Assert.That(body!.SeriesScores, Has.Exactly(1).Items);
+        Assert.That(body.SeriesScores[0].Score!.Weight, Is.EqualTo(60.0));
+        Assert.That(body.SeriesScores[0].Score!.GymName, Is.Null);
     }
 
     [Test]
@@ -337,11 +336,11 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
-        body.Should().NotBeNull();
-        body.Should().BeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Is.Empty);
     }
 
     [Test]
@@ -380,11 +379,11 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCountGreaterThanOrEqualTo(1);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Count.GreaterThanOrEqualTo(1));
     }
 
     [Test]
@@ -417,7 +416,7 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
                 new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = WeightUnits.Kilograms.ToString() }
             }
         });
-        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await ReassignGymOwnerAsync(gymId, foreignOwner.Id);
 
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", new
@@ -425,13 +424,13 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
             exerciseId = exerciseId.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
-        body.Should().ContainSingle();
-        body![0].GymName.Should().BeEmpty();
-        body[0].SeriesScores.Should().ContainSingle();
-        body[0].SeriesScores[0].Score!.Weight.Should().Be(100.0);
-        body[0].SeriesScores[0].Score!.GymName.Should().BeNull();
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].GymName, Is.Empty);
+        Assert.That(body[0].SeriesScores, Has.Exactly(1).Items);
+        Assert.That(body[0].SeriesScores[0].Score!.Weight, Is.EqualTo(100.0));
+        Assert.That(body[0].SeriesScores[0].Score!.GymName, Is.Null);
     }
 
     [Test]
@@ -479,12 +478,11 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(item => item.GymName)
-            .Should().BeEquivalentTo("First Shared History Gym", "Second Shared History Gym");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(item => item.GymName), Is.EquivalentTo(new[] { "First Shared History Gym", "Second Shared History Gym" }));
     }
 
     [Test]
@@ -515,21 +513,21 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
                 new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 100.0, unit = WeightUnits.Kilograms.ToString() }
             }
         });
-        trainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var deletePlanResponse = await Client.PostAsync($"/api/{planId}/deletePlan", null);
-        deletePlanResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deletePlanResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/exercise/getExerciseScoresFromTrainingByExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<ExerciseHistoryItem>>();
-        body.Should().ContainSingle();
-        body![0].GymName.Should().Be("Deleted Plan History Gym");
-        body[0].TrainingName.Should().BeEmpty();
-        body[0].SeriesScores.Should().ContainSingle();
-        body[0].SeriesScores[0].Score.Should().NotBeNull();
-        body[0].SeriesScores[0].Score!.Weight.Should().Be(100.0);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].GymName, Is.EqualTo("Deleted Plan History Gym"));
+        Assert.That(body[0].TrainingName, Is.Empty);
+        Assert.That(body[0].SeriesScores, Has.Exactly(1).Items);
+        Assert.That(body[0].SeriesScores[0].Score, Is.Not.Null);
+        Assert.That(body[0].SeriesScores[0].Score!.Weight, Is.EqualTo(100.0));
     }
 
     [Test]
@@ -561,25 +559,25 @@ public sealed class ExerciseScoresTests : IntegrationTestBase
                 new { exercise = exerciseId.ToString(), series = 1, reps = 10, weight = 50.0, unit = WeightUnits.Kilograms.ToString() }
             }
         });
-        createTrainingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(createTrainingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var chartResponse = await Client.PostAsJsonAsync($"/api/exerciseScores/{userId}/getExerciseScoresChartData", new
         {
             exerciseId = exerciseId.ToString()
         });
 
-        chartResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(chartResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var chartDocument = JsonDocument.Parse(await chartResponse.Content.ReadAsStringAsync());
-        chartDocument.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        chartDocument.RootElement.GetArrayLength().Should().BeGreaterThan(0);
+        Assert.That(chartDocument.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+        Assert.That(chartDocument.RootElement.GetArrayLength(), Is.GreaterThan(0));
 
         var chartEntry = chartDocument.RootElement[0];
-        chartEntry.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("_id", "value", "date", "exerciseName", "exerciseId");
-        chartEntry.GetProperty("_id").GetString().Should().StartWith($"{exerciseId}-");
-        chartEntry.GetProperty("value").ValueKind.Should().Be(JsonValueKind.Number);
-        chartEntry.GetProperty("date").ValueKind.Should().Be(JsonValueKind.String);
-        chartEntry.GetProperty("exerciseName").GetString().Should().Be("Chart Contract Exercise");
-        chartEntry.GetProperty("exerciseId").GetString().Should().Be(exerciseId.ToString());
+        Assert.That(chartEntry.EnumerateObject().Select(property => property.Name), Is.EquivalentTo(new[] { "_id", "value", "date", "exerciseName", "exerciseId" }));
+        Assert.That(chartEntry.GetProperty("_id").GetString(), Does.StartWith($"{exerciseId}-"));
+        Assert.That(chartEntry.GetProperty("value").ValueKind, Is.EqualTo(JsonValueKind.Number));
+        Assert.That(chartEntry.GetProperty("date").ValueKind, Is.EqualTo(JsonValueKind.String));
+        Assert.That(chartEntry.GetProperty("exerciseName").GetString(), Is.EqualTo("Chart Contract Exercise"));
+        Assert.That(chartEntry.GetProperty("exerciseId").GetString(), Is.EqualTo(exerciseId.ToString()));
     }
 
     private sealed class ChartDataEntry

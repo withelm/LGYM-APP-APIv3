@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -38,11 +37,11 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
-        result.Value.PlannedDoses.Should().Be(3);
-        result.Value.TakenDoses.Should().Be(1);
-        result.Value.AdherenceRate.Should().Be(33.33);
-        result.Value.FromDate.Should().Be(new DateOnly(2026, 7, 6));
-        result.Value.ToDate.Should().Be(new DateOnly(2026, 7, 7));
+        Assert.That(result.Value.PlannedDoses, Is.EqualTo(3));
+        Assert.That(result.Value.TakenDoses, Is.EqualTo(1));
+        Assert.That(result.Value.AdherenceRate, Is.EqualTo(33.33));
+        Assert.That(result.Value.FromDate, Is.EqualTo(new DateOnly(2026, 7, 6)));
+        Assert.That(result.Value.ToDate, Is.EqualTo(new DateOnly(2026, 7, 7)));
     }
 
     [Test]
@@ -67,9 +66,9 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 6)));
 
-        result.Value.PlannedDoses.Should().Be(0);
-        result.Value.TakenDoses.Should().Be(0);
-        result.Value.AdherenceRate.Should().Be(0);
+        Assert.That(result.Value.PlannedDoses, Is.EqualTo(0));
+        Assert.That(result.Value.TakenDoses, Is.EqualTo(0));
+        Assert.That(result.Value.AdherenceRate, Is.EqualTo(0));
     }
 
     [Test]
@@ -83,10 +82,10 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
-        result.Value.PlannedDoses.Should().Be(0);
-        result.Value.TakenDoses.Should().Be(0);
-        result.Value.AdherenceRate.Should().Be(0);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(result.Value.PlannedDoses, Is.EqualTo(0));
+        Assert.That(result.Value.TakenDoses, Is.EqualTo(0));
+        Assert.That(result.Value.AdherenceRate, Is.EqualTo(0));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -101,9 +100,9 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)));
 
-        result.Value.PlannedDoses.Should().Be(0);
-        result.Value.TakenDoses.Should().Be(0);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(result.Value.PlannedDoses, Is.EqualTo(0));
+        Assert.That(result.Value.TakenDoses, Is.EqualTo(0));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -121,12 +120,12 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var oversized = await useCase.ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 2)));
 
-        maximum.IsSuccess.Should().BeTrue();
-        reversed.Error.Should().BeOfType<InvalidSupplementationError>();
-        reversed.Error.Message.Should().Be(Messages.InvalidDateRange);
-        oversized.Error.Should().BeOfType<InvalidSupplementationError>();
-        oversized.Error.Message.Should().Be(Messages.DateRangeTooLarge);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(maximum.IsSuccess, Is.True);
+        Assert.That(reversed.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(reversed.Error.Message, Is.EqualTo(Messages.InvalidDateRange));
+        Assert.That(oversized.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(oversized.Error.Message, Is.EqualTo(Messages.DateRangeTooLarge));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -140,9 +139,9 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<UserEntity>.Empty, new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)));
 
-        result.Error.Should().BeOfType<SupplementationForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(result.Error, Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
     }
 
     [Test]
@@ -165,7 +164,7 @@ public sealed class GetSupplementComplianceSummaryUseCaseTests
             new GetSupplementComplianceSummaryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, new DateOnly(2026, 7, 6), new DateOnly(2026, 7, 7)),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
         await dependencies.Plans.Received(1).GetActivePlanForTraineeAsync(traineeId, cancellationToken);
         await dependencies.Plans.Received(1).ListIntakeLogsForPlanAsync(

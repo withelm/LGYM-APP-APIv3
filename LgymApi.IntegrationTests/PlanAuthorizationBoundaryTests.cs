@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -33,28 +32,28 @@ public sealed class PlanAuthorizationBoundaryTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
 
         using var list = await Client.GetAsync($"/api/{owner.Id}/getPlansList");
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var listJson = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
-        listJson.RootElement.EnumerateArray().Should().ContainSingle(row => row.GetProperty("_id").GetString() == plan.Id.ToString());
+        Assert.That((listJson.RootElement.EnumerateArray()).Where(row => row.GetProperty("_id").GetString() == plan.Id.ToString()), Has.Exactly(1).Items);
         using var read = await Client.GetAsync($"/api/planDay/{day.Id}/getPlanDay");
-        read.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(read.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var dayJson = JsonDocument.Parse(await read.Content.ReadAsStringAsync());
-        dayJson.RootElement.GetProperty("exercises")[0].GetProperty("exercise").GetProperty("_id").GetString().Should().Be(exercise.Id.ToString());
+        Assert.That(dayJson.RootElement.GetProperty("exercises")[0].GetProperty("exercise").GetProperty("_id").GetString(), Is.EqualTo(exercise.Id.ToString()));
         using var update = await PostAsJsonWithApiOptionsAsync("/api/planDay/updatePlanDay", new
         {
             _id = day.Id.ToString(), name = "Updated day",
             exercises = new[] { new { exercise = exercise.Id.ToString(), series = 5, reps = "8" } }
         });
-        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(update.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verification = Factory.Services.CreateScope();
         var persisted = verification.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await persisted.PlanDays.AsNoTracking().SingleAsync(d => d.Id == day.Id)).Name.Should().Be("Updated day");
+        Assert.That((await persisted.PlanDays.AsNoTracking().SingleAsync(d => d.Id == day.Id)).Name, Is.EqualTo("Updated day"));
         var storedExercise = await persisted.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == day.Id);
-        storedExercise.ExerciseId.Should().Be(exercise.Id);
-        storedExercise.Series.Should().Be(5);
-        storedExercise.Reps.Should().Be("8");
-        (await persisted.Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id)).Purpose.Should().Be(purpose);
+        Assert.That(storedExercise.ExerciseId, Is.EqualTo(exercise.Id));
+        Assert.That(storedExercise.Series, Is.EqualTo(5));
+        Assert.That(storedExercise.Reps, Is.EqualTo("8"));
+        Assert.That((await persisted.Plans.AsNoTracking().SingleAsync(p => p.Id == plan.Id)).Purpose, Is.EqualTo(purpose));
     }
 
     [TestCase("assign")]
@@ -75,14 +74,14 @@ public sealed class PlanAuthorizationBoundaryTests : IntegrationTestBase
         var path = action == "assign" ? $"{target.Id}/assign" : "unassign";
         using var response = await Client.PostAsync($"/api/trainer/trainees/{owner.Id}/plans/{path}", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var verification = Factory.Services.CreateScope();
         var plans = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.IgnoreQueryFilters().AsNoTracking()
             .Where(p => p.UserId == owner.Id).ToListAsync();
-        plans.Should().HaveCount(2);
-        plans.Single(p => p.Id == active.Id).IsActive.Should().BeTrue();
-        plans.Single(p => p.Id == target.Id).IsActive.Should().BeFalse();
-        plans.Should().OnlyContain(p => !p.IsDeleted && p.Purpose == PlanPurpose.Personal);
+        Assert.That(plans, Has.Exactly(2).Items);
+        Assert.That(plans.Single(p => p.Id == active.Id).IsActive, Is.True);
+        Assert.That(plans.Single(p => p.Id == target.Id).IsActive, Is.False);
+        Assert.That((plans).All(p => !p.IsDeleted && p.Purpose == PlanPurpose.Personal), Is.True);
     }
 
     [Test]
@@ -103,11 +102,11 @@ public sealed class PlanAuthorizationBoundaryTests : IntegrationTestBase
 
         using var response = await Client.PostAsync($"/api/trainer/trainees/{owner.Id}/plans/{plan.Id}/delete", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var verification = Factory.Services.CreateScope();
         var stored = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.IgnoreQueryFilters().AsNoTracking().SingleAsync(p => p.Id == plan.Id);
-        stored.UserId.Should().Be(owner.Id);
-        stored.Purpose.Should().Be(PlanPurpose.Personal);
-        stored.IsDeleted.Should().BeTrue();
+        Assert.That(stored.UserId, Is.EqualTo(owner.Id));
+        Assert.That(stored.Purpose, Is.EqualTo(PlanPurpose.Personal));
+        Assert.That(stored.IsDeleted, Is.True);
     }
 }

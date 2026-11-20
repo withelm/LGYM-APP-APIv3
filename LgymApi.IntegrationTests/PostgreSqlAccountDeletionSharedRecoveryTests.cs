@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -69,37 +68,37 @@ internal sealed class PostgreSqlAccountDeletionSharedRecoveryTests : PostgreSqlI
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var persistedTrainer = await db.Users.IgnoreQueryFilters().SingleAsync(x => x.Id == trainer.Id);
-                persistedTrainer.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-                persistedTrainer.DeletionEffectiveAt.Should().Be(trainerDeadline);
-                (await db.PhotoDeletionWorkItems.CountAsync(x => x.DeletionGeneration == generation)).Should().Be(0);
-                (await db.ReportRequests.IgnoreQueryFilters().Where(x => requestIds.Contains(x.Id)).CountAsync()).Should().Be(2);
-                (await db.ReportSubmissions.IgnoreQueryFilters().Where(x => requestIds.Contains(x.ReportRequestId)).CountAsync()).Should().Be(2);
-                (await db.Photos.IgnoreQueryFilters().Where(x => photoIds.Contains(x.Id)).CountAsync()).Should().Be(2);
+                Assert.That(persistedTrainer.DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+                Assert.That(persistedTrainer.DeletionEffectiveAt, Is.EqualTo(trainerDeadline));
+                Assert.That((await db.PhotoDeletionWorkItems.CountAsync(x => x.DeletionGeneration == generation)), Is.EqualTo(0));
+                Assert.That((await db.ReportRequests.IgnoreQueryFilters().Where(x => requestIds.Contains(x.Id)).CountAsync()), Is.EqualTo(2));
+                Assert.That((await db.ReportSubmissions.IgnoreQueryFilters().Where(x => requestIds.Contains(x.ReportRequestId)).CountAsync()), Is.EqualTo(2));
+                Assert.That((await db.Photos.IgnoreQueryFilters().Where(x => photoIds.Contains(x.Id)).CountAsync()), Is.EqualTo(2));
             }
-            foreach (var key in keys) (await storage.ReadAsync(key)).Should().Equal(bytes);
+            foreach (var key in keys) Assert.That((await storage.ReadAsync(key)), Is.EqualTo(bytes));
 
             var login = await Client.PostAsJsonAsync("/api/account-deletion/recovery/login", new { name = trainee.Name, password = "password123" });
-            login.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("recoveryToken").GetString();
-            (await Client.PostAsJsonAsync("/api/account-deletion/recovery/cancel", new { recoveryToken = token })).StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That((await Client.PostAsJsonAsync("/api/account-deletion/recovery/cancel", new { recoveryToken = token })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
             await using var verify = Factory.Services.CreateAsyncScope();
             var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
             var restored = await database.Users.SingleAsync(x => x.Id == trainee.Id);
-            restored.DeletionState.Should().Be(AccountDeletionState.Active);
-            restored.Name.Should().Be(trainee.Name);
-            restored.Email.Should().Be(trainee.Email);
-            (await database.ReportSubmissions.IgnoreQueryFilters().Where(x => requestIds.Contains(x.ReportRequestId)).Select(x => x.PayloadJson).ToListAsync()).Should().Equal("{\"answer\":42}", "{\"answer\":42}");
-            (await database.Photos.IgnoreQueryFilters().Where(x => photoIds.Contains(x.Id)).Select(x => x.StorageKey).ToListAsync()).Should().BeEquivalentTo(keys[0], keys[2]);
-            foreach (var key in keys) (await storage.ReadAsync(key)).Should().Equal(bytes);
+            Assert.That(restored.DeletionState, Is.EqualTo(AccountDeletionState.Active));
+            Assert.That(restored.Name, Is.EqualTo(trainee.Name));
+            Assert.That(restored.Email, Is.EqualTo(trainee.Email));
+            Assert.That((await database.ReportSubmissions.IgnoreQueryFilters().Where(x => requestIds.Contains(x.ReportRequestId)).Select(x => x.PayloadJson).ToListAsync()), Is.EqualTo(new[] { "{\"answer\":42}", "{\"answer\":42}" }));
+            Assert.That((await database.Photos.IgnoreQueryFilters().Where(x => photoIds.Contains(x.Id)).Select(x => x.StorageKey).ToListAsync()), Is.EquivalentTo(new[] { keys[0], keys[2] }).UsingPropertiesComparer());
+            foreach (var key in keys) Assert.That((await storage.ReadAsync(key)), Is.EqualTo(bytes));
 
             await using (var resumed = Factory.Services.CreateAsyncScope())
             {
                 await resumed.ServiceProvider.GetRequiredService<IAccountFinalizationService>().ProcessDueAsync();
                 await resumed.ServiceProvider.GetRequiredService<IAccountPhotoDeletionService>().ProcessPendingAsync();
             }
-            (await database.Users.IgnoreQueryFilters().SingleAsync(account => account.Id == trainer.Id))
-                .DeletionState.Should().Be(AccountDeletionState.PermanentlyDeleted);
-            foreach (var key in keys) (await storage.ReadAsync(key)).Should().BeNull();
+            Assert.That((await database.Users.IgnoreQueryFilters().SingleAsync(account => account.Id == trainer.Id))
+                .DeletionState, Is.EqualTo(AccountDeletionState.PermanentlyDeleted));
+            foreach (var key in keys) Assert.That((await storage.ReadAsync(key)), Is.Null);
         }
         finally
         {
@@ -133,8 +132,8 @@ internal sealed class PostgreSqlAccountDeletionSharedRecoveryTests : PostgreSqlI
             await execution.ServiceProvider.GetRequiredService<IAccountFinalizationService>().ProcessDueAsync();
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Users.SingleAsync(account => account.Id == trainer.Id)).DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        (await database.TrainerInvitations.CountAsync(invitation => invitation.TrainerId == trainer.Id)).Should().Be(1);
+        Assert.That((await database.Users.SingleAsync(account => account.Id == trainer.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That((await database.TrainerInvitations.CountAsync(invitation => invitation.TrainerId == trainer.Id)), Is.EqualTo(1));
     }
 
     [Test]
@@ -160,6 +159,6 @@ internal sealed class PostgreSqlAccountDeletionSharedRecoveryTests : PostgreSqlI
         await using var verify = Factory.Services.CreateAsyncScope();
         var states = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Users.IgnoreQueryFilters()
             .Where(account => account.Id == trainer.Id || account.Id == trainee.Id).Select(account => account.DeletionState).ToListAsync();
-        states.Should().Equal(AccountDeletionState.PermanentlyDeleted, AccountDeletionState.PermanentlyDeleted);
+        Assert.That(states, Is.EqualTo(new[] { AccountDeletionState.PermanentlyDeleted, AccountDeletionState.PermanentlyDeleted }));
     }
 }

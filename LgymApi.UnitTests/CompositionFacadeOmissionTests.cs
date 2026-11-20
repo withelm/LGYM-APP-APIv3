@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Identity.ApiAdapters;
 using LgymApi.Application.Notifications;
@@ -37,8 +36,7 @@ public sealed class CompositionFacadeOmissionTests
 
         var action = () => provider.GetRequiredService(expectation.MissingServiceType);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{expectation.MissingServiceType.FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{expectation.MissingServiceType.FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     public sealed record FacadeOmissionExpectation(

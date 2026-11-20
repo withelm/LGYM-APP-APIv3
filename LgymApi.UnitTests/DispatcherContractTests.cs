@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using NUnit.Framework;
 using System.Reflection;
@@ -26,30 +25,30 @@ public sealed class DispatcherContractTests
         var dispatcherType = GetApplicationType(ApplicationCommandDispatcherTypeName);
         var methods = dispatcherType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
-        dispatcherType.IsPublic.Should().BeTrue();
-        dispatcherType.IsInterface.Should().BeTrue();
-        dispatcherType.IsGenericType.Should().BeFalse();
-        dispatcherType.GetInterfaces().Should().BeEmpty();
-        dispatcherType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Should().BeEmpty();
-        dispatcherType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Should().BeEmpty();
-        methods.Should().ContainSingle();
+        Assert.That(dispatcherType.IsPublic, Is.True);
+        Assert.That(dispatcherType.IsInterface, Is.True);
+        Assert.That(dispatcherType.IsGenericType, Is.False);
+        Assert.That(dispatcherType.GetInterfaces(), Is.Empty);
+        Assert.That(dispatcherType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
+        Assert.That(dispatcherType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
+        Assert.That(methods, Has.Exactly(1).Items);
 
         var method = methods.Single();
-        method.Name.Should().Be("EnqueueAsync");
-        method.IsGenericMethodDefinition.Should().BeTrue();
-        method.ReturnType.Should().Be(typeof(Task));
-        method.GetParameters().Should().ContainSingle();
+        Assert.That(method.Name, Is.EqualTo("EnqueueAsync"));
+        Assert.That(method.IsGenericMethodDefinition, Is.True);
+        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task)));
+        Assert.That(method.GetParameters(), Has.Exactly(1).Items);
 
-        var genericParameter = method.GetGenericArguments().Should().ContainSingle().Subject;
-        genericParameter.GenericParameterAttributes.Should().Be(GenericParameterAttributes.ReferenceTypeConstraint);
-        genericParameter.GetGenericParameterConstraints().Should().Equal(actionCommandType);
+        var assertedValue101 = (method.GetGenericArguments()).ToArray();
+        Assert.That(assertedValue101, Has.Exactly(1).Items);
+        var genericParameter = assertedValue101.Single();
+        Assert.That(genericParameter.GenericParameterAttributes, Is.EqualTo(GenericParameterAttributes.ReferenceTypeConstraint));
+        Assert.That(genericParameter.GetGenericParameterConstraints(), Is.EqualTo(new[] { actionCommandType }));
 
         var commandParameter = method.GetParameters().Single();
-        commandParameter.Name.Should().Be("command");
-        commandParameter.ParameterType.Should().Be(genericParameter);
-        commandParameter.IsOptional.Should().BeFalse();
+        Assert.That(commandParameter.Name, Is.EqualTo("command"));
+        Assert.That(commandParameter.ParameterType, Is.EqualTo(genericParameter));
+        Assert.That(commandParameter.IsOptional, Is.False);
     }
 
     [Test]
@@ -61,26 +60,16 @@ public sealed class DispatcherContractTests
             .OrderBy(type => type.Name)
             .ToArray();
 
-        portTypes.Select(type => type.FullName).Should().Equal(
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeFinalization",
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeReceipt",
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeRequest",
-            CommandEnvelopeStageResultTypeName,
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeStart",
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandHandlerResult",
-            ApplicationActionCommandTypeName,
-            ApplicationCommandDispatcherTypeName,
-            "LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandEnvelopeRuntime",
-            ApplicationCommandOutboxWriterTypeName);
+        Assert.That(portTypes.Select(type => type.FullName), Is.EqualTo(new[] { "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeFinalization", "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeReceipt", "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeRequest", CommandEnvelopeStageResultTypeName, "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandEnvelopeStart", "LgymApi.Application.Platform.Contracts.BackgroundCommands.CommandHandlerResult", ApplicationActionCommandTypeName, ApplicationCommandDispatcherTypeName, "LgymApi.Application.Platform.Contracts.BackgroundCommands.ICommandEnvelopeRuntime", ApplicationCommandOutboxWriterTypeName }));
 
         var exposedSignatureTypes = portTypes
             .SelectMany(GetExposedSignatureTypes)
             .Select(type => type.FullName ?? type.Name)
             .ToArray();
 
-        exposedSignatureTypes.Should().NotContain(name =>
+        Assert.That((exposedSignatureTypes).Any(name =>
             name.Contains("Hangfire", StringComparison.Ordinal)
-            || name.Contains("LgymApi.BackgroundWorker", StringComparison.Ordinal));
+            || name.Contains("LgymApi.BackgroundWorker", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -94,9 +83,9 @@ public sealed class DispatcherContractTests
         dispatcher.EnqueueAsync(command);
 
         // Assert
-        dispatcher.EnqueuedCommands.Should().HaveCount(1);
-        dispatcher.EnqueuedCommands[0].Should().BeOfType<TestCommand>();
-        ((TestCommand)dispatcher.EnqueuedCommands[0]).Value.Should().Be(42);
+        Assert.That(dispatcher.EnqueuedCommands, Has.Exactly(1).Items);
+        Assert.That(dispatcher.EnqueuedCommands[0], Is.TypeOf<TestCommand>());
+        Assert.That(((TestCommand)dispatcher.EnqueuedCommands[0]).Value, Is.EqualTo(42));
     }
 
     [Test]
@@ -111,7 +100,9 @@ public sealed class DispatcherContractTests
         // Act & Assert: compiler enforces ICommand constraint
         dispatcher.EnqueueAsync(command);
 
-        dispatcher.EnqueuedCommands.Should().ContainSingle().Which.Should().BeSameAs(command);
+        var assertedValue102 = (dispatcher.EnqueuedCommands).ToArray();
+        Assert.That(assertedValue102, Has.Exactly(1).Items);
+        Assert.That(assertedValue102.Single(), Is.SameAs(command));
     }
 
     [Test]
@@ -123,7 +114,7 @@ public sealed class DispatcherContractTests
         var dispatcher = new FakeCommandDispatcher();
 
         // Assert: only typed API available
-        dispatcher.Should().NotBeNull();
+        Assert.That(dispatcher, Is.Not.Null);
         // Pass indicates no string-based routing overloads present
     }
 
@@ -147,7 +138,7 @@ public sealed class DispatcherContractTests
     private static Type GetApplicationType(string metadataName)
     {
         var type = typeof(ICommandDispatcher).Assembly.GetType(metadataName);
-        type.Should().NotBeNull($"{metadataName} must be defined by the Platform assembly");
+        Assert.That(type, Is.Not.Null, $"{metadataName} must be defined by the Platform assembly");
         return type!;
     }
 

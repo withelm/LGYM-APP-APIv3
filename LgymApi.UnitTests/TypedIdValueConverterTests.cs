@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -21,7 +20,7 @@ public sealed class TypedIdValueConverterTests
         var guid = toProvider(id);
         var roundtrip = fromProvider(guid);
 
-        roundtrip.Should().Be(id);
+        Assert.That(roundtrip, Is.EqualTo(id));
     }
 
     [Test]
@@ -38,10 +37,10 @@ public sealed class TypedIdValueConverterTests
         var roundtrip = fromProvider(guid);
         var nullRoundtrip = fromProvider(null);
 
-        guid.Should().Be(id.GetValue());
-        nullGuid.Should().BeNull();
-        roundtrip.Should().Be(id);
-        nullRoundtrip.Should().BeNull();
+        Assert.That(guid, Is.EqualTo(id.GetValue()));
+        Assert.That(nullGuid, Is.Null);
+        Assert.That(roundtrip, Is.EqualTo(id));
+        Assert.That(nullRoundtrip, Is.Null);
     }
 
     [Test]
@@ -51,12 +50,12 @@ public sealed class TypedIdValueConverterTests
         var left = Id<User>.New();
         var right = Id<User>.New();
 
-        comparer.Equals(null, null).Should().BeTrue();
-        comparer.Equals(left, null).Should().BeFalse();
-        comparer.Equals(null, right).Should().BeFalse();
-        comparer.Equals(left, left).Should().BeTrue();
-        comparer.Equals(left, right).Should().BeFalse();
-        comparer.GetHashCode(null).Should().Be(0);
-        comparer.GetHashCode(left).Should().NotBe(0);
+        Assert.That(comparer.Equals(null, null), Is.True);
+        Assert.That(comparer.Equals(left, null), Is.False);
+        Assert.That(comparer.Equals(null, right), Is.False);
+        Assert.That(comparer.Equals(left, left), Is.True);
+        Assert.That(comparer.Equals(left, right), Is.False);
+        Assert.That(comparer.GetHashCode(null), Is.EqualTo(0));
+        Assert.That(comparer.GetHashCode(left), Is.Not.EqualTo(0));
     }
 }

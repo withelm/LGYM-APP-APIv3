@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -41,11 +40,11 @@ public sealed class WelcomeEmailServicesTests
             CultureName = "en-US"
         });
 
-        repository.Added.Should().HaveCount(1);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(1);
-        metrics.Retried.Should().Be(0);
+        Assert.That(repository.Added, Has.Exactly(1).Items);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(1));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -82,10 +81,10 @@ public sealed class WelcomeEmailServicesTests
             CultureName = "en-US"
         });
 
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        repository.Added.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -111,11 +110,11 @@ public sealed class WelcomeEmailServicesTests
             CultureName = "en-US"
         });
 
-        repository.Added.Should().BeEmpty();
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(repository.Added, Is.Empty);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -154,9 +153,9 @@ public sealed class WelcomeEmailServicesTests
             CultureName = "en-US"
         });
 
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
-        metrics.Enqueued.Should().Be(1);
-        metrics.Retried.Should().Be(0);
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
+        Assert.That(metrics.Enqueued, Is.EqualTo(1));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     [Test]
@@ -184,11 +183,11 @@ public sealed class WelcomeEmailServicesTests
             metrics,
              NullLogger<EmailJobHandlerService>.Instance);
 
-        await FluentActions.Invoking(() => handler.ProcessAsync(notification.Id.ToString())).Should().ThrowAsync<InvalidOperationException>();
-        notification.Status.Should().Be(EmailNotificationStatus.Failed);
-        notification.LastError.Should().StartWith("InvalidOperationException");
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        metrics.Failed.Should().Be(1);
+        await Assert.ThatAsync(async () => { await handler.ProcessAsync(notification.Id.ToString()); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(notification.Status, Is.EqualTo(EmailNotificationStatus.Failed));
+        Assert.That(notification.LastError, Does.StartWith("InvalidOperationException"));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(metrics.Failed, Is.EqualTo(1));
     }
 
     [Test]
@@ -219,12 +218,12 @@ public sealed class WelcomeEmailServicesTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        unitOfWork.SaveChangesCalls.Should().Be(0);
-        sender.SendCalls.Should().Be(0);
-        notification.Attempts.Should().Be(2);
-        metrics.Sent.Should().Be(0);
-        metrics.Failed.Should().Be(0);
-        metrics.Retried.Should().Be(0);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(notification.Attempts, Is.EqualTo(2));
+        Assert.That(metrics.Sent, Is.EqualTo(0));
+        Assert.That(metrics.Failed, Is.EqualTo(0));
+        Assert.That(metrics.Retried, Is.EqualTo(0));
     }
 
     private sealed class FakeNotificationRepository : IEmailNotificationLogRepository

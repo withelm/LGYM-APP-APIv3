@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Services;
@@ -67,7 +66,7 @@ public sealed class TrainingServiceAddTrainingTests
     public async Task EmptyAccountId_ShouldReturnInvalidTrainingDataError()
     {
         var result = await _service.AddTrainingAsync(Id<AccountReference>.Empty, Input(Id<Gym>.New(), Id<PlanDayReference>.New()));
-        result.Error.Should().BeOfType<InvalidTrainingDataError>();
+        Assert.That(result.Error, Is.TypeOf<InvalidTrainingDataError>());
     }
 
     [Test]
@@ -76,7 +75,7 @@ public sealed class TrainingServiceAddTrainingTests
         var accountId = Id<AccountReference>.New();
         _accountAccess.GetByIdAsync(accountId, Arg.Any<CancellationToken>()).Returns((AccountAccessFacts?)null);
         var result = await _service.AddTrainingAsync(accountId, Input(Id<Gym>.New(), Id<PlanDayReference>.New()));
-        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<TrainingNotFoundError>());
     }
 
     [Test]
@@ -91,8 +90,8 @@ public sealed class TrainingServiceAddTrainingTests
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New()));
 
-        result.Error.Should().BeOfType<InternalServerError>();
-        result.Error.Message.Should().Be(Messages.TryAgain);
+        Assert.That(result.Error, Is.TypeOf<InternalServerError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TryAgain));
         await transaction.Received(1).RollbackAsync(CancellationToken.None);
     }
 
@@ -114,7 +113,7 @@ public sealed class TrainingServiceAddTrainingTests
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New(), exerciseId));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _trainings.Received(1).AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await _scores.Received(1).AddRangeAsync(Arg.Any<IReadOnlyCollection<WorkoutExerciseScoreWriteModel>>(), Arg.Any<CancellationToken>());
         await _trainings.Received(1).AddExerciseScoreLinksAsync(Arg.Any<IReadOnlyCollection<WorkoutTrainingExerciseScorePersistenceModel>>(), Arg.Any<CancellationToken>());
@@ -138,7 +137,7 @@ public sealed class TrainingServiceAddTrainingTests
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New(), foreignExerciseId));
 
-        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<TrainingNotFoundError>());
         await _exercises.Received(1).GetByIdsAsync(Arg.Is<IReadOnlyCollection<Id<Exercise>>>(ids => ids.Contains(foreignExerciseId)), Arg.Any<CancellationToken>());
         await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
@@ -156,7 +155,7 @@ public sealed class TrainingServiceAddTrainingTests
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New()));
 
-        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<TrainingNotFoundError>());
         await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }
@@ -176,7 +175,7 @@ public sealed class TrainingServiceAddTrainingTests
 
         var action = () => _service.AddTrainingAsync(accountId, Input(gymId, Id<PlanDayReference>.New()));
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await _trainings.Received(1).AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await transaction.Received(1).RollbackAsync(CancellationToken.None);
         await transaction.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
@@ -186,7 +185,7 @@ public sealed class TrainingServiceAddTrainingTests
     public void PullupProfile_ShouldRewardLowerWeight()
     {
         var calculator = new PullupWeightedExerciseEloCalculator();
-        calculator.Calculate(new(80, 8, 60, 8)).Should().BeGreaterThan(calculator.Calculate(new(80, 8, 100, 8)));
+        Assert.That(calculator.Calculate(new(80, 8, 60, 8)), Is.GreaterThan(calculator.Calculate(new(80, 8, 100, 8))));
     }
 
     [Test]
@@ -200,7 +199,7 @@ public sealed class TrainingServiceAddTrainingTests
 
         var result = await _service.AddTrainingAsync(accountId, Input(gymId, planDayId));
 
-        result.Error.Should().BeOfType<TrainingNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<TrainingNotFoundError>());
         await _trainings.DidNotReceive().AddAsync(Arg.Any<WorkoutTrainingWriteModel>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }

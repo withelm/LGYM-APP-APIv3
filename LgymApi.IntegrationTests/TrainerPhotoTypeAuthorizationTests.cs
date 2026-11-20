@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -32,24 +31,24 @@ public sealed class TrainerPhotoTypeAuthorizationTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
 
         using var ownerGet = await SendAsync(HttpMethod.Get, CollectionRoute);
-        ownerGet.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerGet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var defaults = await ReadArrayAsync(ownerGet);
-        defaults.Should().Contain(item => item.GetProperty("systemKey").GetString() == "Front");
+        Assert.That((defaults).Any(item => item.GetProperty("systemKey").GetString() == "Front"), Is.True);
         var defaultCount = await CountPhotoTypesAsync();
 
         using var ownerCreate = await SendJsonAsync(CollectionRoute, new { name = "Competition pose" });
-        ownerCreate.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(ownerCreate.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var createdId = await ReadIdAsync(ownerCreate);
-        (await CountPhotoTypesAsync()).Should().Be(defaultCount + 1);
+        Assert.That((await CountPhotoTypesAsync()), Is.EqualTo(defaultCount + 1));
 
         ClearAuthorizationHeader();
         using var anonymousGet = await SendAsync(HttpMethod.Get, CollectionRoute);
-        anonymousGet.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousGet.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var anonymousCreate = await SendJsonAsync(CollectionRoute, new { name = "Anonymous pose" });
-        anonymousCreate.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousCreate.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
-        (await CountPhotoTypesAsync()).Should().Be(defaultCount + 1);
-        (await GetPhotoTypeAsync(createdId)).Name.Should().Be("Competition pose");
+        Assert.That((await CountPhotoTypesAsync()), Is.EqualTo(defaultCount + 1));
+        Assert.That((await GetPhotoTypeAsync(createdId)).Name, Is.EqualTo("Competition pose"));
     }
 
     [Test]
@@ -65,19 +64,19 @@ public sealed class TrainerPhotoTypeAuthorizationTests : IntegrationTestBase
         var route = $"{CollectionRoute}/{photoTypeId}/update";
 
         using var ownerUpdate = await SendJsonAsync(route, new { name = "Owner updated name", isArchived = true });
-        ownerUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerUpdate.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerSnapshot = await GetPhotoTypeAsync(photoTypeId);
-        ownerSnapshot.Should().Be(new PhotoTypeSnapshot("Owner updated name", PhotoTypeNameMode.TrainerProvided, true));
+        Assert.That(ownerSnapshot, Is.EqualTo(new PhotoTypeSnapshot("Owner updated name", PhotoTypeNameMode.TrainerProvided, true)));
 
         SetAuthorizationHeader(foreignTrainer.Id);
         using var foreignUpdate = await SendJsonAsync(route, new { name = "Foreign mutation", isArchived = false });
-        foreignUpdate.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await GetPhotoTypeAsync(photoTypeId)).Should().Be(ownerSnapshot);
+        Assert.That(foreignUpdate.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await GetPhotoTypeAsync(photoTypeId)), Is.EqualTo(ownerSnapshot));
 
         ClearAuthorizationHeader();
         using var anonymousUpdate = await SendJsonAsync(route, new { name = "Anonymous mutation", isArchived = false });
-        anonymousUpdate.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await GetPhotoTypeAsync(photoTypeId)).Should().Be(ownerSnapshot);
+        Assert.That(anonymousUpdate.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await GetPhotoTypeAsync(photoTypeId)), Is.EqualTo(ownerSnapshot));
     }
 
     [Test]
@@ -92,25 +91,25 @@ public sealed class TrainerPhotoTypeAuthorizationTests : IntegrationTestBase
         var frontId = await GetBuiltInPhotoTypeIdAsync("Front");
         using (var rename = await SendJsonAsync($"{CollectionRoute}/{frontId}/update", new { name = "Owner front label" }))
         {
-            rename.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(rename.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         var renamedSnapshot = await GetPhotoTypeAsync(frontId);
         var resetRoute = $"{CollectionRoute}/{frontId}/reset-name";
 
         SetAuthorizationHeader(foreignTrainer.Id);
         using var foreignReset = await SendAsync(HttpMethod.Post, resetRoute);
-        foreignReset.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await GetPhotoTypeAsync(frontId)).Should().Be(renamedSnapshot);
+        Assert.That(foreignReset.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await GetPhotoTypeAsync(frontId)), Is.EqualTo(renamedSnapshot));
 
         ClearAuthorizationHeader();
         using var anonymousReset = await SendAsync(HttpMethod.Post, resetRoute);
-        anonymousReset.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await GetPhotoTypeAsync(frontId)).Should().Be(renamedSnapshot);
+        Assert.That(anonymousReset.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await GetPhotoTypeAsync(frontId)), Is.EqualTo(renamedSnapshot));
 
         SetAuthorizationHeader(owner.Id);
         using var ownerReset = await SendAsync(HttpMethod.Post, resetRoute);
-        ownerReset.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await GetPhotoTypeAsync(frontId)).Should().Be(new PhotoTypeSnapshot("Front", PhotoTypeNameMode.SystemLocalized, false));
+        Assert.That(ownerReset.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await GetPhotoTypeAsync(frontId)), Is.EqualTo(new PhotoTypeSnapshot("Front", PhotoTypeNameMode.SystemLocalized, false)));
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)
@@ -126,18 +125,18 @@ public sealed class TrainerPhotoTypeAuthorizationTests : IntegrationTestBase
     private async Task<Id<TrainerPhotoType>> CreatePhotoTypeAsync(string name)
     {
         using var response = await SendJsonAsync(CollectionRoute, new { name });
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         return await ReadIdAsync(response);
     }
 
     private async Task<Id<TrainerPhotoType>> GetBuiltInPhotoTypeIdAsync(string systemKey)
     {
         using var response = await SendAsync(HttpMethod.Get, CollectionRoute);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var types = await ReadArrayAsync(response);
         var id = types.Single(item => item.GetProperty("systemKey").GetString() == systemKey).GetProperty("_id").GetString();
-        id.Should().NotBeNullOrWhiteSpace();
-        Id<TrainerPhotoType>.TryParse(id!, out var parsed).Should().BeTrue();
+        Assert.That(string.IsNullOrWhiteSpace(id), Is.False);
+        Assert.That(Id<TrainerPhotoType>.TryParse(id!, out var parsed), Is.True);
         return parsed;
     }
 
@@ -189,8 +188,8 @@ public sealed class TrainerPhotoTypeAuthorizationTests : IntegrationTestBase
     {
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var id = document.RootElement.GetProperty("_id").GetString();
-        id.Should().NotBeNullOrWhiteSpace();
-        Id<TrainerPhotoType>.TryParse(id!, out var parsed).Should().BeTrue();
+        Assert.That(string.IsNullOrWhiteSpace(id), Is.False);
+        Assert.That(Id<TrainerPhotoType>.TryParse(id!, out var parsed), Is.True);
         return parsed;
     }
 

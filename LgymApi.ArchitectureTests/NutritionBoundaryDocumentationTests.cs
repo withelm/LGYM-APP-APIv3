@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -42,8 +41,8 @@ public sealed class NutritionBoundaryDocumentationTests
             ["nutrition.persistence.shared-topology"]);
 
         ValidateOwners(ownerRows);
-        actionRows.Values.Should().OnlyContain(row => row.GetField("Surface") == "HTTP");
-        adapterRows.Should().HaveCount(4);
+        Assert.That((actionRows.Values).All(row => row.GetField("Surface") == "HTTP"), Is.True);
+        Assert.That(adapterRows, Has.Exactly(4).Items);
         ValidateSharedPersistenceTopology(topologyRows);
     }
 
@@ -55,8 +54,7 @@ public sealed class NutritionBoundaryDocumentationTests
             ActionPrefix,
             ActionIds);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Missing stable row IDs*nutrition.action.d1.list-trainee-diet-plans*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Missing stable row IDs*nutrition.action.d1.list-trainee-diet-plans*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -67,8 +65,7 @@ public sealed class NutritionBoundaryDocumentationTests
             OwnerPrefix,
             OwnerIds);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Duplicate stable row IDs*nutrition.owner.diet-plan*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate stable row IDs*nutrition.owner.diet-plan*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -83,8 +80,7 @@ public sealed class NutritionBoundaryDocumentationTests
             PersistencePrefix,
             ["nutrition.persistence.shared-topology"]));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*exactly one AppDbContext*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*exactly one AppDbContext*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static IReadOnlyList<DocumentationRow> ParseBoundaryRows()
@@ -176,10 +172,9 @@ public sealed class NutritionBoundaryDocumentationTests
             .Where(entry => entry.Owner == PersistedEntityOwnershipCatalog.NutritionModuleName)
             .ToList();
 
-        catalogEntries.Should().HaveCount(6);
-        ownerRows.Values.Select(row => row.GetField("Entity name"))
-            .Should().BeEquivalentTo(catalogEntries.Select(entry => entry.EntityType.Name));
-        ownerRows.Values.Should().OnlyContain(row => row.GetField("Owner") == PersistedEntityOwnershipCatalog.NutritionModuleName);
+        Assert.That(catalogEntries, Has.Exactly(6).Items);
+        Assert.That(ownerRows.Values.Select(row => row.GetField("Entity name")), Is.EquivalentTo(catalogEntries.Select(entry => entry.EntityType.Name)).UsingPropertiesComparer());
+        Assert.That((ownerRows.Values).All(row => row.GetField("Owner") == PersistedEntityOwnershipCatalog.NutritionModuleName), Is.True);
     }
 
     private static void ValidateSharedPersistenceTopology(IReadOnlyDictionary<string, DocumentationRow> rows)

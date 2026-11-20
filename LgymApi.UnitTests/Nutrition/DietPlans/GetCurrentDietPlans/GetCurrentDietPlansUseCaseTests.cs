@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Nutrition.DietPlans.GetCurrentDietPlans;
@@ -29,12 +28,12 @@ public sealed class GetCurrentDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetCurrentDietPlansQuery(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(plan => plan.Name).Should().Equal(plans.Select(plan => plan.Name));
-        result.Value.Select(plan => plan.UpdatedAt).Should().Equal(plans.Select(plan => plan.UpdatedAt));
-        result.Value.Select(plan => plan.StartDate).Should().Equal(plans.Select(plan => plan.StartDate));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(plan => plan.Name), Is.EqualTo(plans.Select(plan => plan.Name)));
+        Assert.That(result.Value.Select(plan => plan.UpdatedAt), Is.EqualTo(plans.Select(plan => plan.UpdatedAt)));
+        Assert.That(result.Value.Select(plan => plan.StartDate), Is.EqualTo(plans.Select(plan => plan.StartDate)));
         await dependencies.Plans.Received(1).ListActivePlansForTraineeAsync(traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -50,9 +49,9 @@ public sealed class GetCurrentDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetCurrentDietPlansQuery(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(plan => plan.Id).Should().Equal(active.Id);
-        result.Value.Select(plan => plan.Name).Should().NotContain(new[] { inactive.Name, deleted.Name });
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(plan => plan.Id), Is.EqualTo(new[] { active.Id }));
+        Assert.That(result.Value.Select(plan => plan.Name), Has.None.EqualTo(inactive.Name).And.None.EqualTo(deleted.Name));
     }
 
     [Test]
@@ -64,8 +63,8 @@ public sealed class GetCurrentDietPlansUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetCurrentDietPlansQuery(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.Empty);
         await dependencies.Plans.Received(1).ListActivePlansForTraineeAsync(traineeId, CancellationToken.None);
     }
 
@@ -82,9 +81,9 @@ public sealed class GetCurrentDietPlansUseCaseTests
             new GetCurrentDietPlansQuery(traineeId),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Plans.Received(1).ListActivePlansForTraineeAsync(traineeId, cancellationToken);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     private static DietPlan CreatePlan(

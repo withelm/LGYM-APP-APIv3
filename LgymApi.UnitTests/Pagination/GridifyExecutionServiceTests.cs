@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using LgymApi.Infrastructure;
 using LgymApi.Infrastructure.Pagination;
@@ -55,11 +54,11 @@ public sealed class GridifyExecutionServiceTests
             registry,
             CreatePolicy());
 
-        result.TotalCount.Should().Be(4);
-        result.Page.Should().Be(2);
-        result.PageSize.Should().Be(2);
-        result.Items.Select(x => x.Rank).Should().Equal(20, 10);
-        dbContext.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(result.TotalCount, Is.EqualTo(4));
+        Assert.That(result.Page, Is.EqualTo(2));
+        Assert.That(result.PageSize, Is.EqualTo(2));
+        Assert.That(result.Items.Select(x => x.Rank), Is.EqualTo(new[] { 20, 10 }));
+        Assert.That(dbContext.ChangeTracker.Entries(), Is.Empty);
     }
 
     [Test]
@@ -87,10 +86,10 @@ public sealed class GridifyExecutionServiceTests
             registry,
             CreatePolicy());
 
-        result.TotalCount.Should().Be(3);
-        result.Items.Should().BeEmpty();
-        result.Page.Should().Be(4);
-        result.PageSize.Should().Be(2);
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.Items, Is.Empty);
+        Assert.That(result.Page, Is.EqualTo(4));
+        Assert.That(result.PageSize, Is.EqualTo(2));
     }
 
     [Test]
@@ -120,7 +119,7 @@ public sealed class GridifyExecutionServiceTests
             CreatePolicy(),
             cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -150,10 +149,10 @@ public sealed class GridifyExecutionServiceTests
             CreatePolicy(),
             cancellationSource.Token);
 
-        result.TotalCount.Should().Be(3);
-        result.Page.Should().Be(2);
-        result.PageSize.Should().Be(2);
-        result.Items.Select(x => x.Rank).Should().Equal(10);
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.Page, Is.EqualTo(2));
+        Assert.That(result.PageSize, Is.EqualTo(2));
+        Assert.That(result.Items.Select(x => x.Rank), Is.EqualTo(new[] { 10 }));
     }
 
     [Test]
@@ -171,7 +170,7 @@ public sealed class GridifyExecutionServiceTests
 
         var service = provider.GetService<GridifyExecutionService>();
 
-        service.Should().NotBeNull();
+        Assert.That(service, Is.Not.Null);
     }
 
     private static async Task SeedRowsAsync(TestPaginationDbContext dbContext, IEnumerable<TestRow> rows)

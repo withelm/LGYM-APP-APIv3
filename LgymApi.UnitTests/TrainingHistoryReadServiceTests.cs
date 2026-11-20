@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -30,9 +29,9 @@ public sealed class TrainingHistoryReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(accountId, UtcTimeRange.ForLegacyUtcDay(training.CreatedAt.UtcDateTime));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].PlanDay.Should().Be(new PlanDayReferenceReadModel(planDayId, result.Value[0].PlanDay!.PlanId, "Push", true, false, accountId));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].PlanDay, Is.EqualTo(new PlanDayReferenceReadModel(planDayId, result.Value[0].PlanDay!.PlanId, "Push", true, false, accountId)));
         await planDays.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyList<Id<PlanDayReference>>>(ids => ids.SequenceEqual(new[] { planDayId })),
             CancellationToken.None);
@@ -49,9 +48,9 @@ public sealed class TrainingHistoryReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(accountId, UtcTimeRange.ForLegacyUtcDay(training.CreatedAt.UtcDateTime));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].PlanDay.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].PlanDay, Is.Null);
     }
 
     [Test]
@@ -70,10 +69,10 @@ public sealed class TrainingHistoryReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(accountId, UtcTimeRange.ForLegacyUtcDay(trainings[0].CreatedAt.UtcDateTime));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
-        result.Value.Select(training => training.Id).Should().BeEquivalentTo(trainings.Select(training => training.Id));
-        result.Value.Should().OnlyContain(training => training.PlanDay == new PlanDayReferenceReadModel(planDayId, planId, "Push", true, false, accountId));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(2).Items);
+        Assert.That(result.Value.Select(training => training.Id), Is.EquivalentTo(trainings.Select(training => training.Id)));
+        Assert.That((result.Value).All(training => training.PlanDay == new PlanDayReferenceReadModel(planDayId, planId, "Push", true, false, accountId)), Is.True);
         await planDays.Received(1).GetByIdsAsync(
             Arg.Is<IReadOnlyList<Id<PlanDayReference>>>(ids => ids.SequenceEqual(new[] { planDayId })),
             CancellationToken.None);
@@ -92,7 +91,7 @@ public sealed class TrainingHistoryReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(accountId, range);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await persistence.Received(1).GetByAccountIdAndDateAsync(
             accountId,
             Arg.Is<UtcTimeRange>(value => value.FromUtc == new DateTimeOffset(2026, 10, 21, 22, 0, 0, TimeSpan.Zero)
@@ -119,10 +118,10 @@ public sealed class TrainingHistoryReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(accountId, UtcTimeRange.ForLegacyUtcDay(training.CreatedAt.UtcDateTime));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle();
-        result.Value[0].Gym.Should().BeNull();
-        result.Value[0].Exercises.Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Has.Exactly(1).Items);
+        Assert.That(result.Value[0].Gym, Is.Null);
+        Assert.That(result.Value[0].Exercises, Is.Empty);
     }
 
     private static TrainingHistoryReadService CreateService(

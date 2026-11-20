@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications.Authorization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -17,7 +16,7 @@ public sealed class NotificationSourceEligibilityPolicyTests
         var state = (NotificationSourceState)stateValue;
         var source = Reference(NotificationSourceKind.ReportRequest, NotificationSourceState.Pending);
 
-        NotificationSourceEligibilityPolicy.CanDisclose(source, Facts(state: state)).Should().Be(expected);
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(source, Facts(state: state)), Is.EqualTo(expected));
     }
 
     [TestCase(true, true, true)]
@@ -34,10 +33,9 @@ public sealed class NotificationSourceEligibilityPolicyTests
             RequiresActiveSourceEpisode = requiresActiveSourceEpisode
         };
 
-        NotificationSourceEligibilityPolicy.CanDisclose(
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(
             source,
-            Facts(NotificationSourceState.Pending, hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode))
-            .Should().Be(expected);
+            Facts(NotificationSourceState.Pending, hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode)), Is.EqualTo(expected));
     }
 
     [TestCase((int)NotificationSourceState.Pending, false)]
@@ -50,7 +48,7 @@ public sealed class NotificationSourceEligibilityPolicyTests
         var state = (NotificationSourceState)stateValue;
         var source = Reference(NotificationSourceKind.ReportSubmission, NotificationSourceState.Submitted);
 
-        NotificationSourceEligibilityPolicy.CanDisclose(source, Facts(state: state)).Should().Be(expected);
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(source, Facts(state: state)), Is.EqualTo(expected));
     }
 
     [TestCase(true, true)]
@@ -62,9 +60,9 @@ public sealed class NotificationSourceEligibilityPolicyTests
             NotificationSourceState.Submitted,
             requiresVisibleContent: true);
 
-        NotificationSourceEligibilityPolicy.CanDisclose(
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(
             source,
-            Facts(state: NotificationSourceState.Submitted, hasExpectedContent: hasExpectedContent)).Should().Be(expected);
+            Facts(state: NotificationSourceState.Submitted, hasExpectedContent: hasExpectedContent)), Is.EqualTo(expected));
     }
 
     [TestCase(true, true)]
@@ -78,11 +76,11 @@ public sealed class NotificationSourceEligibilityPolicyTests
             RequiresActiveSourceEpisode = true
         };
 
-        NotificationSourceEligibilityPolicy.CanDisclose(
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(
             source,
             Facts(
                 state: NotificationSourceState.Completed,
-                hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode)).Should().Be(expected);
+                hasActiveMatchingSourceEpisode: hasActiveMatchingSourceEpisode)), Is.EqualTo(expected));
     }
 
     [TestCase(false, true, true)]
@@ -95,13 +93,13 @@ public sealed class NotificationSourceEligibilityPolicyTests
     {
         var source = Reference(NotificationSourceKind.ReportSubmission, NotificationSourceState.Submitted);
 
-        NotificationSourceEligibilityPolicy.CanDisclose(
+        Assert.That(NotificationSourceEligibilityPolicy.CanDisclose(
             source,
             Facts(
                 state: NotificationSourceState.Submitted,
                 senderAvailable: senderAvailable,
                 recipientAvailable: recipientAvailable,
-                participantsMatch: participantsMatch)).Should().BeFalse();
+                participantsMatch: participantsMatch)), Is.False);
     }
 
     private static NotificationSourceReference Reference(

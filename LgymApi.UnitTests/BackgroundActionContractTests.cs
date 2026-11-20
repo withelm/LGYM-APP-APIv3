@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker.Actions.Contracts;
 using NUnit.Framework;
@@ -15,12 +14,11 @@ public sealed class BackgroundActionContractTests
     {
         var type = GetPlatformType(ApplicationActionCommandTypeName);
 
-        type.IsPublic.Should().BeTrue();
-        type.IsInterface.Should().BeTrue();
-        type.IsGenericType.Should().BeFalse();
-        type.GetInterfaces().Should().BeEmpty();
-        type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Should().BeEmpty();
+        Assert.That(type.IsPublic, Is.True);
+        Assert.That(type.IsInterface, Is.True);
+        Assert.That(type.IsGenericType, Is.False);
+        Assert.That(type.GetInterfaces(), Is.Empty);
+        Assert.That(type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly), Is.Empty);
     }
 
     [Test]
@@ -28,9 +26,9 @@ public sealed class BackgroundActionContractTests
     {
         // Verify IActionCommand is defined and can be implemented
         var type = typeof(IActionCommand);
-        type.IsInterface.Should().BeTrue();
-        type.GetProperties().Should().BeEmpty();
-        type.GetMethods().Should().HaveCount(0);
+        Assert.That(type.IsInterface, Is.True);
+        Assert.That(type.GetProperties(), Is.Empty);
+        Assert.That(type.GetMethods(), Has.Exactly(0).Items);
     }
 
     [Test]
@@ -40,9 +38,9 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var typeParams = type.GetGenericArguments();
 
-        typeParams.Should().HaveCount(1);
+        Assert.That(typeParams, Has.Exactly(1).Items);
         var constraint = typeParams[0].GetGenericParameterConstraints();
-        constraint.Should().Contain(typeof(IActionCommand));
+        Assert.That(constraint, Does.Contain(typeof(IActionCommand)));
     }
 
     [Test]
@@ -52,14 +50,14 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var method = type.GetMethod("ExecuteAsync");
 
-        method.Should().NotBeNull();
-        method.ReturnType.Should().Be(typeof(Task));
+        Assert.That(method, Is.Not.Null);
+        Assert.That(method.ReturnType, Is.EqualTo(typeof(Task)));
 
         var parameters = method.GetParameters();
-        parameters.Should().HaveCount(2);
-        parameters[0].Name.Should().Be("command");
-        parameters[1].Name.Should().Be("cancellationToken");
-        parameters[1].ParameterType.Should().Be(typeof(CancellationToken));
+        Assert.That(parameters, Has.Exactly(2).Items);
+        Assert.That(parameters[0].Name, Is.EqualTo("command"));
+        Assert.That(parameters[1].Name, Is.EqualTo("cancellationToken"));
+        Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(CancellationToken)));
     }
 
     [Test]
@@ -69,7 +67,7 @@ public sealed class BackgroundActionContractTests
         var command = new TestCommand();
 
         // Assert
-        command.Should().BeAssignableTo<IActionCommand>();
+        Assert.That(command, Is.InstanceOf<IActionCommand>());
     }
 
     [Test]
@@ -79,7 +77,7 @@ public sealed class BackgroundActionContractTests
         var handler = new TestActionHandler();
 
         // Assert
-        handler.Should().BeAssignableTo<IBackgroundAction<TestCommand>>();
+        Assert.That(handler, Is.InstanceOf<IBackgroundAction<TestCommand>>());
     }
 
     [Test]
@@ -94,8 +92,8 @@ public sealed class BackgroundActionContractTests
         await handler.ExecuteAsync(command, cts.Token);
 
         // Assert
-        handler.WasExecuted.Should().BeTrue();
-        handler.ReceivedCommand.Should().BeSameAs(command);
+        Assert.That(handler.WasExecuted, Is.True);
+        Assert.That(handler.ReceivedCommand, Is.SameAs(command));
     }
 
     [Test]
@@ -109,7 +107,7 @@ public sealed class BackgroundActionContractTests
         await handler.ExecuteAsync(command);
 
         // Assert
-        handler.WasExecuted.Should().BeTrue();
+        Assert.That(handler.WasExecuted, Is.True);
     }
 
     [Test]
@@ -119,8 +117,8 @@ public sealed class BackgroundActionContractTests
         var testHandler = new TestActionHandler();
         var anotherHandler = new AnotherTestActionHandler();
 
-        testHandler.Should().BeAssignableTo<IBackgroundAction<TestCommand>>();
-        anotherHandler.Should().BeAssignableTo<IBackgroundAction<AnotherTestCommand>>();
+        Assert.That(testHandler, Is.InstanceOf<IBackgroundAction<TestCommand>>());
+        Assert.That(anotherHandler, Is.InstanceOf<IBackgroundAction<AnotherTestCommand>>());
     }
 
     [Test]
@@ -131,7 +129,7 @@ public sealed class BackgroundActionContractTests
         var type = typeof(IBackgroundAction<>);
         var constraint = type.GetGenericArguments()[0].GetGenericParameterConstraints();
 
-        constraint.Should().Contain(typeof(IActionCommand));
+        Assert.That(constraint, Does.Contain(typeof(IActionCommand)));
     }
 
     // Test implementations
@@ -167,7 +165,7 @@ public sealed class BackgroundActionContractTests
     private static Type GetPlatformType(string metadataName)
     {
         var type = typeof(IActionCommand).Assembly.GetType(metadataName);
-        type.Should().NotBeNull($"{metadataName} must be defined by the Platform assembly");
+        Assert.That(type, Is.Not.Null, $"{metadataName} must be defined by the Platform assembly");
         return type!;
     }
 }

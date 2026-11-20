@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Api.Features.User.Contracts;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -19,11 +18,11 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Not found.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Not found."));
     }
 
     [Test]
@@ -36,15 +35,15 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<UserRankingResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body![0].Name.Should().Be("highelo");
-        body[0].Elo.Should().Be(2000);
-        body[1].Name.Should().Be("lowelo");
-        body[1].Elo.Should().Be(1200);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body![0].Name, Is.EqualTo("highelo"));
+        Assert.That(body[0].Elo, Is.EqualTo(2000));
+        Assert.That(body[1].Name, Is.EqualTo("lowelo"));
+        Assert.That(body[1].Elo, Is.EqualTo(1200));
     }
 
     [Test]
@@ -56,12 +55,12 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<UserRankingResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("visible");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("visible"));
     }
 
     [Test]
@@ -73,12 +72,12 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<UserRankingResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("normal");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("normal"));
     }
 
     [Test]
@@ -90,12 +89,12 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/getUsersRanking");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<UserRankingResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Name.Should().Be("active");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Name, Is.EqualTo("active"));
     }
 
     [Test]
@@ -108,14 +107,14 @@ public sealed class RankingTests : IntegrationTestBase
         var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = false };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Updated");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Updated"));
 
         var rankingResponse = await Client.GetAsync("/api/getUsersRanking");
-        rankingResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(rankingResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -127,17 +126,17 @@ public sealed class RankingTests : IntegrationTestBase
         var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = true };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Updated");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Updated"));
 
         var rankingResponse = await Client.GetAsync("/api/getUsersRanking");
-        rankingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(rankingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var rankings = await rankingResponse.Content.ReadFromJsonAsync<List<UserRankingResponse>>();
-        rankings.Should().ContainSingle(r => r.Name == "hiddenuser");
+        Assert.That((rankings).Where(r => r.Name == "hiddenuser"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -149,7 +148,7 @@ public sealed class RankingTests : IntegrationTestBase
         var request = new ChangeVisibilityInRankingRequest { IsVisibleInRanking = null };
         var response = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -161,11 +160,11 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/userInfo/{user.Id}/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<EloResponse>();
-        body.Should().NotBeNull();
-        body!.Elo.Should().Be(1750);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Elo, Is.EqualTo(1750));
     }
 
     [Test]
@@ -176,11 +175,11 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/userInfo/{Id<User>.New()}/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Not found.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Not found."));
     }
 
     [Test]
@@ -191,11 +190,11 @@ public sealed class RankingTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/userInfo/invalid-guid/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Not found.");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Not found."));
     }
 
     private sealed class MessageResponse

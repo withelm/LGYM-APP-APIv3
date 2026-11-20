@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -36,23 +35,23 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             email = "recover-existing@example.com"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ForgotPasswordGenericMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ForgotPasswordGenericMessage));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var token = await db.PasswordResetTokens.SingleOrDefaultAsync(t => t.UserId == user.Id);
-        token.Should().NotBeNull();
-        token!.IsUsed.Should().BeFalse();
-        token.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow.AddMinutes(25));
+        Assert.That(token, Is.Not.Null);
+        Assert.That(token!.IsUsed, Is.False);
+        Assert.That(token.ExpiresAt, Is.GreaterThan(DateTimeOffset.UtcNow.AddMinutes(25)));
 
         var notification = await db.NotificationMessages.SingleOrDefaultAsync(n =>
             n.Type == EmailNotificationTypes.PasswordRecovery
             && n.Recipient == "recover-existing@example.com");
-        notification.Should().NotBeNull();
+        Assert.That(notification, Is.Not.Null);
     }
 
     [Test]
@@ -63,20 +62,20 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             email = "missing-user@example.com"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ForgotPasswordGenericMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ForgotPasswordGenericMessage));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var tokenCount = await db.PasswordResetTokens.CountAsync();
-        tokenCount.Should().Be(0);
+        Assert.That(tokenCount, Is.EqualTo(0));
 
         var notificationCount = await db.NotificationMessages
             .CountAsync(n => n.Type == EmailNotificationTypes.PasswordRecovery);
-        notificationCount.Should().Be(0);
+        Assert.That(notificationCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -93,16 +92,16 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             email = "recover-deleted@example.com"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ForgotPasswordGenericMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ForgotPasswordGenericMessage));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var tokenCount = await db.PasswordResetTokens.CountAsync(t => t.UserId == user.Id);
-        tokenCount.Should().Be(0);
+        Assert.That(tokenCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -123,16 +122,16 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             confirmPassword = "new-password-123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ResetPasswordSuccessMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ResetPasswordSuccessMessage));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var tokenEntity = await db.PasswordResetTokens.SingleAsync(t => t.UserId == user.Id);
-            tokenEntity.IsUsed.Should().BeTrue();
+            Assert.That(tokenEntity.IsUsed, Is.True);
         }
 
         var oldPasswordLoginResponse = await Client.PostAsJsonAsync("/api/login", new
@@ -140,17 +139,17 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             name = "reset-valid",
             password = "old-password"
         });
-        oldPasswordLoginResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(oldPasswordLoginResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var newPasswordLoginResponse = await Client.PostAsJsonAsync("/api/login", new
         {
             name = "reset-valid",
             password = "new-password-123"
         });
-        newPasswordLoginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(newPasswordLoginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var loginBody = await newPasswordLoginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        loginBody.Should().NotBeNull();
-        loginBody!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(loginBody, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(loginBody!.Token), Is.False);
     }
 
     [Test]
@@ -170,10 +169,10 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             confirmPassword = "new-password-123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ResetPasswordInvalidMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ResetPasswordInvalidMessage));
     }
 
     [Test]
@@ -193,10 +192,10 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             confirmPassword = "new-password-123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ResetPasswordInvalidMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ResetPasswordInvalidMessage));
     }
 
     [Test]
@@ -209,10 +208,10 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             confirmPassword = "new-password-123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ResetPasswordInvalidMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ResetPasswordInvalidMessage));
     }
 
     [Test]
@@ -228,14 +227,14 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             name = "reset-session",
             password = "session-old-password"
         });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        loginBody.Should().NotBeNull();
-        loginBody!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(loginBody, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(loginBody!.Token), Is.False);
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody.Token);
         var beforeResetCheckToken = await Client.GetAsync("/api/checkToken");
-        beforeResetCheckToken.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(beforeResetCheckToken.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         const string validToken = "SESSION-RESET-TOKEN-001";
         await SeedPasswordResetTokenAsync(user.Id, validToken, DateTimeOffset.UtcNow.AddMinutes(30), isUsed: false);
@@ -246,15 +245,15 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             newPassword = "session-new-password",
             confirmPassword = "session-new-password"
         });
-        resetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(resetResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody.Token);
         var afterResetCheckToken = await Client.GetAsync("/api/checkToken");
-        afterResetCheckToken.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(afterResetCheckToken.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var middlewareError = await afterResetCheckToken.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
-        middlewareError.Should().NotBeNull();
-        middlewareError!.Message.Should().Be("Unauthorized");
+        Assert.That(middlewareError, Is.Not.Null);
+        Assert.That(middlewareError!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -270,10 +269,10 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             email = "recover-email@example.com"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(ForgotPasswordGenericMessage);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(ForgotPasswordGenericMessage));
 
         await ProcessPendingCommandsAsync();
 
@@ -293,11 +292,11 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             await emailHandler.ProcessAsync(notificationId.ToString());
         }
 
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
         var sentMessage = Factory.EmailSender.SentMessages.Single();
-        sentMessage.To.Should().Be("recover-email@example.com");
-        sentMessage.Subject.Should().NotBeNullOrWhiteSpace();
-        sentMessage.Body.Should().NotBeNullOrWhiteSpace();
+        Assert.That(sentMessage.To, Is.EqualTo("recover-email@example.com"));
+        Assert.That(string.IsNullOrWhiteSpace(sentMessage.Subject), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(sentMessage.Body), Is.False);
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -305,9 +304,9 @@ public sealed class PasswordRecoveryTests : IntegrationTestBase
             n.Type == EmailNotificationTypes.PasswordRecovery
             && n.Recipient == "recover-email@example.com");
 
-        notification.Should().NotBeNull();
-        notification!.Status.Should().Be(EmailNotificationStatus.Sent);
-        notification.SentAt.Should().NotBeNull();
+        Assert.That(notification, Is.Not.Null);
+        Assert.That(notification!.Status, Is.EqualTo(EmailNotificationStatus.Sent));
+        Assert.That(notification.SentAt, Is.Not.Null);
     }
 
     private async Task SeedPasswordResetTokenAsync(

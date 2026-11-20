@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -45,12 +44,12 @@ internal sealed class PostgreSqlAccountDeletionPushCleanupTests : PostgreSqlInte
 
         var response = await Client.GetAsync("/api/deleteAccount");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
         {
-            responseJson.RootElement.TryGetProperty("msg", out var message).Should().BeTrue();
-            message.GetString().Should().Be("Deleted.");
-            responseJson.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+            Assert.That(responseJson.RootElement.TryGetProperty("msg", out var message), Is.True);
+            Assert.That(message.GetString(), Is.EqualTo("Deleted."));
+            Assert.That(responseJson.RootElement.TryGetProperty("message", out _), Is.False);
         }
 
         await using var verificationScope = Factory.Services.CreateAsyncScope();
@@ -70,17 +69,17 @@ internal sealed class PostgreSqlAccountDeletionPushCleanupTests : PostgreSqlInte
             .Select(message => message.Id)
             .ToListAsync();
 
-        pendingUser.IsDeleted.Should().BeFalse();
-        pendingUser.Name.Should().Be(user.Name);
-        pendingUser.Email.Should().Be(user.Email);
-        remainingInstallationIds.Should().BeEquivalentTo(new[]
+        Assert.That(pendingUser.IsDeleted, Is.False);
+        Assert.That(pendingUser.Name, Is.EqualTo(user.Name));
+        Assert.That(pendingUser.Email, Is.EqualTo(user.Email));
+        Assert.That(remainingInstallationIds, Is.EquivalentTo(new[]
         {
             unrelatedInstallationId, activeInstallationId, disabledInstallationId, softDeletedInstallationId
-        });
-        remainingMessageIds.Should().BeEquivalentTo(new[]
+        }));
+        Assert.That(remainingMessageIds, Is.EquivalentTo(new[]
         {
             unrelatedMessageId, activeMessageId, disabledMessageId, softDeletedMessageId
-        });
+        }));
     }
 
     private async Task SeedPushDataAsync(
@@ -121,9 +120,9 @@ internal sealed class PostgreSqlAccountDeletionPushCleanupTests : PostgreSqlInte
     private async Task AuthenticateAsync(User user)
     {
         var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var loginJson = JsonDocument.Parse(await loginResponse.Content.ReadAsStringAsync());
-        loginJson.RootElement.TryGetProperty("token", out var token).Should().BeTrue();
+        Assert.That(loginJson.RootElement.TryGetProperty("token", out var token), Is.True);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.GetString());
     }
 

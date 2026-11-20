@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Controllers;
 using LgymApi.Application.Coaching.ApiAdapters;
 using LgymApi.Application.Coaching.Invitations.Accept;
@@ -51,10 +50,10 @@ public sealed class CoachingTraineeControllerAdapterArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        source.Should().NotContain(text => text.Contains("ITrainerRelationshipService", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("TrainerRelationshipService", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITraineeNoteService", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("TraineeNoteService", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("ITrainerRelationshipService", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("TrainerRelationshipService", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITraineeNoteService", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("TraineeNoteService", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -76,17 +75,17 @@ public sealed class CoachingTraineeControllerAdapterArchitectureTests
             typeof(GetVisibleTraineeNoteQuery)
         };
 
-        inputs.Should().OnlyContain(type => type.GetProperties().All(property =>
+        Assert.That((inputs).All(type => type.GetProperties().All(property =>
             IsAllowedIdentifier(property.PropertyType)
-            || property.PropertyType == typeof(TraineeNoteUpsertData)));
+            || property.PropertyType == typeof(TraineeNoteUpsertData))), Is.True);
     }
 
     private static void AssertConstructor(Type controllerType, params Type[] dependencies)
     {
         var constructors = controllerType.GetConstructors();
 
-        constructors.Should().ContainSingle();
-        constructors[0].GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(dependencies);
+        Assert.That(constructors, Has.Exactly(1).Items);
+        Assert.That(constructors[0].GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(dependencies));
     }
 
     private static bool IsAllowedIdentifier(Type type)

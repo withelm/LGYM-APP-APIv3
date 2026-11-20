@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -32,8 +31,8 @@ public sealed class ReportingPhotoTypeSnapshotTests
         persistence.FindPhotoTypeAsync(type.Id, Arg.Any<CancellationToken>()).Returns(type);
         persistence.ListPhotoTypesAsync(trainer.Id, Arg.Any<CancellationToken>()).Returns([type]);
         var result = await CreateService(persistence).UpdatePhotoTypeAsync(trainer, type.Id, "Front", null);
-        result.Value.NameMode.Should().Be(PhotoTypeNameMode.TrainerProvided);
-        result.Value.Labels.Should().Be(new PhotoTypeLabelsResult("Front", "Front"));
+        Assert.That(result.Value.NameMode, Is.EqualTo(PhotoTypeNameMode.TrainerProvided));
+        Assert.That(result.Value.Labels, Is.EqualTo(new PhotoTypeLabelsResult("Front", "Front")));
     }
 
     [Test]
@@ -46,7 +45,7 @@ public sealed class ReportingPhotoTypeSnapshotTests
         persistence.FindPhotoTypeAsync(type.Id, Arg.Any<CancellationToken>()).Returns(type);
         persistence.ListPhotoTypesAsync(trainer.Id, Arg.Any<CancellationToken>()).Returns([type, conflict]);
         var result = await CreateService(persistence).ResetPhotoTypeNameAsync(trainer, type.Id);
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
         await persistence.DidNotReceiveWithAnyArgs().UpdatePhotoTypeAsync(default, default!, default!, default, default);
     }
 
@@ -76,13 +75,13 @@ public sealed class ReportingPhotoTypeSnapshotTests
         var archived = await service.UpdatePhotoTypeAsync(trainer, photoType.Id, null, true);
         var reset = await service.ResetPhotoTypeNameAsync(trainer, photoType.Id);
 
-        renamed.Value.Name.Should().Be("Check-in front");
-        renamed.Value.NameMode.Should().Be(PhotoTypeNameMode.TrainerProvided);
-        archived.Value.NameMode.Should().Be(PhotoTypeNameMode.TrainerProvided);
-        archived.Value.IsArchived.Should().BeTrue();
-        reset.Value.NameMode.Should().Be(PhotoTypeNameMode.SystemLocalized);
-        reset.Value.IsArchived.Should().BeTrue();
-        reset.Value.Labels.Should().Be(new PhotoTypeLabelsResult("Przód", "Front"));
+        Assert.That(renamed.Value.Name, Is.EqualTo("Check-in front"));
+        Assert.That(renamed.Value.NameMode, Is.EqualTo(PhotoTypeNameMode.TrainerProvided));
+        Assert.That(archived.Value.NameMode, Is.EqualTo(PhotoTypeNameMode.TrainerProvided));
+        Assert.That(archived.Value.IsArchived, Is.True);
+        Assert.That(reset.Value.NameMode, Is.EqualTo(PhotoTypeNameMode.SystemLocalized));
+        Assert.That(reset.Value.IsArchived, Is.True);
+        Assert.That(reset.Value.Labels, Is.EqualTo(new PhotoTypeLabelsResult("Przód", "Front")));
     }
 
     [Test]
@@ -111,19 +110,18 @@ public sealed class ReportingPhotoTypeSnapshotTests
 
         var result = await service.CreateReportRequestAsync(trainer, traineeId, new CreateReportRequestCommand { TemplateId = template.Id });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.DefinitionSnapshotProvenance.Should().Be("Issued");
-        staged.Should().NotBeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.DefinitionSnapshotProvenance, Is.EqualTo("Issued"));
+        Assert.That(staged, Is.Not.Null);
         using var snapshot = JsonDocument.Parse(staged!.DefinitionSnapshotJson!);
         var moduleConfig = snapshot.RootElement.GetProperty("fields")[0].GetProperty("moduleConfig");
-        moduleConfig.GetProperty("schemaVersion").GetInt32().Should().Be(2);
+        Assert.That(moduleConfig.GetProperty("schemaVersion").GetInt32(), Is.EqualTo(2));
         var frozen = moduleConfig.GetProperty("photoTypes")[0];
-        frozen.GetProperty("photoTypeId").GetString().Should().Be(photoTypeId.ToString());
-        Id<PhotoUploadSession>.TryParse(frozen.GetProperty("reportPhotoSlotId").GetString() ?? string.Empty, out _)
-            .Should().BeTrue();
-        frozen.GetProperty("labels").GetProperty("pl").GetString().Should().Be("Przód");
-        result.Value.Template.Fields[0].ModuleConfig!.Value.GetProperty("photoTypes")[0]
-            .GetProperty("labels").GetProperty("en").GetString().Should().Be("Front");
+        Assert.That(frozen.GetProperty("photoTypeId").GetString(), Is.EqualTo(photoTypeId.ToString()));
+        Assert.That(Id<PhotoUploadSession>.TryParse(frozen.GetProperty("reportPhotoSlotId").GetString() ?? string.Empty, out _), Is.True);
+        Assert.That(frozen.GetProperty("labels").GetProperty("pl").GetString(), Is.EqualTo("Przód"));
+        Assert.That(result.Value.Template.Fields[0].ModuleConfig!.Value.GetProperty("photoTypes")[0]
+            .GetProperty("labels").GetProperty("en").GetString(), Is.EqualTo("Front"));
     }
 
     [Test]
@@ -146,7 +144,7 @@ public sealed class ReportingPhotoTypeSnapshotTests
 
         var result = await service.CreateReportRequestAsync(trainer, traineeId, new CreateReportRequestCommand { TemplateId = template.Id });
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
         await requests.DidNotReceive().AddRequestAsync(Arg.Any<NewReportRequestPersistenceModel>(), Arg.Any<CancellationToken>());
     }
 

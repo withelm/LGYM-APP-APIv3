@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Notifications;
@@ -26,13 +25,13 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/notifications");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().BeEmpty();
-        body.HasNextPage.Should().BeFalse();
-        body.NextCursorCreatedAt.Should().BeNull();
-        body.NextCursorId.Should().BeNull();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items, Is.Empty);
+        Assert.That(body.HasNextPage, Is.False);
+        Assert.That(body.NextCursorCreatedAt, Is.Null);
+        Assert.That(body.NextCursorId, Is.Null);
     }
 
     [Test]
@@ -47,24 +46,24 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(owner.Id);
         using var ownerResponse = await Client.GetAsync($"/api/{owner.Id}/notifications");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerBody = await ownerResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        ownerBody.Should().NotBeNull();
-        ownerBody!.Items.Should().ContainSingle(item => item.Id == notification.Id.ToString() && item.Message == notification.Message);
+        Assert.That(ownerBody, Is.Not.Null);
+        Assert.That((ownerBody!.Items).Where(item => item.Id == notification.Id.ToString() && item.Message == notification.Message), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(otherUser.Id);
         using var foreignResponse = await Client.GetAsync($"/api/{owner.Id}/notifications");
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
-        foreignText.Should().NotContain(notification.Id.ToString());
-        foreignText.Should().NotContain(notification.Message);
+        Assert.That(foreignText, Does.Not.Contain(notification.Id.ToString()));
+        Assert.That(foreignText, Does.Not.Contain(notification.Message));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/{owner.Id}/notifications");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(notification.Id.ToString());
-        anonymousText.Should().NotContain(notification.Message);
+        Assert.That(anonymousText, Does.Not.Contain(notification.Id.ToString()));
+        Assert.That(anonymousText, Does.Not.Contain(notification.Message));
     }
 
     [TestCase(0)]
@@ -76,7 +75,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/notifications?limit={limit}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -89,10 +88,10 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         var cursorCreatedAt = Uri.EscapeDataString(notification.CreatedAt.ToString("O"));
         var response = await Client.GetAsync($"/api/{user.Id}/notifications?cursorCreatedAt={cursorCreatedAt}&cursorId=not-a-notification-id");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Select(item => item.Id).Should().Contain(notification.Id.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items.Select(item => item.Id), Does.Contain(notification.Id.ToString()));
     }
 
     [Test]
@@ -108,18 +107,18 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
         var response = await Client.GetAsync($"/api/{user.Id}/notifications?limit=2");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().HaveCount(2);
-        body.Items.Select(x => x.Id).Should().ContainInOrder(newest.Id.ToString(), middle.Id.ToString());
-        body.Items.Select(x => x.Message).Should().ContainInOrder("third", "second");
-        body.Items[0].IsRead.Should().BeTrue();
-        body.Items[1].SenderUserId.Should().Be(sender.Id.ToString());
-        body.HasNextPage.Should().BeTrue();
-        body.NextCursorCreatedAt.Should().Be(middle.CreatedAt);
-        body.NextCursorId.Should().Be(middle.Id.ToString());
-        body.Items.Select(x => x.Id).Should().NotContain(oldest.Id.ToString());
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items, Has.Exactly(2).Items);
+        { var orderedItems = (body.Items.Select(x => x.Id)).ToArray(); var previousIndex = -1; foreach (var expectedItem in new[] { newest.Id.ToString(), middle.Id.ToString() }) { var nextIndex = Array.FindIndex(orderedItems, previousIndex + 1, item => Equals(item, expectedItem)); Assert.That(nextIndex, Is.GreaterThan(previousIndex), $"Expected {expectedItem} after index {previousIndex}"); previousIndex = nextIndex; } }
+        { var orderedItems = (body.Items.Select(x => x.Message)).ToArray(); var previousIndex = -1; foreach (var expectedItem in new[] { "third", "second" }) { var nextIndex = Array.FindIndex(orderedItems, previousIndex + 1, item => Equals(item, expectedItem)); Assert.That(nextIndex, Is.GreaterThan(previousIndex), $"Expected {expectedItem} after index {previousIndex}"); previousIndex = nextIndex; } }
+        Assert.That(body.Items[0].IsRead, Is.True);
+        Assert.That(body.Items[1].SenderUserId, Is.EqualTo(sender.Id.ToString()));
+        Assert.That(body.HasNextPage, Is.True);
+        Assert.That(body.NextCursorCreatedAt, Is.EqualTo(middle.CreatedAt));
+        Assert.That(body.NextCursorId, Is.EqualTo(middle.Id.ToString()));
+        Assert.That(body.Items.Select(x => x.Id), Does.Not.Contain(oldest.Id.ToString()));
     }
 
     [Test]
@@ -130,7 +129,7 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{user.Id}/notifications/{Id<NotificationEntity>.New()}/mark-read", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -143,15 +142,15 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(otherUser.Id);
         var response = await Client.PostAsync($"/api/{otherUser.Id}/notifications/{notification.Id}/mark-read", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Notification forbidden");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Notification forbidden"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await db.InAppNotifications.SingleAsync(x => x.Id == notification.Id);
-        stored.IsRead.Should().BeFalse();
+        Assert.That(stored.IsRead, Is.False);
     }
 
     [Test]
@@ -167,22 +166,22 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{user.Id}/notifications/{notification.Id}/mark-read", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Message), Is.False);
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await db.InAppNotifications.SingleAsync(x => x.Id == notification.Id);
-        stored.IsRead.Should().BeTrue();
+        Assert.That(stored.IsRead, Is.True);
 
         SetAuthorizationHeader(otherUser.Id);
         var foreignResponse = await Client.PostAsync($"/api/{user.Id}/notifications/{notification.Id}/mark-read", null);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         Client.DefaultRequestHeaders.Authorization = null;
         var anonymousResponse = await Client.PostAsync($"/api/{user.Id}/notifications/{notification.Id}/mark-read", null);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -234,14 +233,14 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         var replay = await Client.PostAsync($"/api/{trainee.Id}/notifications/{notificationId}/mark-read", null);
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        replay.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await replay.Content.ReadAsStringAsync()).Should().NotContain("private replay payload");
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await replay.Content.ReadAsStringAsync()), Does.Not.Contain("private replay payload"));
         using var assertionScope = Factory.Services.CreateScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await assertionDatabase.InAppNotifications.SingleAsync(item => item.Id == notificationId);
-        stored.IsRead.Should().BeTrue();
-        stored.UpdatedAt.Should().Be(firstUpdatedAt);
+        Assert.That(stored.IsRead, Is.True);
+        Assert.That(stored.UpdatedAt, Is.EqualTo(firstUpdatedAt));
     }
 
     [Test]
@@ -259,19 +258,19 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
         var response = await Client.PostAsync($"/api/{user.Id}/notifications/mark-all-read", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var unreadCount = await db.InAppNotifications.CountAsync(x => x.RecipientId == user.Id && !x.IsRead);
-        unreadCount.Should().Be(0);
+        Assert.That(unreadCount, Is.EqualTo(0));
 
         SetAuthorizationHeader(otherUser.Id);
         var foreignResponse = await Client.PostAsync($"/api/{user.Id}/notifications/mark-all-read", null);
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         Client.DefaultRequestHeaders.Authorization = null;
         var anonymousResponse = await Client.PostAsync($"/api/{user.Id}/notifications/mark-all-read", null);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -289,10 +288,10 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(user.Id);
         var response = await Client.GetAsync($"/api/{user.Id}/notifications/unread-count");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<UnreadCountResponse>();
-        body.Should().NotBeNull();
-        body!.Count.Should().Be(2);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Count, Is.EqualTo(2));
     }
 
     [Test]
@@ -308,24 +307,24 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         SetAuthorizationHeader(owner.Id);
         using var ownerResponse = await Client.GetAsync($"/api/{owner.Id}/notifications/unread-count");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerBody = await ownerResponse.Content.ReadFromJsonAsync<UnreadCountResponse>();
-        ownerBody.Should().NotBeNull();
-        ownerBody!.Count.Should().Be(2);
+        Assert.That(ownerBody, Is.Not.Null);
+        Assert.That(ownerBody!.Count, Is.EqualTo(2));
 
         SetAuthorizationHeader(otherUser.Id);
         using var foreignResponse = await Client.GetAsync($"/api/{owner.Id}/notifications/unread-count");
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
-        foreignText.Should().NotContain("HTTP unread one");
-        foreignText.Should().NotContain("HTTP unread two");
+        Assert.That(foreignText, Does.Not.Contain("HTTP unread one"));
+        Assert.That(foreignText, Does.Not.Contain("HTTP unread two"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/{owner.Id}/notifications/unread-count");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain("HTTP unread one");
-        anonymousText.Should().NotContain("HTTP unread two");
+        Assert.That(anonymousText, Does.Not.Contain("HTTP unread one"));
+        Assert.That(anonymousText, Does.Not.Contain("HTTP unread two"));
     }
 
     [Test]
@@ -442,16 +441,18 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         var pageResponse = await Client.GetAsync($"/api/{recipient.Id}/notifications?limit=1");
         var countResponse = await Client.GetAsync($"/api/{recipient.Id}/notifications/unread-count");
 
-        pageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(pageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var page = await pageResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        page.Should().NotBeNull();
-        page!.Items.Should().ContainSingle().Which.Message.Should().Be("valid source");
-        page.HasNextPage.Should().BeFalse();
+        Assert.That(page, Is.Not.Null);
+        var assertedValue181 = (page!.Items).ToArray();
+        Assert.That(assertedValue181, Has.Exactly(1).Items);
+        Assert.That(assertedValue181.Single().Message, Is.EqualTo("valid source"));
+        Assert.That(page.HasNextPage, Is.False);
 
-        countResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(countResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var count = await countResponse.Content.ReadFromJsonAsync<UnreadCountResponse>();
-        count.Should().NotBeNull();
-        count!.Count.Should().Be(1);
+        Assert.That(count, Is.Not.Null);
+        Assert.That(count!.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -517,14 +518,14 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         var traineeResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications?limit=20");
         var traineePage = await traineeResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        traineeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        traineePage!.Items.Select(item => item.Message).Should().BeEquivalentTo("sent", "request", "feedback", "diet", "note");
+        Assert.That(traineeResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(traineePage!.Items.Select(item => item.Message), Is.EquivalentTo(new[] { "sent", "request", "feedback", "diet", "note" }));
 
         SetAuthorizationHeader(trainer.Id);
         var trainerResponse = await Client.GetAsync($"/api/{trainer.Id}/notifications?limit=20");
         var trainerPage = await trainerResponse.Content.ReadFromJsonAsync<PagedNotificationsResponse>();
-        trainerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        trainerPage!.Items.Select(item => item.Message).Should().BeEquivalentTo("accepted", "rejected", "submission", "ended");
+        Assert.That(trainerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(trainerPage!.Items.Select(item => item.Message), Is.EquivalentTo(new[] { "accepted", "rejected", "submission", "ended" }));
     }
 
     [Test]
@@ -535,9 +536,13 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         var now = DateTimeOffset.UtcNow;
         var note = new TraineeNote
         {
-            Id = Id<TraineeNote>.New(), TrainerId = trainer.Id, TraineeId = trainee.Id,
-            Content = "Sensitive queued title", VisibleToTrainee = true,
-            LastUpdatedByUserId = trainer.Id, LastUpdatedAt = now
+            Id = Id<TraineeNote>.New(),
+            TrainerId = trainer.Id,
+            TraineeId = trainee.Id,
+            Content = "Sensitive queued title",
+            VisibleToTrainee = true,
+            LastUpdatedByUserId = trainer.Id,
+            LastUpdatedAt = now
         };
 
         using (var scope = Factory.Services.CreateScope())
@@ -553,8 +558,8 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         SetAuthorizationHeader(trainee.Id);
         using (var visibleResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications"))
         {
-            visibleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await visibleResponse.Content.ReadAsStringAsync()).Should().Contain("Sensitive queued title");
+            Assert.That(visibleResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That((await visibleResponse.Content.ReadAsStringAsync()), Does.Contain("Sensitive queued title"));
         }
 
         using (var scope = Factory.Services.CreateScope())
@@ -567,8 +572,8 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
 
         using (var hiddenResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications"))
         {
-            hiddenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await hiddenResponse.Content.ReadAsStringAsync()).Should().NotContain("Sensitive queued title");
+            Assert.That(hiddenResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That((await hiddenResponse.Content.ReadAsStringAsync()), Does.Not.Contain("Sensitive queued title"));
         }
 
         using (var scope = Factory.Services.CreateScope())
@@ -580,8 +585,8 @@ public sealed class InAppNotificationApiTests : IntegrationTestBase
         }
 
         using var deletedResponse = await Client.GetAsync($"/api/{trainee.Id}/notifications");
-        deletedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await deletedResponse.Content.ReadAsStringAsync()).Should().NotContain("Sensitive queued title");
+        Assert.That(deletedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await deletedResponse.Content.ReadAsStringAsync()), Does.Not.Contain("Sensitive queued title"));
     }
 
     private async Task<NotificationEntity> SeedNotificationAsync(

@@ -6,7 +6,6 @@ using LgymApi.Identity.Contracts.Accounts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Security.Claims;
-using FluentAssertions;
 using NSubstitute;
 
 namespace LgymApi.UnitTests;
@@ -37,7 +36,7 @@ public sealed class UserContextMiddlewareBlockedTests
 
         await _middleware.InvokeAsync(context, _authenticatedAccountContextResolver);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
     }
 
     [Test]
@@ -55,10 +54,10 @@ public sealed class UserContextMiddlewareBlockedTests
 
         await middleware.InvokeAsync(context, _authenticatedAccountContextResolver);
 
-        nextCalled.Should().BeTrue();
-        context.Response.StatusCode.Should().Be(200);
-        context.GetAuthenticatedAccountContext()!.Id.Should().Be(accountId);
-        context.Items.Should().NotContainKey("User");
+        Assert.That(nextCalled, Is.True);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(200));
+        Assert.That(context.GetAuthenticatedAccountContext()!.Id, Is.EqualTo(accountId));
+        Assert.That(context.Items, Does.Not.ContainKey("User"));
     }
 
     [Test]
@@ -71,7 +70,7 @@ public sealed class UserContextMiddlewareBlockedTests
 
         await _middleware.InvokeAsync(context, _authenticatedAccountContextResolver);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status401Unauthorized));
         await _authenticatedAccountContextResolver.DidNotReceiveWithAnyArgs()
             .ResolveAsync(default, default, default);
     }

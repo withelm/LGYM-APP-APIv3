@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Access;
 using LgymApi.Application.Identity.Authorization;
 using LgymApi.Application.Identity.Mapping;
@@ -32,8 +31,8 @@ public sealed class AccountLifecycleAuthorizationTests
         var facts = mapper.Map<User, AccountAccessFacts>(user);
         var context = mapper.Map<AccountAccessFacts, AuthenticatedAccountContext>(facts);
 
-        facts.DeletionState.Should().Be(state);
-        context.DeletionState.Should().Be(state);
+        Assert.That(facts.DeletionState, Is.EqualTo(state));
+        Assert.That(context.DeletionState, Is.EqualTo(state));
     }
 
     [TestCase(AccountDeletionState.PendingDeletion)]
@@ -53,9 +52,9 @@ public sealed class AccountLifecycleAuthorizationTests
         var facts = await reader.GetByIdAsync(accountId);
         var resolution = await resolver.ResolveAsync(accountId, sessionId);
 
-        facts.Should().BeNull();
-        resolution.Status.Should().Be(AuthenticatedAccountResolutionStatus.AccountNotFound);
-        resolution.Context.Should().BeNull();
+        Assert.That(facts, Is.Null);
+        Assert.That(resolution.Status, Is.EqualTo(AuthenticatedAccountResolutionStatus.AccountNotFound));
+        Assert.That(resolution.Context, Is.Null);
     }
 
     [Test]
@@ -78,13 +77,13 @@ public sealed class AccountLifecycleAuthorizationTests
         user.DeletionState = AccountDeletionState.Active;
         var restored = await resolver.ResolveAsync(accountId, sessionId);
 
-        initial.Status.Should().Be(AuthenticatedAccountResolutionStatus.Active);
-        authorization.HasPermission(initial.Context!, AuthConstants.Permissions.AdminAccess).Should().BeTrue();
-        pending.Context.Should().BeNull();
-        restored.Status.Should().Be(AuthenticatedAccountResolutionStatus.Active);
-        restored.Context!.Id.Should().Be(accountId);
-        restored.Context.DeletionState.Should().Be(AccountDeletionState.Active);
-        authorization.HasPermission(restored.Context, AuthConstants.Permissions.AdminAccess).Should().BeTrue();
+        Assert.That(initial.Status, Is.EqualTo(AuthenticatedAccountResolutionStatus.Active));
+        Assert.That(authorization.HasPermission(initial.Context!, AuthConstants.Permissions.AdminAccess), Is.True);
+        Assert.That(pending.Context, Is.Null);
+        Assert.That(restored.Status, Is.EqualTo(AuthenticatedAccountResolutionStatus.Active));
+        Assert.That(restored.Context!.Id, Is.EqualTo(accountId));
+        Assert.That(restored.Context.DeletionState, Is.EqualTo(AccountDeletionState.Active));
+        Assert.That(authorization.HasPermission(restored.Context, AuthConstants.Permissions.AdminAccess), Is.True);
     }
 
     [TestCase(AccountDeletionState.PendingDeletion)]
@@ -103,7 +102,7 @@ public sealed class AccountLifecycleAuthorizationTests
 
         var result = await resolver.ResolveAsync(accountId, sessionId);
 
-        result.Status.Should().Be(AuthenticatedAccountResolutionStatus.AccountNotFound);
-        result.Context.Should().BeNull();
+        Assert.That(result.Status, Is.EqualTo(AuthenticatedAccountResolutionStatus.AccountNotFound));
+        Assert.That(result.Context, Is.Null);
     }
 }

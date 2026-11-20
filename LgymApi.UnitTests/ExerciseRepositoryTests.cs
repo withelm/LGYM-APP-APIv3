@@ -1,5 +1,3 @@
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
@@ -42,7 +40,7 @@ public sealed class ExerciseRepositoryTests
         var repository = new ExerciseRepository(dbContext);
         var result = await repository.GetTranslationsAsync([exerciseId], ["   ", ""], CancellationToken.None);
 
-        result.Should().BeEmpty();
+        Assert.That(result, Is.Empty);
     }
 
     [Test]
@@ -70,21 +68,21 @@ public sealed class ExerciseRepositoryTests
         var global = await repository.FindGlobalByIdAsync(globalExercise.Id);
         var foreignGlobal = await repository.FindGlobalByIdAsync(foreignExercise.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            visibleGlobal.Should().NotBeNull();
-            visibleGlobal!.OwnerId.Should().BeNull();
-            visibleOwned.Should().NotBeNull();
-            visibleOwned!.OwnerId.Should().Be(actorId);
-            visibleForeign.Should().BeNull();
-            owned.Should().NotBeNull();
-            owned!.OwnerId.Should().Be(actorId);
-            foreignOwned.Should().BeNull();
-            unrestrictedForeign.Should().NotBeNull();
-            unrestrictedForeign!.OwnerId.Should().Be(foreignOwnerId);
-            global.Should().NotBeNull();
-            global!.OwnerId.Should().BeNull();
-            foreignGlobal.Should().BeNull();
+            Assert.That(visibleGlobal, Is.Not.Null);
+            Assert.That(visibleGlobal!.OwnerId, Is.Null);
+            Assert.That(visibleOwned, Is.Not.Null);
+            Assert.That(visibleOwned!.OwnerId, Is.EqualTo(actorId));
+            Assert.That(visibleForeign, Is.Null);
+            Assert.That(owned, Is.Not.Null);
+            Assert.That(owned!.OwnerId, Is.EqualTo(actorId));
+            Assert.That(foreignOwned, Is.Null);
+            Assert.That(unrestrictedForeign, Is.Not.Null);
+            Assert.That(unrestrictedForeign!.OwnerId, Is.EqualTo(foreignOwnerId));
+            Assert.That(global, Is.Not.Null);
+            Assert.That(global!.OwnerId, Is.Null);
+            Assert.That(foreignGlobal, Is.Null);
         }
     }
 
@@ -108,11 +106,11 @@ public sealed class ExerciseRepositoryTests
         }
         await new WorkoutExercisePersistenceRepository(metadata).UpdateAsync(new(stale!.Id, null, "Metadata saved later", stale.BodyPart, stale.EloFormula, stale.Description, staleImage, false));
         metadata.ChangeTracker.DetectChanges();
-        metadata.Entry(exercise).Property(x => x.Image).IsModified.Should().BeFalse();
+        Assert.That(metadata.Entry(exercise).Property(x => x.Image).IsModified, Is.False);
         await metadata.SaveChangesAsync();
         await using var read = new AppDbContext(options);
-        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Image.Should().Be("https://new.test/current.gif");
-        (await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Name.Should().Be("Metadata saved later");
+        Assert.That((await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Image, Is.EqualTo("https://new.test/current.gif"));
+        Assert.That((await read.Exercises.SingleAsync(x => x.Id == exercise.Id)).Name, Is.EqualTo("Metadata saved later"));
     }
 
     private static Exercise Exercise(Id<Exercise> id, Id<User>? ownerId, string name) => new()

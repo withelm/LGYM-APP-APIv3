@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Reporting.Authorization;
 using LgymApi.Application.Reporting.Persistence;
@@ -28,7 +27,7 @@ public sealed partial class ReportingServiceTests
         var facts = new ReportFeedbackFacts(ReportingTestData.Submission(submission),
             new ReportingRelationshipAccessFact(true, [], new ReportingActiveRelationshipFact(DefaultCoachingEpisodeId, 0)), null);
 
-        ReportFeedbackLifecyclePolicy.Allows(ReportingTestData.Account(traineeId), facts, ReportFeedbackAction.EditAnswers).Should().Be(allowed);
+        Assert.That(ReportFeedbackLifecyclePolicy.Allows(ReportingTestData.Account(traineeId), facts, ReportFeedbackAction.EditAnswers), Is.EqualTo(allowed));
     }
 
     [TestCase("current", true)]
@@ -74,17 +73,17 @@ public sealed partial class ReportingServiceTests
             hasActiveTrainerLink: scenario != "inactive");
 
         var before = await service.GetOwnSubmissionsAsync(CreateUser(traineeId));
-        before.IsSuccess.Should().BeTrue();
-        before.Value.Single().CanMarkFeedbackRead.Should().Be(allowed);
+        Assert.That(before.IsSuccess, Is.True);
+        Assert.That(before.Value.Single().CanMarkFeedbackRead, Is.EqualTo(allowed));
         var result = await service.MarkTrainerFeedbackAsReadAsync(CreateUser(traineeId), submission.Id);
 
-        result.IsSuccess.Should().Be(allowed || scenario == "read");
+        Assert.That(result.IsSuccess, Is.EqualTo(allowed || scenario == "read"));
         if (allowed)
         {
-            submission.TrainerFeedbackReadAt.Should().NotBeNull();
-            request.Status.Should().Be(ReportRequestStatus.Completed);
+            Assert.That(submission.TrainerFeedbackReadAt, Is.Not.Null);
+            Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Completed));
         }
-        else if (scenario != "read") submission.TrainerFeedbackReadAt.Should().BeNull();
+        else if (scenario != "read") Assert.That(submission.TrainerFeedbackReadAt, Is.Null);
     }
 
     [TestCase("current", true)]
@@ -122,11 +121,11 @@ public sealed partial class ReportingServiceTests
             findSubmissionByIdForTrainer: (_, _, _, _) => Task.FromResult<ReportSubmission?>(submission),
             recurringAssignmentByRequestId: (_, _) => Task.FromResult(assignment));
 
-        ReportFeedbackLifecyclePolicy.Allows(actor, facts, ReportFeedbackAction.Edit).Should().Be(allowed);
+        Assert.That(ReportFeedbackLifecyclePolicy.Allows(actor, facts, ReportFeedbackAction.Edit), Is.EqualTo(allowed));
         var result = await service.UpdateTrainerFeedbackAsync(actor, ReportingTestData.AccountId(traineeId), submission.Id,
             new UpdateReportSubmissionFeedbackCommand { TrainerOverallComment = "changed" });
 
-        result.IsSuccess.Should().Be(allowed);
-        submission.TrainerOverallComment.Should().Be(allowed ? "changed" : "original");
+        Assert.That(result.IsSuccess, Is.EqualTo(allowed));
+        Assert.That(submission.TrainerOverallComment, Is.EqualTo(allowed ? "changed" : "original"));
     }
 }

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Repositories;
@@ -61,17 +60,17 @@ public sealed class PushNotificationDeliveryRecoveryTests
 
         Func<Task> act = () => service.ProcessAsync(message.Id.ToString(), cancellationTokenSource.Token);
 
-        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
-        installationRepository.ResetCancellationToken.CanBeCanceled.Should().BeFalse();
-        unitOfWork.RecoverySaveCancellationToken.CanBeCanceled.Should().BeFalse();
-        unitOfWork.RecoverySaveObservedAfterReset.Should().BeTrue();
-        installation.FcmToken.Should().Be("token-b");
-        installation.SessionId.Should().Be(replacementSessionId);
-        installation.RegistrationRevision.Should().Be(1);
-        installation.DisabledAt.Should().BeNull();
-        installation.DisabledReason.Should().BeNull();
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
+        Assert.That(installationRepository.ResetCancellationToken.CanBeCanceled, Is.False);
+        Assert.That(unitOfWork.RecoverySaveCancellationToken.CanBeCanceled, Is.False);
+        Assert.That(unitOfWork.RecoverySaveObservedAfterReset, Is.True);
+        Assert.That(installation.FcmToken, Is.EqualTo("token-b"));
+        Assert.That(installation.SessionId, Is.EqualTo(replacementSessionId));
+        Assert.That(installation.RegistrationRevision, Is.EqualTo(1));
+        Assert.That(installation.DisabledAt, Is.Null);
+        Assert.That(installation.DisabledReason, Is.Null);
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
     }
 
     private sealed class RecoveryMessageRepository(PushNotificationMessage message) : IPushNotificationMessageRepository

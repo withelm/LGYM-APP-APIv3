@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -46,10 +45,10 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
         var response = await Client.GetAsync("/api/trainer/trainees?search=mIxEd&sortBy=name&sortDirection=asc&page=2&pageSize=1");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("total").GetInt32().Should().Be(2);
-        body.RootElement.GetProperty("items").EnumerateArray().Should().ContainSingle(item => item.GetProperty("_id").GetString() == matchingByEmail.Id.ToString());
+        Assert.That(body.RootElement.GetProperty("total").GetInt32(), Is.EqualTo(2));
+        Assert.That((body.RootElement.GetProperty("items").EnumerateArray()).Where(item => item.GetProperty("_id").GetString() == matchingByEmail.Id.ToString()), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -80,21 +79,21 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
         var secondPageResponse = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 2, pageSize = 2 });
 
         // Assert
-        firstPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        secondPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(secondPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var firstPage = JsonDocument.Parse(await firstPageResponse.Content.ReadAsStringAsync());
-        firstPage.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
+        Assert.That(firstPage.RootElement.GetProperty("totalCount").GetInt32(), Is.EqualTo(3));
         var firstPageItems = firstPage.RootElement.GetProperty("items").EnumerateArray().ToArray();
-        firstPageItems.Select(item => item.GetProperty("_id").GetString()).Should().Equal(emailOnlyInvitationId.ToString(), profileInvitationId.ToString());
-        firstPageItems[0].GetProperty("traineeId").GetString().Should().BeEmpty();
-        firstPageItems[0].TryGetProperty("traineeName", out _).Should().BeFalse();
-        firstPageItems[0].TryGetProperty("traineeEmail", out _).Should().BeFalse();
-        firstPageItems[1].GetProperty("traineeName").GetString().Should().Be(trainee.Name);
-        firstPageItems[1].GetProperty("traineeEmail").GetString().Should().Be(trainee.Email);
+        Assert.That(firstPageItems.Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { emailOnlyInvitationId.ToString(), profileInvitationId.ToString() }));
+        Assert.That(firstPageItems[0].GetProperty("traineeId").GetString(), Is.Empty);
+        Assert.That(firstPageItems[0].TryGetProperty("traineeName", out _), Is.False);
+        Assert.That(firstPageItems[0].TryGetProperty("traineeEmail", out _), Is.False);
+        Assert.That(firstPageItems[1].GetProperty("traineeName").GetString(), Is.EqualTo(trainee.Name));
+        Assert.That(firstPageItems[1].GetProperty("traineeEmail").GetString(), Is.EqualTo((string)(trainee.Email)));
 
         using var secondPage = JsonDocument.Parse(await secondPageResponse.Content.ReadAsStringAsync());
-        secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()).Should().Equal(latestInvitationId.ToString());
+        Assert.That(secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { latestInvitationId.ToString() }));
     }
 
     [Test]
@@ -122,13 +121,12 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=2");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("total").GetInt32().Should().Be(2);
+        Assert.That(body.RootElement.GetProperty("total").GetInt32(), Is.EqualTo(2));
         var items = body.RootElement.GetProperty("items").EnumerateArray().ToArray();
-        items.Select(item => item.GetProperty("_id").GetString())
-            .Should().Equal(firstById.Id.ToString(), secondById.Id.ToString());
-        items.Select(item => item.GetProperty("status").GetString()).Should().Equal("Linked", "Linked");
+        Assert.That(items.Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { firstById.Id.ToString(), secondById.Id.ToString() }));
+        Assert.That(items.Select(item => item.GetProperty("status").GetString()), Is.EqualTo(new[] { "Linked", "Linked" }));
     }
 
     [Test]
@@ -179,15 +177,13 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
         var response = await Client.GetAsync("/api/trainer/trainees?sortBy=status&sortDirection=asc&page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var items = body.RootElement.GetProperty("items").EnumerateArray().ToArray();
-        items.Select(item => item.GetProperty("_id").GetString())
-            .Should().Equal(linked.Id.ToString(), pending.Id.ToString(), expired.Id.ToString());
-        items.Select(item => item.GetProperty("status").GetString())
-            .Should().Equal("Linked", "InvitationPending", "InvitationExpired");
-        items[2].GetProperty("hasPendingInvitation").GetBoolean().Should().BeFalse();
-        items[2].GetProperty("hasExpiredInvitation").GetBoolean().Should().BeTrue();
+        Assert.That(items.Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { linked.Id.ToString(), pending.Id.ToString(), expired.Id.ToString() }));
+        Assert.That(items.Select(item => item.GetProperty("status").GetString()), Is.EqualTo(new[] { "Linked", "InvitationPending", "InvitationExpired" }));
+        Assert.That(items[2].GetProperty("hasPendingInvitation").GetBoolean(), Is.False);
+        Assert.That(items[2].GetProperty("hasExpiredInvitation").GetBoolean(), Is.True);
     }
 
     [Test]
@@ -218,14 +214,12 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
         var secondPageResponse = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 2, pageSize = 2 });
 
         // Assert
-        firstPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        secondPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(secondPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var firstPage = JsonDocument.Parse(await firstPageResponse.Content.ReadAsStringAsync());
         using var secondPage = JsonDocument.Parse(await secondPageResponse.Content.ReadAsStringAsync());
-        firstPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString())
-            .Should().Equal(firstById.ToString(), secondById.ToString());
-        secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString())
-            .Should().Equal(thirdById.ToString());
+        Assert.That(firstPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { firstById.ToString(), secondById.ToString() }));
+        Assert.That(secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { thirdById.ToString() }));
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)
@@ -243,7 +237,7 @@ internal sealed class PostgreSqlTrainerRelationshipPaginationTests : PostgreSqlI
     private async Task AuthenticateAsAsync(User user)
     {
         var response = await Client.PostAsJsonAsync("/api/login", new { name = user.Name, password = "password123" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.RootElement.GetProperty("token").GetString());

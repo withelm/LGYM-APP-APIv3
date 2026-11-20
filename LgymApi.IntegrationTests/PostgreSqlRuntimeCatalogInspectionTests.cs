@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -27,23 +26,23 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
             options,
             CancellationToken.None);
 
-        inspection.DatabaseName.Should().Be(environment.DatabaseName);
-        inspection.CurrentUser.Should().Be(environment.RuntimeRole);
-        inspection.IsSuperuser.Should().BeFalse();
-        inspection.BypassesRowSecurity.Should().BeFalse();
-        inspection.ElevatedMemberships.Should().BeEmpty();
-        inspection.MultiplexingEnabled.Should().BeFalse();
-        inspection.HangfireSchemaExists.Should().BeTrue();
-        inspection.HangfireSchemaUsageGranted.Should().BeTrue();
-        inspection.MissingTableGrants.Should().BeEmpty();
-        inspection.MissingSequenceGrants.Should().BeEmpty();
-        inspection.ProtectedTables.Should().OnlyContain(table =>
-            !table.RowSecurityEnabled && !table.RowSecurityForced && table.IsOwnedByRuntimeRole);
+        Assert.That(inspection.DatabaseName, Is.EqualTo(environment.DatabaseName));
+        Assert.That(inspection.CurrentUser, Is.EqualTo(environment.RuntimeRole));
+        Assert.That(inspection.IsSuperuser, Is.False);
+        Assert.That(inspection.BypassesRowSecurity, Is.False);
+        Assert.That(inspection.ElevatedMemberships, Is.Empty);
+        Assert.That(inspection.MultiplexingEnabled, Is.False);
+        Assert.That(inspection.HangfireSchemaExists, Is.True);
+        Assert.That(inspection.HangfireSchemaUsageGranted, Is.True);
+        Assert.That(inspection.MissingTableGrants, Is.Empty);
+        Assert.That(inspection.MissingSequenceGrants, Is.Empty);
+        Assert.That((inspection.ProtectedTables).All(table =>
+            !table.RowSecurityEnabled && !table.RowSecurityForced && table.IsOwnedByRuntimeRole), Is.True);
 
         var policies = inspection.ProtectedTables.SelectMany(table => table.Policies).ToArray();
-        policies.Should().HaveCount(8);
-        policies.Should().OnlyContain(policy => policy.Roles.Count == 1 && policy.Roles[0] == "PUBLIC");
-        policies.Should().OnlyContain(policy => policy.IsPermissive);
+        Assert.That(policies, Has.Exactly(8).Items);
+        Assert.That((policies).All(policy => policy.Roles.Count == 1 && policy.Roles[0] == "PUBLIC"), Is.True);
+        Assert.That((policies).All(policy => policy.IsPermissive), Is.True);
         AssertPolicy(policies, "user_tutorial_progresses_actor_select", "SELECT", "ActorOwnsRow", null);
         AssertPolicy(policies, "user_tutorial_progresses_actor_insert", "INSERT", null, "ActorOwnsRow");
         AssertPolicy(policies, "user_tutorial_progresses_actor_update", "UPDATE", "ActorOwnsRow", "ActorOwnsRow");
@@ -54,7 +53,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
         AssertPolicy(policies, "user_tutorial_step_progresses_actor_delete", "DELETE", "ActorOwnsParent", null);
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [TestCase(RuntimePrivilege.SchemaUsage, "*USAGE on the Hangfire schema*")]
@@ -76,7 +75,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
 
         var action = () => ValidateAsync(environment, CreateConfiguration(environment));
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage(expectedMessage);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape(expectedMessage).Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -87,7 +86,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
 
         var action = () => ValidateAsync(environment, CreateConfiguration(environment));
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("Hangfire schema is missing*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Hangfire schema is missing*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -101,7 +100,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
 
         var action = () => ValidateAsync(environment, configuration);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*policies do not match*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*policies do not match*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -114,7 +113,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
 
         var action = () => ValidateAsync(environment, CreateConfiguration(environment));
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("Runtime-owned protected tables must force row-level security.");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Runtime-owned protected tables must force row-level security.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -142,7 +141,7 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
             options,
             CancellationToken.None);
 
-        inspection.HelperFunction.Should().Be(new PostgreSqlHelperFunctionInspection(false, true, true));
+        Assert.That(inspection.HelperFunction, Is.EqualTo(new PostgreSqlHelperFunctionInspection(false, true, true)));
         PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
     }
 
@@ -152,11 +151,11 @@ public sealed class PostgreSqlRuntimeCatalogInspectionTests
         string command,
         string? usingExpression,
         string? withCheckExpression)
-        => policies.Should().ContainSingle(policy =>
+        => Assert.That((policies).Where(policy =>
             policy.Name == name
             && policy.Command == command
             && policy.Using == usingExpression
-            && policy.WithCheck == withCheckExpression);
+            && policy.WithCheck == withCheckExpression), Has.Exactly(1).Items);
 
     internal static async Task ValidateAsync(PostgreSqlTutorialRowSecurityTestEnvironment environment, IConfiguration configuration)
     {

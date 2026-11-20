@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -24,14 +23,11 @@ public sealed class NotificationRetentionSchemaTests
 
         AssertIndex(pushInstallation, [nameof(PushInstallation.DisabledAt)], false, "IX_PushInstallations_DisabledAt");
         AssertIndex(pushInstallation, [nameof(PushInstallation.InstallationId)], true, "IX_PushInstallations_InstallationId", "\"IsDeleted\" = FALSE");
-        pushInstallation.GetProperties()
-            .Where(property => property.IsConcurrencyToken)
-            .Select(property => property.Name)
-            .Should()
-            .ContainSingle()
-            .Which
-            .Should()
-            .Be("RegistrationRevision");
+        var assertedValue135 = (pushInstallation.GetProperties()
+                    .Where(property => property.IsConcurrencyToken)
+                    .Select(property => property.Name)).ToArray();
+        Assert.That(assertedValue135, Has.Exactly(1).Items);
+        Assert.That(assertedValue135.Single(), Is.EqualTo("RegistrationRevision"));
         AssertForeignKey(pushInstallation, nameof(PushInstallation.UserId), DeleteBehavior.SetNull);
         AssertForeignKey(pushInstallation, nameof(PushInstallation.SessionId), DeleteBehavior.SetNull);
 
@@ -46,15 +42,15 @@ public sealed class NotificationRetentionSchemaTests
     private static void AssertIndex(IEntityType entity, string[] properties, bool unique, string name, string? filter = null)
     {
         var index = entity.GetIndexes().Single(candidate => candidate.Properties.Select(property => property.Name).SequenceEqual(properties));
-        index.IsUnique.Should().Be(unique);
-        index.GetDatabaseName().Should().Be(name);
-        index.GetFilter().Should().Be(filter);
+        Assert.That(index.IsUnique, Is.EqualTo(unique));
+        Assert.That(index.GetDatabaseName(), Is.EqualTo(name));
+        Assert.That(index.GetFilter(), Is.EqualTo(filter));
     }
 
     private static void AssertForeignKey(IEntityType entity, string property, DeleteBehavior deleteBehavior)
     {
         var foreignKey = entity.GetForeignKeys().Single(candidate => candidate.Properties.Select(key => key.Name).SequenceEqual([property]));
-        foreignKey.DeleteBehavior.Should().Be(deleteBehavior);
+        Assert.That(foreignKey.DeleteBehavior, Is.EqualTo(deleteBehavior));
     }
 
     private static AppDbContext CreateDatabase() => new(new DbContextOptionsBuilder<AppDbContext>()

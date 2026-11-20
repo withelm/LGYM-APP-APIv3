@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
@@ -63,18 +62,18 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.IsSuccess.Should().BeTrue();
-        plan.Name.Should().Be("Nutrition Plan");
-        history.Should().NotBeNull();
-        history!.ChangeType.Should().Be("Updated");
-        history.DietPlanId.Should().Be(plan.Id);
-        history.ChangedByUserId.Should().Be(trainerId);
-        notification.Should().NotBeNull();
-        notification!.DietPlanId.Should().Be(plan.Id);
-        notification.TraineeId.Should().Be(traineeId);
-        notification.TrainerId.Should().Be(trainerId);
-        notification.DietPlanName.Should().Be("Nutrition Plan");
-        operations.Should().Equal("access", "tracked", "stage", "history", "save", "notify");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.Name, Is.EqualTo("Nutrition Plan"));
+        Assert.That(history, Is.Not.Null);
+        Assert.That(history!.ChangeType, Is.EqualTo("Updated"));
+        Assert.That(history.DietPlanId, Is.EqualTo(plan.Id));
+        Assert.That(history.ChangedByUserId, Is.EqualTo(trainerId));
+        Assert.That(notification, Is.Not.Null);
+        Assert.That(notification!.DietPlanId, Is.EqualTo(plan.Id));
+        Assert.That(notification.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(notification.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(notification.DietPlanName, Is.EqualTo("Nutrition Plan"));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "tracked", "stage", "history", "save", "notify" }));
         await AssertNoTransactionAsync(dependencies);
     }
 
@@ -90,8 +89,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.IsSuccess.Should().BeTrue();
-        plan.IsActive.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.IsActive, Is.False);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await AssertNoTransactionAsync(dependencies);
@@ -118,11 +117,11 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.IsSuccess.Should().BeTrue();
-        plan.Meals.Select(meal => meal.Order).Should().Equal(1, 2);
-        plan.Meals.Select(meal => meal.Name).Should().Equal("Breakfast", "Dinner");
-        plan.Meals.Should().OnlyContain(meal => !meal.Id.IsEmpty);
-        plan.Meals.Select(meal => meal.Id).Should().NotIntersectWith(oldMealIds);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.Meals.Select(meal => meal.Order), Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(plan.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "Breakfast", "Dinner" }));
+        Assert.That((plan.Meals).All(meal => !meal.Id.IsEmpty), Is.True);
+        Assert.That((plan.Meals.Select(meal => meal.Id)).Intersect(oldMealIds), Is.Empty);
     }
 
     [Test]
@@ -138,8 +137,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -159,8 +158,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(
             Arg.Any<Id<DietPlan>>(),
             Arg.Any<CancellationToken>());
@@ -194,8 +193,8 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
             var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-            result.Error.GetType().Should().Be(failureCase.ErrorType);
-            result.Error.Message.Should().Be(failureCase.Message);
+            Assert.That(result.Error.GetType(), Is.EqualTo(failureCase.ErrorType));
+            Assert.That(result.Error.Message, Is.EqualTo(failureCase.Message));
             if (failureCase.PlanId.IsEmpty)
             {
                 await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(
@@ -243,9 +242,9 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(command);
 
-        result.IsSuccess.Should().BeTrue();
-        history.Should().NotBeNull();
-        history!.SnapshotJson.Should().Be(UpdatedT2Golden(plan));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(history, Is.Not.Null);
+        Assert.That(history!.SnapshotJson, Is.EqualTo(UpdatedT2Golden(plan)));
     }
 
     [Test]
@@ -260,9 +259,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(new InvalidOperationException("save failed")));
 
-        await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(command))
-            .Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("save failed");
+        await Assert.ThatAsync(async () => { await dependencies.CreateUseCase().ExecuteAsync(command); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
@@ -350,7 +347,7 @@ public sealed class UpdateTraineeDietPlanUseCaseTests
     private static Id<TEntity> ParseId<TEntity>(string value)
         where TEntity : class
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

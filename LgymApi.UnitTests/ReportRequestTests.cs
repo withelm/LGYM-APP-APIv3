@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 
@@ -12,6 +11,6 @@ public sealed class ReportRequestTests
     {
         var request = new ReportRequest();
 
-        request.Status.Should().Be(ReportRequestStatus.Pending);
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Pending));
     }
 }

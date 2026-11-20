@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Relationships.DetachFromTrainer;
 using LgymApi.Application.Coaching.Relationships.GetCurrentTrainer;
@@ -25,9 +24,9 @@ public sealed class CoachingRelationshipSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -39,23 +38,22 @@ public sealed class CoachingRelationshipSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == slice.Contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == slice.Contract), Is.EqualTo(1));
         }
     }
 
     [Test]
     public void RelationshipSlicePublicModels_AreSealedRecordsWithTypedIdentifiers()
     {
-        typeof(UnlinkTraineeCommand).IsSealed.Should().BeTrue();
-        typeof(DetachFromTrainerCommand).IsSealed.Should().BeTrue();
-        typeof(GetCurrentTrainerQuery).IsSealed.Should().BeTrue();
-        typeof(CurrentTrainerReadModel).IsSealed.Should().BeTrue();
+        Assert.That(typeof(UnlinkTraineeCommand).IsSealed, Is.True);
+        Assert.That(typeof(DetachFromTrainerCommand).IsSealed, Is.True);
+        Assert.That(typeof(GetCurrentTrainerQuery).IsSealed, Is.True);
+        Assert.That(typeof(CurrentTrainerReadModel).IsSealed, Is.True);
 
-        typeof(UnlinkTraineeCommand).GetProperties().Should().OnlyContain(property => IsUserId(property.PropertyType));
-        typeof(DetachFromTrainerCommand).GetProperties().Should().OnlyContain(property => IsUserId(property.PropertyType));
-        typeof(GetCurrentTrainerQuery).GetProperties().Should().OnlyContain(property => IsUserId(property.PropertyType));
-        typeof(CurrentTrainerReadModel).GetProperty(nameof(CurrentTrainerReadModel.TrainerId))!.PropertyType
-            .Should().Be(typeof(LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>));
+        Assert.That((typeof(UnlinkTraineeCommand).GetProperties()).All(property => IsUserId(property.PropertyType)), Is.True);
+        Assert.That((typeof(DetachFromTrainerCommand).GetProperties()).All(property => IsUserId(property.PropertyType)), Is.True);
+        Assert.That((typeof(GetCurrentTrainerQuery).GetProperties()).All(property => IsUserId(property.PropertyType)), Is.True);
+        Assert.That(typeof(CurrentTrainerReadModel).GetProperty(nameof(CurrentTrainerReadModel.TrainerId))!.PropertyType, Is.EqualTo(typeof(LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User>)));
     }
 
     [Test]
@@ -67,9 +65,9 @@ public sealed class CoachingRelationshipSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        source.Should().NotContain(text => text.Contains("IUserRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains(" User ", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("IUserRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains(" User ", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -91,10 +89,10 @@ public sealed class CoachingRelationshipSliceArchitectureTests
             "RelationshipMappingProfile.cs");
         var source = File.ReadAllText(useCase);
 
-        source.Should().NotContain("new CurrentTrainerReadModel(");
-        source.Should().Contain("_mapper.Map<CurrentTrainerSource, CurrentTrainerReadModel>(");
-        source.Should().Contain("_mapper.CreateContext()");
-        File.ReadAllText(mappingProfile).Should().Contain("CreateMap<CurrentTrainerSource, CurrentTrainerReadModel>");
+        Assert.That(source, Does.Not.Contain("new CurrentTrainerReadModel("));
+        Assert.That(source, Does.Contain("_mapper.Map<CurrentTrainerSource, CurrentTrainerReadModel>("));
+        Assert.That(source, Does.Contain("_mapper.CreateContext()"));
+        Assert.That(File.ReadAllText(mappingProfile), Does.Contain("CreateMap<CurrentTrainerSource, CurrentTrainerReadModel>"));
     }
 
     private static bool IsUserId(Type type)

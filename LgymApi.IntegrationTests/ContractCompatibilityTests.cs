@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
 
@@ -30,7 +29,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         // Clear idempotency key after request
         ClearIdempotencyKey();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "msg property must be present for backward compatibility");
@@ -47,19 +46,19 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             password = "password123"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
-        json.RootElement.TryGetProperty("token", out var token).Should().BeTrue();
-        token.GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(json.RootElement.TryGetProperty("token", out var token), Is.True);
+        Assert.That(string.IsNullOrWhiteSpace(token.GetString()), Is.False);
 
         AssertLegacyReqFieldPresent(json, requireIdField: true, requireNameField: true);
-        json.RootElement.TryGetProperty("req", out var req).Should().BeTrue();
-        req.TryGetProperty("name", out var userName).Should().BeTrue();
-        userName.GetString().Should().Be("contract_login");
+        Assert.That(json.RootElement.TryGetProperty("req", out var req), Is.True);
+        Assert.That(req.TryGetProperty("name", out var userName), Is.True);
+        Assert.That(userName.GetString(), Is.EqualTo("contract_login"));
 
         // Contract guard: login payload must keep `req` (legacy shape), not `user`.
-        json.RootElement.TryGetProperty("user", out _).Should().BeFalse();
+        Assert.That(json.RootElement.TryGetProperty("user", out _), Is.False);
     }
 
     [Test]
@@ -77,20 +76,20 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             updateUrl = "https://example.com/app",
             releaseNotes = "contract-check"
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         var getResponse = await Client.PostAsJsonAsync("/api/appConfig/getAppVersion", new
         {
             platform = Platforms.Android.ToString()
         });
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(getResponse);
-        json.RootElement.TryGetProperty("minRequiredVersion", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("latestVersion", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("forceUpdate", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("updateUrl", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("releaseNotes", out _).Should().BeTrue();
+        Assert.That(json.RootElement.TryGetProperty("minRequiredVersion", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("latestVersion", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("forceUpdate", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("updateUrl", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("releaseNotes", out _), Is.True);
     }
 
     [Test]
@@ -108,25 +107,25 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         });
-        addResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", new
         {
             exerciseId = exerciseId.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
-        json.RootElement.TryGetProperty("weight", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("reps", out _).Should().BeTrue();
-        json.RootElement.TryGetProperty("date", out _).Should().BeTrue();
+        Assert.That(json.RootElement.TryGetProperty("weight", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("reps", out _), Is.True);
+        Assert.That(json.RootElement.TryGetProperty("date", out _), Is.True);
 
-        json.RootElement.TryGetProperty("unit", out var unit).Should().BeTrue();
-        unit.TryGetProperty("name", out var unitName).Should().BeTrue();
-        unitName.GetString().Should().NotBeNullOrWhiteSpace();
-        unit.TryGetProperty("displayName", out var unitDisplayName).Should().BeTrue();
-        unitDisplayName.GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(json.RootElement.TryGetProperty("unit", out var unit), Is.True);
+        Assert.That(unit.TryGetProperty("name", out var unitName), Is.True);
+        Assert.That(string.IsNullOrWhiteSpace(unitName.GetString()), Is.False);
+        Assert.That(unit.TryGetProperty("displayName", out var unitDisplayName), Is.True);
+        Assert.That(string.IsNullOrWhiteSpace(unitDisplayName.GetString()), Is.False);
     }
 
     [Test]
@@ -141,11 +140,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             unit = MeasurementUnits.Kilograms.ToString(),
             value = 80.5
         });
-        addResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var addJson = await ReadJsonAsync(addResponse))
         {
             AssertLegacyMsgFieldPresent(addJson, "measurement add must return the legacy msg envelope");
-            addJson.RootElement.GetProperty("msg").GetString().Should().Be("Created");
+            Assert.That(addJson.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Created"));
         }
 
         var bulkResponse = await Client.PostAsJsonAsync("/api/measurements/add-bulk", new
@@ -166,11 +165,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
                 }
             }
         });
-        bulkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(bulkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var bulkJson = await ReadJsonAsync(bulkResponse))
         {
             AssertLegacyMsgFieldPresent(bulkJson, "measurement bulk add must return the legacy msg envelope");
-            bulkJson.RootElement.GetProperty("msg").GetString().Should().Be("Created");
+            Assert.That(bulkJson.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Created"));
         }
 
         foreach (var route in new[]
@@ -180,41 +179,41 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
                  })
         {
             var response = await Client.GetAsync(route);
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
             using var json = await ReadJsonAsync(response);
-            json.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
+            Assert.That(json.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
             var measurements = json.RootElement.GetProperty("measurements");
-            measurements.ValueKind.Should().Be(JsonValueKind.Array);
+            Assert.That(measurements.ValueKind, Is.EqualTo(JsonValueKind.Array));
             var measurementItems = measurements.EnumerateArray().ToList();
-            measurementItems.Should().HaveCount(2);
-            measurementItems.Should().OnlyContain(measurement =>
+            Assert.That(measurementItems, Has.Exactly(2).Items);
+            Assert.That((measurementItems).All(measurement =>
                 measurement.GetProperty("user").GetString() == user.Id.ToString()
                 && measurement.GetProperty("bodyPart").GetProperty("id").GetString() == BodyParts.BodyWeight.ToString()
-                && measurement.GetProperty("unit").GetProperty("id").GetString() == MeasurementUnits.Kilograms.ToString());
-            measurementItems.Select(measurement => measurement.GetProperty("value").GetDouble()).Should().BeEquivalentTo([80.5, 81.0]);
+                && measurement.GetProperty("unit").GetProperty("id").GetString() == MeasurementUnits.Kilograms.ToString()), Is.True);
+            Assert.That(measurementItems.Select(measurement => measurement.GetProperty("value").GetDouble()), Is.EquivalentTo(new[] { 80.5, 81.0 }));
             AssertEnumLookup(measurementItems[0].GetProperty("bodyPart"), BodyParts.BodyWeight.ToString());
             AssertEnumLookup(measurementItems[0].GetProperty("unit"), MeasurementUnits.Kilograms.ToString());
         }
 
         var trendResponse = await Client.GetAsync($"/api/measurements/{user.Id}/trend?bodyPart=BodyWeight&unit=Kilograms");
-        trendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trendResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var trendJson = await ReadJsonAsync(trendResponse))
         {
-            trendJson.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
+            Assert.That(trendJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
             AssertEnumLookup(trendJson.RootElement.GetProperty("bodyPart"), BodyParts.BodyWeight.ToString());
             AssertEnumLookup(trendJson.RootElement.GetProperty("unit"), MeasurementUnits.Kilograms.ToString());
-            trendJson.RootElement.GetProperty("direction").GetString().Should().Be("up");
-            trendJson.RootElement.GetProperty("points").GetInt32().Should().Be(2);
+            Assert.That(trendJson.RootElement.GetProperty("direction").GetString(), Is.EqualTo("up"));
+            Assert.That(trendJson.RootElement.GetProperty("points").GetInt32(), Is.EqualTo(2));
         }
 
         var trendsResponse = await Client.GetAsync($"/api/measurements/{user.Id}/trends");
-        trendsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(trendsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var trendsJson = await ReadJsonAsync(trendsResponse);
-        trendsJson.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
+        Assert.That(trendsJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
         var trends = trendsJson.RootElement.GetProperty("trends");
-        trends.ValueKind.Should().Be(JsonValueKind.Array);
-        trends.EnumerateArray().ToList().Should().Contain(trend => trend.GetProperty("bodyPart").GetProperty("id").GetString() == BodyParts.BodyWeight.ToString());
+        Assert.That(trends.ValueKind, Is.EqualTo(JsonValueKind.Array));
+        Assert.That((trends.EnumerateArray().ToList()).Any(trend => trend.GetProperty("bodyPart").GetProperty("id").GetString() == BodyParts.BodyWeight.ToString()), Is.True);
     }
 
     [Test]
@@ -231,42 +230,42 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         });
-        addResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var addJson = await ReadJsonAsync(addResponse))
         {
             AssertLegacyMsgFieldPresent(addJson, "main-record add must return the legacy msg envelope");
-            addJson.RootElement.GetProperty("msg").GetString().Should().Be("Created");
+            Assert.That(addJson.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Created"));
         }
 
         var historyResponse = await Client.GetAsync($"/api/mainRecords/{user.Id}/getMainRecordsHistory");
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         string recordId;
         using (var historyJson = await ReadJsonAsync(historyResponse))
         {
-            historyJson.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            Assert.That(historyJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
             var record = historyJson.RootElement.EnumerateArray().Single();
             recordId = record.GetProperty("_id").GetString()!;
-            Id<LgymApi.Domain.Entities.MainRecord>.TryParse(recordId, out _).Should().BeTrue();
-            record.GetProperty("exercise").GetString().Should().Be(exerciseId.ToString());
+            Assert.That(Id<LgymApi.Domain.Entities.MainRecord>.TryParse(recordId, out _), Is.True);
+            Assert.That(record.GetProperty("exercise").GetString(), Is.EqualTo(exerciseId.ToString()));
             AssertEnumLookup(record.GetProperty("unit"), WeightUnits.Kilograms.ToString());
         }
 
         var lastResponse = await Client.GetAsync($"/api/mainRecords/{user.Id}/getLastMainRecords");
-        lastResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(lastResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var lastJson = await ReadJsonAsync(lastResponse))
         {
             var record = lastJson.RootElement.EnumerateArray().Single();
-            record.GetProperty("_id").GetString().Should().Be(recordId);
-            record.GetProperty("exerciseDetails").GetProperty("_id").GetString().Should().Be(exerciseId.ToString());
+            Assert.That(record.GetProperty("_id").GetString(), Is.EqualTo(recordId));
+            Assert.That(record.GetProperty("exerciseDetails").GetProperty("_id").GetString(), Is.EqualTo(exerciseId.ToString()));
         }
 
         var possibleResponse = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", new { exerciseId = exerciseId.ToString() });
-        possibleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(possibleResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var possibleJson = await ReadJsonAsync(possibleResponse))
         {
-            possibleJson.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
-            possibleJson.RootElement.GetProperty("weight").GetDouble().Should().Be(100.0);
-            possibleJson.RootElement.GetProperty("reps").GetDouble().Should().Be(1);
+            Assert.That(possibleJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
+            Assert.That(possibleJson.RootElement.GetProperty("weight").GetDouble(), Is.EqualTo(100.0));
+            Assert.That(possibleJson.RootElement.GetProperty("reps").GetDouble(), Is.EqualTo(1));
             AssertEnumLookup(possibleJson.RootElement.GetProperty("unit"), WeightUnits.Kilograms.ToString());
         }
 
@@ -278,15 +277,15 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             unit = WeightUnits.Kilograms.ToString(),
             date = DateTime.UtcNow
         });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var updateJson = await ReadJsonAsync(updateResponse))
         {
             AssertLegacyMsgFieldPresent(updateJson, "main-record update must return the legacy msg envelope");
-            updateJson.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+            Assert.That(updateJson.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Updated"));
         }
 
         var deleteResponse = await Client.GetAsync($"/api/mainRecords/{recordId}/deleteMainRecord");
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var deleteJson = await ReadJsonAsync(deleteResponse);
         AssertLegacyMsgFieldPresent(deleteJson, "legacy main-record delete must retain its GET route and msg envelope");
     }
@@ -301,43 +300,43 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         SetAuthorizationHeader(visibleUser.Id);
 
         var chartResponse = await Client.GetAsync($"/api/eloRegistry/{visibleUser.Id}/getEloRegistryChart");
-        chartResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(chartResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var chartJson = await ReadJsonAsync(chartResponse))
         {
-            chartJson.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            Assert.That(chartJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
             var entry = chartJson.RootElement.EnumerateArray().Single();
-            Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(entry.GetProperty("_id").GetString(), out _).Should().BeTrue();
-            entry.GetProperty("value").GetInt32().Should().Be(1250);
-            entry.GetProperty("date").GetString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(entry.GetProperty("_id").GetString(), out _), Is.True);
+            Assert.That(entry.GetProperty("value").GetInt32(), Is.EqualTo(1250));
+            Assert.That(string.IsNullOrWhiteSpace(entry.GetProperty("date").GetString()), Is.False);
         }
 
         var eloResponse = await Client.GetAsync($"/api/userInfo/{visibleUser.Id}/getUserEloPoints");
-        eloResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(eloResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var eloJson = await ReadJsonAsync(eloResponse))
         {
-            eloJson.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
-            eloJson.RootElement.GetProperty("elo").GetInt32().Should().Be(1250);
-            eloJson.RootElement.TryGetProperty("req", out _).Should().BeFalse("the legacy user ELO route returns a dedicated object, not the login envelope");
+            Assert.That(eloJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
+            Assert.That(eloJson.RootElement.GetProperty("elo").GetInt32(), Is.EqualTo(1250));
+            Assert.That(eloJson.RootElement.TryGetProperty("req", out _), Is.False, "the legacy user ELO route returns a dedicated object, not the login envelope");
         }
 
         var rankingResponse = await Client.GetAsync("/api/getUsersRanking");
-        rankingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(rankingResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using (var rankingJson = await ReadJsonAsync(rankingResponse))
         {
-            rankingJson.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            Assert.That(rankingJson.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
             var ranking = rankingJson.RootElement.EnumerateArray().Single();
-            ranking.GetProperty("name").GetString().Should().Be("contract_visible");
-            ranking.GetProperty("elo").GetInt32().Should().Be(1250);
-            ranking.TryGetProperty("avatar", out _).Should().BeFalse("null avatar values are omitted by the established JSON contract");
-            ranking.GetProperty("profileRank").GetString().Should().NotBeNullOrWhiteSpace();
-            ranking.TryGetProperty("_id", out _).Should().BeFalse("ranking uses its established anonymous entry shape");
+            Assert.That(ranking.GetProperty("name").GetString(), Is.EqualTo("contract_visible"));
+            Assert.That(ranking.GetProperty("elo").GetInt32(), Is.EqualTo(1250));
+            Assert.That(ranking.TryGetProperty("avatar", out _), Is.False, "null avatar values are omitted by the established JSON contract");
+            Assert.That(string.IsNullOrWhiteSpace(ranking.GetProperty("profileRank").GetString()), Is.False);
+            Assert.That(ranking.TryGetProperty("_id", out _), Is.False, "ranking uses its established anonymous entry shape");
         }
 
         var visibilityResponse = await Client.PostAsJsonAsync("/api/changeVisibilityInRanking", new { isVisibleInRanking = false });
-        visibilityResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(visibilityResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var visibilityJson = await ReadJsonAsync(visibilityResponse);
         AssertLegacyMsgFieldPresent(visibilityJson, "ranking visibility mutation must return the legacy msg envelope");
-        visibilityJson.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+        Assert.That(visibilityJson.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -351,7 +350,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             name = "Contract Test Gym"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "addGym endpoint must return msg field for backward compatibility");
     }
@@ -366,7 +365,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         await CreateGymViaEndpointAsync(user.Id, "Test Gym 2");
 
         var response = await Client.GetAsync($"/api/gym/{user.Id}/getGyms");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertJsonArrayHasLegacyIdFields(json, "each gym in list must have _id");
@@ -381,7 +380,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         var gymId = await CreateGymViaEndpointAsync(user.Id, "Test Gym");
 
         var response = await Client.GetAsync($"/api/gym/{gymId}/getGym");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertLegacyIdFieldPresent(json, "_id property must be present for gym detail response");
@@ -398,7 +397,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             name = "Contract Test Plan"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "createPlan endpoint must return msg field for backward compatibility");
     }
@@ -413,7 +412,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         await CreatePlanViaEndpointAsync(user.Id, "Test Plan 2");
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertJsonArrayHasLegacyIdFields(json, "each plan in list must have _id");
@@ -431,10 +430,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             name = "Updated Contract Plan"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "updatePlan endpoint must return msg field for backward compatibility");
-        json.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+        Assert.That(json.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -445,12 +444,12 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyIdFieldPresent(json, "getPlanConfig must return the legacy _id field");
-        json.RootElement.GetProperty("_id").GetString().Should().Be(planId.ToString());
-        json.RootElement.GetProperty("name").GetString().Should().Be("Configured Plan");
-        json.RootElement.GetProperty("isActive").GetBoolean().Should().BeTrue();
+        Assert.That(json.RootElement.GetProperty("_id").GetString(), Is.EqualTo(planId.ToString()));
+        Assert.That(json.RootElement.GetProperty("name").GetString(), Is.EqualTo("Configured Plan"));
+        Assert.That(json.RootElement.GetProperty("isActive").GetBoolean(), Is.True);
     }
 
     [Test]
@@ -461,9 +460,9 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/checkIsUserHavePlan");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
-        json.RootElement.ValueKind.Should().Be(JsonValueKind.False);
+        Assert.That(json.RootElement.ValueKind, Is.EqualTo(JsonValueKind.False));
     }
 
     [Test]
@@ -478,10 +477,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             _id = planId.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "setNewActivePlan endpoint must return msg field for backward compatibility");
-        json.RootElement.GetProperty("msg").GetString().Should().Be("Updated");
+        Assert.That(json.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -491,7 +490,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         var sourcePlanId = await CreatePlanViaEndpointAsync(sourceUser.Id, "Copy Source Plan");
 
         var shareResponse = await Client.PostAsync($"/api/{sourcePlanId}/share", null);
-        shareResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(shareResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var shareJson = await ReadJsonAsync(shareResponse);
         var shareCode = shareJson.RootElement.GetProperty("shareCode").GetString();
 
@@ -499,13 +498,13 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         SetAuthorizationHeader(destinationUser.Id);
         var response = await Client.PostAsJsonAsync("/api/copy", new { shareCode });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var json = await ReadJsonAsync(response);
-        json.RootElement.GetProperty("id").GetString().Should().NotBeNullOrWhiteSpace();
-        json.RootElement.TryGetProperty("_id", out _).Should().BeFalse("copyPlan returns PlanDto, which uses id rather than legacy _id");
-        json.RootElement.GetProperty("name").GetString().Should().Be("Copy Source Plan");
-        json.RootElement.GetProperty("isActive").GetBoolean().Should().BeTrue();
-        json.RootElement.GetProperty("userId").GetString().Should().Be(destinationUser.Id.ToString());
+        Assert.That(string.IsNullOrWhiteSpace(json.RootElement.GetProperty("id").GetString()), Is.False);
+        Assert.That(json.RootElement.TryGetProperty("_id", out _), Is.False, "copyPlan returns PlanDto, which uses id rather than legacy _id");
+        Assert.That(json.RootElement.GetProperty("name").GetString(), Is.EqualTo("Copy Source Plan"));
+        Assert.That(json.RootElement.GetProperty("isActive").GetBoolean(), Is.True);
+        Assert.That(json.RootElement.GetProperty("userId").GetString(), Is.EqualTo(destinationUser.Id.ToString()));
     }
 
     [Test]
@@ -516,11 +515,11 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{planId}/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
-        json.RootElement.TryGetProperty("shareCode", out var shareCode).Should().BeTrue("share endpoint must return shareCode");
-        shareCode.GetString().Should().HaveLength(10);
-        json.RootElement.TryGetProperty("code", out _).Should().BeFalse("share endpoint must retain the shareCode property name");
+        Assert.That(json.RootElement.TryGetProperty("shareCode", out var shareCode), Is.True, "share endpoint must return shareCode");
+        Assert.That(shareCode.GetString(), Has.Length.EqualTo(10));
+        Assert.That(json.RootElement.TryGetProperty("code", out _), Is.False, "share endpoint must retain the shareCode property name");
     }
 
     [Test]
@@ -531,10 +530,10 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "deletePlan endpoint must return msg field for backward compatibility");
-        json.RootElement.GetProperty("msg").GetString().Should().Be("Deleted.");
+        Assert.That(json.RootElement.GetProperty("msg").GetString(), Is.EqualTo("Deleted."));
     }
 
     [Test]
@@ -550,7 +549,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
             description = "Test"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, "addUserExercise endpoint must return msg field for backward compatibility");
     }
@@ -565,7 +564,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         await CreateExerciseViaEndpointAsync(user.Id, "Exercise B", BodyParts.Back);
 
         var response = await Client.GetAsync($"/api/exercise/{user.Id}/getAllUserExercises");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertJsonArrayHasLegacyIdFields(json, "each exercise in list must have _id");
@@ -584,7 +583,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         var request = CreateDynamicRequest(propertyName, propertyValue);
 
         var response = await Client.PostAsJsonAsync(route, request);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertLegacyMsgFieldPresent(json, $"endpoint {route} must return msg field");
@@ -615,7 +614,7 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
         var route = string.Format(routeTemplate, user.Id);
 
         var response = await Client.GetAsync(route);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var json = await ReadJsonAsync(response);
         AssertJsonArrayHasLegacyIdFields(json, $"endpoint {route} must return array items with _id");
@@ -625,54 +624,54 @@ public sealed class ContractCompatibilityTests : IntegrationTestBase
 
     private static void AssertLegacyIdFieldPresent(JsonDocument json, string because)
     {
-        json.RootElement.TryGetProperty("_id", out var id).Should().BeTrue(because);
-        id.GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(json.RootElement.TryGetProperty("_id", out var id), Is.True, because);
+        Assert.That(string.IsNullOrWhiteSpace(id.GetString()), Is.False);
         // Contract guard: API must use `_id` (legacy MongoDB naming), not `id`
-        json.RootElement.TryGetProperty("id", out _).Should().BeFalse($"response must not have 'id' field when '_id' is present (legacy compatibility)");
+        Assert.That(json.RootElement.TryGetProperty("id", out _), Is.False, $"response must not have 'id' field when '_id' is present (legacy compatibility)");
     }
 
     private static void AssertLegacyMsgFieldPresent(JsonDocument json, string because)
     {
-        json.RootElement.TryGetProperty("msg", out var msg).Should().BeTrue(because);
-        msg.GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(json.RootElement.TryGetProperty("msg", out var msg), Is.True, because);
+        Assert.That(string.IsNullOrWhiteSpace(msg.GetString()), Is.False);
         // Contract guard: legacy clients expect `msg`; an accidental switch to `message` would break them.
-        json.RootElement.TryGetProperty("message", out _).Should().BeFalse($"response must not have 'message' field when 'msg' is present (legacy compatibility)");
+        Assert.That(json.RootElement.TryGetProperty("message", out _), Is.False, $"response must not have 'message' field when 'msg' is present (legacy compatibility)");
     }
 
     private static void AssertLegacyReqFieldPresent(JsonDocument json, bool requireIdField, bool requireNameField)
     {
-        json.RootElement.TryGetProperty("req", out var req).Should().BeTrue("legacy clients expect 'req' field");
+        Assert.That(json.RootElement.TryGetProperty("req", out var req), Is.True, "legacy clients expect 'req' field");
         if (requireIdField)
         {
-            req.TryGetProperty("_id", out var userId).Should().BeTrue("req must contain _id");
-            userId.GetString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(req.TryGetProperty("_id", out var userId), Is.True, "req must contain _id");
+            Assert.That(string.IsNullOrWhiteSpace(userId.GetString()), Is.False);
         }
         if (requireNameField)
         {
-            req.TryGetProperty("name", out var userName).Should().BeTrue("req must contain name");
-            userName.GetString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(req.TryGetProperty("name", out var userName), Is.True, "req must contain name");
+            Assert.That(string.IsNullOrWhiteSpace(userName.GetString()), Is.False);
         }
     }
 
     private static void AssertJsonArrayHasLegacyIdFields(JsonDocument json, string because)
     {
-        json.RootElement.ValueKind.Should().Be(JsonValueKind.Array, because);
+        Assert.That(json.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array), because);
         var array = json.RootElement.EnumerateArray().ToList();
-        array.Should().NotBeEmpty(because);
+        Assert.That(array, Is.Not.Empty, because);
 
         foreach (var item in array)
         {
-            item.TryGetProperty("_id", out var id).Should().BeTrue($"{because} - each item must have _id");
-            id.GetString().Should().NotBeNullOrWhiteSpace();
+            Assert.That(item.TryGetProperty("_id", out var id), Is.True, $"{because} - each item must have _id");
+            Assert.That(string.IsNullOrWhiteSpace(id.GetString()), Is.False);
         }
     }
 
     private static void AssertEnumLookup(JsonElement lookup, string expectedId)
     {
-        lookup.ValueKind.Should().Be(JsonValueKind.Object);
-        lookup.GetProperty("id").GetString().Should().Be(expectedId);
-        lookup.GetProperty("name").GetString().Should().NotBeNullOrWhiteSpace();
-        lookup.GetProperty("displayName").GetString().Should().NotBeNullOrWhiteSpace();
+        Assert.That(lookup.ValueKind, Is.EqualTo(JsonValueKind.Object));
+        Assert.That(lookup.GetProperty("id").GetString(), Is.EqualTo(expectedId));
+        Assert.That(string.IsNullOrWhiteSpace(lookup.GetProperty("name").GetString()), Is.False);
+        Assert.That(string.IsNullOrWhiteSpace(lookup.GetProperty("displayName").GetString()), Is.False);
     }
 
     private static object CreateDynamicRequest(string propertyName, object propertyValue)

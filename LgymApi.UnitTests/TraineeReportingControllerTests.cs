@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
@@ -35,8 +34,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.SubmitRequest("bad-id", new SubmitReportRequestRequest());
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -59,10 +58,10 @@ public sealed class TraineeReportingControllerTests
             Answers = new Dictionary<string, JsonElement> { ["weight"] = answer }
         });
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedRequestId.Should().Be(requestId);
-        capturedCommand.Should().NotBeNull();
-        capturedCommand!.Answers.Should().ContainKey("weight");
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedRequestId, Is.EqualTo(requestId));
+        Assert.That(capturedCommand, Is.Not.Null);
+        Assert.That(capturedCommand!.Answers, Does.ContainKey("weight"));
     }
 
     [Test]
@@ -72,8 +71,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.InitiatePhotoUpload(new InitiatePhotoUploadRequest { ReportRequestId = "bad-id" });
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -83,8 +82,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.CompletePhotoUpload(new CompletePhotoUploadRequest { ReportRequestId = "bad-id" });
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -94,8 +93,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetPhotoHistory("bad-id");
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -126,10 +125,10 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetPhotoHistory(requestId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedCommand.Should().NotBeNull();
-        capturedCommand!.TraineeId.Should().Be(currentUser.Id.Rebind<AccountReference>());
-        capturedCommand.RequestId.Should().Be(requestId);
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedCommand, Is.Not.Null);
+        Assert.That(capturedCommand!.TraineeId, Is.EqualTo(currentUser.Id.Rebind<AccountReference>()));
+        Assert.That(capturedCommand.RequestId, Is.EqualTo(requestId));
     }
 
     [Test]
@@ -164,9 +163,11 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetPendingRequests();
 
-        result.Should().BeOfType<OkObjectResult>();
-        var payload = ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<ReportRequestDto>>().Subject;
-        payload.Should().ContainSingle();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        var assertedValue160 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue160, Is.InstanceOf<IEnumerable<ReportRequestDto>>());
+        var payload = ((IEnumerable<ReportRequestDto>)assertedValue160);
+        Assert.That(payload, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -179,7 +180,7 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetPendingRequests();
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -193,7 +194,7 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.SubmitRequest(requestId.ToString(), new SubmitReportRequestRequest { Answers = [] });
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -208,8 +209,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetOwnSubmissions();
 
-        result.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<ReportSubmissionDto>>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(((OkObjectResult)result).Value, Is.InstanceOf<IEnumerable<ReportSubmissionDto>>());
     }
 
     [Test]
@@ -225,8 +226,8 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.MarkFeedbackRead(submissionId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedSubmissionId.Should().Be(submissionId);
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedSubmissionId, Is.EqualTo(submissionId));
     }
 
     [Test]
@@ -240,7 +241,7 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.MarkFeedbackRead(submissionId.ToString());
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -265,7 +266,7 @@ public sealed class TraineeReportingControllerTests
             SizeBytes = 1234
         });
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -291,7 +292,7 @@ public sealed class TraineeReportingControllerTests
             ViewType = "Front"
         });
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -304,7 +305,7 @@ public sealed class TraineeReportingControllerTests
 
         var result = await controller.GetPhotoHistory(null);
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     private static ReportSubmissionResult CreateSubmissionResult(Id<ReportSubmission> submissionId, Id<ReportRequest> requestId)

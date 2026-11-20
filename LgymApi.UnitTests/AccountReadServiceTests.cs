@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Identity;
 using LgymApi.Application.Identity.Access;
 using LgymApi.Application.Identity.Contracts.Accounts;
@@ -36,13 +35,13 @@ public sealed class AccountReadServiceTests
 
         var result = mapper.Map<User, AccountReadModel>(account, mapper.CreateContext());
 
-        result.Should().Be(new AccountReadModel(
+        Assert.That(result, Is.EqualTo(new AccountReadModel(
             account.Id,
             account.Name,
             account.Email.Value,
             account.Avatar,
             account.PreferredLanguage,
-            account.PreferredTimeZone));
+            account.PreferredTimeZone)));
     }
 
     [Test]
@@ -53,13 +52,13 @@ public sealed class AccountReadServiceTests
 
         var result = await _service.GetByIdAsync(account.Id);
 
-        result.Should().Be(new AccountReadModel(
+        Assert.That(result, Is.EqualTo(new AccountReadModel(
             account.Id,
             account.Name,
             account.Email.Value,
             account.Avatar,
             account.PreferredLanguage,
-            account.PreferredTimeZone));
+            account.PreferredTimeZone)));
     }
 
     [Test]
@@ -70,7 +69,7 @@ public sealed class AccountReadServiceTests
 
         var result = await _service.GetByIdAsync(accountId);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     [Test]
@@ -82,7 +81,7 @@ public sealed class AccountReadServiceTests
 
         var result = await _service.GetByIdAsync(account.Id);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     [Test]
@@ -93,15 +92,13 @@ public sealed class AccountReadServiceTests
 
         var result = await _service.GetByEmailAsync("  ACCOUNT@EXAMPLE.COM  ");
 
-        result!.Email.Should().Be("account@example.com");
-        _userRepository.Calls
+        Assert.That(result!.Email, Is.EqualTo("account@example.com"));
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.FindByEmailAsync)
                 && call.Argument is Email email
                 && email.Value == "account@example.com"
-                && call.CancellationToken == CancellationToken.None)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == CancellationToken.None), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -113,7 +110,7 @@ public sealed class AccountReadServiceTests
 
         var result = await _service.GetByEmailAsync(account.Email.Value);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     [Test]
@@ -140,15 +137,9 @@ public sealed class AccountReadServiceTests
             secondAccount.Id
         ]);
 
-        result.Select(account => account.Id).Should().Equal(
-            secondAccount.Id,
-            firstAccount.Id,
-            secondAccount.Id);
-        result.Select(account => account.Name).Should().Equal(
-            secondAccount.Name,
-            firstAccount.Name,
-            secondAccount.Name);
-        _userRepository.Calls
+        Assert.That(result.Select(account => account.Id), Is.EqualTo(new[] { secondAccount.Id, firstAccount.Id, secondAccount.Id }));
+        Assert.That(result.Select(account => account.Name), Is.EqualTo(new[] { secondAccount.Name, firstAccount.Name, secondAccount.Name }));
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.GetByIdsAsync)
                 && call.Argument is IReadOnlyCollection<Id<User>> ids
@@ -160,10 +151,8 @@ public sealed class AccountReadServiceTests
                     firstAccount.Id,
                     secondAccount.Id
                 })
-                && call.CancellationToken == CancellationToken.None)
-            .Should()
-            .ContainSingle();
-        _userRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserRepository.FindByIdAsync));
+                && call.CancellationToken == CancellationToken.None), Has.Exactly(1).Items);
+        Assert.That((_userRepository.Calls).Any(call => call.Method == nameof(IUserRepository.FindByIdAsync)), Is.False);
     }
 
     [Test]
@@ -177,15 +166,13 @@ public sealed class AccountReadServiceTests
 
         var action = async () => await _service.GetByIdsAsync([accountId], cancellationToken);
 
-        await action.Should().ThrowAsync<TaskCanceledException>();
-        _userRepository.Calls
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<TaskCanceledException>());
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.GetByIdsAsync)
                 && call.Argument is IReadOnlyCollection<Id<User>> ids
                 && ids.SequenceEqual(new[] { accountId })
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -197,20 +184,15 @@ public sealed class AccountReadServiceTests
         services.AddScoped<IUserRepository>(_ => new ConfigurableUserRepository());
         services.AddScoped<IIdentityPersistenceContext, IdentityPersistenceContextStub>();
 
-        services.Count(descriptor => descriptor.ServiceType == typeof(IAccountReadService)).Should().Be(1);
-        services.Count(descriptor => descriptor.ServiceType == typeof(IIdentityPersistenceContext)).Should().Be(1);
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IAccountReadService)), Is.EqualTo(1));
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IIdentityPersistenceContext)), Is.EqualTo(1));
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetServices<IAccountReadService>()
-            .Should()
-            .ContainSingle()
-            .Which
-            .Should()
-            .BeOfType<AccountReadService>();
-        scope.ServiceProvider.GetRequiredService<IIdentityPersistenceContext>()
-            .Should()
-            .BeOfType<IdentityPersistenceContextStub>();
+        var assertedValue78 = (scope.ServiceProvider.GetServices<IAccountReadService>()).ToArray();
+        Assert.That(assertedValue78, Has.Exactly(1).Items);
+        Assert.That(assertedValue78.Single(), Is.TypeOf<AccountReadService>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<IIdentityPersistenceContext>(), Is.TypeOf<IdentityPersistenceContextStub>());
     }
 
     private static User CreateUser() => new()

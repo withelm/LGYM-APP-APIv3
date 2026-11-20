@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -58,14 +57,14 @@ public sealed class ReportSubmissionCreatedInAppNotificationCommandHandlerTests
             CultureInfo.CurrentUICulture = previousUiCulture;
         }
 
-        service.Calls.Should().Be(1);
-        service.LastInput.Should().NotBeNull();
-        service.LastInput!.RecipientId.Should().Be(trainerId.Rebind<User>());
-        service.LastInput.SenderUserId.Should().Be(traineeId.Rebind<User>());
-        service.LastInput.DeliveryKey.Should().Be($"report-submission:{submissionId}");
-        service.LastInput.Message.Should().Be("Adam submitted a report: Weekly check-in.");
-        service.LastInput.RedirectUrl.Should().Be($"/trainer/members/{traineeId}?tab=reports&submissionId={submissionId}");
-        service.LastInput.Type.Should().Be(InAppNotificationTypes.ReportSubmissionReceived);
+        Assert.That(service.Calls, Is.EqualTo(1));
+        Assert.That(service.LastInput, Is.Not.Null);
+        Assert.That(service.LastInput!.RecipientId, Is.EqualTo(trainerId.Rebind<User>()));
+        Assert.That(service.LastInput.SenderUserId, Is.EqualTo(traineeId.Rebind<User>()));
+        Assert.That(service.LastInput.DeliveryKey, Is.EqualTo($"report-submission:{submissionId}"));
+        Assert.That(service.LastInput.Message, Is.EqualTo("Adam submitted a report: Weekly check-in."));
+        Assert.That(service.LastInput.RedirectUrl, Is.EqualTo($"/trainer/members/{traineeId}?tab=reports&submissionId={submissionId}"));
+        Assert.That(service.LastInput.Type, Is.EqualTo(InAppNotificationTypes.ReportSubmissionReceived));
     }
 
     [Test]
@@ -97,7 +96,7 @@ public sealed class ReportSubmissionCreatedInAppNotificationCommandHandlerTests
             CultureInfo.CurrentUICulture = previousUiCulture;
         }
 
-        service.LastInput!.Message.Should().Be("Podopieczny wysłał raport: raport.");
+        Assert.That(service.LastInput!.Message, Is.EqualTo("Podopieczny wysłał raport: raport."));
     }
 
     [Test]
@@ -115,7 +114,7 @@ public sealed class ReportSubmissionCreatedInAppNotificationCommandHandlerTests
 
         await handler.ExecuteAsync(command);
 
-        port.PayloadJson.Should().Be(JsonSerializer.Serialize(command, SharedSerializationOptions.Current));
+        Assert.That(port.PayloadJson, Is.EqualTo(JsonSerializer.Serialize(command, SharedSerializationOptions.Current)));
     }
 
     private static InAppNotificationResult CreateResult()
@@ -132,9 +131,9 @@ public sealed class ReportSubmissionCreatedInAppNotificationCommandHandlerTests
 
         public Task CreateAsync(string recipientId, string actorId, string deliveryKey, string message, string redirectUrl, string notificationType, CancellationToken cancellationToken = default)
         {
-            Id<User>.TryParse(recipientId, out var recipient).Should().BeTrue();
-            Id<User>.TryParse(actorId, out var actor).Should().BeTrue();
-            InAppNotificationTypes.TryFromValue(notificationType, out var type).Should().BeTrue();
+            Assert.That(Id<User>.TryParse(recipientId, out var recipient), Is.True);
+            Assert.That(Id<User>.TryParse(actorId, out var actor), Is.True);
+            Assert.That(InAppNotificationTypes.TryFromValue(notificationType, out var type), Is.True);
             Calls++;
             LastInput = new CreateInAppNotificationInput(recipient, actor, deliveryKey, false, message, redirectUrl, type);
             return Task.CompletedTask;

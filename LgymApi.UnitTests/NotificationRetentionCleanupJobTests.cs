@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Common.Jobs;
@@ -60,7 +59,7 @@ public sealed class NotificationRetentionCleanupJobTests
 
         var action = async () => await job.ExecuteAsync();
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("cleanup failed");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("cleanup failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]

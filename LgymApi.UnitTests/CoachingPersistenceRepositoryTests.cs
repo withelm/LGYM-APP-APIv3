@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
@@ -51,13 +50,13 @@ public sealed class CoachingPersistenceRepositoryTests
         var invitationFacts = await reader.GetInvitationFactsAsync(trainerId);
         var dashboardFacts = await reader.GetDashboardFactsAsync(trainerId);
 
-        invitationFacts.Should().HaveCount(3);
-        invitationFacts.Should().Contain(fact => fact.Id == emailInvitation.Id && !fact.TraineeId.HasValue);
-        dashboardFacts.Should().ContainSingle();
-        dashboardFacts[0].TraineeId.Should().Be(traineeId);
-        dashboardFacts[0].ActiveLink!.CreatedAt.Should().Be(linkedAt);
-        dashboardFacts[0].LatestInvitation!.Id.Should().Be(latestInvitation.Id);
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(invitationFacts, Has.Exactly(3).Items);
+        Assert.That((invitationFacts).Any(fact => fact.Id == emailInvitation.Id && !fact.TraineeId.HasValue), Is.True);
+        Assert.That(dashboardFacts, Has.Exactly(1).Items);
+        Assert.That(dashboardFacts[0].TraineeId, Is.EqualTo(traineeId));
+        Assert.That(dashboardFacts[0].ActiveLink!.CreatedAt, Is.EqualTo(linkedAt));
+        Assert.That(dashboardFacts[0].LatestInvitation!.Id, Is.EqualTo(latestInvitation.Id));
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
     }
 
     [Test]
@@ -84,26 +83,26 @@ public sealed class CoachingPersistenceRepositoryTests
         await noteRepository.AddHistoryEntryAsync(new CoachingTraineeNoteHistoryWriteModel(
             historyId, noteId, trainerId, now, null, "Content", false, true, "Created"));
 
-        database.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added).Should().HaveCount(5);
+        Assert.That(database.ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added), Has.Exactly(5).Items);
         await database.SaveChangesAsync();
         database.ChangeTracker.Clear();
 
-        (await invitationRepository.FindByIdAsync(invitationId))!.Code.Should().Be("code");
-        (await linkRepository.FindByTrainerAndTraineeAsync(trainerId, traineeId))!.Id.Should().Be(linkId);
+        Assert.That((await invitationRepository.FindByIdAsync(invitationId))!.Code, Is.EqualTo("code"));
+        Assert.That((await linkRepository.FindByTrainerAndTraineeAsync(trainerId, traineeId))!.Id, Is.EqualTo(linkId));
         var persistedNote = (await noteRepository.FindNoteByIdAsync(noteId))!;
-        persistedNote.Content.Should().Be("Content");
-        (await noteRepository.GetNoteHistoryAsync(noteId)).Should().ContainSingle(entry => entry.Id == historyId);
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(persistedNote.Content, Is.EqualTo("Content"));
+        Assert.That(((await noteRepository.GetNoteHistoryAsync(noteId))).Where(entry => entry.Id == historyId), Has.Exactly(1).Items);
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
 
         await noteRepository.UpdateNoteAsync(new CoachingTraineeNoteWriteModel(
             noteId, trainerId, traineeId, null, "Updated", false, false, trainerId, now.AddMinutes(1), true, persistedNote.UpdatedAt));
-        database.ChangeTracker.Entries<TraineeNote>().Should().ContainSingle(entry => entry.State == EntityState.Modified);
+        Assert.That((database.ChangeTracker.Entries<TraineeNote>()).Where(entry => entry.State == EntityState.Modified), Has.Exactly(1).Items);
         await database.SaveChangesAsync();
         database.ChangeTracker.Clear();
         var deletedNote = await database.TraineeNotes.IgnoreQueryFilters().SingleAsync(note => note.Id == noteId);
-        deletedNote.Content.Should().Be("Updated");
-        deletedNote.VisibleToTrainee.Should().BeFalse();
-        deletedNote.IsDeleted.Should().BeTrue();
+        Assert.That(deletedNote.Content, Is.EqualTo("Updated"));
+        Assert.That(deletedNote.VisibleToTrainee, Is.False);
+        Assert.That(deletedNote.IsDeleted, Is.True);
     }
 
     [Test]
@@ -125,16 +124,16 @@ public sealed class CoachingPersistenceRepositoryTests
             respondedAt));
 
         var entry = database.ChangeTracker.Entries<TrainerInvitation>().Single();
-        entry.Property(candidate => candidate.Status).IsModified.Should().BeTrue();
-        entry.Property(candidate => candidate.RespondedAt).IsModified.Should().BeTrue();
-        entry.Property(candidate => candidate.TraineeId).IsModified.Should().BeFalse();
+        Assert.That(entry.Property(candidate => candidate.Status).IsModified, Is.True);
+        Assert.That(entry.Property(candidate => candidate.RespondedAt).IsModified, Is.True);
+        Assert.That(entry.Property(candidate => candidate.TraineeId).IsModified, Is.False);
         await database.SaveChangesAsync();
         database.ChangeTracker.Clear();
 
         var persisted = await database.TrainerInvitations.SingleAsync(candidate => candidate.Id == invitation.Id);
-        persisted.Status.Should().Be(TrainerInvitationStatus.Expired);
-        persisted.RespondedAt.Should().Be(respondedAt);
-        persisted.TraineeId.Should().BeNull();
+        Assert.That(persisted.Status, Is.EqualTo(TrainerInvitationStatus.Expired));
+        Assert.That(persisted.RespondedAt, Is.EqualTo(respondedAt));
+        Assert.That(persisted.TraineeId, Is.Null);
     }
 
     [Test]
@@ -154,7 +153,7 @@ public sealed class CoachingPersistenceRepositoryTests
 
         foreach (var contract in contracts)
         {
-            services.Count(descriptor => descriptor.ServiceType == contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == contract), Is.EqualTo(1));
         }
 
         using var provider = services.BuildServiceProvider();
@@ -168,11 +167,11 @@ public sealed class CoachingPersistenceRepositoryTests
             invitation.CreatedAt,
             invitation.UpdatedAt);
 
-        scope.ServiceProvider.GetRequiredService<ICoachingInvitationPersistence>().Should().BeOfType<CoachingInvitationPersistenceRepository>();
-        scope.ServiceProvider.GetRequiredService<ICoachingActiveLinkPersistence>().Should().BeOfType<CoachingActiveLinkPersistenceRepository>();
-        scope.ServiceProvider.GetRequiredService<ICoachingFactReader>().Should().BeOfType<CoachingFactReader>();
-        scope.ServiceProvider.GetRequiredService<ICoachingTraineeNotePersistence>().Should().BeOfType<CoachingTraineeNotePersistenceRepository>();
-        mapper.Map<TrainerInvitation, CoachingInvitationFact>(invitation, mapper.CreateContext()).Should().BeEquivalentTo(new CoachingInvitationFact(
+        Assert.That(scope.ServiceProvider.GetRequiredService<ICoachingInvitationPersistence>(), Is.TypeOf<CoachingInvitationPersistenceRepository>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<ICoachingActiveLinkPersistence>(), Is.TypeOf<CoachingActiveLinkPersistenceRepository>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<ICoachingFactReader>(), Is.TypeOf<CoachingFactReader>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<ICoachingTraineeNotePersistence>(), Is.TypeOf<CoachingTraineeNotePersistenceRepository>());
+        Assert.That(mapper.Map<TrainerInvitation, CoachingInvitationFact>(invitation, mapper.CreateContext()), Is.EqualTo(new CoachingInvitationFact(
             invitation.Id,
             invitation.TrainerId,
             invitation.InviteeEmail,
@@ -182,10 +181,10 @@ public sealed class CoachingPersistenceRepositoryTests
             invitation.ExpiresAt,
             invitation.RespondedAt,
             invitation.CreatedAt,
-            invitation.UpdatedAt));
-        mapper.Map<CoachingDashboardSource, CoachingDashboardFact>(
+            invitation.UpdatedAt)).UsingPropertiesComparer());
+        Assert.That(mapper.Map<CoachingDashboardSource, CoachingDashboardFact>(
             new CoachingDashboardSource(activeLink.TraineeId, activeLink, null),
-            mapper.CreateContext()).Should().BeEquivalentTo(new CoachingDashboardFact(activeLink.TraineeId, activeLink, null));
+            mapper.CreateContext()), Is.EqualTo(new CoachingDashboardFact(activeLink.TraineeId, activeLink, null)).UsingPropertiesComparer());
     }
 
     private static AppDbContext CreateDbContext()

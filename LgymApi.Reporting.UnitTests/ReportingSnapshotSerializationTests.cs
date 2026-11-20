@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Platform.Contracts.Serialization;
@@ -28,10 +27,12 @@ public sealed class ReportingSnapshotSerializationTests
 
         var effective = ReportTemplateSnapshotFactory.EffectiveTemplate(ReportingTestData.Request(request));
 
-        effective.Name.Should().Be("Frozen name");
-        effective.Fields.Should().ContainSingle().Which.Type.Should().Be(ReportFieldType.Photos);
-        effective.Fields[0].Label.Should().Be("Frozen label");
-        request.DefinitionSnapshot.DefinitionJson.Should().Be(json);
+        Assert.That(effective.Name, Is.EqualTo("Frozen name"));
+        var assertedValue75 = (effective.Fields).ToArray();
+        Assert.That(assertedValue75, Has.Exactly(1).Items);
+        Assert.That(assertedValue75.Single().Type, Is.EqualTo(ReportFieldType.Photos));
+        Assert.That(effective.Fields[0].Label, Is.EqualTo("Frozen label"));
+        Assert.That(request.DefinitionSnapshot.DefinitionJson, Is.EqualTo(json));
     }
 
     [Test]
@@ -42,7 +43,7 @@ public sealed class ReportingSnapshotSerializationTests
 
         using var json = JsonDocument.Parse(ReportTemplateSnapshotFactory.Serialize(document));
 
-        json.RootElement.GetProperty("fields")[0].GetProperty("type").GetString().Should().Be("Photos");
-        json.RootElement.GetProperty("provenance").GetString().Should().Be("Issued");
+        Assert.That(json.RootElement.GetProperty("fields")[0].GetProperty("type").GetString(), Is.EqualTo("Photos"));
+        Assert.That(json.RootElement.GetProperty("provenance").GetString(), Is.EqualTo("Issued"));
     }
 }

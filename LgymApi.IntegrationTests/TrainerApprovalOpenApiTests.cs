@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
@@ -18,21 +17,20 @@ public sealed class TrainerApprovalOpenApiTests : IntegrationTestBase
         var json = text.ToString();
         using var parsed = JsonDocument.Parse(json);
         var root = parsed.RootElement;
-        root.GetProperty("paths").TryGetProperty("/api/admin/users/trainer-applications", out _).Should().BeTrue();
-        root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/approve", out _).Should().BeTrue();
-        root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/reject", out _).Should().BeTrue();
-        root.GetProperty("paths").GetProperty("/api/trainer/application/resubmit").GetProperty("post").GetProperty("responses")
-            .TryGetProperty("200", out _).Should().BeTrue();
+        Assert.That(root.GetProperty("paths").TryGetProperty("/api/admin/users/trainer-applications", out _), Is.True);
+        Assert.That(root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/approve", out _), Is.True);
+        Assert.That(root.GetProperty("paths").TryGetProperty("/api/admin/users/{id}/trainer-application/reject", out _), Is.True);
+        Assert.That(root.GetProperty("paths").GetProperty("/api/trainer/application/resubmit").GetProperty("post").GetProperty("responses")
+            .TryGetProperty("200", out _), Is.True);
         var properties = root.GetProperty("components").GetProperty("schemas").GetProperty("TrainerApplicationDto").GetProperty("properties");
-        properties.GetProperty("status").GetProperty("enum").EnumerateArray().Select(item => item.GetString())
-            .Should().BeEquivalentTo("PendingApproval", "Approved", "Rejected");
-        properties.TryGetProperty("reviewedBy", out _).Should().BeTrue();
-        properties.TryGetProperty("decidedAt", out _).Should().BeTrue();
-        properties.GetProperty("attempt").GetProperty("type").GetString().Should().Be("integer");
-        root.GetProperty("components").GetProperty("schemas").GetProperty("UserInfoDto").GetProperty("properties")
-            .TryGetProperty("trainerApprovalStatus", out _).Should().BeTrue();
-        root.GetProperty("paths").GetProperty("/api/trainer/login").GetProperty("post").GetProperty("responses")
-            .TryGetProperty("403", out _).Should().BeTrue();
+        Assert.That(properties.GetProperty("status").GetProperty("enum").EnumerateArray().Select(item => item.GetString()), Is.EquivalentTo(new[] { "PendingApproval", "Approved", "Rejected" }));
+        Assert.That(properties.TryGetProperty("reviewedBy", out _), Is.True);
+        Assert.That(properties.TryGetProperty("decidedAt", out _), Is.True);
+        Assert.That(properties.GetProperty("attempt").GetProperty("type").GetString(), Is.EqualTo("integer"));
+        Assert.That(root.GetProperty("components").GetProperty("schemas").GetProperty("UserInfoDto").GetProperty("properties")
+            .TryGetProperty("trainerApprovalStatus", out _), Is.True);
+        Assert.That(root.GetProperty("paths").GetProperty("/api/trainer/login").GetProperty("post").GetProperty("responses")
+            .TryGetProperty("403", out _), Is.True);
 
         // Reproducible local contract export without connecting to any application database.
         var output = Environment.GetEnvironmentVariable("LGYM_OPENAPI_OUTPUT");

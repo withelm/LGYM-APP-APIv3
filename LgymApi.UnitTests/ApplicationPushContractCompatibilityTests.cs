@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -50,15 +49,8 @@ public sealed class ApplicationPushContractCompatibilityTests
             .OrderBy(type => type.Name, StringComparer.Ordinal)
             .ToArray();
 
-        contractTypes.Select(type => type.FullName).Should().Equal(
-            $"{PushContractsNamespace}.IPushBackgroundScheduler",
-            $"{PushContractsNamespace}.IPushNotificationDeliveryRetrySettings",
-            $"{PushContractsNamespace}.IPushProviderSender",
-            $"{PushContractsNamespace}.PushEventPayload",
-            $"{PushContractsNamespace}.PushInstallationDeliveryTarget",
-            $"{PushContractsNamespace}.PushSendAttemptResult",
-            $"{PushContractsNamespace}.PushSendOutcome");
-        contractTypes.Should().OnlyContain(type => type.Assembly == notificationsAssembly && type.IsPublic);
+        Assert.That(contractTypes.Select(type => type.FullName), Is.EqualTo(new[] { $"{PushContractsNamespace}.IPushBackgroundScheduler", $"{PushContractsNamespace}.IPushNotificationDeliveryRetrySettings", $"{PushContractsNamespace}.IPushProviderSender", $"{PushContractsNamespace}.PushEventPayload", $"{PushContractsNamespace}.PushInstallationDeliveryTarget", $"{PushContractsNamespace}.PushSendAttemptResult", $"{PushContractsNamespace}.PushSendOutcome" }));
+        Assert.That((contractTypes).All(type => type.Assembly == notificationsAssembly && type.IsPublic), Is.True);
     }
 
     [Test]
@@ -83,8 +75,8 @@ public sealed class ApplicationPushContractCompatibilityTests
             ("delay", typeof(TimeSpan), false));
 
         var nullability = new NullabilityInfoContext();
-        nullability.Create(schedulerMethods[0].ReturnParameter).ReadState.Should().Be(NullabilityState.Nullable);
-        nullability.Create(schedulerMethods[1].ReturnParameter).ReadState.Should().Be(NullabilityState.Nullable);
+        Assert.That(nullability.Create(schedulerMethods[0].ReturnParameter).ReadState, Is.EqualTo(NullabilityState.Nullable));
+        Assert.That(nullability.Create(schedulerMethods[1].ReturnParameter).ReadState, Is.EqualTo(NullabilityState.Nullable));
     }
 
     [Test]
@@ -101,27 +93,25 @@ public sealed class ApplicationPushContractCompatibilityTests
             ("cancellationToken", typeof(CancellationToken), true));
 
         var retrySettingsType = typeof(ApplicationPushDeliveryRetrySettings);
-        retrySettingsType.IsPublic.Should().BeTrue();
-        retrySettingsType.IsInterface.Should().BeTrue();
-        retrySettingsType.IsGenericType.Should().BeFalse();
-        retrySettingsType.GetInterfaces().Should().BeEmpty();
-        retrySettingsType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Select(method => method.Name)
-            .Should().Equal("get_RetryDelaysSeconds");
-        retrySettingsType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Should().BeEmpty();
+        Assert.That(retrySettingsType.IsPublic, Is.True);
+        Assert.That(retrySettingsType.IsInterface, Is.True);
+        Assert.That(retrySettingsType.IsGenericType, Is.False);
+        Assert.That(retrySettingsType.GetInterfaces(), Is.Empty);
+        Assert.That(retrySettingsType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(method => method.Name), Is.EqualTo(new[] { "get_RetryDelaysSeconds" }));
+        Assert.That(retrySettingsType.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
         var retryDelays = retrySettingsType
             .GetProperty(nameof(ApplicationPushDeliveryRetrySettings.RetryDelaysSeconds));
-        retryDelays.Should().NotBeNull();
-        retryDelays!.PropertyType.Should().Be(typeof(IReadOnlyList<int>));
-        retrySettingsType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Select(property => property.Name)
-            .Should().Equal(nameof(ApplicationPushDeliveryRetrySettings.RetryDelaysSeconds));
+        Assert.That(retryDelays, Is.Not.Null);
+        Assert.That(retryDelays!.PropertyType, Is.EqualTo(typeof(IReadOnlyList<int>)));
+        Assert.That(retrySettingsType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(property => property.Name), Is.EqualTo(new[] { nameof(ApplicationPushDeliveryRetrySettings.RetryDelaysSeconds) }));
     }
 
     [Test]
     public void ApplicationPushEventPayload_PreservesMemberOrderTypedIdBoundaryAndGoldenJson()
     {
-        Id<InAppNotification>.TryParse(NotificationIdText, out var notificationId).Should().BeTrue();
+        Assert.That(Id<InAppNotification>.TryParse(NotificationIdText, out var notificationId), Is.True);
         var applicationPayload = new ApplicationPushEventPayload(
             1,
             "trainer.note.updated",
@@ -147,9 +137,8 @@ public sealed class ApplicationPushContractCompatibilityTests
 
         var applicationJson = JsonSerializer.Serialize(applicationPayload, SharedSerializationOptions.Current);
 
-        applicationJson.Should().Be(ExpectedPayloadJson);
-        JsonSerializer.Deserialize<ApplicationPushEventPayload>(ExpectedPayloadJson, SharedSerializationOptions.Current)
-            .Should().Be(applicationPayload);
+        Assert.That(applicationJson, Is.EqualTo(ExpectedPayloadJson));
+        Assert.That(JsonSerializer.Deserialize<ApplicationPushEventPayload>(ExpectedPayloadJson, SharedSerializationOptions.Current), Is.EqualTo(applicationPayload));
     }
 
     [Test]
@@ -168,24 +157,19 @@ public sealed class ApplicationPushContractCompatibilityTests
             (nameof(ApplicationPushSendAttemptResult.ProviderErrorCode), NullabilityState.Nullable),
             (nameof(ApplicationPushSendAttemptResult.ProviderResponseSummary), NullabilityState.Nullable));
 
-        Enum.GetNames<ApplicationPushSendOutcome>().Should().Equal(
-            nameof(ApplicationPushSendOutcome.Sent),
-            nameof(ApplicationPushSendOutcome.TransientFailure),
-            nameof(ApplicationPushSendOutcome.InvalidToken),
-            nameof(ApplicationPushSendOutcome.PermanentFailure),
-            nameof(ApplicationPushSendOutcome.Skipped));
-        Enum.GetValues<ApplicationPushSendOutcome>().Select(outcome => (int)outcome).Should().Equal(0, 1, 2, 3, 4);
+        Assert.That(Enum.GetNames<ApplicationPushSendOutcome>(), Is.EqualTo(new[] { nameof(ApplicationPushSendOutcome.Sent), nameof(ApplicationPushSendOutcome.TransientFailure), nameof(ApplicationPushSendOutcome.InvalidToken), nameof(ApplicationPushSendOutcome.PermanentFailure), nameof(ApplicationPushSendOutcome.Skipped) }));
+        Assert.That(Enum.GetValues<ApplicationPushSendOutcome>().Select(outcome => (int)outcome), Is.EqualTo(new[] { 0, 1, 2, 3, 4 }));
     }
 
     private static void AssertInterfaceShape(Type type, int expectedMethodCount)
     {
-        type.IsPublic.Should().BeTrue();
-        type.IsInterface.Should().BeTrue();
-        type.IsGenericType.Should().BeFalse();
-        type.GetInterfaces().Should().BeEmpty();
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Should().BeEmpty();
-        type.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Should().BeEmpty();
-        type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Should().HaveCount(expectedMethodCount);
+        Assert.That(type.IsPublic, Is.True);
+        Assert.That(type.IsInterface, Is.True);
+        Assert.That(type.IsGenericType, Is.False);
+        Assert.That(type.GetInterfaces(), Is.Empty);
+        Assert.That(type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
+        Assert.That(type.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Is.Empty);
+        Assert.That(type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly), Has.Exactly(expectedMethodCount).Items);
     }
 
     private static void AssertMethod(
@@ -194,14 +178,14 @@ public sealed class ApplicationPushContractCompatibilityTests
         Type expectedReturnType,
         params (string Name, Type Type, bool IsOptional)[] expectedParameters)
     {
-        method.Name.Should().Be(expectedName);
-        method.ReturnType.Should().Be(expectedReturnType);
-        method.IsGenericMethod.Should().BeFalse();
+        Assert.That(method.Name, Is.EqualTo(expectedName));
+        Assert.That(method.ReturnType, Is.EqualTo(expectedReturnType));
+        Assert.That(method.IsGenericMethod, Is.False);
 
         var parameters = method.GetParameters();
-        parameters.Select(parameter => parameter.Name).Should().Equal(expectedParameters.Select(parameter => parameter.Name));
-        parameters.Select(parameter => parameter.ParameterType).Should().Equal(expectedParameters.Select(parameter => parameter.Type));
-        parameters.Select(parameter => parameter.IsOptional).Should().Equal(expectedParameters.Select(parameter => parameter.IsOptional));
+        Assert.That(parameters.Select(parameter => parameter.Name), Is.EqualTo(expectedParameters.Select(parameter => parameter.Name)));
+        Assert.That(parameters.Select(parameter => parameter.ParameterType), Is.EqualTo(expectedParameters.Select(parameter => parameter.Type)));
+        Assert.That(parameters.Select(parameter => parameter.IsOptional), Is.EqualTo(expectedParameters.Select(parameter => parameter.IsOptional)));
     }
 
     private static void AssertRecordShape<T>(string[] expectedMemberNames, params Type[] expectedMemberTypes)
@@ -211,14 +195,16 @@ public sealed class ApplicationPushContractCompatibilityTests
             .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .OrderBy(property => property.MetadataToken)
             .ToArray();
-        var constructor = type.GetConstructors().Should().ContainSingle().Subject;
+        var assertedValue84 = (type.GetConstructors()).ToArray();
+        Assert.That(assertedValue84, Has.Exactly(1).Items);
+        var constructor = assertedValue84.Single();
 
-        type.IsPublic.Should().BeTrue();
-        type.IsSealed.Should().BeTrue();
-        properties.Select(property => property.Name).Should().Equal(expectedMemberNames);
-        properties.Select(property => property.PropertyType).Should().Equal(expectedMemberTypes);
-        constructor.GetParameters().Select(parameter => parameter.Name).Should().Equal(expectedMemberNames);
-        constructor.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(expectedMemberTypes);
+        Assert.That(type.IsPublic, Is.True);
+        Assert.That(type.IsSealed, Is.True);
+        Assert.That(properties.Select(property => property.Name), Is.EqualTo(expectedMemberNames));
+        Assert.That(properties.Select(property => property.PropertyType), Is.EqualTo(expectedMemberTypes));
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.Name), Is.EqualTo(expectedMemberNames));
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(expectedMemberTypes));
     }
 
     private static void AssertPropertyNullability<T>(params (string Name, NullabilityState State)[] expectedProperties)
@@ -229,7 +215,7 @@ public sealed class ApplicationPushContractCompatibilityTests
         foreach (var expectedProperty in expectedProperties)
         {
             var property = properties.Single(candidate => candidate.Name == expectedProperty.Name);
-            nullability.Create(property).ReadState.Should().Be(expectedProperty.State);
+            Assert.That(nullability.Create(property).ReadState, Is.EqualTo(expectedProperty.State));
         }
     }
 }

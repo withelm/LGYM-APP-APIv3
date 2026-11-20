@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using NUnit.Framework;
 using System.Text.Json;
@@ -16,9 +15,10 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
             contract.CommandType,
             SharedSerializationOptions.Current);
 
-        command.Should().NotBeNull().And.BeOfType(contract.CommandType);
-        JsonSerializer.Serialize(command, contract.CommandType, SharedSerializationOptions.Current)
-            .Should().Be(contract.PayloadJson);
+        var assertedChain39 = command;
+        Assert.That(assertedChain39, Is.Not.Null);
+        Assert.That(assertedChain39, Is.TypeOf(contract.CommandType));
+        Assert.That(JsonSerializer.Serialize(command, contract.CommandType, SharedSerializationOptions.Current), Is.EqualTo(contract.PayloadJson));
     }
 
     [TestCaseSource(nameof(LegacyPropertyCaseFixtures))]
@@ -33,8 +33,7 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
             contract.CommandType,
             SharedSerializationOptions.Current);
 
-        JsonSerializer.Serialize(command, contract.CommandType, SharedSerializationOptions.Current)
-            .Should().Be(contract.PayloadJson);
+        Assert.That(JsonSerializer.Serialize(command, contract.CommandType, SharedSerializationOptions.Current), Is.EqualTo(contract.PayloadJson));
     }
 
     [Test]
@@ -42,9 +41,9 @@ public sealed class CommandPayloadRoundtripCompatibilityTests
     {
         var options = SharedSerializationOptions.Current;
 
-        options.PropertyNamingPolicy.Should().Be(JsonNamingPolicy.CamelCase);
-        options.DictionaryKeyPolicy.Should().Be(JsonNamingPolicy.CamelCase);
-        options.PropertyNameCaseInsensitive.Should().BeTrue();
+        Assert.That(options.PropertyNamingPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
+        Assert.That(options.DictionaryKeyPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
+        Assert.That(options.PropertyNameCaseInsensitive, Is.True);
     }
 
     private static IEnumerable<TestCaseData> LegacyPropertyCaseFixtures()

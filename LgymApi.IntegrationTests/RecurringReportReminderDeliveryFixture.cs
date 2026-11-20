@@ -11,7 +11,6 @@ using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using LgymApi.Infrastructure.UnitOfWork;
-using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -110,7 +109,7 @@ public sealed partial class RecurringReportReminderIntegrationTests
         {
             var result = await services.GetRequiredService<IUnlinkTraineeUseCase>().ExecuteAsync(
                 new UnlinkTraineeCommand(scenario.Input.SenderUserId!.Value, scenario.Input.RecipientId), ct);
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
             return;
         }
         var database = services.GetRequiredService<AppDbContext>();

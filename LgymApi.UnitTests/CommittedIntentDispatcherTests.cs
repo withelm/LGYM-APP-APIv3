@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Options;
 using LgymApi.BackgroundWorker.Common;
 using LgymApi.Domain.Entities;
@@ -69,13 +68,15 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher();
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _actionScheduler.Enqueued.Should().ContainSingle().Which.Should().Be(envelope.Id);
+        var assertedValue97 = (_actionScheduler.Enqueued).ToArray();
+        Assert.That(assertedValue97, Has.Exactly(1).Items);
+        Assert.That(assertedValue97.Single(), Is.EqualTo(envelope.Id));
 
         await using (var read = NewContext())
         {
             var loaded = await read.CommandEnvelopes.AsNoTracking().SingleAsync(e => e.Id == envelope.Id);
-            loaded.DispatchedAt.Should().NotBeNull();
-            loaded.SchedulerJobId.Should().Be("job-id");
+            Assert.That(loaded.DispatchedAt, Is.Not.Null);
+            Assert.That(loaded.SchedulerJobId, Is.EqualTo("job-id"));
         }
     }
 
@@ -85,8 +86,8 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher();
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _actionScheduler.Enqueued.Should().BeEmpty();
-        _emailScheduler.Enqueued.Should().BeEmpty();
+        Assert.That(_actionScheduler.Enqueued, Is.Empty);
+        Assert.That(_emailScheduler.Enqueued, Is.Empty);
     }
 
     [Test]
@@ -111,13 +112,15 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher();
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _emailScheduler.Enqueued.Should().ContainSingle().Which.Should().Be(notification.Id);
+        var assertedValue98 = (_emailScheduler.Enqueued).ToArray();
+        Assert.That(assertedValue98, Has.Exactly(1).Items);
+        Assert.That(assertedValue98.Single(), Is.EqualTo(notification.Id));
 
         await using (var read = NewContext())
         {
             var loaded = await read.NotificationMessages.AsNoTracking().SingleAsync(n => n.Id == notification.Id);
-            loaded.DispatchedAt.Should().NotBeNull();
-            loaded.SchedulerJobId.Should().Be("job-id");
+            Assert.That(loaded.DispatchedAt, Is.Not.Null);
+            Assert.That(loaded.SchedulerJobId, Is.EqualTo("job-id"));
         }
     }
 
@@ -145,12 +148,14 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher(new BackgroundCommandOptions { EmailSendLeaseSeconds = 30 });
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _emailScheduler.Enqueued.Should().ContainSingle().Which.Should().Be(notification.Id);
+        var assertedValue99 = (_emailScheduler.Enqueued).ToArray();
+        Assert.That(assertedValue99, Has.Exactly(1).Items);
+        Assert.That(assertedValue99.Single(), Is.EqualTo(notification.Id));
 
         await using (var read = NewContext())
         {
             var loaded = await read.NotificationMessages.AsNoTracking().SingleAsync(n => n.Id == notification.Id);
-            loaded.DispatchedAt.Should().NotBeNull();
+            Assert.That(loaded.DispatchedAt, Is.Not.Null);
         }
     }
 
@@ -175,12 +180,12 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher();
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _actionScheduler.Enqueued.Should().BeEmpty();
+        Assert.That(_actionScheduler.Enqueued, Is.Empty);
 
         await using (var read = NewContext())
         {
             var loaded = await read.CommandEnvelopes.AsNoTracking().SingleAsync(e => e.Id == envelope.Id);
-            loaded.DispatchedAt.Should().BeNull();
+            Assert.That(loaded.DispatchedAt, Is.Null);
         }
     }
 
@@ -207,12 +212,12 @@ public sealed class CommittedIntentDispatcherTests
         var dispatcher = CreateDispatcher();
         await dispatcher.DispatchCommittedIntentsAsync();
 
-        _emailScheduler.Enqueued.Should().BeEmpty();
+        Assert.That(_emailScheduler.Enqueued, Is.Empty);
 
         await using (var read = NewContext())
         {
             var loaded = await read.NotificationMessages.AsNoTracking().SingleAsync(n => n.Id == notification.Id);
-            loaded.DispatchedAt.Should().BeNull();
+            Assert.That(loaded.DispatchedAt, Is.Null);
         }
     }
 

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Api.Features.Trainer.Controllers;
@@ -36,8 +35,8 @@ public sealed class TraineeNotesControllerTests
 
         var result = await controller.GetVisibleNotes();
 
-        result.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<TraineeNoteDto>>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(((OkObjectResult)result).Value, Is.InstanceOf<IEnumerable<TraineeNoteDto>>());
     }
 
     [Test]
@@ -47,8 +46,8 @@ public sealed class TraineeNotesControllerTests
 
         var result = await controller.GetVisibleNote("bad-id");
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -62,7 +61,7 @@ public sealed class TraineeNotesControllerTests
 
         var result = await controller.GetVisibleNote(noteId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     private static TraineeNotesController CreateController(

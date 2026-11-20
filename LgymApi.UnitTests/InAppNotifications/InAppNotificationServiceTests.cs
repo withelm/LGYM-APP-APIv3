@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Repositories;
@@ -28,16 +27,11 @@ public sealed class InAppNotificationServiceTests
     [Test]
     public void InAppNotificationService_UsesTheFourDirectDeliveryCollaborators()
     {
-        var constructor = typeof(InAppNotificationService).GetConstructors().Should().ContainSingle().Which;
+        var assertedValue184 = (typeof(InAppNotificationService).GetConstructors()).ToArray();
+        Assert.That(assertedValue184, Has.Exactly(1).Items);
+        var constructor = assertedValue184.Single();
 
-        constructor.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
-            typeof(IInAppNotificationRepository),
-            typeof(IUnitOfWork),
-            typeof(IInAppNotificationPushPublisher),
-            typeof(INotificationEventBridge),
-            typeof(Microsoft.Extensions.Logging.ILogger<InAppNotificationService>),
-            typeof(LgymApi.Authorization.Contracts.IAuthorizationEvaluator<NotificationOwnershipContext>),
-            typeof(NotificationDisclosureEligibilityService));
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(IInAppNotificationRepository), typeof(IUnitOfWork), typeof(IInAppNotificationPushPublisher), typeof(INotificationEventBridge), typeof(Microsoft.Extensions.Logging.ILogger<InAppNotificationService>), typeof(LgymApi.Authorization.Contracts.IAuthorizationEvaluator<NotificationOwnershipContext>), typeof(NotificationDisclosureEligibilityService) }));
     }
 
     [Test]
@@ -51,9 +45,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Message.Should().Be("Test message");
-        result.Value.Type.Should().Be(InAppNotificationTypes.InvitationSent);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Message, Is.EqualTo("Test message"));
+        Assert.That(result.Value.Type, Is.EqualTo(InAppNotificationTypes.InvitationSent));
     }
 
     [Test]
@@ -67,10 +61,10 @@ public sealed class InAppNotificationServiceTests
 
         await service.CreateAsync(input);
 
-        repo.Added.Should().HaveCount(1);
-        repo.Added[0].Message.Should().Be("Persisted");
-        repo.Added[0].RecipientId.Should().Be(userId);
-        repo.Added[0].IsRead.Should().BeFalse();
+        Assert.That(repo.Added, Has.Exactly(1).Items);
+        Assert.That(repo.Added[0].Message, Is.EqualTo("Persisted"));
+        Assert.That(repo.Added[0].RecipientId, Is.EqualTo(userId));
+        Assert.That(repo.Added[0].IsRead, Is.False);
     }
 
     [Test]
@@ -83,8 +77,8 @@ public sealed class InAppNotificationServiceTests
 
         await service.CreateAsync(input);
 
-        push.PushCalls.Should().Be(1);
-        push.LastPushed!.Message.Should().Be("Push me");
+        Assert.That(push.PushCalls, Is.EqualTo(1));
+        Assert.That(push.LastPushed!.Message, Is.EqualTo("Push me"));
     }
 
     [Test]
@@ -104,15 +98,15 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        bridge.EnqueueCalls.Should().Be(1);
-        bridge.LastInput.Should().NotBeNull();
-        bridge.LastInput!.UserId.Should().Be(userId);
-        bridge.LastInput.SchemaVersion.Should().Be(1);
-        bridge.LastInput.Type.Should().Be(InAppNotificationTypes.ReportRequestReceived.Value);
-        bridge.LastInput.EventKey.Should().Be(result.Value.Id.ToString());
-        bridge.LastInput.EntityKey.Should().BeNull();
-        bridge.LastInput.InAppNotificationId.Should().Be(result.Value.Id);
-        bridge.LastInput.Deeplink.Should().Be("/trainer/report-requests/request-1");
+        Assert.That(bridge.EnqueueCalls, Is.EqualTo(1));
+        Assert.That(bridge.LastInput, Is.Not.Null);
+        Assert.That(bridge.LastInput!.UserId, Is.EqualTo(userId));
+        Assert.That(bridge.LastInput.SchemaVersion, Is.EqualTo(1));
+        Assert.That(bridge.LastInput.Type, Is.EqualTo(InAppNotificationTypes.ReportRequestReceived.Value));
+        Assert.That(bridge.LastInput.EventKey, Is.EqualTo(result.Value.Id.ToString()));
+        Assert.That(bridge.LastInput.EntityKey, Is.Null);
+        Assert.That(bridge.LastInput.InAppNotificationId, Is.EqualTo(result.Value.Id));
+        Assert.That(bridge.LastInput.Deeplink, Is.EqualTo("/trainer/report-requests/request-1"));
     }
 
     [Test]
@@ -125,9 +119,8 @@ public sealed class InAppNotificationServiceTests
 
         var action = async () => await service.CreateAsync(input);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Remote push enqueue failed");
-        bridge.EnqueueCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Remote push enqueue failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(bridge.EnqueueCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -140,8 +133,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Message.Should().Be("Still ok");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Message, Is.EqualTo("Still ok"));
     }
 
     [Test]
@@ -153,9 +146,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetForUserAsync(userId, query);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().BeEmpty();
-        result.Value.HasNextPage.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Items, Is.Empty);
+        Assert.That(result.Value.HasNextPage, Is.False);
     }
 
     [Test]
@@ -171,9 +164,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetForUserAsync(userId, query);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().HaveCount(2);
-        result.Value.HasNextPage.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Items, Has.Exactly(2).Items);
+        Assert.That(result.Value.HasNextPage, Is.False);
     }
 
     [Test]
@@ -194,11 +187,11 @@ public sealed class InAppNotificationServiceTests
         var query = new CursorPaginationQuery(Limit: 2);
         var result = await service.GetForUserAsync(userId, query);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().HaveCount(2);
-        result.Value.HasNextPage.Should().BeTrue();
-        result.Value.NextCursorCreatedAt.Should().NotBeNull();
-        result.Value.NextCursorId.Should().NotBeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Items, Has.Exactly(2).Items);
+        Assert.That(result.Value.HasNextPage, Is.True);
+        Assert.That(result.Value.NextCursorCreatedAt, Is.Not.Null);
+        Assert.That(result.Value.NextCursorId, Is.Not.Null);
     }
 
     [Test]
@@ -220,8 +213,10 @@ public sealed class InAppNotificationServiceTests
             userId,
             new CursorPaginationQuery(Limit: 1));
 
-        result.Value.Items.Should().ContainSingle().Which.Message.Should().Be("older valid");
-        result.Value.HasNextPage.Should().BeFalse();
+        var assertedValue185 = (result.Value.Items).ToArray();
+        Assert.That(assertedValue185, Has.Exactly(1).Items);
+        Assert.That(assertedValue185.Single().Message, Is.EqualTo("older valid"));
+        Assert.That(result.Value.HasNextPage, Is.False);
     }
 
     [Test]
@@ -239,10 +234,10 @@ public sealed class InAppNotificationServiceTests
             userId,
             new CursorPaginationQuery(Limit: 50));
 
-        result.Value.Items.Should().HaveCount(50);
-        result.Value.HasNextPage.Should().BeTrue();
-        result.Value.NextCursorCreatedAt.Should().Be(now.AddMinutes(-49));
-        result.Value.NextCursorId.Should().Be(result.Value.Items[^1].Id);
+        Assert.That(result.Value.Items, Has.Exactly(50).Items);
+        Assert.That(result.Value.HasNextPage, Is.True);
+        Assert.That(result.Value.NextCursorCreatedAt, Is.EqualTo(now.AddMinutes(-49)));
+        Assert.That(result.Value.NextCursorId, Is.EqualTo(result.Value.Items[^1].Id));
     }
 
     [Test]
@@ -256,7 +251,7 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(notification.Id, Actor(userId));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -271,8 +266,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(notification.Id, Actor(otherUserId));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InAppNotificationForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InAppNotificationForbiddenError>());
     }
 
     [Test]
@@ -283,8 +278,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(nonExistentId, Actor(Id<User>.New()));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InAppNotificationNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InAppNotificationNotFoundError>());
     }
 
     [Test]
@@ -299,7 +294,7 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAsReadAsync(notification.Id, Actor(userId));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -314,10 +309,10 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAllAsReadAsync(userId, before: null);
 
-        result.IsSuccess.Should().BeTrue();
-        repo.MarkAllAsReadCalls.Should().Be(1);
-        repo.LastMarkAllAsReadUserId.Should().Be(userId);
-        repo.LastMarkAllAsReadBefore.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(repo.MarkAllAsReadCalls, Is.EqualTo(1));
+        Assert.That(repo.LastMarkAllAsReadUserId, Is.EqualTo(userId));
+        Assert.That(repo.LastMarkAllAsReadBefore, Is.Null);
     }
 
     [Test]
@@ -331,9 +326,9 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.MarkAllAsReadAsync(userId, before);
 
-        result.IsSuccess.Should().BeTrue();
-        repo.MarkAllAsReadCalls.Should().Be(1);
-        repo.LastMarkAllAsReadBefore.Should().Be(before);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(repo.MarkAllAsReadCalls, Is.EqualTo(1));
+        Assert.That(repo.LastMarkAllAsReadBefore, Is.EqualTo(before));
     }
 
     [Test]
@@ -350,8 +345,8 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.GetUnreadCountAsync(userId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(2);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(2));
     }
 
     [Test]
@@ -384,14 +379,14 @@ public sealed class InAppNotificationServiceTests
 
         var result = await service.CreateAsync(input);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Id.Should().Be(existing.Id);
-        push.PushCalls.Should().Be(0);
-        bridge.EnqueueCalls.Should().Be(1);
-        bridge.LastInput!.InAppNotificationId.Should().Be(existing.Id);
-        bridge.LastInput.EventKey.Should().Be(existing.Id.ToString());
-        unitOfWork.SaveChangesCalls.Should().Be(1);
-        repo.DetachCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Id, Is.EqualTo(existing.Id));
+        Assert.That(push.PushCalls, Is.EqualTo(0));
+        Assert.That(bridge.EnqueueCalls, Is.EqualTo(1));
+        Assert.That(bridge.LastInput!.InAppNotificationId, Is.EqualTo(existing.Id));
+        Assert.That(bridge.LastInput.EventKey, Is.EqualTo(existing.Id.ToString()));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(repo.DetachCalls, Is.EqualTo(1));
     }
 
     #region Helpers

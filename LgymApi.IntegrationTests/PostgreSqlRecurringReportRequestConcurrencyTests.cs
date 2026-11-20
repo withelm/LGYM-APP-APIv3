@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting;
@@ -54,19 +53,19 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
             cancellationToken);
 
         await WaitUntilBothReachedAsync(first.Gate, second.Gate, cancellationToken);
-        first.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(first.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         await first.Gate.LockAcquired.Task.WaitAsync(GateTimeout, cancellationToken);
-        second.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(second.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         var results = await Task.WhenAll(firstTask, secondTask).WaitAsync(GateTimeout, cancellationToken);
 
-        results[0].IsSuccess.Should().BeTrue();
-        results[1].IsFailure.Should().BeTrue();
-        results[1].Error.Should().BeOfType<ReportingConflictError>();
-        results[1].Error.Message.Should().Be(Messages.RecurringReportRequestInProgress);
-        first.UnitOfWork.SaveChangesCalls.Should().Be(1);
-        first.UnitOfWork.CommitCalls.Should().Be(1);
-        second.UnitOfWork.SaveChangesCalls.Should().Be(0);
-        second.UnitOfWork.RollbackCalls.Should().Be(1);
+        Assert.That(results[0].IsSuccess, Is.True);
+        Assert.That(results[1].IsFailure, Is.True);
+        Assert.That(results[1].Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(results[1].Error.Message, Is.EqualTo(Messages.RecurringReportRequestInProgress));
+        Assert.That(first.UnitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(first.UnitOfWork.CommitCalls, Is.EqualTo(1));
+        Assert.That(second.UnitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(second.UnitOfWork.RollbackCalls, Is.EqualTo(1));
         await AssertSingleCreationAsync(scenario.AssignmentId, cancellationToken);
         WriteGateEvidence("manual-a", first.Gate, second.Gate, "manual-success/manual-conflict");
     }
@@ -90,17 +89,17 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
         var automaticTask = automatic.Service.ProcessDueAssignmentsAsync(cancellationToken);
 
         await WaitUntilBothReachedAsync(manual.Gate, automatic.Gate, cancellationToken);
-        manual.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(manual.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         await manual.Gate.LockAcquired.Task.WaitAsync(GateTimeout, cancellationToken);
-        automatic.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(automatic.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         await Task.WhenAll(manualTask, automaticTask).WaitAsync(GateTimeout, cancellationToken);
 
         var manualResult = await manualTask;
-        manualResult.IsSuccess.Should().BeTrue();
-        manual.UnitOfWork.SaveChangesCalls.Should().Be(1);
-        manual.UnitOfWork.CommitCalls.Should().Be(1);
-        automatic.UnitOfWork.SaveChangesCalls.Should().Be(0);
-        automatic.UnitOfWork.RollbackCalls.Should().Be(1);
+        Assert.That(manualResult.IsSuccess, Is.True);
+        Assert.That(manual.UnitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(manual.UnitOfWork.CommitCalls, Is.EqualTo(1));
+        Assert.That(automatic.UnitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(automatic.UnitOfWork.RollbackCalls, Is.EqualTo(1));
         await AssertSingleCreationAsync(scenario.AssignmentId, cancellationToken);
         WriteGateEvidence("manual", manual.Gate, automatic.Gate, "manual-success/automatic-skip");
     }
@@ -124,19 +123,19 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
         var automaticTask = automatic.Service.ProcessDueAssignmentsAsync(cancellationToken);
 
         await WaitUntilBothReachedAsync(manual.Gate, automatic.Gate, cancellationToken);
-        automatic.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(automatic.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         await automatic.Gate.LockAcquired.Task.WaitAsync(GateTimeout, cancellationToken);
-        manual.Gate.ReleaseToLock.TrySetResult(true).Should().BeTrue();
+        Assert.That(manual.Gate.ReleaseToLock.TrySetResult(true), Is.True);
         await Task.WhenAll(manualTask, automaticTask).WaitAsync(GateTimeout, cancellationToken);
 
         var manualResult = await manualTask;
-        manualResult.IsFailure.Should().BeTrue();
-        manualResult.Error.Should().BeOfType<ReportingConflictError>();
-        manualResult.Error.Message.Should().Be(Messages.RecurringReportRequestInProgress);
-        automatic.UnitOfWork.SaveChangesCalls.Should().Be(1);
-        automatic.UnitOfWork.CommitCalls.Should().Be(1);
-        manual.UnitOfWork.SaveChangesCalls.Should().Be(0);
-        manual.UnitOfWork.RollbackCalls.Should().Be(1);
+        Assert.That(manualResult.IsFailure, Is.True);
+        Assert.That(manualResult.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(manualResult.Error.Message, Is.EqualTo(Messages.RecurringReportRequestInProgress));
+        Assert.That(automatic.UnitOfWork.SaveChangesCalls, Is.EqualTo(1));
+        Assert.That(automatic.UnitOfWork.CommitCalls, Is.EqualTo(1));
+        Assert.That(manual.UnitOfWork.SaveChangesCalls, Is.EqualTo(0));
+        Assert.That(manual.UnitOfWork.RollbackCalls, Is.EqualTo(1));
         await AssertSingleCreationAsync(scenario.AssignmentId, cancellationToken);
         WriteGateEvidence("automatic", automatic.Gate, manual.Gate, "automatic-created/manual-conflict");
     }
@@ -229,8 +228,8 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
         await Task.WhenAll(
             first.ReachedLock.Task,
             second.ReachedLock.Task).WaitAsync(GateTimeout, cancellationToken);
-        first.ReachedCount.Should().Be(1);
-        second.ReachedCount.Should().Be(1);
+        Assert.That(first.ReachedCount, Is.EqualTo(1));
+        Assert.That(second.ReachedCount, Is.EqualTo(1));
     }
 
     private async Task AssertSingleCreationAsync(
@@ -251,14 +250,14 @@ public sealed class PostgreSqlRecurringReportRequestConcurrencyTests : PostgreSq
             .Where(envelope => envelope.CommandTypeFullName == CanonicalCommandId)
             .ToListAsync(cancellationToken);
 
-        requests.Should().ContainSingle();
+        Assert.That(requests, Has.Exactly(1).Items);
         var request = requests[0];
-        request.Status.Should().Be(ReportRequestStatus.Pending);
-        assignment.CurrentReportRequestId.Should().Be(request.Id);
-        assignment.LastRequestCreatedAt.Should().Be(request.CreatedAt);
-        assignment.NextEligibleAt.Should().BeNull();
-        envelopes.Should().ContainSingle();
-        envelopes[0].PayloadJson.Should().Contain(request.Id.Value.ToString());
+        Assert.That(request.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(assignment.CurrentReportRequestId, Is.EqualTo(request.Id));
+        Assert.That(assignment.LastRequestCreatedAt, Is.EqualTo(request.CreatedAt));
+        Assert.That(assignment.NextEligibleAt, Is.Null);
+        Assert.That(envelopes, Has.Exactly(1).Items);
+        Assert.That(envelopes[0].PayloadJson, Does.Contain(request.Id.Value.ToString()));
     }
 
     private static void WriteGateEvidence(

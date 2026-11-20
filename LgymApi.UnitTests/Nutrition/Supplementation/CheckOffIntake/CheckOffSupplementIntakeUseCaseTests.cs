@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
 using LgymApi.Application.Nutrition.Persistence;
@@ -31,9 +30,11 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
             cancellationSource.Token);
         var after = DateTimeOffset.UtcNow;
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Taken.Should().BeTrue();
-        result.Value.TakenAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Taken, Is.True);
+        var assertedChain52 = result.Value.TakenAt;
+        Assert.That(assertedChain52, Is.GreaterThanOrEqualTo(before));
+        Assert.That(assertedChain52, Is.LessThanOrEqualTo(after));
         await dependencies.Plans.Received(1).GetActivePlanForTraineeAsync(dependencies.TraineeId, cancellationSource.Token);
         await dependencies.Plans.Received(1).FindTrackedIntakeLogAsync(dependencies.TraineeId, item.Id, Monday, cancellationSource.Token);
         await dependencies.Plans.Received(1).AddIntakeLogAsync(Arg.Is<SupplementIntakeLog>(log =>
@@ -50,8 +51,8 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id, takenAt));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TakenAt.Should().Be(takenAt);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TakenAt, Is.EqualTo(takenAt));
         await dependencies.Plans.Received(1).AddIntakeLogAsync(Arg.Is<SupplementIntakeLog>(log => log.TakenAt == takenAt), Arg.Any<CancellationToken>());
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -66,8 +67,8 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TakenAt.Should().Be(existing.TakenAt);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TakenAt, Is.EqualTo(existing.TakenAt));
         await dependencies.Plans.DidNotReceive().AddIntakeLogAsync(Arg.Any<SupplementIntakeLog>(), Arg.Any<CancellationToken>());
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -83,9 +84,9 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(item.Id, replacement));
 
-        result.IsSuccess.Should().BeTrue();
-        existing.TakenAt.Should().Be(replacement);
-        result.Value.TakenAt.Should().Be(replacement);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(existing.TakenAt, Is.EqualTo(replacement));
+        Assert.That(result.Value.TakenAt, Is.EqualTo(replacement));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -96,7 +97,7 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(Id<SupplementPlanItem>.Empty));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
         await AssertNoPersistenceAsync(dependencies);
     }
 
@@ -108,7 +109,7 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CheckOffSupplementIntakeCommand(dependencies.TraineeId, Id<SupplementPlanItem>.New(), default, null));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
         await AssertNoPersistenceAsync(dependencies);
     }
 
@@ -122,7 +123,7 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(itemId));
 
-        result.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(result.Error, Is.TypeOf<SupplementationNotFoundError>());
         await dependencies.Plans.Received(1).GetActivePlanForTraineeAsync(dependencies.TraineeId, Arg.Any<CancellationToken>());
         await AssertNoSaveAsync(dependencies);
     }
@@ -135,7 +136,7 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var missingResult = await missing.CreateUseCase().ExecuteAsync(missing.Command(Id<SupplementPlanItem>.New()));
 
-        missingResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(missingResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoTrackedMutationAsync(missing);
 
         var unscheduled = new Dependencies();
@@ -143,13 +144,13 @@ public sealed class CheckOffSupplementIntakeUseCaseTests
 
         var unscheduledResult = await unscheduled.CreateUseCase().ExecuteAsync(unscheduled.Command(unscheduledItem.Id));
 
-        unscheduledResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(unscheduledResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoTrackedMutationAsync(unscheduled);
     }
 
     private static async Task AssertNoPersistenceAsync(Dependencies dependencies)
     {
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
         await AssertNoSaveAsync(dependencies);
     }
 

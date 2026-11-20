@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications.Contracts.InApp;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Platform.Contracts.Serialization;
@@ -90,8 +89,7 @@ public sealed class ReportFeedbackAddedInAppNotificationCommandHandlerTests
 
         Func<Task> action = () => port.ExecuteAsync(payload);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage($"*invalid {invalidProperty}*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*invalid {invalidProperty}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCase("")]

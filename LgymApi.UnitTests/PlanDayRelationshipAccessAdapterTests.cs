@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Adapters;
@@ -30,7 +29,7 @@ public sealed class PlanDayRelationshipAccessAdapterTests
 
         var result = await adapter.HasActiveRelationshipAsync(trainerId, traineeId);
 
-        result.Should().Be(hasActiveRelationship);
+        Assert.That(result, Is.EqualTo(hasActiveRelationship));
         await relationshipAccess.Received(1)
             .GetAccessDecisionAsync(trainerId, traineeId, CancellationToken.None);
     }
@@ -63,17 +62,12 @@ public sealed class PlanDayRelationshipAccessAdapterTests
         services.AddScoped(_ => Substitute.For<IAccountLookupService>());
         services.AddScoped(_ => Substitute.For<ICoachingActiveLinkPersistence>());
 
-        services.Count(descriptor => descriptor.ServiceType == typeof(IPlanDayRelationshipAccessPort))
-            .Should()
-            .Be(1);
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(IPlanDayRelationshipAccessPort)), Is.EqualTo(1));
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetServices<IPlanDayRelationshipAccessPort>()
-            .Should()
-            .ContainSingle()
-            .Which
-            .Should()
-            .BeOfType<PlanDayRelationshipAccessAdapter>();
+        var assertedValue141 = (scope.ServiceProvider.GetServices<IPlanDayRelationshipAccessPort>()).ToArray();
+        Assert.That(assertedValue141, Has.Exactly(1).Items);
+        Assert.That(assertedValue141.Single(), Is.TypeOf<PlanDayRelationshipAccessAdapter>());
     }
 }

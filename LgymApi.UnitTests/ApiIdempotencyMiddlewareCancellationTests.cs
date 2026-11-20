@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Application.Repositories;
@@ -36,9 +35,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
         await middleware.InvokeAsync(context, repository, unitOfWork);
 
         var body = await ReadBodyAsync(responseBody);
-        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         AssertErrorBody(body, "Idempotency key is required.", "IDEMPOTENCY_KEY_REQUIRED");
-        nextCalled.Should().BeFalse();
+        Assert.That(nextCalled, Is.False);
         TestContext.Progress.WriteLine($"missing-key status={context.Response.StatusCode} body={body}");
     }
 
@@ -64,12 +63,12 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
         await middleware.InvokeAsync(context, repository, unitOfWork);
 
         var body = await ReadBodyAsync(responseBody);
-        context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status409Conflict));
         AssertErrorBody(
             body,
             "Idempotency key reused with different request payload.",
             "IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH");
-        nextCalled.Should().BeFalse();
+        Assert.That(nextCalled, Is.False);
         TestContext.Progress.WriteLine($"conflict status={context.Response.StatusCode} body={body}");
     }
 
@@ -92,9 +91,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         var action = () => middleware.InvokeAsync(context, repository, unitOfWork);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        responseBody.WriteTokens.Should().NotBeEmpty();
-        responseBody.ObservedRequestCancellation.Should().BeTrue();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(responseBody.WriteTokens, Is.Not.Empty);
+        Assert.That(responseBody.ObservedRequestCancellation, Is.True);
     }
 
     [Test]
@@ -114,9 +113,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         var action = () => middleware.InvokeAsync(context, repository, Substitute.For<IUnitOfWork>());
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        responseBody.WriteTokens.Should().NotBeEmpty();
-        responseBody.ObservedRequestCancellation.Should().BeTrue();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(responseBody.WriteTokens, Is.Not.Empty);
+        Assert.That(responseBody.ObservedRequestCancellation, Is.True);
     }
 
     [Test]
@@ -143,12 +142,12 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         await middleware.InvokeAsync(context, repository, unitOfWork);
 
-        requestBody.ReadTokens.Should().NotBeEmpty();
-        requestBody.ReadTokens.Should().OnlyContain(token => token == cancellationSource.Token);
-        requestBody.Position.Should().Be(0);
-        nextCalls.Should().Be(1);
-        context.Response.Body.Should().BeSameAs(responseBody);
-        (await ReadBodyAsync(responseBody)).Should().Be("{\"ok\":true}");
+        Assert.That(requestBody.ReadTokens, Is.Not.Empty);
+        Assert.That((requestBody.ReadTokens).All(token => token == cancellationSource.Token), Is.True);
+        Assert.That(requestBody.Position, Is.EqualTo(0));
+        Assert.That(nextCalls, Is.EqualTo(1));
+        Assert.That(context.Response.Body, Is.SameAs(responseBody));
+        Assert.That((await ReadBodyAsync(responseBody)), Is.EqualTo("{\"ok\":true}"));
         await repository.Received(1).UpdateAsync(
             Arg.Is<ApiIdempotencyRecord>(record => record.ResponseBodyJson == "{\"ok\":true}"),
             cancellationSource.Token);
@@ -178,9 +177,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         await middleware.InvokeAsync(context, repository, Substitute.For<IUnitOfWork>());
 
-        requestBody.ReadTokens.Should().HaveCountGreaterThanOrEqualTo(2);
-        requestBody.ReadTokens.Should().OnlyContain(token => token == cancellationSource.Token);
-        requestBody.Position.Should().Be(0);
+        Assert.That(requestBody.ReadTokens, Has.Count.GreaterThanOrEqualTo(2));
+        Assert.That((requestBody.ReadTokens).All(token => token == cancellationSource.Token), Is.True);
+        Assert.That(requestBody.Position, Is.EqualTo(0));
         await repository.Received(1).FindByScopeAndKeyAsync(
             "POST|/api/idempotency-test|user@example.com",
             "email-key",
@@ -212,9 +211,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         var action = () => middleware.InvokeAsync(context, repository, unitOfWork);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        nextCalls.Should().Be(0);
-        context.Response.Body.Should().BeSameAs(responseBody);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(nextCalls, Is.EqualTo(0));
+        Assert.That(context.Response.Body, Is.SameAs(responseBody));
         await repository.DidNotReceiveWithAnyArgs().FindByScopeAndKeyAsync(default!, default!, default);
         await repository.DidNotReceiveWithAnyArgs().AddOrGetExistingAsync(default!, default);
         await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
@@ -252,8 +251,8 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         await middleware.InvokeAsync(context, repository, Substitute.For<IUnitOfWork>());
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-        nextCalls.Should().Be(0);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status409Conflict));
+        Assert.That(nextCalls, Is.EqualTo(0));
         await repository.DidNotReceiveWithAnyArgs().AddOrGetExistingAsync(default!, default);
         await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
     }
@@ -299,10 +298,10 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
             Substitute.For<IUnitOfWork>(),
             new ApiIdempotencyReplayAccessEvaluator([deniedPort]));
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        (await ReadBodyAsync(responseBody)).Should().NotContain("private");
-        nextCalls.Should().Be(0);
-        deniedPort.Calls.Should().Be(1);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
+        Assert.That((await ReadBodyAsync(responseBody)), Does.Not.Contain("private"));
+        Assert.That(nextCalls, Is.EqualTo(0));
+        Assert.That(deniedPort.Calls, Is.EqualTo(1));
         await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
     }
 
@@ -352,10 +351,10 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
             unitOfWork,
             new ApiIdempotencyReplayAccessEvaluator([deniedPort]));
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        (await ReadBodyAsync(responseBody)).Should().NotContain("private");
-        nextCalls.Should().Be(0);
-        deniedPort.Calls.Should().Be(1);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
+        Assert.That((await ReadBodyAsync(responseBody)), Does.Not.Contain("private"));
+        Assert.That(nextCalls, Is.EqualTo(0));
+        Assert.That(deniedPort.Calls, Is.EqualTo(1));
         await repository.Received(1).TryRecoverDuplicateAsync(
             Arg.Any<ApiIdempotencyRecord>(),
             Arg.Any<DbUpdateException>(),
@@ -401,8 +400,8 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         await middleware.InvokeAsync(context, repository, unitOfWork);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-        nextCalls.Should().Be(0);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status409Conflict));
+        Assert.That(nextCalls, Is.EqualTo(0));
         await repository.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
     }
 
@@ -426,7 +425,7 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
 
         var action = () => middleware.InvokeAsync(context, repository, unitOfWork);
 
-        await action.Should().ThrowAsync<DbUpdateException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<DbUpdateException>());
         await repository.Received(1).TryRecoverDuplicateAsync(
             Arg.Any<ApiIdempotencyRecord>(),
             Arg.Any<DbUpdateException>(),
@@ -475,9 +474,9 @@ public sealed class ApiIdempotencyMiddlewareCancellationTests
     {
         using var document = JsonDocument.Parse(body);
         var properties = document.RootElement.EnumerateObject().ToArray();
-        properties.Select(property => property.Name).Should().Equal("message", "code");
-        document.RootElement.GetProperty("message").GetString().Should().Be(message);
-        document.RootElement.GetProperty("code").GetString().Should().Be(code);
+        Assert.That(properties.Select(property => property.Name), Is.EqualTo(new[] { "message", "code" }));
+        Assert.That(document.RootElement.GetProperty("message").GetString(), Is.EqualTo(message));
+        Assert.That(document.RootElement.GetProperty("code").GetString(), Is.EqualTo(code));
     }
 
     private sealed class RecordingMemoryStream : MemoryStream

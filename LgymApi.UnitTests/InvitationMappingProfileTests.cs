@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Invitations;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Mapping;
@@ -36,7 +35,7 @@ public sealed class InvitationMappingProfileTests
 
         var result = mapper.Map<InvitationCreationSource, CoachingInvitationWriteModel>(source, mapper.CreateContext());
 
-        result.Should().Be(new CoachingInvitationWriteModel(
+        Assert.That(result, Is.EqualTo(new CoachingInvitationWriteModel(
             invitationId,
             trainerId,
             "trainee@example.test",
@@ -45,7 +44,7 @@ public sealed class InvitationMappingProfileTests
             TrainerInvitationStatus.Pending,
             createdAt.AddDays(7),
             createdAt,
-            null));
+            null)));
     }
 
     [Test]
@@ -67,11 +66,11 @@ public sealed class InvitationMappingProfileTests
 
         var result = mapper.Map<InvitationResponseSource, CoachingInvitationResponseUpdateModel>(source, mapper.CreateContext());
 
-        result.Should().Be(new CoachingInvitationResponseUpdateModel(
+        Assert.That(result, Is.EqualTo(new CoachingInvitationResponseUpdateModel(
             invitationId,
             traineeId,
             TrainerInvitationStatus.Accepted,
-            respondedAt));
+            respondedAt)));
     }
 
     [Test]
@@ -89,6 +88,6 @@ public sealed class InvitationMappingProfileTests
 
         var result = mapper.Map<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>(source, mapper.CreateContext());
 
-        result.Should().Be(new CoachingActiveLinkWriteModel(linkId, trainerId, traineeId));
+        Assert.That(result, Is.EqualTo(new CoachingActiveLinkWriteModel(linkId, trainerId, traineeId)));
     }
 }

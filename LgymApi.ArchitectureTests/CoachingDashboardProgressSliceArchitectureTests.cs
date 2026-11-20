@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Progress.EloChart;
 using LgymApi.Application.Coaching.Progress.ExerciseScoresChart;
@@ -37,9 +36,9 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -51,7 +50,7 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == slice.Contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == slice.Contract), Is.EqualTo(1));
         }
     }
 
@@ -64,12 +63,12 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
             .Concat(Directory.GetFiles(Path.Combine(coachingRoot, "Relationships", "TrainerDashboard"), "*.cs", SearchOption.AllDirectories));
         var source = files.Select(File.ReadAllText).ToArray();
 
-        source.Should().NotContain(text => text.Contains("IUserRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITrainingRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("IExerciseScoreRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("IMainRecordRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains(" User ", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("IUserRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITrainingRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("IExerciseScoreRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("IMainRecordRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains(" User ", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -80,20 +79,20 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
         var useCase = File.ReadAllText(Path.Combine(directory, "GetTrainerDashboardUseCase.cs"));
         var profile = File.ReadAllText(Path.Combine(directory, "TrainerDashboardMappingProfile.cs"));
 
-        useCase.Should().NotContain("new TrainerDashboardTraineeReadModel(");
-        useCase.Should().Contain("_mapper.MapList<TrainerDashboardSource, TrainerDashboardTraineeReadModel>");
-        useCase.Should().Contain("_mapper.CreateContext()");
-        profile.Should().Contain("CreateMap<TrainerDashboardSource, TrainerDashboardTraineeReadModel>");
+        Assert.That(useCase, Does.Not.Contain("new TrainerDashboardTraineeReadModel("));
+        Assert.That(useCase, Does.Contain("_mapper.MapList<TrainerDashboardSource, TrainerDashboardTraineeReadModel>"));
+        Assert.That(useCase, Does.Contain("_mapper.CreateContext()"));
+        Assert.That(profile, Does.Contain("CreateMap<TrainerDashboardSource, TrainerDashboardTraineeReadModel>"));
     }
 
     [Test]
     public void ExerciseScoresChart_KeepsTypedExerciseIdUntilWorkoutProgressFacadeCall()
     {
-        typeof(GetExerciseScoresChartQuery).GetProperty(nameof(GetExerciseScoresChartQuery.ExerciseId))!
-            .PropertyType.Should().Be(typeof(Id<Exercise>));
-        typeof(IWorkoutProgressDashboardReadService)
+        Assert.That(typeof(GetExerciseScoresChartQuery).GetProperty(nameof(GetExerciseScoresChartQuery.ExerciseId))!
+            .PropertyType, Is.EqualTo(typeof(Id<Exercise>)));
+        Assert.That(typeof(IWorkoutProgressDashboardReadService)
             .GetMethod(nameof(IWorkoutProgressDashboardReadService.GetExerciseScoreChartAsync))!
-            .GetParameters()[1].ParameterType.Should().Be(typeof(string));
+            .GetParameters()[1].ParameterType, Is.EqualTo(typeof(string)));
 
         var root = ArchitectureTestHelpers.ResolveRepositoryRoot();
         var useCaseRoot = ParseRoot(Path.Combine(
@@ -107,9 +106,10 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
             .OfType<InvocationExpressionSyntax>()
             .Single(invocation => invocation.Expression is MemberAccessExpressionSyntax memberAccess
                 && memberAccess.Name.Identifier.ValueText == nameof(IWorkoutProgressDashboardReadService.GetExerciseScoreChartAsync));
-        facadeCall.ArgumentList.Arguments[1].Expression.ToString().Should().Be("query.ExerciseId.ToString()");
-        FindToStringCalls(useCaseRoot).Should().ContainSingle()
-            .Which.Should().BeSameAs(facadeCall.ArgumentList.Arguments[1].Expression);
+        Assert.That(facadeCall.ArgumentList.Arguments[1].Expression.ToString(), Is.EqualTo("query.ExerciseId.ToString()"));
+        var assertedValue1 = (FindToStringCalls(useCaseRoot)).ToArray();
+        Assert.That(assertedValue1, Has.Exactly(1).Items);
+        Assert.That(assertedValue1.Single(), Is.SameAs(facadeCall.ArgumentList.Arguments[1].Expression));
 
         var controllerRoot = ParseRoot(Path.Combine(
             root,
@@ -121,7 +121,7 @@ public sealed class CoachingDashboardProgressSliceArchitectureTests
         var controllerAction = controllerRoot.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .Single(method => method.Identifier.ValueText == "GetTraineeExerciseScoresChartData");
-        FindToStringCalls(controllerAction).Should().BeEmpty();
+        Assert.That(FindToStringCalls(controllerAction), Is.Empty);
     }
 
     private static CompilationUnitSyntax ParseRoot(string path) =>

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.ReferenceData.Units;
 using LgymApi.Domain.Enums;
 
@@ -16,7 +15,7 @@ public sealed class UnitConversionTests
     {
         var result = Converter.Convert(input, from, to);
 
-        result.Should().BeApproximately(expected, 1e-9);
+        Assert.That(result, Is.EqualTo(expected).Within(1e-9));
     }
 
     [TestCase(0d, WeightUnits.Kilograms, WeightUnits.Pounds, 0d)]
@@ -26,7 +25,7 @@ public sealed class UnitConversionTests
     {
         var result = Converter.Convert(input, from, to);
 
-        result.Should().BeApproximately(expected, 1e-9);
+        Assert.That(result, Is.EqualTo(expected).Within(1e-9));
     }
 
     [Test]
@@ -37,7 +36,7 @@ public sealed class UnitConversionTests
         var pounds = Converter.Convert(originalKilograms, WeightUnits.Kilograms, WeightUnits.Pounds);
         var resultKilograms = Converter.Convert(pounds, WeightUnits.Pounds, WeightUnits.Kilograms);
 
-        resultKilograms.Should().BeApproximately(originalKilograms, 1e-9);
+        Assert.That(resultKilograms, Is.EqualTo(originalKilograms).Within(1e-9));
     }
 
     [Test]
@@ -46,7 +45,7 @@ public sealed class UnitConversionTests
         var strategy = new WeightLinearUnitStrategy();
 
         var action = () => strategy.ConvertTo(100d, WeightUnits.Unknown);
-        action.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<ArgumentOutOfRangeException>());
     }
 
     [Test]
@@ -55,7 +54,7 @@ public sealed class UnitConversionTests
         var strategy = new WeightLinearUnitStrategy();
 
         var action = () => strategy.ConvertFrom(100d, WeightUnits.Unknown);
-        action.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<ArgumentOutOfRangeException>());
     }
 
     [Test]
@@ -68,6 +67,6 @@ public sealed class UnitConversionTests
             WeightUnits.Pounds,
             (value, unit) => Converter.Convert(value, unit, WeightUnits.Kilograms));
 
-        comparison.Should().Be(0);
+        Assert.That(comparison, Is.EqualTo(0));
     }
 }

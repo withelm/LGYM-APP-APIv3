@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -56,20 +55,20 @@ public sealed class PlanPurposeHistoryTests : IntegrationTestBase
         SetAuthorizationHeader(coach.Id);
         var coachRows = await ReadHistoryAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date");
 
-        ownerRows.Length.Should().Be(4);
-        coachRows.Length.Should().Be(4);
+        Assert.That(ownerRows.Length, Is.EqualTo(4));
+        Assert.That(coachRows.Length, Is.EqualTo(4));
         for (var i = 0; i < trainings.Length; i++)
         {
             var ownerRow = ownerRows.Single(row => row.GetProperty("_id").GetString() == trainings[i].Id.ToString());
             var coachRow = coachRows.Single(row => row.GetProperty("_id").GetString() == trainings[i].Id.ToString());
-            ownerRow.GetProperty("type").GetString().Should().Be(days[i].Id.ToString());
-            ownerRow.GetProperty("planDay").GetProperty("name").GetString().Should().Be(i == 3 ? string.Empty : days[i].Name);
-            coachRow.GetProperty("gym").GetString().Should().Be(gym.Name);
-            coachRow.GetProperty("exercises").GetArrayLength().Should().Be(1);
-            coachRow.GetProperty("exercises")[0].GetProperty("scoresDetails")[0].GetProperty("weight").GetDouble().Should().Be(80);
-            coachRow.GetProperty("type").GetString().Should().Be(i == 0 ? days[i].Id.ToString() : string.Empty);
-            coachRow.GetProperty("planDay").GetProperty("_id").GetString().Should().Be(i == 0 ? days[i].Id.ToString() : string.Empty);
-            coachRow.GetProperty("planDay").GetProperty("name").GetString().Should().Be(i == 0 ? days[i].Name : string.Empty);
+            Assert.That(ownerRow.GetProperty("type").GetString(), Is.EqualTo(days[i].Id.ToString()));
+            Assert.That(ownerRow.GetProperty("planDay").GetProperty("name").GetString(), Is.EqualTo(i == 3 ? string.Empty : days[i].Name));
+            Assert.That(coachRow.GetProperty("gym").GetString(), Is.EqualTo(gym.Name));
+            Assert.That(coachRow.GetProperty("exercises").GetArrayLength(), Is.EqualTo(1));
+            Assert.That(coachRow.GetProperty("exercises")[0].GetProperty("scoresDetails")[0].GetProperty("weight").GetDouble(), Is.EqualTo(80));
+            Assert.That(coachRow.GetProperty("type").GetString(), Is.EqualTo(i == 0 ? days[i].Id.ToString() : string.Empty));
+            Assert.That(coachRow.GetProperty("planDay").GetProperty("_id").GetString(), Is.EqualTo(i == 0 ? days[i].Id.ToString() : string.Empty));
+            Assert.That(coachRow.GetProperty("planDay").GetProperty("name").GetString(), Is.EqualTo(i == 0 ? days[i].Name : string.Empty));
         }
     }
 
@@ -96,24 +95,24 @@ public sealed class PlanPurposeHistoryTests : IntegrationTestBase
 
         SetAuthorizationHeader(coach.Id);
         var before = await ReadHistoryAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date");
-        before.Single().GetProperty("type").GetString().Should().Be(day.Id.ToString());
+        Assert.That(before.Single().GetProperty("type").GetString(), Is.EqualTo(day.Id.ToString()));
         SetAuthorizationHeader(trainee.Id);
         using var update = await PostAsJsonWithApiOptionsAsync($"/api/{trainee.Id}/updatePlan", new { _id = plan.Id.ToString(), name = plan.Name, purpose = "Professional" });
-        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(update.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var owner = await ReadHistoryAsync($"/api/{trainee.Id}/getTrainingByDate");
         SetAuthorizationHeader(coach.Id);
         var after = await ReadHistoryAsync($"/api/trainer/trainees/{trainee.Id}/trainings/by-date");
 
-        owner.Single().GetProperty("planDay").GetProperty("name").GetString().Should().Be(day.Name);
-        after.Single().GetProperty("_id").GetString().Should().Be(training.Id.ToString());
-        after.Single().GetProperty("type").GetString().Should().BeEmpty();
-        after.Single().GetProperty("planDay").GetProperty("name").GetString().Should().BeEmpty();
+        Assert.That(owner.Single().GetProperty("planDay").GetProperty("name").GetString(), Is.EqualTo(day.Name));
+        Assert.That(after.Single().GetProperty("_id").GetString(), Is.EqualTo(training.Id.ToString()));
+        Assert.That(after.Single().GetProperty("type").GetString(), Is.Empty);
+        Assert.That(after.Single().GetProperty("planDay").GetProperty("name").GetString(), Is.Empty);
     }
 
     private async Task<JsonElement[]> ReadHistoryAsync(string route)
     {
         using var response = await Client.PostAsJsonAsync(route, new { createdAt = Day });
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return json.RootElement.EnumerateArray().Select(row => row.Clone()).ToArray();
     }

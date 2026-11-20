@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.IntegrationTests;
@@ -22,11 +21,11 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/userInfo/{userId}/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<EloResponse>();
-        body.Should().NotBeNull();
-        body!.Elo.Should().Be(1000);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Elo, Is.EqualTo(1000));
     }
 
     [Test]
@@ -43,20 +42,20 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/eloRegistry/{userId}/getEloRegistryChart");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<EloChartEntry>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCountGreaterThanOrEqualTo(1);
-        body![0].Value.Should().Be(1000);
-        Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(body[0].Id, out var parsedId).Should().BeTrue();
-        parsedId.ToString().Should().Be(body[0].Id);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Count.GreaterThanOrEqualTo(1));
+        Assert.That(body![0].Value, Is.EqualTo(1000));
+        Assert.That(Id<LgymApi.Domain.Entities.EloRegistry>.TryParse(body[0].Id, out var parsedId), Is.True);
+        Assert.That(parsedId.ToString(), Is.EqualTo(body[0].Id));
 
         var repeatResponse = await Client.GetAsync($"/api/eloRegistry/{userId}/getEloRegistryChart");
-        repeatResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(repeatResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var repeatBody = await repeatResponse.Content.ReadFromJsonAsync<List<EloChartEntry>>();
-        repeatBody.Should().NotBeNull();
-        repeatBody!.Select(entry => entry.Id).Should().Equal(body.Select(entry => entry.Id));
+        Assert.That(repeatBody, Is.Not.Null);
+        Assert.That(repeatBody!.Select(entry => entry.Id), Is.EqualTo(body.Select(entry => entry.Id)));
         TestContext.Progress.WriteLine(System.Text.Json.JsonSerializer.Serialize(body));
     }
 
@@ -79,7 +78,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/eloRegistry/{otherUserId}/getEloRegistryChart");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -95,7 +94,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/eloRegistry/invalid-guid/getEloRegistryChart");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -111,11 +110,11 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/userInfo/{userId}/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<EloResponse>();
-        body.Should().NotBeNull();
-        body!.Elo.Should().Be(1000);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Elo, Is.EqualTo(1000));
     }
 
     [Test]
@@ -132,7 +131,7 @@ public sealed class EloRegistryTests : IntegrationTestBase
         var nonExistentId = Domain.ValueObjects.Id<object>.New();
         var response = await Client.GetAsync($"/api/userInfo/{nonExistentId}/getUserEloPoints");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -146,12 +145,12 @@ public sealed class EloRegistryTests : IntegrationTestBase
         var loginRequest = new { name = "loginuser", password = "password123" };
         var response = await Client.PostAsJsonAsync("/api/login", loginRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.User.Should().NotBeNull();
-        body.User!.Elo.Should().Be(1000);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.User, Is.Not.Null);
+        Assert.That(body.User!.Elo, Is.EqualTo(1000));
     }
 
     [Test]
@@ -167,11 +166,11 @@ public sealed class EloRegistryTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/checkToken");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
-        body.Should().NotBeNull();
-        body!.Elo.Should().Be(1000);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Elo, Is.EqualTo(1000));
     }
 
     private sealed class EloResponse

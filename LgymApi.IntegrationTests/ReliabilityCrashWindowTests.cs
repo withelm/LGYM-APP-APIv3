@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker;
 using LgymApi.Domain.Entities;
@@ -56,11 +55,10 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var recovered = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            recovered.Should().NotBeNull();
-            recovered!.DispatchedAt.Should().NotBeNull("recovery job should set DispatchedAt");
-            recovered.SchedulerJobId.Should().NotBeNullOrEmpty("recovery job should assign scheduler job ID");
-            recovered.Status.Should().Be(ActionExecutionStatus.Pending,
-                "envelope should remain Pending until background worker processes it");
+            Assert.That(recovered, Is.Not.Null);
+            Assert.That(recovered!.DispatchedAt, Is.Not.Null, "recovery job should set DispatchedAt");
+            Assert.That(recovered.SchedulerJobId, Is.Not.Null.And.Not.Empty, "recovery job should assign scheduler job ID");
+            Assert.That(recovered.Status, Is.EqualTo(ActionExecutionStatus.Pending), "envelope should remain Pending until background worker processes it");
         }
     }
 
@@ -104,11 +102,10 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var recovered = await db.NotificationMessages.FindAsync(notification.Id);
 
-            recovered.Should().NotBeNull();
-            recovered!.DispatchedAt.Should().NotBeNull("recovery job should set DispatchedAt");
-            recovered.SchedulerJobId.Should().NotBeNullOrEmpty("recovery job should assign scheduler job ID");
-            recovered.Status.Should().Be(EmailNotificationStatus.Pending,
-                "notification should remain Pending until background worker processes it");
+            Assert.That(recovered, Is.Not.Null);
+            Assert.That(recovered!.DispatchedAt, Is.Not.Null, "recovery job should set DispatchedAt");
+            Assert.That(recovered.SchedulerJobId, Is.Not.Null.And.Not.Empty, "recovery job should assign scheduler job ID");
+            Assert.That(recovered.Status, Is.EqualTo(EmailNotificationStatus.Pending), "notification should remain Pending until background worker processes it");
         }
     }
 
@@ -152,15 +149,12 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var recovered = await db.NotificationMessages.FindAsync(notification.Id);
 
-            recovered.Should().NotBeNull();
-            recovered!.Status.Should().Be(EmailNotificationStatus.Sending,
-                "redispatch should preserve the in-flight Sending state until a worker reclaims and completes it");
-            recovered.DispatchedAt.Should().NotBeNull();
-            recovered.DispatchedAt.Should().BeAfter(originalDispatchedAt,
-                "redispatch should refresh DispatchedAt when a stale Sending notification is re-enqueued");
-            recovered.SchedulerJobId.Should().NotBeNullOrEmpty();
-            recovered.LastAttemptAt.Should().Be(originalLastAttemptAt,
-                "dispatcher should re-enqueue stale Sending notifications without mutating the lease owned by the worker path");
+            Assert.That(recovered, Is.Not.Null);
+            Assert.That(recovered!.Status, Is.EqualTo(EmailNotificationStatus.Sending), "redispatch should preserve the in-flight Sending state until a worker reclaims and completes it");
+            Assert.That(recovered.DispatchedAt, Is.Not.Null);
+            Assert.That(recovered.DispatchedAt, Is.GreaterThan(originalDispatchedAt), "redispatch should refresh DispatchedAt when a stale Sending notification is re-enqueued");
+            Assert.That(recovered.SchedulerJobId, Is.Not.Null.And.Not.Empty);
+            Assert.That(recovered.LastAttemptAt, Is.EqualTo(originalLastAttemptAt), "dispatcher should re-enqueue stale Sending notifications without mutating the lease owned by the worker path");
         }
     }
 
@@ -204,11 +198,10 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.NotificationMessages.FindAsync(notification.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.DispatchedAt.Should().Be(originalDispatchedAt,
-                "dispatcher should not redispatch a fresh Sending notification with an active lease");
-            unchanged.SchedulerJobId.Should().Be("fresh-sending-job-id");
-            unchanged.LastAttemptAt.Should().Be(originalLastAttemptAt);
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.DispatchedAt, Is.EqualTo(originalDispatchedAt), "dispatcher should not redispatch a fresh Sending notification with an active lease");
+            Assert.That(unchanged.SchedulerJobId, Is.EqualTo("fresh-sending-job-id"));
+            Assert.That(unchanged.LastAttemptAt, Is.EqualTo(originalLastAttemptAt));
         }
     }
 
@@ -252,11 +245,9 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.DispatchedAt.Should().Be(originalDispatchedAt,
-                "recovery should skip already-dispatched envelopes");
-            unchanged.SchedulerJobId.Should().Be(originalJobId,
-                "recovery should not overwrite existing scheduler job ID");
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.DispatchedAt, Is.EqualTo(originalDispatchedAt), "recovery should skip already-dispatched envelopes");
+            Assert.That(unchanged.SchedulerJobId, Is.EqualTo(originalJobId), "recovery should not overwrite existing scheduler job ID");
         }
     }
 
@@ -297,9 +288,8 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.Status.Should().Be(ActionExecutionStatus.Processing,
-                "recovery should skip envelopes currently being processed");
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.Status, Is.EqualTo(ActionExecutionStatus.Processing), "recovery should skip envelopes currently being processed");
         }
     }
 
@@ -339,13 +329,11 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.Status.Should().Be(ActionExecutionStatus.Processing,
-                "automatic stale-processing recovery is intentionally disabled until a safe lease-renewal strategy exists");
-            unchanged.ProcessingStartedAtUtc.Should().Be(processingStartedAt,
-                "dispatcher should not clear an active processing lease based only on age");
-            unchanged.DispatchedAt.Should().NotBeNull();
-            unchanged.SchedulerJobId.Should().Be("stale-processing-job-id");
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.Status, Is.EqualTo(ActionExecutionStatus.Processing), "automatic stale-processing recovery is intentionally disabled until a safe lease-renewal strategy exists");
+            Assert.That(unchanged.ProcessingStartedAtUtc, Is.EqualTo(processingStartedAt), "dispatcher should not clear an active processing lease based only on age");
+            Assert.That(unchanged.DispatchedAt, Is.Not.Null);
+            Assert.That(unchanged.SchedulerJobId, Is.EqualTo("stale-processing-job-id"));
         }
     }
 
@@ -387,10 +375,9 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.Status.Should().Be(ActionExecutionStatus.Completed,
-                "recovery should skip already-completed envelopes");
-            unchanged.CompletedAt.Should().NotBeNull();
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.Status, Is.EqualTo(ActionExecutionStatus.Completed), "recovery should skip already-completed envelopes");
+            Assert.That(unchanged.CompletedAt, Is.Not.Null);
         }
     }
 
@@ -431,9 +418,8 @@ public sealed class ReliabilityCrashWindowTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unchanged = await db.CommandEnvelopes.FindAsync(envelope.Id);
 
-            unchanged.Should().NotBeNull();
-            unchanged!.Status.Should().Be(ActionExecutionStatus.DeadLettered,
-                "recovery should skip dead-lettered envelopes");
+            Assert.That(unchanged, Is.Not.Null);
+            Assert.That(unchanged!.Status, Is.EqualTo(ActionExecutionStatus.DeadLettered), "recovery should skip dead-lettered envelopes");
         }
     }
 }

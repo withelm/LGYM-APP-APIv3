@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
@@ -52,11 +51,11 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 1024
         });
 
-        result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error.Message : string.Empty);
-        recorded.Should().NotBeNull();
-        recorded!.SourcePhotoTypeId.Should().Be(photoTypeId);
-        recorded.ReportPhotoSlotId.Should().Be(slotId);
-        recorded.ViewType.Should().Be("Front");
+        Assert.That(result.IsSuccess, Is.True, result.IsFailure ? result.Error.Message : string.Empty);
+        Assert.That(recorded, Is.Not.Null);
+        Assert.That(recorded!.SourcePhotoTypeId, Is.EqualTo(photoTypeId));
+        Assert.That(recorded.ReportPhotoSlotId, Is.EqualTo(slotId));
+        Assert.That(recorded.ViewType, Is.EqualTo("Front"));
     }
 
     [Test]
@@ -81,7 +80,7 @@ public sealed class PhotoUploadServiceTests
                 SizeBytes = 1024
             });
 
-        result.IsFailure.Should().BeTrue();
+        Assert.That(result.IsFailure, Is.True);
     }
 
     [TestCase(false, "Front", true)]
@@ -103,14 +102,14 @@ public sealed class PhotoUploadServiceTests
             ReportRequestId = request.Id, ViewType = view, PhotoTypeId = includeIdentity ? typeId : null,
             ReportPhotoSlotId = includeIdentity ? slotId : null, MimeType = "image/jpeg", SizeBytes = 1024
         });
-        result.IsSuccess.Should().Be(expectedSuccess);
+        Assert.That(result.IsSuccess, Is.EqualTo(expectedSuccess));
         if (expectedSuccess)
         {
-            captured.Should().NotBeNull();
-            captured!.SourcePhotoTypeId.Should().Be(typeId);
-            captured.ReportPhotoSlotId.Should().Be(slotId);
+            Assert.That(captured, Is.Not.Null);
+            Assert.That(captured!.SourcePhotoTypeId, Is.EqualTo(typeId));
+            Assert.That(captured.ReportPhotoSlotId, Is.EqualTo(slotId));
         }
-        else captured.Should().BeNull();
+        else Assert.That(captured, Is.Null);
     }
 
     [Test]
@@ -137,14 +136,14 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 5_242_880
         });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.UploadUrl.Should().Be("https://storage.example.com/signed-upload-url");
-        result.Value.StorageKey.Should().Contain("photos/");
-        result.Value.StorageKey.Should().Contain(traineeId.ToString());
-        result.Value.StorageKey.Should().Contain(requestId.ToString());
-        result.Value.StorageKey.Should().Contain("Front");
-        result.Value.StorageKey.Should().EndWith(".jpg");
-        result.Value.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.UploadUrl, Is.EqualTo("https://storage.example.com/signed-upload-url"));
+        Assert.That(result.Value.StorageKey, Does.Contain("photos/"));
+        Assert.That(result.Value.StorageKey, Does.Contain(traineeId.ToString()));
+        Assert.That(result.Value.StorageKey, Does.Contain(requestId.ToString()));
+        Assert.That(result.Value.StorageKey, Does.Contain("Front"));
+        Assert.That(result.Value.StorageKey, Does.EndWith(".jpg"));
+        Assert.That(result.Value.ExpiresAt, Is.GreaterThan(DateTimeOffset.UtcNow));
     }
 
     [Test]
@@ -171,8 +170,8 @@ public sealed class PhotoUploadServiceTests
                 SizeBytes = 1024
             });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedUploadUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -210,15 +209,15 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 5_242_880
         });
 
-        result.IsSuccess.Should().BeTrue();
-        recordedSession.Should().NotBeNull();
-        recordedSession!.StorageKey.Should().Be(result.Value.StorageKey);
-        recordedSession.InitiatedByAccountId.Should().Be(currentUser.Id);
-        recordedSession.OwnerAccountId.Should().Be(ReportingTestData.AccountId(traineeId));
-        recordedSession.ReportRequestId.Should().Be(requestId);
-        recordedSession.ViewType.Should().Be(PhotoViewType.Front.ToString());
-        recordedSession.DeclaredContentType.Should().Be("image/jpeg");
-        recordedSession.DeclaredSizeBytes.Should().Be(5_242_880);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(recordedSession, Is.Not.Null);
+        Assert.That(recordedSession!.StorageKey, Is.EqualTo(result.Value.StorageKey));
+        Assert.That(recordedSession.InitiatedByAccountId, Is.EqualTo(currentUser.Id));
+        Assert.That(recordedSession.OwnerAccountId, Is.EqualTo(ReportingTestData.AccountId(traineeId)));
+        Assert.That(recordedSession.ReportRequestId, Is.EqualTo(requestId));
+        Assert.That(recordedSession.ViewType, Is.EqualTo(PhotoViewType.Front.ToString()));
+        Assert.That(recordedSession.DeclaredContentType, Is.EqualTo("image/jpeg"));
+        Assert.That(recordedSession.DeclaredSizeBytes, Is.EqualTo(5_242_880));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -250,9 +249,9 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 3_145_728
         });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.StorageKey.Should().Contain("Side");
-        result.Value.StorageKey.Should().EndWith(".png");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.StorageKey, Does.Contain("Side"));
+        Assert.That(result.Value.StorageKey, Does.EndWith(".png"));
     }
 
     [Test]
@@ -276,8 +275,8 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 2_097_152
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     [TestCase("video/mp4")]
@@ -301,9 +300,9 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 2_097_152
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("Invalid MIME type");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("Invalid MIME type"));
     }
 
     [TestCase("image/jpeg")]
@@ -332,7 +331,7 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 2_097_152
         });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -353,9 +352,9 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 5_242_881
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Contain("File size exceeds maximum");
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Does.Contain("File size exceeds maximum"));
     }
 
     [Test]
@@ -382,7 +381,7 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 5_242_880
         });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     [Test]
@@ -409,9 +408,9 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 5_242_880
         });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.UploadUrl.Should().Be("https://storage.example.com/signed-upload-url");
-        result.Value.StorageKey.Should().Contain("photos/");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.UploadUrl, Is.EqualTo("https://storage.example.com/signed-upload-url"));
+        Assert.That(result.Value.StorageKey, Does.Contain("photos/"));
     }
 
     [Test]
@@ -433,9 +432,9 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 2_097_152
         });
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(LgymApi.Resources.Messages.ReportRequestNotPending);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(LgymApi.Resources.Messages.ReportRequestNotPending));
     }
 
     [Test]
@@ -465,7 +464,7 @@ public sealed class PhotoUploadServiceTests
             SizeBytes = 2_097_152
         });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
     }
 
     private static ReportRequestDefinitionSnapshot CreateSnapshot(

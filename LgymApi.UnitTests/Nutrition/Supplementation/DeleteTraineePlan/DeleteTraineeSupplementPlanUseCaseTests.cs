@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -54,25 +53,25 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
 
             var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Should().Be(Unit.Value);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value, Is.EqualTo(Unit.Value));
         }
-        unitOfWork.SaveCount.Should().Be(1);
+        Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
 
         await using var readContext = new AppDbContext(options);
         var repository = new SupplementationPersistenceRepository(readContext);
-        (await repository.GetActivePlanForTraineeAsync(traineeId))!.Id.Should().Be(unrelatedPlan.Id);
+        Assert.That((await repository.GetActivePlanForTraineeAsync(traineeId))!.Id, Is.EqualTo(unrelatedPlan.Id));
         var allRows = await readContext.SupplementPlans
             .IgnoreQueryFilters()
             .Include(row => row.Items)
             .AsNoTracking()
             .ToListAsync();
         var deletedRow = allRows.Single(row => row.Id == plan.Id);
-        deletedRow.IsDeleted.Should().BeTrue();
-        deletedRow.IsActive.Should().BeFalse();
-        deletedRow.Items.Should().ContainSingle();
-        deletedRow.Items.Single().SupplementName.Should().Be("Vitamin D");
-        allRows.Single(row => row.Id == unrelatedPlan.Id).IsDeleted.Should().BeFalse();
+        Assert.That(deletedRow.IsDeleted, Is.True);
+        Assert.That(deletedRow.IsActive, Is.False);
+        Assert.That(deletedRow.Items, Has.Exactly(1).Items);
+        Assert.That(deletedRow.Items.Single().SupplementName, Is.EqualTo("Vitamin D"));
+        Assert.That(allRows.Single(row => row.Id == unrelatedPlan.Id).IsDeleted, Is.False);
         await access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, Arg.Any<CancellationToken>());
     }
 
@@ -85,7 +84,9 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         var forbiddenResult = await forbidden.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(forbidden.TrainerId), forbidden.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
 
-        forbiddenResult.Error.Should().BeOfType<SupplementationForbiddenError>().Which.Message.Should().Be(Messages.TrainerRoleRequired);
+        var assertedValue195 = forbiddenResult.Error;
+        Assert.That(assertedValue195, Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(((SupplementationForbiddenError)assertedValue195).Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await forbidden.Access.Received(1).GetAccessDecisionAsync(forbidden.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(forbidden);
 
@@ -95,7 +96,9 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         var emptyResult = await emptyTrainee.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(emptyTrainee.TrainerId), emptyTrainee.TrainerId, Id<User>.Empty, Id<SupplementPlan>.New()));
 
-        emptyResult.Error.Should().BeOfType<InvalidSupplementationError>().Which.Message.Should().Be(Messages.UserIdRequired);
+        var assertedValue196 = emptyResult.Error;
+        Assert.That(assertedValue196, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(((InvalidSupplementationError)assertedValue196).Message, Is.EqualTo(Messages.UserIdRequired));
         await emptyTrainee.Access.Received(1).GetAccessDecisionAsync(emptyTrainee.TrainerId, Id<User>.Empty, Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(emptyTrainee);
     }
@@ -109,7 +112,9 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(Id<SupplementPlan>.New()));
 
-        result.Error.Should().BeOfType<SupplementationNotFoundError>().Which.Message.Should().Be(Messages.DidntFind);
+        var assertedValue197 = result.Error;
+        Assert.That(assertedValue197, Is.TypeOf<SupplementationNotFoundError>());
+        Assert.That(((SupplementationNotFoundError)assertedValue197).Message, Is.EqualTo(Messages.DidntFind));
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
     }
@@ -122,7 +127,9 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(Id<SupplementPlan>.Empty));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>().Which.Message.Should().Be(Messages.FieldRequired);
+        var assertedValue198 = result.Error;
+        Assert.That(assertedValue198, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(((InvalidSupplementationError)assertedValue198).Message, Is.EqualTo(Messages.FieldRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(dependencies.TrainerId, dependencies.TraineeId, Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>());
         await AssertNoWritesAsync(dependencies);
@@ -135,7 +142,7 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         missing.GrantAccess();
         missing.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>()).Returns((SupplementPlan?)null);
         var missingResult = await missing.CreateUseCase().ExecuteAsync(missing.Command(Id<SupplementPlan>.New()));
-        missingResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(missingResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(missing);
 
         var foreign = new Dependencies();
@@ -143,7 +150,7 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         foreign.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>())
             .Returns(CreatePlan(Id<User>.New(), foreign.TraineeId));
         var foreignResult = await foreign.CreateUseCase().ExecuteAsync(foreign.Command(Id<SupplementPlan>.New()));
-        foreignResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(foreignResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(foreign);
 
         var deleted = new Dependencies();
@@ -151,7 +158,7 @@ public sealed class DeleteTraineeSupplementPlanUseCaseTests
         deleted.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>())
             .Returns(CreatePlan(deleted.TrainerId, deleted.TraineeId, isDeleted: true));
         var deletedResult = await deleted.CreateUseCase().ExecuteAsync(deleted.Command(Id<SupplementPlan>.New()));
-        deletedResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(deletedResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(deleted);
     }
 

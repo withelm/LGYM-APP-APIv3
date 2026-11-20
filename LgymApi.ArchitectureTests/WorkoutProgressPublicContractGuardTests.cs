@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -121,7 +120,7 @@ public sealed class WorkoutProgressPublicContractGuardTests
                 Id<LgymApi.Domain.Entities.Exercise> FullyQualifiedExerciseId);
             """, path: Path.Combine(repoRoot, "LgymApi.Application", "Coaching", "Progress", "IdentifierOnlyExerciseQuery.cs"));
 
-        CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture]).Should().BeEmpty();
+        Assert.That(CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture]), Is.Empty);
     }
 
     [TestCase("", "Exercise DirectExercise { get; init; } = default!;", "LgymApi.Domain.Entities.Exercise")]
@@ -153,8 +152,8 @@ public sealed class WorkoutProgressPublicContractGuardTests
 
         var violations = CollectViolations(compilation.AddSyntaxTrees(fixture), [fixture]);
 
-        violations.Should().NotBeEmpty();
-        violations.Select(violation => violation.TargetMetadataName).Should().Contain(expectedTarget);
+        Assert.That(violations, Is.Not.Empty);
+        Assert.That(violations.Select(violation => violation.TargetMetadataName), Does.Contain(expectedTarget));
     }
 
     private static IReadOnlyList<Violation> CollectViolations(CSharpCompilation compilation, IEnumerable<SyntaxTree> syntaxTrees)

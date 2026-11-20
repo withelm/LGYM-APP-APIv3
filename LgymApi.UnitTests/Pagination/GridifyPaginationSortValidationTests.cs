@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 
 namespace LgymApi.UnitTests.Pagination;
@@ -17,8 +16,7 @@ public sealed class GridifyPaginationSortValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Sort field 'unknown' is not allowed.*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Sort field 'unknown' is not allowed.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -36,8 +34,7 @@ public sealed class GridifyPaginationSortValidationTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate sort field 'lastName' is not allowed.*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate sort field 'lastName' is not allowed.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -52,6 +49,6 @@ public sealed class GridifyPaginationSortValidationTests
             ]
         };
 
-        input.SortDescriptors.Should().HaveCount(2);
+        Assert.That(input.SortDescriptors, Has.Exactly(2).Items);
     }
 }

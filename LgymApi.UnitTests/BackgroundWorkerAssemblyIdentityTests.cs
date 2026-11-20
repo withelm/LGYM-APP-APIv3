@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Actions;
 using LgymApi.BackgroundWorker.Notifications;
@@ -28,6 +27,6 @@ public sealed class BackgroundWorkerAssemblyIdentityTests
             typeof(DietPlanUpdatedInAppNotificationCommandHandler)
         };
 
-        runtimeTypes.Should().OnlyContain(type => type.Assembly.GetName().Name == workerAssemblyName);
+        Assert.That((runtimeTypes).All(type => type.Assembly.GetName().Name == workerAssemblyName), Is.True);
     }
 }

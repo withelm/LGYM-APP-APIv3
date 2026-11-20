@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -79,35 +78,35 @@ public sealed class TrainerInvitationPaginationTests : IntegrationTestBase
         var cappedPageResponse = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 101 });
 
         // Assert
-        firstPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        secondPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        cappedPageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(secondPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(cappedPageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var firstPage = JsonDocument.Parse(await firstPageResponse.Content.ReadAsStringAsync());
-        firstPage.RootElement.GetProperty("page").GetInt32().Should().Be(1);
-        firstPage.RootElement.GetProperty("pageSize").GetInt32().Should().Be(2);
-        firstPage.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
-        firstPage.RootElement.GetProperty("totalPages").GetInt32().Should().Be(2);
-        firstPage.RootElement.GetProperty("hasNextPage").GetBoolean().Should().BeTrue();
-        firstPage.RootElement.GetProperty("hasPreviousPage").GetBoolean().Should().BeFalse();
+        Assert.That(firstPage.RootElement.GetProperty("page").GetInt32(), Is.EqualTo(1));
+        Assert.That(firstPage.RootElement.GetProperty("pageSize").GetInt32(), Is.EqualTo(2));
+        Assert.That(firstPage.RootElement.GetProperty("totalCount").GetInt32(), Is.EqualTo(3));
+        Assert.That(firstPage.RootElement.GetProperty("totalPages").GetInt32(), Is.EqualTo(2));
+        Assert.That(firstPage.RootElement.GetProperty("hasNextPage").GetBoolean(), Is.True);
+        Assert.That(firstPage.RootElement.GetProperty("hasPreviousPage").GetBoolean(), Is.False);
 
         var firstPageItems = firstPage.RootElement.GetProperty("items").EnumerateArray().ToArray();
-        firstPageItems.Select(item => item.GetProperty("_id").GetString()).Should().Equal(oldestInvitationId.ToString(), tiedInvitationId.ToString());
-        firstPageItems[0].GetProperty("traineeId").GetString().Should().Be(oldestTrainee.Id.ToString());
-        firstPageItems[0].GetProperty("traineeName").GetString().Should().Be(oldestTrainee.Name);
-        firstPageItems[0].GetProperty("traineeEmail").GetString().Should().Be(oldestTrainee.Email);
-        firstPageItems[1].GetProperty("traineeId").GetString().Should().Be(tiedTrainee.Id.ToString());
-        firstPageItems[1].GetProperty("traineeName").GetString().Should().Be(tiedTrainee.Name);
-        firstPageItems[1].GetProperty("traineeEmail").GetString().Should().Be(tiedTrainee.Email);
+        Assert.That(firstPageItems.Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { oldestInvitationId.ToString(), tiedInvitationId.ToString() }));
+        Assert.That(firstPageItems[0].GetProperty("traineeId").GetString(), Is.EqualTo(oldestTrainee.Id.ToString()));
+        Assert.That(firstPageItems[0].GetProperty("traineeName").GetString(), Is.EqualTo(oldestTrainee.Name));
+        Assert.That(firstPageItems[0].GetProperty("traineeEmail").GetString(), Is.EqualTo((string)(oldestTrainee.Email)));
+        Assert.That(firstPageItems[1].GetProperty("traineeId").GetString(), Is.EqualTo(tiedTrainee.Id.ToString()));
+        Assert.That(firstPageItems[1].GetProperty("traineeName").GetString(), Is.EqualTo(tiedTrainee.Name));
+        Assert.That(firstPageItems[1].GetProperty("traineeEmail").GetString(), Is.EqualTo((string)(tiedTrainee.Email)));
 
         using var secondPage = JsonDocument.Parse(await secondPageResponse.Content.ReadAsStringAsync());
-        secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()).Should().Equal(newestInvitationId.ToString());
-        secondPage.RootElement.GetProperty("hasNextPage").GetBoolean().Should().BeFalse();
-        secondPage.RootElement.GetProperty("hasPreviousPage").GetBoolean().Should().BeTrue();
+        Assert.That(secondPage.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("_id").GetString()), Is.EqualTo(new[] { newestInvitationId.ToString() }));
+        Assert.That(secondPage.RootElement.GetProperty("hasNextPage").GetBoolean(), Is.False);
+        Assert.That(secondPage.RootElement.GetProperty("hasPreviousPage").GetBoolean(), Is.True);
 
         using var cappedPage = JsonDocument.Parse(await cappedPageResponse.Content.ReadAsStringAsync());
-        cappedPage.RootElement.GetProperty("pageSize").GetInt32().Should().Be(100);
-        cappedPage.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
+        Assert.That(cappedPage.RootElement.GetProperty("pageSize").GetInt32(), Is.EqualTo(100));
+        Assert.That(cappedPage.RootElement.GetProperty("totalCount").GetInt32(), Is.EqualTo(3));
     }
 
     [Test]
@@ -142,12 +141,14 @@ public sealed class TrainerInvitationPaginationTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/trainer/invitations/paginated", new { page = 1, pageSize = 0 });
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("page").GetInt32().Should().Be(1);
-        body.RootElement.GetProperty("pageSize").GetInt32().Should().Be(20);
-        var item = body.RootElement.GetProperty("items").EnumerateArray().Should().ContainSingle().Subject;
-        item.GetProperty("_id").GetString().Should().Be(invitationId.ToString());
+        Assert.That(body.RootElement.GetProperty("page").GetInt32(), Is.EqualTo(1));
+        Assert.That(body.RootElement.GetProperty("pageSize").GetInt32(), Is.EqualTo(20));
+        var assertedValue183 = (body.RootElement.GetProperty("items").EnumerateArray()).ToArray();
+        Assert.That(assertedValue183, Has.Exactly(1).Items);
+        var item = assertedValue183.Single();
+        Assert.That(item.GetProperty("_id").GetString(), Is.EqualTo(invitationId.ToString()));
     }
 
     private async Task<User> SeedTrainerAsync(string name, string email)

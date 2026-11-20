@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Idempotency;
 using LgymApi.Api.Middleware;
 using LgymApi.Domain.ValueObjects;
@@ -26,8 +25,8 @@ public sealed class ApiIdempotencyReplayAccessEvaluatorTests
                 ApiIdempotencyReplayOwner.NoReplay),
             CancellationToken.None);
 
-        allowed.Should().BeFalse();
-        port.Calls.Should().Be(0);
+        Assert.That(allowed, Is.False);
+        Assert.That(port.Calls, Is.EqualTo(0));
     }
 
     [Test]
@@ -44,8 +43,8 @@ public sealed class ApiIdempotencyReplayAccessEvaluatorTests
                 ApiIdempotencyReplayOwner.Reporting),
             CancellationToken.None);
 
-        allowed.Should().BeFalse();
-        port.Calls.Should().Be(0);
+        Assert.That(allowed, Is.False);
+        Assert.That(port.Calls, Is.EqualTo(0));
     }
 
     private static HttpContext CreateContext()

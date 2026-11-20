@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
@@ -41,10 +40,9 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, plan.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Equal(mappedNewer, mappedOlder);
-        result.Value.Select(history => history.SnapshotJson)
-            .Should().Equal("{\"known\":1,\"legacyUnknown\":true}", "{\"known\":2,\"legacyUnknown\":false}");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(new[] { mappedNewer, mappedOlder }));
+        Assert.That(result.Value.Select(history => history.SnapshotJson), Is.EqualTo(new[] { "{\"known\":1,\"legacyUnknown\":true}", "{\"known\":2,\"legacyUnknown\":false}" }));
         await dependencies.Plans.Received(1).GetPlanByIdAsync(plan.Id, Arg.Any<CancellationToken>());
         await dependencies.Plans.Received(1).ListPlanHistoryAsync(plan.Id, Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>());
@@ -58,8 +56,8 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(Id<User>.New()), Id<User>.New(), Id<User>.Empty, Id<DietPlan>.New()));
 
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await AssertNoReadsAsync(dependencies);
     }
 
@@ -75,8 +73,8 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await AssertNoReadsAsync(dependencies);
     }
 
@@ -92,8 +90,8 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, Id<DietPlan>.New()));
 
-        result.Error.Should().BeOfType<NotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
         await AssertNoReadsAsync(dependencies);
     }
 
@@ -114,20 +112,20 @@ public sealed class GetTraineeDietPlanHistoryUseCaseTests
             var result = await dependencies.CreateUseCase().ExecuteAsync(
                 new GetTraineeDietPlanHistoryQuery(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, planId));
 
-            result.Error.Should().BeOfType<NotFoundError>();
-            result.Error.Message.Should().Be(Messages.DidntFind);
+            Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+            Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
         }
 
         await dependencies.Plans.Received(3).GetPlanByIdAsync(planId, Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().ListPlanHistoryAsync(Arg.Any<Id<DietPlan>>(), Arg.Any<CancellationToken>());
-        dependencies.Mapper.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Mapper.ReceivedCalls(), Is.Empty);
     }
 
     private static async Task AssertNoReadsAsync(Dependencies dependencies)
     {
         await dependencies.Plans.DidNotReceiveWithAnyArgs().GetPlanByIdAsync(default, default);
         await dependencies.Plans.DidNotReceiveWithAnyArgs().ListPlanHistoryAsync(default, default);
-        dependencies.Mapper.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Mapper.ReceivedCalls(), Is.Empty);
     }
 
     private static DietPlan CreatePlan(Id<User> trainerId, Id<User> traineeId, Id<DietPlan>? planId = null, bool isDeleted = false)

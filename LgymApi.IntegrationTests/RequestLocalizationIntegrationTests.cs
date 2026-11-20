@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Resources;
 
 namespace LgymApi.IntegrationTests;
@@ -16,11 +15,11 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
     {
         var englishMessage = GetMessageForCulture("en");
         var polishMessage = GetMessageForCulture("pl");
-        englishMessage.Should().NotBe(polishMessage);
+        Assert.That(englishMessage, Is.Not.EqualTo(polishMessage));
 
-        (await GetChallengeMessageAsync()).Should().Be(englishMessage);
-        (await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("pl"))).Should().Be(polishMessage);
-        (await GetChallengeMessageAsync()).Should().Be(englishMessage);
+        Assert.That((await GetChallengeMessageAsync()), Is.EqualTo(englishMessage));
+        Assert.That((await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd("pl"))), Is.EqualTo(polishMessage));
+        Assert.That((await GetChallengeMessageAsync()), Is.EqualTo(englishMessage));
     }
 
     [TestCase("de")]
@@ -31,7 +30,7 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
 
         var message = await GetChallengeMessageAsync(request => request.Headers.AcceptLanguage.ParseAdd(acceptLanguage));
 
-        message.Should().Be(englishMessage);
+        Assert.That(message, Is.EqualTo(englishMessage));
     }
 
     [Test]
@@ -45,7 +44,7 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
             request.Headers.TryAddWithoutValidation("Cookie", ".AspNetCore.Culture=c%3Dpl%7Cuic%3Dpl");
         });
 
-        message.Should().Be(englishMessage);
+        Assert.That(message, Is.EqualTo(englishMessage));
     }
 
     [Test]
@@ -60,11 +59,11 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
 
         using var response = await Client.SendAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString().Should().Be(polishMessage);
-        body.RootElement.TryGetProperty("msg", out _).Should().BeFalse();
-        body.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        Assert.That(body.RootElement.GetProperty("errors").GetProperty("platform")[0].GetString(), Is.EqualTo(polishMessage));
+        Assert.That(body.RootElement.TryGetProperty("msg", out _), Is.False);
+        Assert.That(body.RootElement.TryGetProperty("message", out _), Is.False);
     }
 
     [Test]
@@ -77,14 +76,14 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
 
         using var response = await Client.SendAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("status").GetInt32().Should().Be(400);
+        Assert.That(body.RootElement.GetProperty("status").GetInt32(), Is.EqualTo(400));
         var platformErrors = body.RootElement.GetProperty("errors").GetProperty("$.platform");
-        platformErrors.GetArrayLength().Should().Be(1);
-        platformErrors[0].GetString().Should().Contain("could not be converted to LgymApi.Domain.Enums.Platforms");
-        body.RootElement.TryGetProperty("msg", out _).Should().BeFalse();
-        body.RootElement.TryGetProperty("message", out _).Should().BeFalse();
+        Assert.That(platformErrors.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(platformErrors[0].GetString(), Does.Contain("could not be converted to LgymApi.Domain.Enums.Platforms"));
+        Assert.That(body.RootElement.TryGetProperty("msg", out _), Is.False);
+        Assert.That(body.RootElement.TryGetProperty("message", out _), Is.False);
     }
 
     private async Task<string> GetChallengeMessageAsync(Action<HttpRequestMessage>? configure = null)
@@ -92,7 +91,7 @@ public sealed class RequestLocalizationIntegrationTests : IntegrationTestBase
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/admin/users/not-a-guid");
         configure?.Invoke(request);
         using var response = await Client.SendAsync(request);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return body.RootElement.GetProperty("msg").GetString()!;

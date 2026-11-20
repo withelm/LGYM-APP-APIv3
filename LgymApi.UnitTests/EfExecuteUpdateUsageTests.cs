@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace LgymApi.UnitTests;
@@ -36,7 +35,7 @@ public sealed class EfExecuteUpdateUsageTests
             }
         }
 
-        offenders.Should().BeEmpty("Found forbidden ExecuteUpdateAsync usage (SetProperty). Use the custom extension instead: " + string.Join(", ", offenders));
+        Assert.That(offenders, Is.Empty, "Found forbidden ExecuteUpdateAsync usage (SetProperty). Use the custom extension instead: " + string.Join(", ", offenders));
     }
 
     private static bool IsIgnoredPath(string relativePath)

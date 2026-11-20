@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
 using LgymApi.Domain.ValueObjects;
@@ -36,33 +35,33 @@ public sealed class ReliabilityReplayTests : IntegrationTestBase
         var (first, second) = await SendRepeatedRequestAsync("/api/register", request, idempotencyKey);
 
         // Assert - Both requests succeed
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Assert - Responses are identical (replay detection)
         var firstBody = await first.Content.ReadAsStringAsync();
         var secondBody = await second.Content.ReadAsStringAsync();
-        secondBody.Should().Be(firstBody, "replay response should match original");
+        Assert.That(secondBody, Is.EqualTo(firstBody), "replay response should match original");
 
         // Assert - Only one user created
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.SingleOrDefaultAsync(u => u.Email == "replay@example.com");
-        user.Should().NotBeNull("replay should not duplicate user creation");
+        Assert.That(user, Is.Not.Null, "replay should not duplicate user creation");
 
         // Assert - Only one command envelope created (query by user ID since payload contains UserId not email)
         var envelopeCount = await db.CommandEnvelopes
             .Where(ce => ce.PayloadJson.Contains(user!.Id.ToString()))
             .CountAsync();
-        envelopeCount.Should().Be(1, "replay should not duplicate command envelope");
+        Assert.That(envelopeCount, Is.EqualTo(1), "replay should not duplicate command envelope");
 
         // Assert - Idempotency record persisted
         var idempotencyRecord = await db.ApiIdempotencyRecords
             .FirstOrDefaultAsync(r => r.IdempotencyKey == idempotencyKey);
-        idempotencyRecord.Should().NotBeNull("idempotency record should be persisted");
-        idempotencyRecord!.ResponseStatusCode.Should().Be(200);
-        idempotencyRecord.ResponseBodyJson.Should().Be(firstBody);
+        Assert.That(idempotencyRecord, Is.Not.Null, "idempotency record should be persisted");
+        Assert.That(idempotencyRecord!.ResponseStatusCode, Is.EqualTo(200));
+        Assert.That(idempotencyRecord.ResponseBodyJson, Is.EqualTo(firstBody));
     }
 
     [Test]
@@ -98,28 +97,28 @@ public sealed class ReliabilityReplayTests : IntegrationTestBase
         ClearIdempotencyKey();
 
         // Assert - First request succeeds
-        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Assert - Second request returns 409 Conflict
-        secondResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(secondResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
         var conflictBody = await secondResponse.Content.ReadFromJsonAsync<ErrorResponse>();
-        conflictBody.Should().NotBeNull();
-        conflictBody!.Code.Should().Be("IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH");
+        Assert.That(conflictBody, Is.Not.Null);
+        Assert.That(conflictBody!.Code, Is.EqualTo("IDEMPOTENCY_KEY_FINGERPRINT_MISMATCH"));
 
         // Assert - Only first user created (conflict prevented duplicate)
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.SingleOrDefaultAsync(u => u.Email == "conflict@example.com");
-        user.Should().NotBeNull("first request should create user");
-        user!.Name.Should().Be("conflict-test-1", "only first request should persist");
+        Assert.That(user, Is.Not.Null, "first request should create user");
+        Assert.That(user!.Name, Is.EqualTo("conflict-test-1"), "only first request should persist");
 
         // Assert - Only one command envelope (conflict prevented duplicate side effect, query by user ID)
         var envelopeCount = await db.CommandEnvelopes
             .Where(ce => ce.PayloadJson.Contains(user.Id.ToString()))
             .CountAsync();
-        envelopeCount.Should().Be(1, "conflict should not create duplicate envelope");
+        Assert.That(envelopeCount, Is.EqualTo(1), "conflict should not create duplicate envelope");
     }
 
     [Test]
@@ -159,26 +158,25 @@ public sealed class ReliabilityReplayTests : IntegrationTestBase
         var (first, second) = await SendRepeatedRequestAsync($"/api/{userId}/addTraining", request, idempotencyKey);
 
         // Assert - Both succeed
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var firstBody = await first.Content.ReadAsStringAsync();
         var secondBody = await second.Content.ReadAsStringAsync();
-        secondBody.Should().Be(firstBody, "training replay should return stored response");
+        Assert.That(secondBody, Is.EqualTo(firstBody), "training replay should return stored response");
 
         // Assert - Only one training created
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var trainings = await db.Trainings.Where(t => t.UserId == userId).ToListAsync();
-        trainings.Should().HaveCount(1, "replay should not duplicate training");
+        Assert.That(trainings, Has.Exactly(1).Items, "replay should not duplicate training");
 
         // Assert - Only one TrainingCompleted command envelope
         var trainingCompletedEnvelopes = await db.CommandEnvelopes
             .Where(ce => ce.PayloadJson.Contains("TrainingCompleted"))
             .ToListAsync();
-        trainingCompletedEnvelopes.Should().HaveCountLessThanOrEqualTo(1,
-            "replay should not create duplicate TrainingCompleted command");
+        Assert.That(trainingCompletedEnvelopes, Has.Count.LessThanOrEqualTo(1), "replay should not create duplicate TrainingCompleted command");
     }
 
     [Test]
@@ -199,19 +197,19 @@ public sealed class ReliabilityReplayTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/register", request);
 
         // Assert - Returns 400 BadRequest
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
         var errorBody = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        errorBody.Should().NotBeNull();
-        errorBody!.Code.Should().Be("IDEMPOTENCY_KEY_REQUIRED");
-        errorBody.Message.Should().Contain("Idempotency key is required");
+        Assert.That(errorBody, Is.Not.Null);
+        Assert.That(errorBody!.Code, Is.EqualTo("IDEMPOTENCY_KEY_REQUIRED"));
+        Assert.That(errorBody.Message, Does.Contain("Idempotency key is required"));
 
         // Assert - No user created (middleware blocked before handler)
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == "nokey@example.com");
-        user.Should().BeNull("request should be rejected before handler execution");
+        Assert.That(user, Is.Null, "request should be rejected before handler execution");
     }
 
     [Test]
@@ -241,25 +239,25 @@ public sealed class ReliabilityReplayTests : IntegrationTestBase
         ClearIdempotencyKey();
 
         // Assert - All requests succeed (replay detection)
-        responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.OK));
+        Assert.Multiple(() => { foreach (var r in responses) { Assert.That(r.StatusCode, Is.EqualTo(HttpStatusCode.OK)); } });
 
         // Assert - All responses are identical
         var bodies = await Task.WhenAll(responses.Select(r => r.Content.ReadAsStringAsync()));
         var firstBody = bodies[0];
-        bodies.Should().AllSatisfy(body => body.Should().Be(firstBody));
+        Assert.Multiple(() => { foreach (var body in bodies) { Assert.That(body, Is.EqualTo(firstBody)); } });
 
         // Assert - Only one user created
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await db.Users.SingleOrDefaultAsync(u => u.Email == "serial@example.com");
-        user.Should().NotBeNull("serial replay should not duplicate user");
+        Assert.That(user, Is.Not.Null, "serial replay should not duplicate user");
 
         // Assert - Only one command envelope created (query by user ID)
         var envelopeCount = await db.CommandEnvelopes
             .Where(ce => ce.PayloadJson.Contains(user!.Id.ToString()))
             .CountAsync();
-        envelopeCount.Should().Be(1, "serial replay should not duplicate envelope");
+        Assert.That(envelopeCount, Is.EqualTo(1), "serial replay should not duplicate envelope");
     }
 
     // Response DTOs for deserialization

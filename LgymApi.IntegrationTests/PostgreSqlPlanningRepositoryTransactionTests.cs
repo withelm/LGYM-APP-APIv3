@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -41,7 +40,7 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
         var persistence = staleScope.ServiceProvider.GetRequiredService<IPlanDayPersistence>();
         var planId = plan.Id.Rebind<PlanReference>();
         var observed = await persistence.FindPlanAsync(planId);
-        observed!.Purpose.Should().Be(PlanPurpose.Personal);
+        Assert.That(observed!.Purpose, Is.EqualTo(PlanPurpose.Personal));
         await persistence.StagePlanRevisionAsync(planId);
         await persistence.CreatePlanDayAsync(planId, new PlanDayWriteModel("Stale day", []));
 
@@ -54,11 +53,11 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
         }
 
         Func<Task> save = () => staleDatabase.SaveChangesAsync();
-        await save.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await save(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
         await using var verify = Factory.Services.CreateAsyncScope();
         var verification = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verification.Plans.AsNoTracking().SingleAsync(item => item.Id == plan.Id)).Purpose.Should().Be(PlanPurpose.Professional);
-        (await verification.PlanDays.AnyAsync(day => day.PlanId == plan.Id && day.Name == "Stale day")).Should().BeFalse();
+        Assert.That((await verification.Plans.AsNoTracking().SingleAsync(item => item.Id == plan.Id)).Purpose, Is.EqualTo(PlanPurpose.Professional));
+        Assert.That((await verification.PlanDays.AnyAsync(day => day.PlanId == plan.Id && day.Name == "Stale day")), Is.False);
     }
 
     [Test]
@@ -85,13 +84,13 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
                 plan.Id.Rebind<PlanReference>(),
                 "After update"));
 
-            result.IsSuccess.Should().BeTrue();
-            unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(0);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(0));
         }
 
-        stagedWriteWasInvisible.Should().BeTrue();
-        (await ReadPlanNameAsync(plan.Id)).Should().Be("After update");
+        Assert.That(stagedWriteWasInvisible, Is.True);
+        Assert.That((await ReadPlanNameAsync(plan.Id)), Is.EqualTo("After update"));
     }
 
     [Test]
@@ -121,18 +120,18 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
                 user.Id.Rebind<AccountReference>(),
                 deletedPlan.Id.Rebind<PlanReference>()));
 
-            result.IsSuccess.Should().BeTrue();
-            unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(1);
-            unitOfWork.CommitCalls.Should().Be(1);
-            unitOfWork.RollbackCalls.Should().Be(0);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.CommitCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.RollbackCalls, Is.EqualTo(0));
         }
 
-        stagedWritesWereInvisible.Should().BeTrue();
+        Assert.That(stagedWritesWereInvisible, Is.True);
         var persistedState = await ReadDeleteStateAsync(deletedPlan.Id, fallbackPlan.Id, planDayId);
-        persistedState.PlanDeleted.Should().BeTrue();
-        persistedState.PlanDayDeleted.Should().BeTrue();
-        persistedState.FallbackActive.Should().BeTrue();
+        Assert.That(persistedState.PlanDeleted, Is.True);
+        Assert.That(persistedState.PlanDayDeleted, Is.True);
+        Assert.That(persistedState.FallbackActive, Is.True);
     }
 
     [Test]
@@ -159,16 +158,16 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
                 graph.TargetUserId.Rebind<AccountReference>(),
                 graph.ShareCode));
 
-            result.IsSuccess.Should().BeTrue();
-            unitOfWork.SaveChangesCalls.Should().Be(1);
-            unitOfWork.BeginTransactionCalls.Should().Be(1);
-            unitOfWork.CommitCalls.Should().Be(1);
-            unitOfWork.RollbackCalls.Should().Be(0);
-            dispatcher.CallCount.Should().Be(1);
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.CommitCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.RollbackCalls, Is.EqualTo(0));
+            Assert.That(dispatcher.CallCount, Is.EqualTo(1));
         }
 
-        durableCloneWasObservedByDispatch.Should().BeTrue();
-        (await ReadCloneCountsAsync(graph.TargetUserId)).Should().Be(new CloneCounts(1, 1, 1, 1));
+        Assert.That(durableCloneWasObservedByDispatch, Is.True);
+        Assert.That((await ReadCloneCountsAsync(graph.TargetUserId)), Is.EqualTo(new CloneCounts(1, 1, 1, 1)));
     }
 
     [Test]
@@ -193,16 +192,16 @@ internal sealed class PostgreSqlPlanningRepositoryTransactionTests : PostgreSqlI
                 graph.TargetUserId.Rebind<AccountReference>(),
                 graph.ShareCode));
 
-            await action.Should().ThrowAsync<InvalidOperationException>();
-            clonePort.FlushCalls.Should().Be(1);
-            unitOfWork.SaveChangesCalls.Should().Be(0);
-            unitOfWork.BeginTransactionCalls.Should().Be(1);
-            unitOfWork.CommitCalls.Should().Be(0);
-            unitOfWork.RollbackCalls.Should().Be(1);
-            dispatcher.CallCount.Should().Be(0);
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+            Assert.That(clonePort.FlushCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(0));
+            Assert.That(unitOfWork.BeginTransactionCalls, Is.EqualTo(1));
+            Assert.That(unitOfWork.CommitCalls, Is.EqualTo(0));
+            Assert.That(unitOfWork.RollbackCalls, Is.EqualTo(1));
+            Assert.That(dispatcher.CallCount, Is.EqualTo(0));
         }
 
-        (await ReadCloneCountsAsync(graph.TargetUserId)).Should().Be(new CloneCounts(0, 0, 0, 0));
+        Assert.That((await ReadCloneCountsAsync(graph.TargetUserId)), Is.EqualTo(new CloneCounts(0, 0, 0, 0)));
     }
 
     private async Task<Plan> SeedPlanAsync(

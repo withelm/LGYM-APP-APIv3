@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -48,16 +47,16 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(oldPlan.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        oldPlan.IsDeleted.Should().BeTrue();
-        oldPlan.IsActive.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(oldPlan.IsDeleted, Is.True);
+        Assert.That(oldPlan.IsActive, Is.False);
         var replacement = result.Value;
-        replacement.Name.Should().Be("Updated plan");
-        replacement.IsActive.Should().BeTrue();
-        replacement.Id.Should().NotBe(oldPlan.Id);
-        replacement.Items.Should().ContainSingle();
-        replacement.Items.Single().Id.Should().NotBe(oldItemId);
-        operations.Should().Equal("access", "tracked", "add", "save");
+        Assert.That(replacement.Name, Is.EqualTo("Updated plan"));
+        Assert.That(replacement.IsActive, Is.True);
+        Assert.That(replacement.Id, Is.Not.EqualTo(oldPlan.Id));
+        Assert.That(replacement.Items, Has.Exactly(1).Items);
+        Assert.That(replacement.Items.Single().Id, Is.Not.EqualTo(oldItemId));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "tracked", "add", "save" }));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -74,10 +73,10 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
                 new SupplementPlanItemInput(" Zinc ", " 20 mg ", "09:30", 127, 2),
                 new SupplementPlanItemInput(" Magnesium ", "400 mg", "08:00", 127, 1)])));
 
-        result.Value.IsActive.Should().BeFalse();
-        result.Value.Items.Select(item => item.SupplementName).Should().Equal("Magnesium", "Zinc");
-        result.Value.Items.Select(item => item.Order).Should().Equal(1, 2);
-        oldPlan.IsDeleted.Should().BeTrue();
+        Assert.That(result.Value.IsActive, Is.False);
+        Assert.That(result.Value.Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Magnesium", "Zinc" }));
+        Assert.That(result.Value.Items.Select(item => item.Order), Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(oldPlan.IsDeleted, Is.True);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -89,7 +88,7 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(false, true));
         var forbiddenResult = await forbidden.CreateUseCase().ExecuteAsync(
             forbidden.Command(Id<SupplementPlan>.New(), Id<User>.Empty));
-        forbiddenResult.Error.Should().BeOfType<SupplementationForbiddenError>();
+        Assert.That(forbiddenResult.Error, Is.TypeOf<SupplementationForbiddenError>());
         await AssertNoWritesAsync(forbidden);
 
         var empty = new Dependencies();
@@ -97,8 +96,8 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, true));
         var emptyResult = await empty.CreateUseCase().ExecuteAsync(
             empty.Command(Id<SupplementPlan>.New(), Id<User>.Empty));
-        emptyResult.Error.Should().BeOfType<InvalidSupplementationError>();
-        emptyResult.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(emptyResult.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(emptyResult.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await AssertNoWritesAsync(empty);
     }
 
@@ -111,7 +110,7 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             dependencies.Command(Id<SupplementPlan>.New(), data: new SupplementPlanUpsertData(" ", null, [])));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
         await dependencies.Access.Received(1).GetAccessDecisionAsync(
             dependencies.TrainerId, dependencies.TraineeId, Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(
@@ -126,24 +125,24 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
         missing.GrantAccess();
         missing.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>())
             .Returns((SupplementPlan?)null);
-        (await missing.CreateUseCase().ExecuteAsync(missing.Command(Id<SupplementPlan>.New())))
-            .Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That((await missing.CreateUseCase().ExecuteAsync(missing.Command(Id<SupplementPlan>.New())))
+            .Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(missing);
 
         var foreign = new Dependencies();
         foreign.GrantAccess();
         foreign.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>())
             .Returns(ExistingPlan(Id<User>.New(), foreign.TraineeId));
-        (await foreign.CreateUseCase().ExecuteAsync(foreign.Command(Id<SupplementPlan>.New())))
-            .Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That((await foreign.CreateUseCase().ExecuteAsync(foreign.Command(Id<SupplementPlan>.New())))
+            .Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(foreign);
 
         var deleted = new Dependencies();
         deleted.GrantAccess();
         deleted.Plans.FindTrackedPlanByIdAsync(Arg.Any<Id<SupplementPlan>>(), Arg.Any<CancellationToken>())
             .Returns(ExistingPlan(deleted.TrainerId, deleted.TraineeId, isDeleted: true));
-        (await deleted.CreateUseCase().ExecuteAsync(deleted.Command(Id<SupplementPlan>.New())))
-            .Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That((await deleted.CreateUseCase().ExecuteAsync(deleted.Command(Id<SupplementPlan>.New())))
+            .Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoWritesAsync(deleted);
     }
 
@@ -156,8 +155,8 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             dependencies.Command(Id<SupplementPlan>.Empty));
 
-        result.Error.Should().BeOfType<InvalidSupplementationError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.Error, Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(
             dependencies.TrainerId, dependencies.TraineeId, Arg.Any<CancellationToken>());
         await dependencies.Plans.DidNotReceive().FindTrackedPlanByIdAsync(
@@ -191,19 +190,17 @@ public sealed class UpdateTraineeSupplementPlanUseCaseTests
                 CreateMapper(),
                 NutritionAuthorizationTestFactory.CreateSupplementationCoordinator());
 
-            await FluentActions.Awaiting(() => useCase.ExecuteAsync(new(
+            await Assert.ThatAsync(async () => { await useCase.ExecuteAsync(new(
                 NutritionAuthorizationTestFactory.CreateActor(trainerId),
                 trainerId,
                 traineeId,
                 oldPlan.Id,
-                ValidData())))
-                .Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("save failed");
+                ValidData())); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
 
         await using var readContext = new AppDbContext(options);
         var rows = await readContext.SupplementPlans.IgnoreQueryFilters().AsNoTracking().ToListAsync();
-        rows.Should().ContainSingle(row => row.Id == oldPlan.Id && !row.IsDeleted && row.IsActive);
+        Assert.That((rows).Where(row => row.Id == oldPlan.Id && !row.IsDeleted && row.IsActive), Has.Exactly(1).Items);
     }
 
     private static SupplementPlanUpsertData ValidData(

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -21,7 +20,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -34,13 +33,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10 });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PaginatedAdminUserResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().HaveCountGreaterThanOrEqualTo(3);
-        body.Page.Should().Be(1);
-        body.PageSize.Should().Be(10);
-        body.TotalCount.Should().BeGreaterThanOrEqualTo(3);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Items, Has.Count.GreaterThanOrEqualTo(3));
+        Assert.That(body.Page, Is.EqualTo(1));
+        Assert.That(body.PageSize, Is.EqualTo(10));
+        Assert.That(body.TotalCount, Is.GreaterThanOrEqualTo(3));
     }
 
     [Test]
@@ -50,10 +49,10 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/admin/users/paginated", new { page = 1, pageSize = 10, includeDeleted = true });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<PaginatedAdminUserResponse>();
-        body.Should().NotBeNull();
-        body!.TotalCount.Should().BeGreaterThanOrEqualTo(1);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.TotalCount, Is.GreaterThanOrEqualTo(1));
     }
 
     [Test]
@@ -63,7 +62,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/admin/users/00000000-0000-0000-0000-000000000000");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -75,9 +74,9 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/admin/users/{user.Id}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<AdminUserResponse>();
-        body!.Id.Should().Be(user.Id.ToString());
+        Assert.That(body!.Id, Is.EqualTo(user.Id.ToString()));
     }
 
     [Test]
@@ -96,14 +95,14 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
             avatar = "https://example.com/avatar.png"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var updated = await db.Users.FindAsync(user.Id);
-        updated.Should().NotBeNull();
-        updated!.Name.Should().Be("updated-name");
-        updated.Email.Should().Be(new LgymApi.Domain.ValueObjects.Email("updated@example.com"));
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Name, Is.EqualTo("updated-name"));
+        Assert.That(updated.Email, Is.EqualTo(new LgymApi.Domain.ValueObjects.Email("updated@example.com")));
     }
 
     [Test]
@@ -122,7 +121,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
             avatar = (string?)null
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
@@ -134,17 +133,17 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/admin/users/{user.Id}/delete", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var deleted = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == user.Id);
-        deleted.Should().NotBeNull();
-        deleted!.IsDeleted.Should().BeFalse();
-        deleted.Name.Should().Be(user.Name);
-        deleted.Email.Should().Be(user.Email);
-        deleted.DeletionState.Should().Be(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion);
-        deleted.DeletionEffectiveAt.Should().Be(deleted.DeletionRequestedAt!.Value.AddDays(30));
+        Assert.That(deleted, Is.Not.Null);
+        Assert.That(deleted!.IsDeleted, Is.False);
+        Assert.That(deleted.Name, Is.EqualTo(user.Name));
+        Assert.That(deleted.Email, Is.EqualTo(user.Email));
+        Assert.That(deleted.DeletionState, Is.EqualTo(LgymApi.Domain.Enums.AccountDeletionState.PendingDeletion));
+        Assert.That(deleted.DeletionEffectiveAt, Is.EqualTo(deleted.DeletionRequestedAt!.Value.AddDays(30)));
     }
 
     [Test]
@@ -154,7 +153,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/delete", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -166,13 +165,13 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/admin/users/{user.Id}/block", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var blocked = await db.Users.FindAsync(user.Id);
-        blocked.Should().NotBeNull();
-        blocked!.IsBlocked.Should().BeTrue();
+        Assert.That(blocked, Is.Not.Null);
+        Assert.That(blocked!.IsBlocked, Is.True);
     }
 
     [Test]
@@ -182,7 +181,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/block", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -202,14 +201,14 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/admin/users/{user.Id}/unblock", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var unblocked = await db.Users.FindAsync(user.Id);
-            unblocked.Should().NotBeNull();
-            unblocked!.IsBlocked.Should().BeFalse();
+            Assert.That(unblocked, Is.Not.Null);
+            Assert.That(unblocked!.IsBlocked, Is.False);
         }
     }
 
@@ -220,7 +219,7 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/api/admin/users/00000000-0000-0000-0000-000000000000/unblock", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     private async Task AuthenticateAsAdminAsync()
@@ -232,10 +231,10 @@ public sealed class AdminUserIntegrationTests : IntegrationTestBase
     private async Task AuthenticateAsync(string name, string password)
     {
         var loginResponse = await Client.PostAsJsonAsync("/api/login", new { name, password });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
-        body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.Token), Is.False);
 
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", body.Token);
     }

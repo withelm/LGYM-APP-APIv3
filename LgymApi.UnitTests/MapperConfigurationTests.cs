@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Exercise.Contracts;
 using LgymApi.Api.Features.ExerciseScores.Contracts;
@@ -32,16 +31,16 @@ public sealed class MapperConfigurationTests
         using var provider = services.BuildServiceProvider();
         var mapper = provider.GetRequiredService<IMapper>();
 
-        mapper.Should().NotBeNull();
+        Assert.That(mapper, Is.Not.Null);
 
         var concrete = mapper as Mapper;
-        concrete.Should().NotBeNull("Mapper should be concrete implementation for validation");
+        Assert.That(concrete, Is.Not.Null, "Mapper should be concrete implementation for validation");
 
-        concrete!.RegisteredMappings.Count.Should().BeGreaterThan(0, "No mappings registered");
+        Assert.That(concrete!.RegisteredMappings.Count, Is.GreaterThan(0), "No mappings registered");
         var action = () => concrete.ValidateMappings();
-        action.Should().NotThrow("Mapping validation failed");
-        mapper.Map<BodyParts, LgymApi.Application.Platform.ReferenceData.Enums.Models.EnumLookupEntry>(BodyParts.Chest)
-            .Id.Should().Be(nameof(BodyParts.Chest));
+        Assert.That(() => { (action).Invoke(); }, Throws.Nothing, "Mapping validation failed");
+        Assert.That(mapper.Map<BodyParts, LgymApi.Application.Platform.ReferenceData.Enums.Models.EnumLookupEntry>(BodyParts.Chest)
+            .Id, Is.EqualTo(nameof(BodyParts.Chest)));
     }
 
     [Test]
@@ -60,8 +59,8 @@ public sealed class MapperConfigurationTests
             .Where(type => type is { IsAbstract: false, IsInterface: false })
             .ToArray();
 
-        registeredProfiles.Should().BeEquivalentTo(discoveredProfiles);
-        registeredProfiles.Should().OnlyHaveUniqueItems();
+        Assert.That(registeredProfiles, Is.EquivalentTo(discoveredProfiles).UsingPropertiesComparer());
+        Assert.That(registeredProfiles, Is.Unique);
     }
 
     [Test]
@@ -76,7 +75,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         var context = mapper.CreateContext();
 
         var action = () => context.Set(new ContextKey<string>("Unknown.Key"), "value");
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -88,7 +87,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         configuration.AllowContextKey(key);
 
         var action = () => configuration.AllowContextKey(key);
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -111,7 +110,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
 
-        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+        Assert.That(input.EloFormula, Is.EqualTo(ExerciseEloFormula.PullupWeighted));
     }
 
     [Test]
@@ -137,7 +136,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var dto = context.Map<ProgressExerciseReadModel, ExerciseResponseDto>(exercise);
 
-        dto.DisplayName.Should().Be("Polska nazwa");
+        Assert.That(dto.DisplayName, Is.EqualTo("Polska nazwa"));
     }
 
     [Test]
@@ -176,10 +175,12 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var dto = context.Map<WorkoutProgressDashboardTrainingReadModel, LgymApi.Api.Features.Training.Contracts.TrainingByDateDetailsDto>(training);
 
-        dto.Exercises[0].ExerciseDetails.Name.Should().Be("English name");
-        dto.Exercises[0].ExerciseDetails.DisplayName.Should().Be("Polska nazwa");
-        dto.Exercises[0].ScoresDetails.Should().ContainSingle().Which.Unit.Should().NotBeNull();
-        dto.Exercises[1].ExerciseDetails.DisplayName.Should().Be("Custom name");
+        Assert.That(dto.Exercises[0].ExerciseDetails.Name, Is.EqualTo("English name"));
+        Assert.That(dto.Exercises[0].ExerciseDetails.DisplayName, Is.EqualTo("Polska nazwa"));
+        var assertedValue127 = (dto.Exercises[0].ScoresDetails).ToArray();
+        Assert.That(assertedValue127, Has.Exactly(1).Items);
+        Assert.That(assertedValue127.Single().Unit, Is.Not.Null);
+        Assert.That(dto.Exercises[1].ExerciseDetails.DisplayName, Is.EqualTo("Custom name"));
     }
 
     [Test]
@@ -200,7 +201,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var dto = mapper.Map<LgymApi.Application.TrainingPlanning.Contracts.PlanDay.PlanExerciseReadModel, ExerciseResponseDto>(exercise);
 
-        dto.DisplayName.Should().Be("Bench Press");
+        Assert.That(dto.DisplayName, Is.EqualTo("Bench Press"));
     }
 
     [Test]
@@ -226,8 +227,8 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var input = context.Map<ExerciseExtendedFormDto, AddUserExerciseWithFormulaInput>(dto);
 
-        input.UserId.Should().Be(userId);
-        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+        Assert.That(input.UserId, Is.EqualTo(userId));
+        Assert.That(input.EloFormula, Is.EqualTo(ExerciseEloFormula.PullupWeighted));
     }
 
     [Test]
@@ -242,7 +243,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var action = () => JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
 
-        action.Should().Throw<JsonException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<JsonException>());
     }
 
     [Test]
@@ -258,9 +259,9 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var dto = JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
 
-        dto.Should().NotBeNull();
-        dto!.EloFormula.Should().NotBeNull();
-        dto.EloFormula!.Id.Should().Be(ExerciseEloFormula.PullupWeighted.ToString());
+        Assert.That(dto, Is.Not.Null);
+        Assert.That(dto!.EloFormula, Is.Not.Null);
+        Assert.That(dto.EloFormula!.Id, Is.EqualTo(ExerciseEloFormula.PullupWeighted.ToString()));
 
         var services = new ServiceCollection();
 services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
@@ -270,7 +271,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
 
-        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+        Assert.That(input.EloFormula, Is.EqualTo(ExerciseEloFormula.PullupWeighted));
     }
 
     [Test]
@@ -286,10 +287,10 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var dto = JsonSerializer.Deserialize<ExerciseExtendedFormDto>(json);
 
-        dto.Should().NotBeNull();
-        dto!.EloFormula.Should().NotBeNull();
-        dto.EloFormula!.Id.Should().Be(ExerciseEloFormula.PullupWeighted.ToString());
-        dto.EloFormula.DisplayName.Should().Be("Pull-up weighted");
+        Assert.That(dto, Is.Not.Null);
+        Assert.That(dto!.EloFormula, Is.Not.Null);
+        Assert.That(dto.EloFormula!.Id, Is.EqualTo(ExerciseEloFormula.PullupWeighted.ToString()));
+        Assert.That(dto.EloFormula.DisplayName, Is.EqualTo("Pull-up weighted"));
 
         var services = new ServiceCollection();
 services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
@@ -299,7 +300,7 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
 
         var input = mapper.Map<ExerciseExtendedFormDto, AddExerciseWithFormulaInput>(dto);
 
-        input.EloFormula.Should().Be(ExerciseEloFormula.PullupWeighted);
+        Assert.That(input.EloFormula, Is.EqualTo(ExerciseEloFormula.PullupWeighted));
     }
 
     [Test]
@@ -322,8 +323,8 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         var exerciseIdProperty = typeof(ExerciseScoresChartData).GetProperty(nameof(ExerciseScoresChartData.ExerciseId));
         var eloRegistryIdProperty = typeof(EloRegistryChartEntry).GetProperty(nameof(EloRegistryChartEntry.Id));
 
-        exerciseIdProperty!.PropertyType.Should().Be(typeof(Id<Exercise>));
-        eloRegistryIdProperty!.PropertyType.Should().Be(typeof(Id<EloRegistry>));
+        Assert.That(exerciseIdProperty!.PropertyType, Is.EqualTo(typeof(Id<Exercise>)));
+        Assert.That(eloRegistryIdProperty!.PropertyType, Is.EqualTo(typeof(Id<EloRegistry>)));
         exerciseIdProperty.SetValue(exerciseScores, exerciseId);
         eloRegistryIdProperty.SetValue(eloRegistry, eloRegistryId);
 
@@ -335,8 +336,8 @@ services.AddApplicationMapping(LgymApi.Api.Mapping.MappingAssemblyMarkers.All);
         var exerciseScoresDto = mapper.Map<ExerciseScoresChartData, ExerciseScoresChartDataDto>(exerciseScores);
         var eloRegistryDto = mapper.Map<EloRegistryChartEntry, EloRegistryBaseChartDto>(eloRegistry);
 
-        exerciseScoresDto.Id.Should().Be("presentation-key");
-        exerciseScoresDto.ExerciseId.Should().Be(exerciseId.ToString());
-        eloRegistryDto.Id.Should().Be(eloRegistryId.ToString());
+        Assert.That(exerciseScoresDto.Id, Is.EqualTo("presentation-key"));
+        Assert.That(exerciseScoresDto.ExerciseId, Is.EqualTo(exerciseId.ToString()));
+        Assert.That(eloRegistryDto.Id, Is.EqualTo(eloRegistryId.ToString()));
     }
 }

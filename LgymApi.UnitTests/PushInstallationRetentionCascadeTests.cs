@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -64,8 +63,8 @@ public sealed class PushInstallationRetentionCascadeTests
         }
 
         await using var freshDatabase = new AppDbContext(options);
-        (await freshDatabase.PushInstallations.AsNoTracking().AnyAsync(installation => installation.Id == installationId)).Should().BeFalse();
-        (await freshDatabase.PushNotificationMessages.AsNoTracking().AnyAsync(message => message.Id == messageId)).Should().BeFalse();
+        Assert.That((await freshDatabase.PushInstallations.AsNoTracking().AnyAsync(installation => installation.Id == installationId)), Is.False);
+        Assert.That((await freshDatabase.PushNotificationMessages.AsNoTracking().AnyAsync(message => message.Id == messageId)), Is.False);
     }
 
     [Test]
@@ -118,15 +117,13 @@ public sealed class PushInstallationRetentionCascadeTests
         }
 
         await using var verificationDatabase = new AppDbContext(options);
-        (await verificationDatabase.PushInstallations
+        Assert.That((await verificationDatabase.PushInstallations
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .AnyAsync(installation => installation.Id == softDeletedInstallationId))
-            .Should().BeFalse();
-        (await verificationDatabase.PushNotificationMessages
+            .AnyAsync(installation => installation.Id == softDeletedInstallationId)), Is.False);
+        Assert.That((await verificationDatabase.PushNotificationMessages
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .AnyAsync(message => message.Id == softDeletedMessageId))
-            .Should().BeFalse();
+            .AnyAsync(message => message.Id == softDeletedMessageId)), Is.False);
     }
 }

@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Api.Hubs;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Models;
@@ -27,7 +26,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/hubs/notifications/negotiate?negotiateVersion=1", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -38,12 +37,12 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/hubs/notifications/negotiate?negotiateVersion=1", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<NegotiateResponse>();
-        body.Should().NotBeNull();
-        body!.ConnectionId.Should().NotBeNullOrWhiteSpace();
-        body.AvailableTransports.Should().NotBeNull();
-        body.AvailableTransports.Should().NotBeEmpty();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.ConnectionId), Is.False);
+        Assert.That(body.AvailableTransports, Is.Not.Null);
+        Assert.That(body.AvailableTransports, Is.Not.Empty);
     }
 
     [Test]
@@ -65,7 +64,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         await PublishAsync(recipient.Id, "recipient-only");
 
         var received = await recipientNotification.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        received.GetProperty("message").GetString().Should().Be("recipient-only");
+        Assert.That(received.GetProperty("message").GetString(), Is.EqualTo("recipient-only"));
         await AssertNotReceivedAsync(otherNotification.Task);
     }
 
@@ -134,12 +133,12 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
                 "visible delivery",
                 $"/trainer/notes/{validNote.Id}",
                 InAppNotificationTypes.TraineeNoteUpdated));
-            valid.IsSuccess.Should().BeTrue();
+            Assert.That(valid.IsSuccess, Is.True);
             validNotificationId = valid.Value.Id;
         }
 
         var received = await validDelivery.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        received.GetProperty("message").GetString().Should().Be("visible delivery");
+        Assert.That(received.GetProperty("message").GetString(), Is.EqualTo("visible delivery"));
         var hiddenDelivery = ReceiveNotification(connection);
 
         using (var scope = Factory.Services.CreateScope())
@@ -153,7 +152,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
                 "hidden delivery",
                 $"/trainer/notes/{hiddenNote.Id}",
                 InAppNotificationTypes.TraineeNoteUpdated));
-            hidden.IsSuccess.Should().BeTrue();
+            Assert.That(hidden.IsSuccess, Is.True);
             hiddenNotificationId = hidden.Value.Id;
         }
 
@@ -161,8 +160,8 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<LgymApi.Infrastructure.Data.AppDbContext>();
-            database.PushNotificationMessages.Should().ContainSingle(message => message.InAppNotificationId == validNotificationId);
-            database.PushNotificationMessages.Should().NotContain(message => message.InAppNotificationId == hiddenNotificationId);
+            Assert.That((database.PushNotificationMessages).Where(message => message.InAppNotificationId == validNotificationId), Has.Exactly(1).Items);
+            Assert.That((database.PushNotificationMessages).Any(message => message.InAppNotificationId == hiddenNotificationId), Is.False);
             var note = await database.TraineeNotes.FindAsync(validNote.Id);
             note!.VisibleToTrainee = false;
             await database.SaveChangesAsync();
@@ -195,7 +194,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         await unaffectedConnection.StartAsync();
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", terminatedSession.Token);
-        (await Client.PostAsync("/api/logout", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync("/api/logout", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await AssertRevokedSessionIsExcludedAsync(terminatedUser.Id, unaffectedUser.Id, terminatedNotification.Task, unaffectedNotification.Task);
     }
@@ -216,7 +215,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         await unaffectedConnection.StartAsync();
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", deletedSession.Token);
-        (await Client.GetAsync("/api/deleteAccount")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.GetAsync("/api/deleteAccount")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await AssertRevokedSessionIsExcludedAsync(deletedUser.Id, unaffectedUser.Id, deletedNotification.Task, unaffectedNotification.Task);
     }
@@ -239,7 +238,7 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         await unaffectedConnection.StartAsync();
 
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.Token);
-        (await Client.PostAsync($"/api/admin/users/{blockedUser.Id}/block", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That((await Client.PostAsync($"/api/admin/users/{blockedUser.Id}/block", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await AssertRevokedSessionIsExcludedAsync(blockedUser.Id, unaffectedUser.Id, blockedNotification.Task, unaffectedNotification.Task);
     }
@@ -260,12 +259,12 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
 
         await unaffectedConnection.StartAsync();
         var start = () => mismatchedConnection.StartAsync();
-        await start.Should().ThrowAsync<Exception>();
+        await Assert.ThatAsync(async () => { await start(); }, Throws.InstanceOf<Exception>());
 
         await PublishAsync(unaffectedUser.Id, "unaffected-after-mismatch");
 
         var received = await unaffectedNotification.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        received.GetProperty("message").GetString().Should().Be("unaffected-after-mismatch");
+        Assert.That(received.GetProperty("message").GetString(), Is.EqualTo("unaffected-after-mismatch"));
     }
 
     private HubConnection CreateHubConnection(string token)
@@ -347,18 +346,18 @@ public sealed class NotificationHubConnectionTests : IntegrationTestBase
         using (var scope = Factory.Services.CreateScope())
         {
             var registry = scope.ServiceProvider.GetRequiredService<IAccountSessionConnectionRegistry>();
-            registry.GetConnections(revokedUserId.Rebind<AccountReference>()).Should().BeEmpty();
+            Assert.That(registry.GetConnections(revokedUserId.Rebind<AccountReference>()), Is.Empty);
         }
 
         await PublishAsync(unaffectedUserId, "unaffected-delivery");
         var received = await unaffectedNotification.WaitAsync(TimeSpan.FromSeconds(2));
-        received.GetProperty("message").GetString().Should().Be("unaffected-delivery");
+        Assert.That(received.GetProperty("message").GetString(), Is.EqualTo("unaffected-delivery"));
     }
 
     private static async Task AssertNotReceivedAsync(Task<JsonElement> notification)
     {
         var completed = await Task.WhenAny(notification, Task.Delay(TimeSpan.FromMilliseconds(500)));
-        completed.Should().NotBe(notification);
+        Assert.That(completed, Is.Not.EqualTo(notification));
     }
 
     private sealed record SessionToken(Id<UserSession> SessionId, string Jti, string Token);

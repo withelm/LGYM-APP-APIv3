@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -29,8 +28,8 @@ public sealed class WelcomeEmailJobTests
 
         await job.ExecuteAsync(notificationId.ToString());
 
-        handler.Calls.Should().Be(1);
-        handler.LastNotificationId.Should().Be(notificationId);
+        Assert.That(handler.Calls, Is.EqualTo(1));
+        Assert.That(handler.LastNotificationId, Is.EqualTo(notificationId));
     }
 
     [Test]
@@ -58,8 +57,8 @@ public sealed class WelcomeEmailJobTests
 
         await handler.ProcessAsync(notification.Id.ToString());
 
-        sender.SendCalls.Should().Be(0);
-        repository.TransitionCalls.Should().Be(1);
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(repository.TransitionCalls, Is.EqualTo(1));
     }
 
     private sealed class FakeEmailJobHandler : IEmailJobHandler

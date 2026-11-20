@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.EloRegistry.Controllers;
 using LgymApi.Api.Features.Exercise.Controllers;
 using LgymApi.Api.Features.ExerciseScores.Controllers;
@@ -48,17 +47,19 @@ public sealed class WorkoutProgressApiHandoffTests
 
         foreach (var contract in DirectControllerServiceContracts)
         {
-            var descriptor = services.Where(candidate => candidate.ServiceType == contract.ServiceType).Should().ContainSingle().Which;
-            descriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
-            scope.ServiceProvider.GetRequiredService(contract.ServiceType).Should().NotBeNull();
+            var assertedValue180 = (services.Where(candidate => candidate.ServiceType == contract.ServiceType)).ToArray();
+            Assert.That(assertedValue180, Has.Exactly(1).Items);
+            var descriptor = assertedValue180.Single();
+            Assert.That(descriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+            Assert.That(scope.ServiceProvider.GetRequiredService(contract.ServiceType), Is.Not.Null);
 
             var constructors = contract.ControllerType.GetConstructors();
-            constructors.Should().ContainSingle();
-            constructors[0].GetParameters().Select(parameter => parameter.ParameterType).Should().Contain(contract.ServiceType);
+            Assert.That(constructors, Has.Exactly(1).Items);
+            Assert.That(constructors[0].GetParameters().Select(parameter => parameter.ParameterType), Does.Contain(contract.ServiceType));
         }
 
-        scope.ServiceProvider.GetRequiredService<IExerciseApiAdapter>().Should().BeOfType<ExerciseApiAdapter>();
-        scope.ServiceProvider.GetRequiredService<IMainRecordsApiAdapter>().Should().BeOfType<MainRecordsApiAdapter>();
+        Assert.That(scope.ServiceProvider.GetRequiredService<IExerciseApiAdapter>(), Is.TypeOf<ExerciseApiAdapter>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<IMainRecordsApiAdapter>(), Is.TypeOf<MainRecordsApiAdapter>());
     }
 
     [Test]
@@ -80,7 +81,7 @@ public sealed class WorkoutProgressApiHandoffTests
             expectedInput.Description,
             expectedInput.Image);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await exerciseService.Received(1).AddUserExerciseAsync(currentAccount, expectedInput, Arg.Any<CancellationToken>());
     }
 
@@ -102,7 +103,7 @@ public sealed class WorkoutProgressApiHandoffTests
             expectedInput.Unit,
             expectedInput.Date);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await mainRecordsService.Received(1).AddNewRecordAsync(expectedInput, Arg.Any<CancellationToken>());
     }
 

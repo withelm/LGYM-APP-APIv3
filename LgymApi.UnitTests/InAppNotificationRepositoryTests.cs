@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Notifications;
@@ -26,9 +25,9 @@ public sealed class InAppNotificationRepositoryTests
 
         var repository = new InAppNotificationRepository(db);
 
-        (await repository.FindByDeliveryKeyAsync(userId, type, "active-key")).Should().NotBeNull();
-        (await repository.FindByDeliveryKeyAsync(userId, type, "deleted-key")).Should().BeNull();
-        (await repository.GetByIdAsync(deleted.Id)).Should().BeNull();
+        Assert.That((await repository.FindByDeliveryKeyAsync(userId, type, "active-key")), Is.Not.Null);
+        Assert.That((await repository.FindByDeliveryKeyAsync(userId, type, "deleted-key")), Is.Null);
+        Assert.That((await repository.GetByIdAsync(deleted.Id)), Is.Null);
     }
 
     [Test]
@@ -46,10 +45,10 @@ public sealed class InAppNotificationRepositoryTests
         var page1 = await repository.GetPageAsync(userId, 1, null, null);
         var page2 = await repository.GetPageAsync(userId, 1, third.CreatedAt, third.Id);
 
-        page1.Should().HaveCount(2);
-        page1[0].Id.Should().Be(third.Id);
-        page2.Should().HaveCount(2);
-        page2[0].Id.Should().Be(second.Id);
+        Assert.That(page1, Has.Exactly(2).Items);
+        Assert.That(page1[0].Id, Is.EqualTo(third.Id));
+        Assert.That(page2, Has.Exactly(2).Items);
+        Assert.That(page2[0].Id, Is.EqualTo(second.Id));
     }
 
     [Test]
@@ -68,9 +67,9 @@ public sealed class InAppNotificationRepositoryTests
         await repository.MarkAllAsReadAsync(userId, DateTimeOffset.UtcNow.AddHours(-1));
         await db.SaveChangesAsync();
 
-        old.IsRead.Should().BeTrue();
-        current.IsRead.Should().BeTrue();
-        (await repository.GetUnreadCountAsync(userId)).Should().Be(0);
+        Assert.That(old.IsRead, Is.True);
+        Assert.That(current.IsRead, Is.True);
+        Assert.That((await repository.GetUnreadCountAsync(userId)), Is.EqualTo(0));
     }
 
     [Test]
@@ -85,7 +84,7 @@ public sealed class InAppNotificationRepositoryTests
         var repository = new InAppNotificationRepository(db);
         repository.Detach(entity);
 
-        db.Entry(entity).State.Should().Be(EntityState.Detached);
+        Assert.That(db.Entry(entity).State, Is.EqualTo(EntityState.Detached));
     }
 
     [Test]
@@ -113,13 +112,14 @@ public sealed class InAppNotificationRepositoryTests
 
         var candidates = await repository.GetRetentionCandidatesCreatedBeforeAsync(cutoff, 2, []);
 
-        candidates.Select(notification => notification.Id).Should().Equal(softDeleted.Id, oldest.Id);
+        Assert.That(candidates.Select(notification => notification.Id), Is.EqualTo(new[] { softDeleted.Id, oldest.Id }));
         repository.RemoveRange(candidates);
 
         await using (var uncommittedDatabase = CreateDbContextForDatabase(databaseName))
         {
-            (await uncommittedDatabase.InAppNotifications.Select(notification => notification.Id).ToListAsync())
-                .Should().Contain(oldest.Id).And.Contain(firstExpired.Id);
+            var assertedChain41 = (await uncommittedDatabase.InAppNotifications.Select(notification => notification.Id).ToListAsync());
+            Assert.That(assertedChain41, Does.Contain(oldest.Id));
+            Assert.That(assertedChain41, Does.Contain(firstExpired.Id));
         }
 
         await db.SaveChangesAsync();
@@ -128,8 +128,12 @@ public sealed class InAppNotificationRepositoryTests
             .IgnoreQueryFilters()
             .Select(notification => notification.Id)
             .ToListAsync();
-        remainingIds.Should().Contain(firstExpired.Id).And.Contain(secondExpired.Id).And.Contain(exactCutoff.Id).And.Contain(recent.Id);
-        remainingIds.Should().NotContain(softDeleted.Id).And.NotContain(oldest.Id);
+        var assertedChain42 = remainingIds;
+        Assert.That(assertedChain42, Does.Contain(firstExpired.Id));
+        Assert.That(assertedChain42, Does.Contain(secondExpired.Id).And.Contain(exactCutoff.Id).And.Contain(recent.Id));
+        var assertedChain43 = remainingIds;
+        Assert.That(assertedChain43, Does.Not.Contain(softDeleted.Id));
+        Assert.That(assertedChain43, Does.Not.Contain(oldest.Id));
     }
 
     private static AppDbContext CreateDbContext(string name)

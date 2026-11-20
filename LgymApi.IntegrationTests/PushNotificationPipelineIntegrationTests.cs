@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.BackgroundWorker.Push;
@@ -63,9 +62,9 @@ public sealed class PushNotificationPipelineIntegrationTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var rows = db.PushNotificationMessages.OrderBy(x => x.EventId).ToList();
-            rows.Should().HaveCount(2);
-            rows.Should().ContainSingle(x => x.Status == PushNotificationStatus.Pending);
-            rows.Should().ContainSingle(x => x.Status == PushNotificationStatus.Skipped && x.FailureKind == PushNotificationFailureKind.Preference);
+            Assert.That(rows, Has.Exactly(2).Items);
+            Assert.That((rows).Where(x => x.Status == PushNotificationStatus.Pending), Has.Exactly(1).Items);
+            Assert.That((rows).Where(x => x.Status == PushNotificationStatus.Skipped && x.FailureKind == PushNotificationFailureKind.Preference), Has.Exactly(1).Items);
         }
     }
 
@@ -126,7 +125,7 @@ public sealed class PushNotificationPipelineIntegrationTests
             await handler.ProcessAsync(notificationId.ToString());
         }
 
-        fakeSender.LastInstallationId.Should().Be(installationId);
+        Assert.That(fakeSender.LastInstallationId, Is.EqualTo(installationId));
 
         using (var scope = factory.Services.CreateScope())
         {
@@ -134,10 +133,10 @@ public sealed class PushNotificationPipelineIntegrationTests
             var installation = db.PushInstallations.Single(x => x.InstallationId == "device-invalid");
             var message = db.PushNotificationMessages.Single(x => x.Id == notificationId);
 
-            installation.DisabledReason.Should().Be("InvalidFcmToken");
-            message.Status.Should().Be(PushNotificationStatus.Failed);
-            message.FailureKind.Should().Be(PushNotificationFailureKind.InvalidToken);
-            message.NextAttemptAt.Should().BeNull();
+            Assert.That(installation.DisabledReason, Is.EqualTo("InvalidFcmToken"));
+            Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+            Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.InvalidToken));
+            Assert.That(message.NextAttemptAt, Is.Null);
         }
     }
 
@@ -204,14 +203,14 @@ public sealed class PushNotificationPipelineIntegrationTests
             await handler.ProcessAsync(notificationId.ToString());
         }
 
-        sender.SendCalls.Should().Be(0);
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
         using var assertionScope = factory.Services.CreateScope();
         var assertionDatabase = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var message = assertionDatabase.PushNotificationMessages.Single(candidate => candidate.Id == notificationId);
-        message.Status.Should().Be(PushNotificationStatus.Skipped);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
-        message.ProviderStatus.Should().Be("InstallationInactive");
-        message.NextAttemptAt.Should().BeNull();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Preference));
+        Assert.That(message.ProviderStatus, Is.EqualTo("InstallationInactive"));
+        Assert.That(message.NextAttemptAt, Is.Null);
     }
 
     [Test]
@@ -285,14 +284,14 @@ public sealed class PushNotificationPipelineIntegrationTests
             await handler.ProcessAsync(hiddenMessageId.ToString());
         }
 
-        sender.SendCalls.Should().Be(1);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.PushNotificationMessages.Single(message => message.Id == validMessageId).Status.Should().Be(PushNotificationStatus.Sent);
+            Assert.That(db.PushNotificationMessages.Single(message => message.Id == validMessageId).Status, Is.EqualTo(PushNotificationStatus.Sent));
             var hiddenMessage = db.PushNotificationMessages.Single(message => message.Id == hiddenMessageId);
-            hiddenMessage.Status.Should().Be(PushNotificationStatus.Skipped);
-            hiddenMessage.ProviderStatus.Should().Be("SourceNotificationUnavailable");
+            Assert.That(hiddenMessage.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+            Assert.That(hiddenMessage.ProviderStatus, Is.EqualTo("SourceNotificationUnavailable"));
         }
     }
 
@@ -360,15 +359,15 @@ public sealed class PushNotificationPipelineIntegrationTests
             var rows = db.PushNotificationMessages
                 .Where(x => x.EventId == "event-integration-dedup")
                 .ToList();
-            rows.Should().ContainSingle();
-            rows[0].Status.Should().Be(PushNotificationStatus.Pending);
+            Assert.That(rows, Has.Exactly(1).Items);
+            Assert.That(rows[0].Status, Is.EqualTo(PushNotificationStatus.Pending));
             messageId = rows[0].Id;
 
             var deliveryKeyIndex = db.Model.FindEntityType(typeof(PushNotificationMessage))!
                 .GetIndexes()
                 .Single(index => index.Properties.Select(property => property.Name)
                     .SequenceEqual(["PushInstallationId", "Type", "EventId"]));
-            deliveryKeyIndex.IsUnique.Should().BeTrue();
+            Assert.That(deliveryKeyIndex.IsUnique, Is.True);
         }
 
         using (var firstScope = factory.Services.CreateScope())
@@ -381,11 +380,11 @@ public sealed class PushNotificationPipelineIntegrationTests
             await secondHandler.ProcessAsync(messageId.ToString());
         }
 
-        sender.SendCalls.Should().Be(1);
+        Assert.That(sender.SendCalls, Is.EqualTo(1));
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.PushNotificationMessages.Single(x => x.Id == messageId).Status.Should().Be(PushNotificationStatus.Sent);
+            Assert.That(db.PushNotificationMessages.Single(x => x.Id == messageId).Status, Is.EqualTo(PushNotificationStatus.Sent));
         }
     }
 
@@ -451,7 +450,7 @@ public sealed class PushNotificationPipelineIntegrationTests
         using (var scope = factory.Services.CreateScope())
         {
             var cleanup = scope.ServiceProvider.GetRequiredService<IStalePushInstallationCleanupService>();
-            (await cleanup.CleanupAsync()).Should().Be(1);
+            Assert.That((await cleanup.CleanupAsync()), Is.EqualTo(1));
 
             var enqueue = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
             await enqueue.EnqueueAsync(new Application.Notifications.Models.EnqueuePushNotificationInput(
@@ -468,13 +467,12 @@ public sealed class PushNotificationPipelineIntegrationTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var staleInstallation = db.PushInstallations.Single(x => x.Id == staleInstallationId);
-            staleInstallation.DisabledAt.Should().NotBeNull();
-            staleInstallation.DisabledReason.Should().Be("InactiveStale");
-            db.PushInstallations.Count().Should().Be(2);
-            db.PushNotificationMessages.Single(x => x.EventId == "event-stale-audit").PushInstallationId.Should().Be(staleInstallationId);
-            db.PushNotificationMessages.Count(x => x.EventId == "event-after-stale-cleanup" && x.PushInstallationId == staleInstallationId)
-                .Should().Be(0);
-            db.PushNotificationMessages.Count(x => x.EventId == "event-after-stale-cleanup").Should().Be(1);
+            Assert.That(staleInstallation.DisabledAt, Is.Not.Null);
+            Assert.That(staleInstallation.DisabledReason, Is.EqualTo("InactiveStale"));
+            Assert.That(db.PushInstallations.Count(), Is.EqualTo(2));
+            Assert.That(db.PushNotificationMessages.Single(x => x.EventId == "event-stale-audit").PushInstallationId, Is.EqualTo(staleInstallationId));
+            Assert.That(db.PushNotificationMessages.Count(x => x.EventId == "event-after-stale-cleanup" && x.PushInstallationId == staleInstallationId), Is.EqualTo(0));
+            Assert.That(db.PushNotificationMessages.Count(x => x.EventId == "event-after-stale-cleanup"), Is.EqualTo(1));
         }
     }
 

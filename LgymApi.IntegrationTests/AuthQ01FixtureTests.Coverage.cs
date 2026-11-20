@@ -23,45 +23,43 @@ public sealed partial class AuthQ01FixtureTests
             .Where(line => line.StartsWith("| AC", StringComparison.Ordinal) && line.Length > 4 && char.IsDigit(line[4]))
             .Select(line => line.Split('|', StringSplitOptions.TrimEntries))
             .ToArray();
-        rows.Should().HaveCount(20);
-        rows.Select(row => row[1]).Should().Equal(Enumerable.Range(1, 20).Select(number => $"AC{number:00}"));
+        Assert.That(rows, Has.Exactly(20).Items);
+        Assert.That(rows.Select(row => row[1]), Is.EqualTo(Enumerable.Range(1, 20).Select(number => $"AC{number:00}")));
 
         foreach (var row in rows)
         {
-            row.Should().HaveCount(8);
+            Assert.That(row, Has.Exactly(8).Items);
             var surface = row[3].Trim('`');
             var status = row[4];
             var locator = row[5].Trim('`');
-            row[6].Should().NotBeNullOrWhiteSpace("every row needs a repository owner and scope");
+            Assert.That(string.IsNullOrWhiteSpace(row[6]), Is.False, "every row needs a repository owner and scope");
             if (surface.StartsWith("future: ", StringComparison.Ordinal))
             {
-                status.Should().Be("FUTURE", "an unshipped surface cannot be current evidence");
+                Assert.That(status, Is.EqualTo("FUTURE"), "an unshipped surface cannot be current evidence");
             }
             else
             {
-                matrix.Should().Contain($"| {surface} |", "live surfaces must come from K01");
+                Assert.That(matrix, Does.Contain($"| {surface} |"), "live surfaces must come from K01");
             }
 
             switch (status)
             {
                 case "CURRENT":
                     var separator = locator.LastIndexOf('.');
-                    separator.Should().BeGreaterThan(0);
+                    Assert.That(separator, Is.GreaterThan(0));
                     var method = typeof(AuthQ01FixtureTests).Assembly.GetTypes()
                         .Where(type => type.Name == locator[..separator])
                         .SelectMany(type => type.GetMethods())
                         .Single(methodInfo => methodInfo.Name == locator[(separator + 1)..]);
-                    method.GetCustomAttributes().Any(attribute =>
-                        attribute is TestAttribute or TestCaseAttribute or TestCaseSourceAttribute).Should().BeTrue();
-                    method.GetCustomAttributes<AuthorizationEvidenceAttribute>()
-                        .Should().Contain(attribute => attribute.Route == surface,
-                            "the executable case must be tied to this route, not just exist");
+                    Assert.That(method.GetCustomAttributes().Any(attribute =>
+                        attribute is TestAttribute or TestCaseAttribute or TestCaseSourceAttribute), Is.True);
+                    Assert.That((method.GetCustomAttributes<AuthorizationEvidenceAttribute>()).Any(attribute => attribute.Route == surface), Is.True, "the executable case must be tied to this route, not just exist");
                     break;
                 case "FUTURE":
                     var key = locator.Split(" / ")[0];
-                    futureTasks.Should().ContainKey(key);
+                    Assert.That(futureTasks, Does.ContainKey(key));
                     var issue = $"LGYM-{futureTasks[key]}";
-                    locator.Should().Be($"{key} / [{issue}](https://linear.app/lgym/issue/{issue})");
+                    Assert.That(locator, Is.EqualTo($"{key} / [{issue}](https://linear.app/lgym/issue/{issue})"));
                     break;
                 default:
                     Assert.Fail($"Unknown coverage disposition '{status}'.");

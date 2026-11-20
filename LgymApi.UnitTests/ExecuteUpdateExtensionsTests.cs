@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.Infrastructure.Data;
@@ -57,9 +56,9 @@ public sealed class ExecuteUpdateExtensionsTests
             .AsNoTracking()
             .SingleAsync(p => p.Id == plan.Id);
 
-        affectedRows.Should().Be(1);
-        updatedPlan.IsActive.Should().BeFalse();
-        (updatedPlan.UpdatedAt > previousUpdatedAt).Should().BeTrue();
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(updatedPlan.IsActive, Is.False);
+        Assert.That((updatedPlan.UpdatedAt > previousUpdatedAt), Is.True);
     }
 
     [Test]
@@ -105,8 +104,8 @@ public sealed class ExecuteUpdateExtensionsTests
             .AsNoTracking()
             .SingleAsync(p => p.Id == plan.Id);
 
-        affectedRows.Should().Be(1);
-        updatedPlan.UpdatedAt.Should().Be(customUpdatedAt);
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(updatedPlan.UpdatedAt, Is.EqualTo(customUpdatedAt));
     }
 
     [Test]
@@ -130,8 +129,8 @@ public sealed class ExecuteUpdateExtensionsTests
             .Where(p => p.Id == plan.Id)
             .StageUpdateAsync(dbContext, p => p.IsActive, _ => false);
 
-        affectedRows.Should().Be(1);
-        plan.IsActive.Should().BeFalse();
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(plan.IsActive, Is.False);
     }
 
     [Test]
@@ -182,10 +181,10 @@ public sealed class ExecuteUpdateExtensionsTests
             .AsNoTracking()
             .SingleAsync(p => p.Id == plan.Id);
 
-        affectedRows.Should().Be(1);
-        updatedPlan.IsActive.Should().BeFalse();
-        updatedPlan.Name.Should().Be("Updated");
-        (updatedPlan.UpdatedAt > previousUpdatedAt).Should().BeTrue();
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(updatedPlan.IsActive, Is.False);
+        Assert.That(updatedPlan.Name, Is.EqualTo("Updated"));
+        Assert.That((updatedPlan.UpdatedAt > previousUpdatedAt), Is.True);
     }
 
     [Test]
@@ -214,9 +213,9 @@ public sealed class ExecuteUpdateExtensionsTests
                 p => p.Name,
                 _ => "Updated");
 
-        affectedRows.Should().Be(1);
-        plan.IsActive.Should().BeFalse();
-        plan.Name.Should().Be("Updated");
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(plan.IsActive, Is.False);
+        Assert.That(plan.Name, Is.EqualTo("Updated"));
     }
 
     [Test]
@@ -226,8 +225,7 @@ public sealed class ExecuteUpdateExtensionsTests
 
         var act = async () => await source.StageUpdateAsync(p => p.IsActive, _ => false);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*DbContext is required*");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*DbContext is required*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -251,8 +249,7 @@ public sealed class ExecuteUpdateExtensionsTests
             .Where(p => p.Id == plan.Id)
             .StageUpdateAsync(dbContext, p => p.Id.GetHashCode(), p => 0);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Property selector must target a property*");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Property selector must target a property*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -276,10 +273,10 @@ public sealed class ExecuteUpdateExtensionsTests
             .Where(x => x.Id == 1)
             .StageUpdateAsync(ctx, x => x.Name, _ => "changed");
 
-        affectedRows.Should().Be(1);
+        Assert.That(affectedRows, Is.EqualTo(1));
 
         var loaded = await ctx.Items.AsNoTracking().SingleAsync(x => x.Id == 1);
-        loaded.Name.Should().Be("changed");
+        Assert.That(loaded.Name, Is.EqualTo("changed"));
     }
 
 #pragma warning disable CS0618
@@ -304,8 +301,8 @@ public sealed class ExecuteUpdateExtensionsTests
             .Where(p => p.Id == plan.Id)
             .ExecuteUpdateAsync(dbContext, p => p.IsActive, _ => false);
 
-        affectedRows.Should().Be(1);
-        plan.IsActive.Should().BeFalse();
+        Assert.That(affectedRows, Is.EqualTo(1));
+        Assert.That(plan.IsActive, Is.False);
     }
 
 #pragma warning restore CS0618

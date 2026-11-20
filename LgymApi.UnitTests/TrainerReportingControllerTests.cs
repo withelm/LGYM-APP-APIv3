@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -35,8 +34,8 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetTemplate("bad-id");
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -59,11 +58,11 @@ public sealed class TrainerReportingControllerTests
             ]
         });
 
-        result.Should().BeOfType<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status201Created);
-        captured.Should().NotBeNull();
-        captured!.Fields.Should().ContainSingle();
-        captured.Fields[0].Key.Should().Be("weight");
+        Assert.That(result, Is.TypeOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status201Created));
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.Fields, Has.Exactly(1).Items);
+        Assert.That(captured.Fields[0].Key, Is.EqualTo("weight"));
     }
 
     [Test]
@@ -76,8 +75,10 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetTemplates();
 
-        var payload = ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<ReportTemplateDto>>().Subject;
-        payload.Should().ContainSingle();
+        var assertedValue162 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue162, Is.InstanceOf<IEnumerable<ReportTemplateDto>>());
+        var payload = ((IEnumerable<ReportTemplateDto>)assertedValue162);
+        Assert.That(payload, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -92,8 +93,8 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.UpdateTemplate(templateId.ToString(), new UpsertReportTemplateRequest { Name = "Weekly", Fields = [] });
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedId.Should().Be(templateId);
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedId, Is.EqualTo(templateId));
     }
 
     [Test]
@@ -106,7 +107,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.DeleteTemplate(Id<ReportTemplate>.New().ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -114,10 +115,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.CreateReportRequest("bad-user", new CreateReportRequestRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
-            .Should().BeAssignableTo<ObjectResult>();
-        (await controller.CreateReportRequest(Id<User>.New().ToString(), new CreateReportRequestRequest { TemplateId = "bad-template" }))
-            .Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.CreateReportRequest("bad-user", new CreateReportRequestRequest { TemplateId = Id<ReportTemplate>.New().ToString() })), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.CreateReportRequest(Id<User>.New().ToString(), new CreateReportRequestRequest { TemplateId = "bad-template" })), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -138,9 +137,9 @@ public sealed class TrainerReportingControllerTests
             Note = "note"
         });
 
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status201Created);
-        capturedTraineeId.Should().Be(traineeId.Rebind<AccountReference>());
-        capturedCommand!.TemplateId.Should().Be(templateId);
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status201Created));
+        Assert.That(capturedTraineeId, Is.EqualTo(traineeId.Rebind<AccountReference>()));
+        Assert.That(capturedCommand!.TemplateId, Is.EqualTo(templateId));
     }
 
     [Test]
@@ -150,8 +149,8 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetTraineeSubmissions("bad-user");
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -171,9 +170,9 @@ public sealed class TrainerReportingControllerTests
             TrainerFieldComments = new Dictionary<string, string?> { ["Weight"] = "keep going" }
         });
 
-        result.Should().BeOfType<OkObjectResult>();
-        captured.Should().NotBeNull();
-        captured!.FieldComments.Should().ContainKey("Weight");
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.FieldComments, Does.ContainKey("Weight"));
     }
 
     [Test]
@@ -195,9 +194,9 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.UpdateSubmissionFeedback(traineeId.ToString(), submissionId.ToString(), request);
 
-        result.Should().BeOfType<OkObjectResult>();
-        captured.Should().NotBeNull();
-        captured!.FieldComments.Should().BeEmpty();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.FieldComments, Is.Empty);
     }
 
     [Test]
@@ -205,10 +204,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.CreateRecurringReportAssignment("bad-user", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
-            .Should().BeAssignableTo<ObjectResult>();
-        (await controller.CreateRecurringReportAssignment(Id<User>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = "bad-template" }))
-            .Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.CreateRecurringReportAssignment("bad-user", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() })), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.CreateRecurringReportAssignment(Id<User>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = "bad-template" })), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -234,13 +231,13 @@ public sealed class TrainerReportingControllerTests
             Note = "note"
         });
 
-        result.Should().BeOfType<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status201Created);
-        captured.Should().NotBeNull();
-        captured!.TemplateId.Should().Be(templateId);
-        captured.IntervalValue.Should().Be(2);
-        captured.IntervalUnit.Should().Be(RecurringReportIntervalUnit.Month);
-        captured.Note.Should().Be("note");
+        Assert.That(result, Is.TypeOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status201Created));
+        Assert.That(captured, Is.Not.Null);
+        Assert.That(captured!.TemplateId, Is.EqualTo(templateId));
+        Assert.That(captured.IntervalValue, Is.EqualTo(2));
+        Assert.That(captured.IntervalUnit, Is.EqualTo(RecurringReportIntervalUnit.Month));
+        Assert.That(captured.Note, Is.EqualTo("note"));
     }
 
     [Test]
@@ -260,7 +257,7 @@ public sealed class TrainerReportingControllerTests
             StartsAt = DateTimeOffset.UtcNow
         });
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -290,14 +287,18 @@ public sealed class TrainerReportingControllerTests
             assignmentId.ToString(),
             cancellationSource.Token);
 
-        var created = result.Should().BeOfType<ObjectResult>().Subject;
-        created.StatusCode.Should().Be(StatusCodes.Status201Created);
-        var payload = created.Value.Should().BeOfType<RecurringReportAssignmentDto>().Subject;
-        payload.Id.Should().Be(assignmentId.ToString());
-        payload.CurrentReportRequestId.Should().Be(currentRequest.Id.ToString());
-        payload.CurrentReportRequest.Should().NotBeNull();
-        payload.CurrentReportRequest!.Status.Should().Be(ReportRequestStatus.Pending);
-        payload.NextEligibleAt.Should().BeNull();
+        var assertedValue163 = result;
+        Assert.That(assertedValue163, Is.TypeOf<ObjectResult>());
+        var created = ((ObjectResult)assertedValue163);
+        Assert.That(created.StatusCode, Is.EqualTo(StatusCodes.Status201Created));
+        var assertedValue164 = created.Value;
+        Assert.That(assertedValue164, Is.TypeOf<RecurringReportAssignmentDto>());
+        var payload = ((RecurringReportAssignmentDto)assertedValue164);
+        Assert.That(payload.Id, Is.EqualTo(assignmentId.ToString()));
+        Assert.That(payload.CurrentReportRequestId, Is.EqualTo(currentRequest.Id.ToString()));
+        Assert.That(payload.CurrentReportRequest, Is.Not.Null);
+        Assert.That(payload.CurrentReportRequest!.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(payload.NextEligibleAt, Is.Null);
         await recurringService.Received(1).RequestNowAsync(
             Arg.Any<AuthenticatedAccountContext>(),
             traineeId.Rebind<AccountReference>(),
@@ -318,8 +319,8 @@ public sealed class TrainerReportingControllerTests
             Id<User>.New().ToString(),
             "not-a-guid");
 
-        ((ObjectResult)invalidTrainee).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        ((ObjectResult)invalidAssignment).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(((ObjectResult)invalidTrainee).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(((ObjectResult)invalidAssignment).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         await recurringService.DidNotReceive().RequestNowAsync(
             Arg.Any<AuthenticatedAccountContext>(),
             Arg.Any<Id<AccountReference>>(),
@@ -344,9 +345,11 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.RequestRecurringReportNow(traineeId.ToString(), assignmentId.ToString());
 
-        var conflict = result.Should().BeOfType<ObjectResult>().Subject;
-        conflict.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-        conflict.Value.Should().BeEquivalentTo(new ResponseMessageDto { Message = "conflict" });
+        var assertedValue165 = result;
+        Assert.That(assertedValue165, Is.TypeOf<ObjectResult>());
+        var conflict = ((ObjectResult)assertedValue165);
+        Assert.That(conflict.StatusCode, Is.EqualTo(StatusCodes.Status409Conflict));
+        Assert.That(conflict.Value, Is.EqualTo(new ResponseMessageDto { Message = "conflict" }).UsingPropertiesComparer());
     }
 
     [Test]
@@ -356,8 +359,8 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetRecurringReportAssignments("bad-user");
 
-        result.Should().BeAssignableTo<ObjectResult>();
-        ((ObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
     }
 
     [Test]
@@ -372,8 +375,8 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetRecurringReportAssignments(traineeId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
-        ((OkObjectResult)result).Value.Should().BeAssignableTo<IEnumerable<RecurringReportAssignmentDto>>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(((OkObjectResult)result).Value, Is.InstanceOf<IEnumerable<RecurringReportAssignmentDto>>());
     }
 
     [Test]
@@ -387,7 +390,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.GetRecurringReportAssignments(traineeId.ToString());
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -395,10 +398,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.UpdateRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
-            .Should().BeAssignableTo<ObjectResult>();
-        (await controller.UpdateRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() }))
-            .Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.UpdateRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString(), new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() })), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.UpdateRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment", new UpsertRecurringReportAssignmentRequest { TemplateId = Id<ReportTemplate>.New().ToString() })), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -422,8 +423,8 @@ public sealed class TrainerReportingControllerTests
             StartsAt = DateTimeOffset.UtcNow
         });
 
-        result.Should().BeOfType<OkObjectResult>();
-        capturedAssignmentId.Should().Be(assignmentId);
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
+        Assert.That(capturedAssignmentId, Is.EqualTo(assignmentId));
     }
 
     [Test]
@@ -444,7 +445,7 @@ public sealed class TrainerReportingControllerTests
             StartsAt = DateTimeOffset.UtcNow
         });
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -452,8 +453,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.PauseRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.PauseRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.PauseRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.PauseRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -469,7 +470,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.PauseRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
         await recurringService.Received(1).PauseAsync(Arg.Any<AuthenticatedAccountContext>(), traineeId.Rebind<AccountReference>(), assignmentId, Arg.Any<CancellationToken>());
     }
 
@@ -485,7 +486,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.PauseRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -493,8 +494,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.ResumeRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.ResumeRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.ResumeRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.ResumeRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -510,7 +511,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.ResumeRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
         await recurringService.Received(1).ResumeAsync(Arg.Any<AuthenticatedAccountContext>(), traineeId.Rebind<AccountReference>(), assignmentId, Arg.Any<CancellationToken>());
     }
 
@@ -526,7 +527,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.ResumeRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -534,8 +535,8 @@ public sealed class TrainerReportingControllerTests
     {
         var controller = CreateController(Substitute.For<IReportingService>());
 
-        (await controller.DeleteRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())).Should().BeAssignableTo<ObjectResult>();
-        (await controller.DeleteRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")).Should().BeAssignableTo<ObjectResult>();
+        Assert.That((await controller.DeleteRecurringReportAssignment("bad-user", Id<RecurringReportAssignment>.New().ToString())), Is.InstanceOf<ObjectResult>());
+        Assert.That((await controller.DeleteRecurringReportAssignment(Id<User>.New().ToString(), "bad-assignment")), Is.InstanceOf<ObjectResult>());
     }
 
     [Test]
@@ -551,7 +552,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.DeleteRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeOfType<OkObjectResult>();
+        Assert.That(result, Is.TypeOf<OkObjectResult>());
         await recurringService.Received(1).DeleteAsync(Arg.Any<AuthenticatedAccountContext>(), traineeId.Rebind<AccountReference>(), assignmentId, Arg.Any<CancellationToken>());
     }
 
@@ -567,7 +568,7 @@ public sealed class TrainerReportingControllerTests
 
         var result = await controller.DeleteRecurringReportAssignment(traineeId.ToString(), assignmentId.ToString());
 
-        result.Should().BeAssignableTo<ObjectResult>();
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
     }
 
     private static TrainerReportingController CreateController(IReportingService reportingService, IRecurringReportAssignmentService? recurringService = null)

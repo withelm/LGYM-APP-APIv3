@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Repositories;
 using LgymApi.Application.Notifications.Providers.Fcm;
@@ -22,13 +21,9 @@ public sealed class PushNotificationRetentionContractTests
             nameof(IPushInstallationRepository.GetStaleActiveAsync),
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-        method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task<List<PushInstallation>>));
-        method.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
-            typeof(DateTimeOffset),
-            typeof(int),
-            typeof(IReadOnlyList<Id<AccountReference>>),
-            typeof(CancellationToken));
+        Assert.That(method, Is.Not.Null);
+        Assert.That(method!.ReturnType, Is.EqualTo(typeof(Task<List<PushInstallation>>)));
+        Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(DateTimeOffset), typeof(int), typeof(IReadOnlyList<Id<AccountReference>>), typeof(CancellationToken) }));
     }
 
     [Test]
@@ -59,14 +54,14 @@ public sealed class PushNotificationRetentionContractTests
 
         var options = PushNotificationOptionsFactory.Create(configuration);
 
-        options.IsSendEnabled.Should().BeFalse();
-        options.RetryDelaysSeconds.Should().Equal(30, 120, 600);
-        options.StaleTokenInactivityDays.Should().Be(45);
-        options.StaleTokenCleanupBatchSize.Should().Be(500);
-        options.Fcm.ProjectId.Should().Be("project-id");
-        options.Fcm.CredentialsPath.Should().Be("path.json");
-        options.Fcm.CredentialsJson.Should().BeNull();
-        options.Fcm.BaseUrl.Should().Be("https://fcm.example.test");
+        Assert.That(options.IsSendEnabled, Is.False);
+        Assert.That(options.RetryDelaysSeconds, Is.EqualTo(new[] { 30, 120, 600 }));
+        Assert.That(options.StaleTokenInactivityDays, Is.EqualTo(45));
+        Assert.That(options.StaleTokenCleanupBatchSize, Is.EqualTo(500));
+        Assert.That(options.Fcm.ProjectId, Is.EqualTo("project-id"));
+        Assert.That(options.Fcm.CredentialsPath, Is.EqualTo("path.json"));
+        Assert.That(options.Fcm.CredentialsJson, Is.Null);
+        Assert.That(options.Fcm.BaseUrl, Is.EqualTo("https://fcm.example.test"));
     }
 
     [Test]
@@ -75,10 +70,10 @@ public sealed class PushNotificationRetentionContractTests
         var options = PushNotificationOptionsFactory.Create(
             TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>()));
 
-        options.MessageHistoryDays.Should().Be(30);
-        options.DisabledInstallationDays.Should().Be(30);
-        options.InAppNotificationDays.Should().Be(90);
-        options.RetentionPurgeBatchSize.Should().Be(500);
+        Assert.That(options.MessageHistoryDays, Is.EqualTo(30));
+        Assert.That(options.DisabledInstallationDays, Is.EqualTo(30));
+        Assert.That(options.InAppNotificationDays, Is.EqualTo(90));
+        Assert.That(options.RetentionPurgeBatchSize, Is.EqualTo(500));
     }
 
     [Test]
@@ -93,10 +88,10 @@ public sealed class PushNotificationRetentionContractTests
         });
 
         var options = PushNotificationOptionsFactory.Create(configuration);
-        options.MessageHistoryDays.Should().Be(30);
-        options.DisabledInstallationDays.Should().Be(30);
-        options.InAppNotificationDays.Should().Be(90);
-        options.RetentionPurgeBatchSize.Should().Be(500);
+        Assert.That(options.MessageHistoryDays, Is.EqualTo(30));
+        Assert.That(options.DisabledInstallationDays, Is.EqualTo(30));
+        Assert.That(options.InAppNotificationDays, Is.EqualTo(90));
+        Assert.That(options.RetentionPurgeBatchSize, Is.EqualTo(500));
 
         var invalidConfiguration = TestConfigurationBuilder.BuildConfiguration(new Dictionary<string, string?>
         {
@@ -105,7 +100,7 @@ public sealed class PushNotificationRetentionContractTests
 
         var action = () => PushNotificationOptionsFactory.Create(invalidConfiguration);
 
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -121,10 +116,10 @@ public sealed class PushNotificationRetentionContractTests
             }));
         INotificationRetentionSettings settings = new NotificationRetentionSettings(options);
 
-        settings.MessageHistoryDays.Should().Be(31);
-        settings.DisabledInstallationDays.Should().Be(32);
-        settings.InAppNotificationDays.Should().Be(91);
-        settings.BatchSize.Should().Be(250);
+        Assert.That(settings.MessageHistoryDays, Is.EqualTo(31));
+        Assert.That(settings.DisabledInstallationDays, Is.EqualTo(32));
+        Assert.That(settings.InAppNotificationDays, Is.EqualTo(91));
+        Assert.That(settings.BatchSize, Is.EqualTo(250));
 
         AssertCleanupContract<IPushNotificationMessageRetentionCleanupService>();
         AssertCleanupContract<IDisabledPushInstallationRetentionCleanupService>();
@@ -136,18 +131,14 @@ public sealed class PushNotificationRetentionContractTests
 
     private static void AssertCleanupContract<TCleanupService>()
     {
-        typeof(TCleanupService).GetMethod("CleanupAsync")!.GetParameters()
-            .Select(parameter => parameter.ParameterType)
-            .Should()
-            .Equal(typeof(CancellationToken));
+        Assert.That(typeof(TCleanupService).GetMethod("CleanupAsync")!.GetParameters()
+            .Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(CancellationToken) }));
     }
 
     private static void AssertJobContract<TJob>()
     {
-        typeof(TJob).GetMethod("ExecuteAsync")!.GetParameters()
-            .Select(parameter => parameter.ParameterType)
-            .Should()
-            .Equal(typeof(CancellationToken));
+        Assert.That(typeof(TJob).GetMethod("ExecuteAsync")!.GetParameters()
+            .Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(CancellationToken) }));
     }
 
     private static void AssertRetentionCandidateContract<TRepository, TCandidate>(string selectionMethodName)
@@ -160,17 +151,12 @@ public sealed class PushNotificationRetentionContractTests
             "RemoveRange",
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-        selection.Should().NotBeNull();
-        selection!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<TCandidate>>));
-        selection.GetParameters().Select(parameter => (parameter.Name, parameter.ParameterType)).Should().Equal(
-            ("cutoff", typeof(DateTimeOffset)),
-            ("candidateLimit", typeof(int)),
-            ("protectedAccounts", typeof(IReadOnlyList<Id<AccountReference>>)),
-            ("cancellationToken", typeof(CancellationToken)));
+        Assert.That(selection, Is.Not.Null);
+        Assert.That(selection!.ReturnType, Is.EqualTo(typeof(Task<IReadOnlyList<TCandidate>>)));
+        Assert.That(selection.GetParameters().Select(parameter => (parameter.Name, parameter.ParameterType)), Is.EqualTo(new[] { ("cutoff", typeof(DateTimeOffset)), ("candidateLimit", typeof(int)), ("protectedAccounts", typeof(IReadOnlyList<Id<AccountReference>>)), ("cancellationToken", typeof(CancellationToken)) }));
 
-        deletion.Should().NotBeNull();
-        deletion!.ReturnType.Should().Be(typeof(void));
-        deletion.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
-            typeof(IEnumerable<TCandidate>));
+        Assert.That(deletion, Is.Not.Null);
+        Assert.That(deletion!.ReturnType, Is.EqualTo(typeof(void)));
+        Assert.That(deletion.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(IEnumerable<TCandidate>) }));
     }
 }

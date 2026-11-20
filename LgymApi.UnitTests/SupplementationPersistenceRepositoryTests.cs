@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -33,26 +32,26 @@ public sealed class SupplementationPersistenceRepositoryTests
 
         var trackedPlan = await repository.FindTrackedPlanByIdAsync(plan.Id);
 
-        trackedPlan.Should().NotBeNull();
-        database.ChangeTracker.Entries().Should().NotBeEmpty();
+        Assert.That(trackedPlan, Is.Not.Null);
+        Assert.That(database.ChangeTracker.Entries(), Is.Not.Empty);
 
         database.ChangeTracker.Clear();
         var trackedPlans = await repository.ListTrackedPlansByTrainerAndTraineeAsync(trainerId, traineeId);
 
-        trackedPlans.Should().ContainSingle();
-        database.ChangeTracker.Entries().Should().NotBeEmpty();
+        Assert.That(trackedPlans, Has.Exactly(1).Items);
+        Assert.That(database.ChangeTracker.Entries(), Is.Not.Empty);
 
         database.ChangeTracker.Clear();
         var trackedActivePlan = await repository.GetTrackedActivePlanForTraineeAsync(traineeId);
 
-        trackedActivePlan!.Id.Should().Be(plan.Id);
-        database.ChangeTracker.Entries().Should().NotBeEmpty();
+        Assert.That(trackedActivePlan!.Id, Is.EqualTo(plan.Id));
+        Assert.That(database.ChangeTracker.Entries(), Is.Not.Empty);
 
         database.ChangeTracker.Clear();
         var trackedLog = await repository.FindTrackedIntakeLogAsync(traineeId, item.Id, log.IntakeDate);
 
-        trackedLog!.Id.Should().Be(log.Id);
-        database.ChangeTracker.Entries().Should().NotBeEmpty();
+        Assert.That(trackedLog!.Id, Is.EqualTo(log.Id));
+        Assert.That(database.ChangeTracker.Entries(), Is.Not.Empty);
     }
 
     [Test]
@@ -87,13 +86,13 @@ public sealed class SupplementationPersistenceRepositoryTests
         var logs = await repository.ListIntakeLogsForPlanAsync(traineeId, latest.Id, new DateOnly(2026, 7, 20), new DateOnly(2026, 7, 20));
         var log = await repository.FindIntakeLogAsync(traineeId, secondItem.Id, secondLog.IntakeDate);
 
-        plans.Select(plan => plan.Id).Should().Equal(latest.Id, earlier.Id);
-        plans.Single(plan => plan.Id == latest.Id).Items.Select(item => item.Id).Should().Equal(firstItem.Id, secondItem.Id);
-        activePlan!.Id.Should().Be(otherTrainerActive.Id);
-        logs.Select(intakeLog => intakeLog.Id).Should().Equal(firstLog.Id, secondLog.Id);
-        logs.Should().OnlyContain(intakeLog => intakeLog.PlanItem != null);
-        log!.Id.Should().Be(secondLog.Id);
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(plans.Select(plan => plan.Id), Is.EqualTo(new[] { latest.Id, earlier.Id }));
+        Assert.That(plans.Single(plan => plan.Id == latest.Id).Items.Select(item => item.Id), Is.EqualTo(new[] { firstItem.Id, secondItem.Id }));
+        Assert.That(activePlan!.Id, Is.EqualTo(otherTrainerActive.Id));
+        Assert.That(logs.Select(intakeLog => intakeLog.Id), Is.EqualTo(new[] { firstLog.Id, secondLog.Id }));
+        Assert.That((logs).All(intakeLog => intakeLog.PlanItem != null), Is.True);
+        Assert.That(log!.Id, Is.EqualTo(secondLog.Id));
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
     }
 
     [Test]
@@ -113,20 +112,20 @@ public sealed class SupplementationPersistenceRepositoryTests
             var repository = new SupplementationPersistenceRepository(writeContext);
             await repository.AddPlanAsync(plan);
             await repository.AddIntakeLogAsync(log);
-            writeContext.ChangeTracker.Entries().Select(entry => entry.State).Should().OnlyContain(state => state == EntityState.Added);
+            Assert.That((writeContext.ChangeTracker.Entries().Select(entry => entry.State)).All(state => state == EntityState.Added), Is.True);
 
             await using (var beforeCommitContext = new AppDbContext(options))
             {
-                (await beforeCommitContext.SupplementPlans.AsNoTracking().AnyAsync()).Should().BeFalse();
-                (await beforeCommitContext.SupplementIntakeLogs.AsNoTracking().AnyAsync()).Should().BeFalse();
+                Assert.That((await beforeCommitContext.SupplementPlans.AsNoTracking().AnyAsync()), Is.False);
+                Assert.That((await beforeCommitContext.SupplementIntakeLogs.AsNoTracking().AnyAsync()), Is.False);
             }
 
             await new EfUnitOfWork(writeContext).SaveChangesAsync();
         }
 
         await using var afterCommitContext = new AppDbContext(options);
-        (await afterCommitContext.SupplementPlans.AsNoTracking().SingleAsync()).Id.Should().Be(plan.Id);
-        (await afterCommitContext.SupplementIntakeLogs.AsNoTracking().SingleAsync()).Id.Should().Be(log.Id);
+        Assert.That((await afterCommitContext.SupplementPlans.AsNoTracking().SingleAsync()).Id, Is.EqualTo(plan.Id));
+        Assert.That((await afterCommitContext.SupplementIntakeLogs.AsNoTracking().SingleAsync()).Id, Is.EqualTo(log.Id));
     }
 
     [Test]
@@ -143,9 +142,9 @@ public sealed class SupplementationPersistenceRepositoryTests
             "SupplementationPersistenceRepository.cs");
         var source = File.ReadAllText(sourcePath);
 
-        declaredMethodNames.Should().NotContain(new[] { nameof(AppDbContext.SaveChangesAsync), nameof(EfUnitOfWork.BeginTransactionAsync) });
-        source.Should().NotContain("SaveChangesAsync(");
-        source.Should().NotContain("BeginTransactionAsync(");
+        Assert.That(declaredMethodNames, Has.None.EqualTo(nameof(AppDbContext.SaveChangesAsync)).And.None.EqualTo(nameof(EfUnitOfWork.BeginTransactionAsync)));
+        Assert.That(source, Does.Not.Contain("SaveChangesAsync("));
+        Assert.That(source, Does.Not.Contain("BeginTransactionAsync("));
     }
 
     [Test]
@@ -158,9 +157,9 @@ public sealed class SupplementationPersistenceRepositoryTests
             .Where(descriptor => descriptor.ServiceType == typeof(ISupplementationPersistence))
             .ToList();
 
-        supplementationRegistrations.Should().ContainSingle();
-        supplementationRegistrations[0].ImplementationType.Should().Be(typeof(SupplementationPersistenceRepository));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IDietPlanPersistence));
+        Assert.That(supplementationRegistrations, Has.Exactly(1).Items);
+        Assert.That(supplementationRegistrations[0].ImplementationType, Is.EqualTo(typeof(SupplementationPersistenceRepository)));
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IDietPlanPersistence)), Has.Exactly(1).Items);
     }
 
     private static AppDbContext CreateDbContext()

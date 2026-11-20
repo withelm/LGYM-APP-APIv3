@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.Security;
@@ -29,51 +28,50 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var applicant = await RegisterAsync();
         var admin = await SeedAdminAsync();
         var decision = $"/api/admin/users/{applicant.Id}/trainer-application";
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That((await Client.PostAsync(resubmit, null)).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         SetAuthorizationHeader(applicant.Id);
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That((await Client.PostAsync(resubmit, null)).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         SetAuthorizationHeader(admin.Id);
         var rejection = await Body(await Client.PostAsync(decision + "/reject", null));
-        (await Client.PostAsJsonAsync(resubmit, new { accountId = applicant.Id.ToString() }))
-            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That((await Client.PostAsJsonAsync(resubmit, new { accountId = applicant.Id.ToString() }))
+            .StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
         ClearAuthorizationHeader();
         var login = await Client.PostAsJsonAsync("/api/login", new { name = applicant.Name, password = "password123" });
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Body(login)).GetProperty("token").GetString());
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.PostAsync(resubmit, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Client.PostAsync(resubmit, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Client.GetAsync("/api/trainer/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var attempts = await db.TrainerApplications.Where(item => item.ApplicantId == applicant.Id)
                 .OrderBy(item => item.Attempt).ToListAsync();
-            attempts.Should().HaveCount(2);
-            attempts[0].Status.Should().Be(TrainerApprovalStatus.Rejected);
-            attempts[0].CreatedAt.Should().Be(rejection.GetProperty("createdAt").GetDateTimeOffset());
-            attempts[0].ReviewedBy.Should().Be(admin.Id);
-            attempts[0].DecidedAt.Should().Be(rejection.GetProperty("decidedAt").GetDateTimeOffset());
-            attempts[1].Status.Should().Be(TrainerApprovalStatus.PendingApproval);
-            attempts[1].ReviewedBy.Should().BeNull();
-            attempts[1].DecidedAt.Should().BeNull();
+            Assert.That(attempts, Has.Exactly(2).Items);
+            Assert.That(attempts[0].Status, Is.EqualTo(TrainerApprovalStatus.Rejected));
+            Assert.That(attempts[0].CreatedAt, Is.EqualTo(rejection.GetProperty("createdAt").GetDateTimeOffset()));
+            Assert.That(attempts[0].ReviewedBy, Is.EqualTo(admin.Id));
+            Assert.That(attempts[0].DecidedAt, Is.EqualTo(rejection.GetProperty("decidedAt").GetDateTimeOffset()));
+            Assert.That(attempts[1].Status, Is.EqualTo(TrainerApprovalStatus.PendingApproval));
+            Assert.That(attempts[1].ReviewedBy, Is.Null);
+            Assert.That(attempts[1].DecidedAt, Is.Null);
         }
 
         SetAuthorizationHeader(admin.Id);
         var queue = await Body(await Client.GetAsync("/api/admin/users/trainer-applications"));
-        queue.GetProperty("totalCount").GetInt32().Should().Be(1);
-        queue.GetProperty("items")[0].GetProperty("attempt").GetInt32().Should().Be(2);
+        Assert.That(queue.GetProperty("totalCount").GetInt32(), Is.EqualTo(1));
+        Assert.That(queue.GetProperty("items")[0].GetProperty("attempt").GetInt32(), Is.EqualTo(2));
         var history = await Body(await Client.GetAsync("/api/admin/users/trainer-applications?includeReviewed=true"));
-        history.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("status").GetString())
-            .Should().BeEquivalentTo("Rejected", "PendingApproval");
-        (await Client.PostAsync(decision + "/approve?attempt=1", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await Client.PostAsync(decision + "/reject", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await Client.PostAsync(decision + "/approve?attempt=2", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(history.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("status").GetString()), Is.EquivalentTo(new[] { "Rejected", "PendingApproval" }));
+        Assert.That((await Client.PostAsync(decision + "/approve?attempt=1", null)).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That((await Client.PostAsync(decision + "/reject", null)).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That((await Client.PostAsync(decision + "/approve?attempt=2", null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(applicant.Id);
-        (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.PostAsync(resubmit, null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        Assert.That((await Client.GetAsync("/api/trainer/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Client.PostAsync(resubmit, null)).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [TestCase("approve", "Approved")]
@@ -88,39 +86,38 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
         var list = await Client.GetAsync("/api/admin/users/trainer-applications?page=1&pageSize=1");
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var listing = await Body(list);
-        listing.GetProperty("totalCount").GetInt32().Should().Be(1);
-        listing.GetProperty("items")[0].GetProperty("accountId").GetString().Should().Be(applicant.Id.ToString());
+        Assert.That(listing.GetProperty("totalCount").GetInt32(), Is.EqualTo(1));
+        Assert.That(listing.GetProperty("items")[0].GetProperty("accountId").GetString(), Is.EqualTo(applicant.Id.ToString()));
 
         var first = await Client.PostAsync($"/api/admin/users/{applicant.Id}/trainer-application/{action}", null);
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var decision = await Body(first);
-        decision.GetProperty("status").GetString().Should().Be(expected);
-        decision.GetProperty("reviewedBy").GetString().Should().Be(admin.Id.ToString());
-        decision.GetProperty("decidedAt").GetDateTimeOffset().Offset.Should().Be(TimeSpan.Zero);
+        Assert.That(decision.GetProperty("status").GetString(), Is.EqualTo(expected));
+        Assert.That(decision.GetProperty("reviewedBy").GetString(), Is.EqualTo(admin.Id.ToString()));
+        Assert.That(decision.GetProperty("decidedAt").GetDateTimeOffset().Offset, Is.EqualTo(TimeSpan.Zero));
         var repeated = await Client.PostAsync($"/api/admin/users/{applicant.Id}/trainer-application/{action}", null);
-        repeated.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Body(repeated)).GetProperty("decidedAt").GetString().Should().Be(decision.GetProperty("decidedAt").GetString());
+        Assert.That(repeated.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Body(repeated)).GetProperty("decidedAt").GetString(), Is.EqualTo(decision.GetProperty("decidedAt").GetString()));
         var conflicting = await Client.PostAsync($"/api/admin/users/{applicant.Id}/trainer-application/{(action == "approve" ? "reject" : "approve")}", null);
-        conflicting.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await Body(conflicting)).GetProperty("code").GetString().Should().Be("TrainerApprovalConflict");
+        Assert.That(conflicting.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That((await Body(conflicting)).GetProperty("code").GetString(), Is.EqualTo("TrainerApprovalConflict"));
         var detail = await Client.GetAsync($"/api/admin/users/{applicant.Id}/trainer-application");
-        (await Body(detail)).GetProperty("status").GetString().Should().Be(expected);
-        (await Body(await Client.GetAsync("/api/admin/users/trainer-applications"))).GetProperty("totalCount").GetInt32().Should().Be(0);
+        Assert.That((await Body(detail)).GetProperty("status").GetString(), Is.EqualTo(expected));
+        Assert.That((await Body(await Client.GetAsync("/api/admin/users/trainer-applications"))).GetProperty("totalCount").GetInt32(), Is.EqualTo(0));
 
         ClearAuthorizationHeader();
         var login = await Client.PostAsJsonAsync("/api/trainer/login", new { name = applicant.Name, password = "password123" });
-        login.StatusCode.Should().Be(action == "approve" ? HttpStatusCode.OK : HttpStatusCode.Forbidden);
+        Assert.That(login.StatusCode, Is.EqualTo(action == "approve" ? HttpStatusCode.OK : HttpStatusCode.Forbidden));
         if (action == "approve")
         {
             Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Body(login)).GetProperty("token").GetString());
-            (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That((await Client.GetAsync("/api/trainer/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.UserRoles.AnyAsync(role => role.UserId == applicant.Id && role.Role.Name == AuthConstants.Roles.Trainer))
-            .Should().Be(action == "approve");
+        Assert.That((await db.UserRoles.AnyAsync(role => role.UserId == applicant.Id && role.Role.Name == AuthConstants.Roles.Trainer)), Is.EqualTo(action == "approve"));
     }
 
     [TestCase("en")]
@@ -130,20 +127,20 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var applicant = await RegisterAsync();
         Client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
         var wrong = await Client.PostAsJsonAsync("/api/trainer/login", new { name = applicant.Name, password = "wrong-password" });
-        wrong.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await Body(wrong)).TryGetProperty("code", out _).Should().BeFalse();
+        Assert.That(wrong.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await Body(wrong)).TryGetProperty("code", out _), Is.False);
         var correct = await Client.PostAsJsonAsync("/api/trainer/login", new { name = applicant.Name, password = "password123" });
-        correct.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(correct.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var denied = await Body(correct);
-        denied.GetProperty("code").GetString().Should().Be("TrainerPendingApproval");
-        denied.GetProperty("msg").GetString().Should().Contain(language == "pl" ? "zatwierdzenie" : "approval");
+        Assert.That(denied.GetProperty("code").GetString(), Is.EqualTo("TrainerPendingApproval"));
+        Assert.That(denied.GetProperty("msg").GetString(), Does.Contain(language == "pl" ? "zatwierdzenie" : "approval"));
         using (var scope = Factory.Services.CreateScope())
-            (await scope.ServiceProvider.GetRequiredService<AppDbContext>().UserSessions.CountAsync()).Should().Be(0);
+            Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().UserSessions.CountAsync()), Is.EqualTo(0));
         var athlete = await Client.PostAsJsonAsync("/api/login", new { name = applicant.Name, password = "password123" });
-        athlete.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(athlete.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var data = await Body(athlete);
-        data.GetProperty("req").GetProperty("trainerApprovalStatus").GetString().Should().Be("PendingApproval");
-        data.GetProperty("permissionClaims").EnumerateArray().Select(value => value.GetString()).Should().NotContain("trainer.access");
+        Assert.That(data.GetProperty("req").GetProperty("trainerApprovalStatus").GetString(), Is.EqualTo("PendingApproval"));
+        Assert.That(data.GetProperty("permissionClaims").EnumerateArray().Select(value => value.GetString()), Does.Not.Contain("trainer.access"));
     }
 
     [TestCase(TrainerApprovalStatus.PendingApproval)]
@@ -177,12 +174,12 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
                 using var request = new HttpRequestMessage(new HttpMethod(method), "/" + path.TrimStart('/'));
                 request.Content = JsonContent.Create(new { });
                 var response = await Client.SendAsync(request);
-                response.StatusCode.Should().Be(HttpStatusCode.Forbidden, $"{method} {path}");
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), $"{method} {path}");
                 tested++;
             }
         }
-        tested.Should().BeGreaterThan(20);
-        (await Client.GetAsync("/api/checkToken")).StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(tested, Is.GreaterThan(20));
+        Assert.That((await Client.GetAsync("/api/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [TestCase("approve")]
@@ -191,24 +188,24 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
     {
         var applicant = await RegisterAsync();
         var url = $"/api/admin/users/{applicant.Id}/trainer-application/{action}";
-        (await Client.PostAsync(url, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That((await Client.PostAsync(url, null)).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         SetAuthorizationHeader(applicant.Id);
-        (await Client.PostAsync(url, null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.PostAsync(url, null)).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
-        (await Client.PostAsync($"/api/admin/users/{admin.Id}/trainer-application/{action}", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await Client.PostAsync($"/api/admin/users/not-an-id/trainer-application/{action}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.PostAsync($"/api/admin/users/{LgymApi.Domain.ValueObjects.Id<User>.New()}/trainer-application/{action}", null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That((await Client.PostAsync($"/api/admin/users/{admin.Id}/trainer-application/{action}", null)).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await Client.PostAsync($"/api/admin/users/not-an-id/trainer-application/{action}", null)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That((await Client.PostAsync($"/api/admin/users/{LgymApi.Domain.ValueObjects.Id<User>.New()}/trainer-application/{action}", null)).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var ordinary = await SeedUserAsync("ordinary", "ordinary@example.test");
-        (await Client.PostAsync($"/api/admin/users/{ordinary.Id}/trainer-application/{action}", null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That((await Client.PostAsync($"/api/admin/users/{ordinary.Id}/trainer-application/{action}", null)).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.UserRoles.RemoveRange(await db.UserRoles.Where(role => role.UserId == admin.Id && role.Role.Name == "Admin").ToListAsync());
             await db.SaveChangesAsync();
         }
-        (await Client.PostAsync(url, null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await Client.GetAsync("/api/admin/users/trainer-applications")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.PostAsync(url, null)).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await Client.GetAsync("/api/admin/users/trainer-applications")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -218,8 +215,8 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var admin = await SeedAdminAsync();
         SetAuthorizationHeader(admin.Id);
         var direct = await Client.PostAsJsonAsync($"/api/roles/users/{applicant.Id}/roles", new { roles = UserAndTrainerRoles });
-        direct.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await Body(direct)).GetProperty("code").GetString().Should().Be("TrainerApprovalRequired");
+        Assert.That(direct.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That((await Body(direct)).GetProperty("code").GetString(), Is.EqualTo("TrainerApprovalRequired"));
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -229,9 +226,9 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
             await db.SaveChangesAsync();
         }
         SetAuthorizationHeader(applicant.Id);
-        (await Client.GetAsync("/api/trainer/checkToken")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That((await Client.GetAsync("/api/trainer/checkToken")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var profile = await Body(await Client.GetAsync("/api/checkToken"));
-        profile.GetProperty("permissionClaims").EnumerateArray().Select(value => value.GetString()).Should().NotContain("trainer.access");
+        Assert.That(profile.GetProperty("permissionClaims").EnumerateArray().Select(value => value.GetString()), Does.Not.Contain("trainer.access"));
     }
 
     [Test]
@@ -239,13 +236,13 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
     {
         var applicant = await RegisterAsync();
         var repeated = await RegisterAsync();
-        repeated.Id.Should().Be(applicant.Id);
+        Assert.That(repeated.Id, Is.EqualTo(applicant.Id));
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.Users.CountAsync()).Should().Be(1);
-        (await db.TrainerApplications.CountAsync()).Should().Be(1);
-        (await db.UserSessions.CountAsync()).Should().Be(0);
-        (await db.UserRoles.AnyAsync(role => role.Role.Name == "Trainer")).Should().BeFalse();
+        Assert.That((await db.Users.CountAsync()), Is.EqualTo(1));
+        Assert.That((await db.TrainerApplications.CountAsync()), Is.EqualTo(1));
+        Assert.That((await db.UserSessions.CountAsync()), Is.EqualTo(0));
+        Assert.That((await db.UserRoles.AnyAsync(role => role.Role.Name == "Trainer")), Is.False);
     }
 
     private async Task<User> RegisterAsync()
@@ -254,7 +251,7 @@ public sealed class TrainerApprovalTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/trainer/register", new
         { name = "applicant", email = "applicant@example.test", password = "password123", cpassword = "password123" });
         ClearIdempotencyKey();
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var scope = Factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AsNoTracking().SingleAsync(user => user.Name == "applicant");
     }

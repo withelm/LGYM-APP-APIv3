@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.WorkoutProgress.Contracts.ReportingIntegration;
@@ -37,16 +36,15 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     {
         var payload = CreateValidPayload();
 
-        GetOrderedPropertyNames<ReportSubmissionAcceptedProgressPayload>().Should().Equal(EventFieldNames);
-        JsonSerializer.Serialize(payload, SharedSerializationOptions.Current).Should().Be(
-            "{\"schemaVersion\":1,\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"reportSubmissionId\":\"00000000-0000-0000-0000-000000000002\",\"correlationId\":\"00000000-0000-0000-0000-000000000003\",\"causationId\":\"00000000-0000-0000-0000-000000000004\",\"traineeId\":\"00000000-0000-0000-0000-000000000005\",\"observedAt\":\"2026-07-20T08:30:00+00:00\",\"acceptedAt\":\"2026-07-20T08:31:00+00:00\",\"measurements\":[{\"bodyPart\":\"Chest\",\"value\":101.5,\"unit\":\"Centimeters\"}]}");
+        Assert.That(GetOrderedPropertyNames<ReportSubmissionAcceptedProgressPayload>(), Is.EqualTo(EventFieldNames));
+        Assert.That(JsonSerializer.Serialize(payload, SharedSerializationOptions.Current), Is.EqualTo("{\"schemaVersion\":1,\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"reportSubmissionId\":\"00000000-0000-0000-0000-000000000002\",\"correlationId\":\"00000000-0000-0000-0000-000000000003\",\"causationId\":\"00000000-0000-0000-0000-000000000004\",\"traineeId\":\"00000000-0000-0000-0000-000000000005\",\"observedAt\":\"2026-07-20T08:30:00+00:00\",\"acceptedAt\":\"2026-07-20T08:31:00+00:00\",\"measurements\":[{\"bodyPart\":\"Chest\",\"value\":101.5,\"unit\":\"Centimeters\"}]}"));
     }
 
     [Test]
     public void Payload_UsesStableSchemaVersionTwo()
     {
-        ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion.Should().Be(2);
-        CreateValidPayload().SchemaVersion.Should().Be(1);
+        Assert.That(ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion, Is.EqualTo(2));
+        Assert.That(CreateValidPayload().SchemaVersion, Is.EqualTo(1));
     }
 
     [Test]
@@ -55,14 +53,13 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
         var payload = CreateValidPayload();
         var command = new ReportSubmissionAcceptedProgressCommand { Event = payload };
 
-        command.Validate().IsValid.Should().BeTrue();
-        JsonSerializer.Serialize(command, SharedSerializationOptions.Current).Should().Be(
-            $"{{\"event\":{JsonSerializer.Serialize(payload, SharedSerializationOptions.Current)}}}");
+        Assert.That(command.Validate().IsValid, Is.True);
+        Assert.That(JsonSerializer.Serialize(command, SharedSerializationOptions.Current), Is.EqualTo($"{{\"event\":{JsonSerializer.Serialize(payload, SharedSerializationOptions.Current)}}}"));
         var deserializeMissingEvent = () => JsonSerializer.Deserialize<ReportSubmissionAcceptedProgressCommand>(
             "{}",
             SharedSerializationOptions.Current);
 
-        deserializeMissingEvent.Should().Throw<JsonException>();
+        Assert.That(() => { deserializeMissingEvent(); }, Throws.InstanceOf<JsonException>());
     }
 
     [Test]
@@ -71,12 +68,9 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
         var @event = CreateValidWorkoutEvent();
         var sameInstantWithOffset = @event with { ObservedAt = new DateTimeOffset(2026, 7, 20, 10, 30, 0, TimeSpan.FromHours(2)) };
 
-        WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event)
-            .Should().Be("report-submission-accepted-progress:1:event:00000000-0000-0000-0000-000000000001");
-        WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event)
-            .Should().Be(WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event));
-        WorkoutAcceptedProgressIdempotencyKeys.CreateMeasurementKey(@event, @event.Measurements.Single())
-            .Should().Be(WorkoutAcceptedProgressIdempotencyKeys.CreateMeasurementKey(sameInstantWithOffset, sameInstantWithOffset.Measurements.Single()));
+        Assert.That(WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event), Is.EqualTo("report-submission-accepted-progress:1:event:00000000-0000-0000-0000-000000000001"));
+        Assert.That(WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event), Is.EqualTo(WorkoutAcceptedProgressIdempotencyKeys.CreateEventKey(@event)));
+        Assert.That(WorkoutAcceptedProgressIdempotencyKeys.CreateMeasurementKey(@event, @event.Measurements.Single()), Is.EqualTo(WorkoutAcceptedProgressIdempotencyKeys.CreateMeasurementKey(sameInstantWithOffset, sameInstantWithOffset.Measurements.Single())));
     }
 
     [Test]
@@ -85,14 +79,13 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
         var duplicate = ReportSubmissionAcceptedProgressConsumeResult.Duplicate();
         var poison = ReportSubmissionAcceptedProgressConsumeResult.Poison("unrecoverable payload");
 
-        duplicate.Outcome.Should().Be(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate);
-        duplicate.IsSuccess.Should().BeTrue();
-        duplicate.IsNoOp.Should().BeTrue();
-        duplicate.RequiresPoisonHandling.Should().BeFalse();
-        poison.IsSuccess.Should().BeFalse();
-        poison.RequiresPoisonHandling.Should().BeTrue();
-        Enum.GetValues<ReportSubmissionAcceptedProgressConsumeOutcome>().Select(outcome => (int)outcome)
-            .Should().Equal(0, 1, 2, 3, 4);
+        Assert.That(duplicate.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressConsumeOutcome.Duplicate));
+        Assert.That(duplicate.IsSuccess, Is.True);
+        Assert.That(duplicate.IsNoOp, Is.True);
+        Assert.That(duplicate.RequiresPoisonHandling, Is.False);
+        Assert.That(poison.IsSuccess, Is.False);
+        Assert.That(poison.RequiresPoisonHandling, Is.True);
+        Assert.That(Enum.GetValues<ReportSubmissionAcceptedProgressConsumeOutcome>().Select(outcome => (int)outcome), Is.EqualTo(new[] { 0, 1, 2, 3, 4 }));
     }
 
     [Test]
@@ -109,8 +102,8 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
             payload with { TraineeId = default }
         }.Select(invalidPayload => invalidPayload.Validate());
 
-        validations.Should().OnlyContain(validation =>
-            validation.Outcome == ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+        Assert.That((validations).All(validation =>
+            validation.Outcome == ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid), Is.True);
     }
 
     [Test]
@@ -122,13 +115,10 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
             SourceReportRequestId = "00000000-0000-0000-0000-000000000006"
         };
 
-        valid.Validate().IsValid.Should().BeTrue();
-        (valid with { SourceReportRequestId = null }).Validate().Outcome
-            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
-        (valid with { SourceReportRequestId = "not-an-id" }).Validate().Outcome
-            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
-        (valid with { SourceCoachingEpisodeId = "not-an-id" }).Validate().Outcome
-            .Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+        Assert.That(valid.Validate().IsValid, Is.True);
+        Assert.That((valid with { SourceReportRequestId = null }).Validate().Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid));
+        Assert.That((valid with { SourceReportRequestId = "not-an-id" }).Validate().Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid));
+        Assert.That((valid with { SourceCoachingEpisodeId = "not-an-id" }).Validate().Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid));
     }
 
     [TestCase(double.NaN)]
@@ -139,7 +129,7 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
         var invalidMeasurement = new ReportSubmissionAcceptedProgressMeasurement(BodyParts.Chest, value, MeasurementUnits.Centimeters);
         var validation = (CreateValidPayload() with { Measurements = [invalidMeasurement] }).Validate();
 
-        validation.Outcome.Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid);
+        Assert.That(validation.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressPayloadValidationOutcome.Invalid));
     }
 
     [Test]
@@ -147,7 +137,7 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     {
         var validation = (CreateValidPayload() with { SchemaVersion = 3 }).Validate();
 
-        validation.Outcome.Should().Be(ReportSubmissionAcceptedProgressPayloadValidationOutcome.UnsupportedSchema);
+        Assert.That(validation.Outcome, Is.EqualTo(ReportSubmissionAcceptedProgressPayloadValidationOutcome.UnsupportedSchema));
     }
 
     private static ReportSubmissionAcceptedProgressPayload CreateValidPayload()
@@ -196,7 +186,7 @@ public sealed class ReportSubmissionAcceptedProgressContractTests
     private static Id<TEntity> ParseId<TEntity>(string value)
         where TEntity : class
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 }

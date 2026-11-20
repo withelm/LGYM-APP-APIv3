@@ -1,4 +1,3 @@
-using FluentAssertions;
 
 namespace LgymApi.ArchitectureTests;
 
@@ -72,7 +71,7 @@ public sealed class NotificationsBoundaryDocumentationTests
             .Where(entry => entry.Owner == PersistedEntityOwnershipCatalog.NotificationsModuleName)
             .ToList();
 
-        catalogEntries.Should().HaveCount(5);
+        Assert.That(catalogEntries, Has.Exactly(5).Items);
         ValidateEntityNames(
             persistedRows.Select(row => row.GetField("Artifact name")),
             catalogEntries.Select(entry => entry.EntityType.Name));
@@ -81,7 +80,7 @@ public sealed class NotificationsBoundaryDocumentationTests
         {
             var entityName = row.GetField("Artifact name");
             var expectedOwner = catalogEntries.Single(entry => entry.EntityType.Name == entityName).Owner;
-            row.GetField("Owner").Should().Be(expectedOwner, $"stable row '{row.Id}' must use the catalog owner");
+            Assert.That(row.GetField("Owner"), Is.EqualTo(expectedOwner), $"stable row '{row.Id}' must use the catalog owner");
         }
     }
 
@@ -185,8 +184,7 @@ public sealed class NotificationsBoundaryDocumentationTests
             AdapterPrefix,
             ["notifications.adapter.push-payload", "notifications.adapter.scheduler-runtime"]);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Missing stable row IDs*notifications.adapter.scheduler-runtime*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Missing stable row IDs*notifications.adapter.scheduler-runtime*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -201,8 +199,7 @@ public sealed class NotificationsBoundaryDocumentationTests
             AdapterPrefix,
             ["notifications.adapter.push-payload"]);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Duplicate stable row IDs*notifications.adapter.push-payload*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate stable row IDs*notifications.adapter.push-payload*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -217,8 +214,7 @@ public sealed class NotificationsBoundaryDocumentationTests
             AdapterPrefix,
             ["notifications.adapter.push-payload"]);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Unknown stable row IDs*notifications.adapter.unknown-runtime*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Unknown stable row IDs*notifications.adapter.unknown-runtime*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static IReadOnlyList<DocumentationRow> ParseBoundaryRows()
@@ -337,7 +333,7 @@ public sealed class NotificationsBoundaryDocumentationTests
         var fieldValue = row.GetField(fieldName);
         foreach (var token in requiredTokens)
         {
-            fieldValue.Should().ContainEquivalentOf(token, $"stable row '{row.Id}' field '{fieldName}' must document '{token}'");
+            Assert.That(fieldValue, Does.Contain(token).IgnoreCase, $"stable row '{row.Id}' field '{fieldName}' must document '{token}'");
         }
     }
 
@@ -349,8 +345,7 @@ public sealed class NotificationsBoundaryDocumentationTests
             var structuredValues = string.Join(" ", row.Fields.Values);
             foreach (var privateRuntimeName in privateRuntimeNames)
             {
-                structuredValues.Should().NotContainEquivalentOf(
-                    privateRuntimeName,
+                Assert.That(structuredValues, Does.Not.Contain(privateRuntimeName).IgnoreCase,
                     $"stable public contract row '{row.Id}' must remain provider and runtime neutral");
             }
         }

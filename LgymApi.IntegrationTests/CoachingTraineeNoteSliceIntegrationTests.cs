@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using LgymApi.Application.Coaching.TraineeNotes.Create;
 using LgymApi.Application.Coaching.TraineeNotes.Delete;
@@ -40,11 +39,11 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
                     trainer.Id,
                     trainee.Id,
                     new TraineeNoteUpsertData("   ", "  Initial content  ", true, true)));
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Title.Should().BeNull();
-            result.Value.Content.Should().Be("Initial content");
-            result.Value.VisibleToTrainee.Should().BeTrue();
-            result.Value.IsPinned.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Title, Is.Null);
+            Assert.That(result.Value.Content, Is.EqualTo("Initial content"));
+            Assert.That(result.Value.VisibleToTrainee, Is.True);
+            Assert.That(result.Value.IsPinned, Is.True);
             noteId = result.Value.Id;
         }
 
@@ -52,7 +51,7 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         {
             var result = await listScope.ServiceProvider.GetRequiredService<IListTrainerNotesUseCase>()
                 .ExecuteAsync(new ListTrainerNotesQuery(trainer.Id, trainee.Id));
-            result.Value.Should().ContainSingle(note => note.Id == noteId);
+            Assert.That((result.Value).Where(note => note.Id == noteId), Has.Exactly(1).Items);
         }
 
         using (var updateScope = Factory.Services.CreateScope())
@@ -63,45 +62,45 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
                     trainee.Id,
                     noteId,
                     new TraineeNoteUpsertData("  Updated title  ", "  Updated content  ", false, false)));
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Title.Should().Be("Updated title");
-            result.Value.Content.Should().Be("Updated content");
-            result.Value.VisibleToTrainee.Should().BeFalse();
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Title, Is.EqualTo("Updated title"));
+            Assert.That(result.Value.Content, Is.EqualTo("Updated content"));
+            Assert.That(result.Value.VisibleToTrainee, Is.False);
         }
 
         using (var historyScope = Factory.Services.CreateScope())
         {
             var result = await historyScope.ServiceProvider.GetRequiredService<IGetTraineeNoteHistoryUseCase>()
                 .ExecuteAsync(new GetTraineeNoteHistoryQuery(trainer.Id, trainee.Id, noteId));
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Select(entry => entry.ChangeType).Should().Equal("Updated", "Created");
-            result.Value.Single(entry => entry.ChangeType == "Updated").Should().Match<TraineeNoteHistoryReadModel>(entry =>
-                entry.PreviousContent == "Initial content" && entry.NewContent == "Updated content");
+            Assert.That(result.IsSuccess, Is.True);
+            Assert.That(result.Value.Select(entry => entry.ChangeType), Is.EqualTo(new[] { "Updated", "Created" }));
+            Assert.That(result.Value.Single(entry => entry.ChangeType == "Updated"), new NUnit.Framework.Constraints.PredicateConstraint<TraineeNoteHistoryReadModel>(entry =>
+                entry.PreviousContent == "Initial content" && entry.NewContent == "Updated content"));
         }
 
         using (var deleteScope = Factory.Services.CreateScope())
         {
             var result = await deleteScope.ServiceProvider.GetRequiredService<IDeleteTraineeNoteUseCase>()
                 .ExecuteAsync(new DeleteTraineeNoteCommand(trainer.Id, trainee.Id, noteId));
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         using var verificationScope = Factory.Services.CreateScope();
         var database = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persisted = await database.TraineeNotes.IgnoreQueryFilters().SingleAsync(note => note.Id == noteId);
-        persisted.IsDeleted.Should().BeTrue();
-        persisted.VisibleToTrainee.Should().BeFalse();
-        persisted.Content.Should().Be("Updated content");
-        persisted.LastUpdatedByUserId.Should().Be(trainer.Id);
+        Assert.That(persisted.IsDeleted, Is.True);
+        Assert.That(persisted.VisibleToTrainee, Is.False);
+        Assert.That(persisted.Content, Is.EqualTo("Updated content"));
+        Assert.That(persisted.LastUpdatedByUserId, Is.EqualTo(trainer.Id));
         var history = await database.TraineeNoteHistories
             .Where(entry => entry.TraineeNoteId == noteId)
             .OrderBy(entry => entry.ChangedAt)
             .ToListAsync();
-        history.Select(entry => entry.ChangeType).Should().Equal("Created", "Updated", "Deleted");
-        history.Last().PreviousContent.Should().Be("Updated content");
-        history.Last().NewContent.Should().Be("Updated content");
-        (await database.CommandEnvelopes.CountAsync(envelope =>
-            envelope.CommandTypeFullName.Contains("TraineeNoteUpdatedInAppNotificationCommand"))).Should().Be(1);
+        Assert.That(history.Select(entry => entry.ChangeType), Is.EqualTo(new[] { "Created", "Updated", "Deleted" }));
+        Assert.That(history.Last().PreviousContent, Is.EqualTo("Updated content"));
+        Assert.That(history.Last().NewContent, Is.EqualTo("Updated content"));
+        Assert.That((await database.CommandEnvelopes.CountAsync(envelope =>
+            envelope.CommandTypeFullName.Contains("TraineeNoteUpdatedInAppNotificationCommand"))), Is.EqualTo(1));
     }
 
     [Test]
@@ -120,7 +119,7 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
                     trainer.Id,
                     trainee.Id,
                     new TraineeNoteUpsertData(null, "Foreign", false, false)));
-            result.Error.Should().BeOfType<NotFoundError>();
+            Assert.That(result.Error, Is.TypeOf<NotFoundError>());
         }
 
         await SeedRelationshipAsync(trainer.Id, trainee.Id, addTrainerRole: false);
@@ -158,10 +157,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         var invalidNoteId = await services.GetRequiredService<IDeleteTraineeNoteUseCase>()
             .ExecuteAsync(new DeleteTraineeNoteCommand(trainer.Id, trainee.Id, Id<TraineeNote>.Empty));
 
-        foreignNoteResult.Error.Should().BeOfType<NotFoundError>();
-        emptyContent.Error.Should().BeOfType<BadRequestError>();
-        invalidNoteId.Error.Should().BeOfType<BadRequestError>();
-        (await services.GetRequiredService<AppDbContext>().TraineeNoteHistories.CountAsync()).Should().Be(0);
+        Assert.That(foreignNoteResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(emptyContent.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(invalidNoteId.Error, Is.TypeOf<BadRequestError>());
+        Assert.That((await services.GetRequiredService<AppDbContext>().TraineeNoteHistories.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -199,27 +198,27 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         var invalidResult = await detail.ExecuteAsync(
             new GetVisibleTraineeNoteQuery(trainee.Id, Id<TraineeNote>.Empty));
 
-        list.IsSuccess.Should().BeTrue();
-        list.Value.Select(note => note.Id).Should().Equal(pinned.Id, recent.Id, older.Id);
-        visibleResult.IsSuccess.Should().BeTrue();
-        visibleResult.Value.Content.Should().Be("Recent");
-        privateResult.Error.Should().BeOfType<NotFoundError>();
-        deletedResult.Error.Should().BeOfType<NotFoundError>();
-        foreignResult.Error.Should().BeOfType<NotFoundError>();
-        missingResult.Error.Should().BeOfType<NotFoundError>();
-        missingResult.Error.Message.Should().Be(Messages.DidntFind);
-        invalidResult.Error.Should().BeOfType<BadRequestError>();
-        invalidResult.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(list.IsSuccess, Is.True);
+        Assert.That(list.Value.Select(note => note.Id), Is.EqualTo(new[] { pinned.Id, recent.Id, older.Id }));
+        Assert.That(visibleResult.IsSuccess, Is.True);
+        Assert.That(visibleResult.Value.Content, Is.EqualTo("Recent"));
+        Assert.That(privateResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(deletedResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(foreignResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(missingResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(missingResult.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(invalidResult.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(invalidResult.Error.Message, Is.EqualTo(Messages.FieldRequired));
 
         var readDatabase = services.GetRequiredService<AppDbContext>();
-        readDatabase.ChangeTracker.Entries().Should().BeEmpty();
-        (await readDatabase.TraineeNotes.IgnoreQueryFilters().CountAsync(note =>
+        Assert.That(readDatabase.ChangeTracker.Entries(), Is.Empty);
+        Assert.That((await readDatabase.TraineeNotes.IgnoreQueryFilters().CountAsync(note =>
             note.Id == pinned.Id
             || note.Id == recent.Id
             || note.Id == older.Id
             || note.Id == privateNote.Id
             || note.Id == deleted.Id
-            || note.Id == foreign.Id)).Should().Be(6);
+            || note.Id == foreign.Id)), Is.EqualTo(6));
     }
 
     [Test]
@@ -245,18 +244,18 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         SetAuthorizationHeader(trainee.Id);
         using var response = await Client.GetAsync("/api/trainee/notes");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
-        body.Should().NotBeNull();
-        body!.Select(note => note.Id).Should().Equal(visible.Id.ToString());
-        body.Single().Content.Should().Be("HTTP visible");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Select(note => note.Id), Is.EqualTo(new[] { visible.Id.ToString() }));
+        Assert.That(body.Single().Content, Is.EqualTo("HTTP visible"));
         var responseText = await response.Content.ReadAsStringAsync();
-        responseText.Should().NotContain(hidden.Id.ToString());
-        responseText.Should().NotContain(hidden.Content);
-        responseText.Should().NotContain(deleted.Id.ToString());
-        responseText.Should().NotContain(deleted.Content);
-        responseText.Should().NotContain(foreign.Id.ToString());
-        responseText.Should().NotContain(foreign.Content);
+        Assert.That(responseText, Does.Not.Contain(hidden.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(hidden.Content));
+        Assert.That(responseText, Does.Not.Contain(deleted.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(deleted.Content));
+        Assert.That(responseText, Does.Not.Contain(foreign.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(foreign.Content));
     }
 
     [Test]
@@ -277,10 +276,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         ClearAuthorizationHeader();
         using var response = await Client.GetAsync("/api/trainee/notes");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var responseText = await response.Content.ReadAsStringAsync();
-        responseText.Should().NotContain(visible.Content);
-        responseText.Should().NotContain(visible.Id.ToString());
+        Assert.That(responseText, Does.Not.Contain(visible.Content));
+        Assert.That(responseText, Does.Not.Contain(visible.Id.ToString()));
     }
 
     [Test]
@@ -306,19 +305,19 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
 
         SetAuthorizationHeader(trainee.Id);
         using var visibleResponse = await Client.GetAsync($"/api/trainee/notes/{visible.Id}");
-        visibleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(visibleResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var visibleBody = await visibleResponse.Content.ReadFromJsonAsync<TraineeNoteDto>();
-        visibleBody.Should().NotBeNull();
-        visibleBody!.Id.Should().Be(visible.Id.ToString());
-        visibleBody.Content.Should().Be(visible.Content);
+        Assert.That(visibleBody, Is.Not.Null);
+        Assert.That(visibleBody!.Id, Is.EqualTo(visible.Id.ToString()));
+        Assert.That(visibleBody.Content, Is.EqualTo(visible.Content));
 
         foreach (var protectedNote in new[] { hidden, deleted, foreign })
         {
             using var deniedResponse = await Client.GetAsync($"/api/trainee/notes/{protectedNote.Id}");
-            deniedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Assert.That(deniedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             var deniedText = await deniedResponse.Content.ReadAsStringAsync();
-            deniedText.Should().NotContain(protectedNote.Id.ToString());
-            deniedText.Should().NotContain(protectedNote.Content);
+            Assert.That(deniedText, Does.Not.Contain(protectedNote.Id.ToString()));
+            Assert.That(deniedText, Does.Not.Contain(protectedNote.Content));
         }
     }
 
@@ -340,10 +339,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         ClearAuthorizationHeader();
         using var response = await Client.GetAsync($"/api/trainee/notes/{visible.Id}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var responseText = await response.Content.ReadAsStringAsync();
-        responseText.Should().NotContain(visible.Id.ToString());
-        responseText.Should().NotContain(visible.Content);
+        Assert.That(responseText, Does.Not.Contain(visible.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(visible.Content));
     }
 
     [Test]
@@ -370,17 +369,17 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
 
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerNotes = await ownerResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
-        ownerNotes.Should().NotBeNull();
-        ownerNotes!.Should().ContainSingle(item => item.Id == note.Id.ToString() && item.Content == note.Content);
-        ownerNotes.Single().OriginalAuthorId.Should().Be(trainer.Id.ToString());
+        Assert.That(ownerNotes, Is.Not.Null);
+        Assert.That((ownerNotes!).Where(item => item.Id == note.Id.ToString() && item.Content == note.Content), Has.Exactly(1).Items);
+        Assert.That(ownerNotes.Single().OriginalAuthorId, Is.EqualTo(trainer.Id.ToString()));
 
         using var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{unrelated.Id}/notes");
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
-        unrelatedText.Should().NotContain(note.Id.ToString());
-        unrelatedText.Should().NotContain(note.Content);
+        Assert.That(unrelatedText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(unrelatedText, Does.Not.Contain(note.Content));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -392,23 +391,23 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerNotes = await formerResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
-        formerNotes.Should().ContainSingle(item => item.Id == note.Id.ToString() && item.Content == note.Content);
+        Assert.That((formerNotes).Where(item => item.Id == note.Id.ToString() && item.Content == note.Content), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(note.Id.ToString());
-        ordinaryText.Should().NotContain(note.Content);
+        Assert.That(ordinaryText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(ordinaryText, Does.Not.Contain(note.Content));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(note.Id.ToString());
-        anonymousText.Should().NotContain(note.Content);
+        Assert.That(anonymousText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(anonymousText, Does.Not.Contain(note.Content));
     }
 
     [Test]
@@ -433,9 +432,9 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var ownerText = await ownerResponse.Content.ReadAsStringAsync();
-        ownerText.Should().Contain("HTTP created protected content");
+        Assert.That(ownerText, Does.Contain("HTTP created protected content"));
 
         using var unrelatedResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{unrelated.Id}/notes", new
         {
@@ -444,8 +443,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await unrelatedResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP unrelated protected content");
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await unrelatedResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP unrelated protected content"));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -463,8 +462,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await formerResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP former protected content");
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await formerResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP former protected content"));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes", new
@@ -474,8 +473,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await ordinaryResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP ordinary protected content");
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await ordinaryResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP ordinary protected content"));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes", new
@@ -485,8 +484,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await anonymousResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP anonymous protected content");
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await anonymousResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP anonymous protected content"));
     }
 
     [Test]
@@ -511,9 +510,9 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<TraineeNoteDto>();
-        created.Should().NotBeNull();
+        Assert.That(created, Is.Not.Null);
 
         using var protectedCreateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes", new
         {
@@ -522,16 +521,16 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        protectedCreateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(protectedCreateResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var protectedNote = await protectedCreateResponse.Content.ReadFromJsonAsync<TraineeNoteDto>();
-        protectedNote.Should().NotBeNull();
+        Assert.That(protectedNote, Is.Not.Null);
 
         using var ownerResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{created!.Id}/delete", null);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var unrelatedResponse = await Client.PostAsync($"/api/trainer/trainees/{unrelated.Id}/notes/{protectedNote!.Id}/delete", null);
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await unrelatedResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP delete protected content");
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await unrelatedResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP delete protected content"));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -543,15 +542,15 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{protectedNote.Id}/delete", null);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{protectedNote.Id}/delete", null);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsync($"/api/trainer/trainees/{linked.Id}/notes/{protectedNote.Id}/delete", null);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -576,9 +575,9 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             visibleToTrainee = true,
             isPinned = false
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var created = await createResponse.Content.ReadFromJsonAsync<TraineeNoteDto>();
-        created.Should().NotBeNull();
+        Assert.That(created, Is.Not.Null);
         var updatePayload = new
         {
             title = "HTTP updated note",
@@ -588,12 +587,12 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         };
 
         using var ownerResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created!.Id}/update", updatePayload);
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ownerResponse.Content.ReadAsStringAsync()).Should().Contain("HTTP updated protected content");
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await ownerResponse.Content.ReadAsStringAsync()), Does.Contain("HTTP updated protected content"));
 
         using var unrelatedResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{unrelated.Id}/notes/{created.Id}/update", updatePayload);
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await unrelatedResponse.Content.ReadAsStringAsync()).Should().NotContain("HTTP updated protected content");
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await unrelatedResponse.Content.ReadAsStringAsync()), Does.Not.Contain("HTTP updated protected content"));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -605,15 +604,15 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created.Id}/update", updatePayload);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created.Id}/update", updatePayload);
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{linked.Id}/notes/{created.Id}/update", updatePayload);
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -651,16 +650,16 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
 
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerHistory = await ownerResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryDto>>();
-        ownerHistory.Should().NotBeNull();
-        ownerHistory!.Should().ContainSingle(item => item.NewContent == history.NewContent && item.ChangeType == history.ChangeType);
+        Assert.That(ownerHistory, Is.Not.Null);
+        Assert.That((ownerHistory!).Where(item => item.NewContent == history.NewContent && item.ChangeType == history.ChangeType), Has.Exactly(1).Items);
 
         using var unrelatedResponse = await Client.GetAsync($"/api/trainer/trainees/{unrelated.Id}/notes/{note.Id}/history");
-        unrelatedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(unrelatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var unrelatedText = await unrelatedResponse.Content.ReadAsStringAsync();
-        unrelatedText.Should().NotContain(note.Id.ToString());
-        unrelatedText.Should().NotContain(history.NewContent);
+        Assert.That(unrelatedText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(unrelatedText, Does.Not.Contain(history.NewContent));
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -672,23 +671,23 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         }
 
         using var formerResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerHistory = await formerResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryDto>>();
-        formerHistory.Should().ContainSingle(item => item.NewContent == history.NewContent && item.ChangeType == history.ChangeType);
+        Assert.That((formerHistory).Where(item => item.NewContent == history.NewContent && item.ChangeType == history.ChangeType), Has.Exactly(1).Items);
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryText.Should().NotContain(note.Id.ToString());
-        ordinaryText.Should().NotContain(history.NewContent);
+        Assert.That(ordinaryText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(ordinaryText, Does.Not.Contain(history.NewContent));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync($"/api/trainer/trainees/{linked.Id}/notes/{note.Id}/history");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousText.Should().NotContain(note.Id.ToString());
-        anonymousText.Should().NotContain(history.NewContent);
+        Assert.That(anonymousText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(anonymousText, Does.Not.Contain(history.NewContent));
     }
 
     [Test]
@@ -718,19 +717,19 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
 
         SetAuthorizationHeader(trainee.Id);
         using var sharedResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
-        sharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(sharedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var visibleHistory = await sharedResponse.Content.ReadFromJsonAsync<List<TraineeNoteHistoryDto>>();
-        visibleHistory.Should().HaveCount(2);
-        visibleHistory!.Select(entry => entry.NewContent).Should().BeEquivalentTo("Initially shared", "Shared again");
-        visibleHistory.Single(entry => entry.NewContent == "Shared again").PreviousContent.Should().BeNull();
-        (await sharedResponse.Content.ReadAsStringAsync()).Should().NotContain("Private revision");
+        Assert.That(visibleHistory, Has.Exactly(2).Items);
+        Assert.That(visibleHistory!.Select(entry => entry.NewContent), Is.EquivalentTo(new[] { "Initially shared", "Shared again" }));
+        Assert.That(visibleHistory.Single(entry => entry.NewContent == "Shared again").PreviousContent, Is.Null);
+        Assert.That((await sharedResponse.Content.ReadAsStringAsync()), Does.Not.Contain("Private revision"));
 
         SetAuthorizationHeader(foreignTrainee.Id);
         using var foreignResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
-        foreignResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(foreignResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var foreignText = await foreignResponse.Content.ReadAsStringAsync();
-        foreignText.Should().NotContain(note.Id.ToString());
-        foreignText.Should().NotContain("Initially shared");
+        Assert.That(foreignText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(foreignText, Does.Not.Contain("Initially shared"));
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -742,8 +741,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
 
         SetAuthorizationHeader(trainee.Id);
         using var hiddenResponse = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
-        hiddenResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await hiddenResponse.Content.ReadAsStringAsync()).Should().NotContain("Initially shared");
+        Assert.That(hiddenResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await hiddenResponse.Content.ReadAsStringAsync()), Does.Not.Contain("Initially shared"));
     }
 
     [Test]
@@ -777,8 +776,8 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         {
             using (response)
             {
-                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-                (await response.Content.ReadAsStringAsync()).Should().NotContain("Concurrent shared");
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+                Assert.That((await response.Content.ReadAsStringAsync()), Does.Not.Contain("Concurrent shared"));
             }
         }
     }
@@ -803,10 +802,10 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         ClearAuthorizationHeader();
         using var response = await Client.GetAsync($"/api/trainee/notes/{note.Id}/history");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var responseText = await response.Content.ReadAsStringAsync();
-        responseText.Should().NotContain(note.Id.ToString());
-        responseText.Should().NotContain(history.NewContent);
+        Assert.That(responseText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(responseText, Does.Not.Contain(history.NewContent));
     }
 
     [Test]
@@ -844,12 +843,12 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
         SetAuthorizationHeader(successor.Id);
 
         using var listResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/notes");
-        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var listedNotes = await listResponse.Content.ReadFromJsonAsync<List<TraineeNoteDto>>();
-        listedNotes.Should().NotBeNull();
-        listedNotes!.Should().NotContain(item => item.Id == note.Id.ToString());
+        Assert.That(listedNotes, Is.Not.Null);
+        Assert.That((listedNotes!).Any(item => item.Id == note.Id.ToString()), Is.False);
         var listText = await listResponse.Content.ReadAsStringAsync();
-        listText.Should().NotContain(note.Content);
+        Assert.That(listText, Does.Not.Contain(note.Content));
 
         var updatePayload = new
         {
@@ -859,26 +858,26 @@ public sealed class CoachingTraineeNoteSliceIntegrationTests : IntegrationTestBa
             isPinned = true
         };
         using var updateResponse = await Client.PostAsJsonAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/update", updatePayload);
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await updateResponse.Content.ReadAsStringAsync()).Should().NotContain(updatePayload.content);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await updateResponse.Content.ReadAsStringAsync()), Does.Not.Contain(updatePayload.content));
 
         using var deleteResponse = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/delete", null);
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var historyResponse = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/notes/{note.Id}/history");
-        historyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(historyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         var historyText = await historyResponse.Content.ReadAsStringAsync();
-        historyText.Should().NotContain(note.Id.ToString());
-        historyText.Should().NotContain(history.NewContent);
+        Assert.That(historyText, Does.Not.Contain(note.Id.ToString()));
+        Assert.That(historyText, Does.Not.Contain(history.NewContent));
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var persisted = await verificationDatabase.TraineeNotes.IgnoreQueryFilters().SingleAsync(candidate => candidate.Id == note.Id);
-        persisted.Content.Should().Be(note.Content);
-        persisted.IsDeleted.Should().BeFalse();
-        persisted.VisibleToTrainee.Should().BeTrue();
-        persisted.IsPinned.Should().BeFalse();
-        (await verificationDatabase.TraineeNoteHistories.CountAsync(candidate => candidate.TraineeNoteId == note.Id)).Should().Be(1);
+        Assert.That(persisted.Content, Is.EqualTo(note.Content));
+        Assert.That(persisted.IsDeleted, Is.False);
+        Assert.That(persisted.VisibleToTrainee, Is.True);
+        Assert.That(persisted.IsPinned, Is.False);
+        Assert.That((await verificationDatabase.TraineeNoteHistories.CountAsync(candidate => candidate.TraineeNoteId == note.Id)), Is.EqualTo(1));
     }
 
     private async Task SeedRelationshipAsync(

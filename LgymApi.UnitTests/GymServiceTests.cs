@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Gym;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.TrainingPlanning.Contracts.PlanDay;
@@ -44,7 +43,7 @@ public sealed class GymServiceTests
     public async Task AddGym_ShouldRejectDifferentRouteAccount()
     {
         var result = await _service.AddGymAsync(Account(Id<AccountReference>.New()), Id<AccountReference>.New(), "Gym", null);
-        result.Error.Should().BeOfType<GymForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<GymForbiddenError>());
     }
 
     [Test]
@@ -52,7 +51,7 @@ public sealed class GymServiceTests
     {
         var accountId = Id<AccountReference>.New();
         var result = await _service.AddGymAsync(Account(accountId), accountId, "Gym", null);
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await _gyms.Received(1).AddAsync(Arg.Is<WorkoutGymWriteModel>(gym => gym.OwnerId == accountId), Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -63,7 +62,7 @@ public sealed class GymServiceTests
         var gymId = Id<Gym>.New();
         _gyms.FindByIdAsync(gymId, Arg.Any<CancellationToken>()).Returns(new WorkoutGymPersistenceModel(gymId, Id<AccountReference>.New(), "Gym", null, false, default, default));
         var result = await _service.DeleteGymAsync(Account(Id<AccountReference>.New()), gymId);
-        result.Error.Should().BeOfType<GymForbiddenError>();
+        Assert.That(result.Error, Is.TypeOf<GymForbiddenError>());
     }
 
     private static AuthenticatedAccountContext Account(Id<AccountReference> id) => new(id, null, [], [], false, false);

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.Exercise.Filters;
 
 namespace LgymApi.UnitTests;
@@ -12,17 +11,17 @@ public sealed class ExerciseMediaRequestAdmissionTests
         using var firstHost = new ExerciseMediaRequestAdmission();
         using var first = firstHost.TryAcquire();
         using var second = firstHost.TryAcquire();
-        first.IsAcquired.Should().BeTrue();
-        second.IsAcquired.Should().BeTrue();
+        Assert.That(first.IsAcquired, Is.True);
+        Assert.That(second.IsAcquired, Is.True);
         using var excess = firstHost.TryAcquire();
-        excess.IsAcquired.Should().BeFalse();
+        Assert.That(excess.IsAcquired, Is.False);
 
         using var secondHost = new ExerciseMediaRequestAdmission();
         using var independent = secondHost.TryAcquire();
-        independent.IsAcquired.Should().BeTrue();
+        Assert.That(independent.IsAcquired, Is.True);
 
         first.Dispose();
         using var next = firstHost.TryAcquire();
-        next.IsAcquired.Should().BeTrue();
+        Assert.That(next.IsAcquired, Is.True);
     }
 }

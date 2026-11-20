@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications.Authorization;
 using LgymApi.Authorization.Contracts;
 using LgymApi.Domain.ValueObjects;
@@ -18,7 +17,7 @@ public sealed class NotificationOwnershipPolicyTests
 
         var decision = policy.Evaluate(actor, new NotificationOwnershipContext(recipientId));
 
-        decision.Should().Be(AuthorizationDecision.Allow);
+        Assert.That(decision, Is.EqualTo(AuthorizationDecision.Allow));
     }
 
     [Test]
@@ -30,6 +29,6 @@ public sealed class NotificationOwnershipPolicyTests
 
         var decision = policy.Evaluate(actor, context);
 
-        decision.Should().Be(AuthorizationDecision.Deny);
+        Assert.That(decision, Is.EqualTo(AuthorizationDecision.Deny));
     }
 }

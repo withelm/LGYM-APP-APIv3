@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -32,31 +31,31 @@ public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
 
         SetAuthorizationHeader(coach.Id);
         using var assigned = await Client.PostAsync($"/api/trainer/trainees/{trainee.Id}/plans/{source.Id}/assign", null);
-        assigned.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(assigned.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         string copyId;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var copy = await db.Plans.AsNoTracking().SingleAsync(p => p.UserId == trainee.Id);
-            copy.Id.Should().NotBe(source.Id);
-            copy.Purpose.Should().Be(PlanPurpose.Personal);
+            Assert.That(copy.Id, Is.Not.EqualTo(source.Id));
+            Assert.That(copy.Purpose, Is.EqualTo(PlanPurpose.Personal));
             copyId = copy.Id.ToString();
             var copiedDay = await db.PlanDays.AsNoTracking().SingleAsync(d => d.PlanId == copy.Id);
-            copiedDay.Id.Should().NotBe(day.Id);
-            copiedDay.Name.Should().Be(day.Name);
+            Assert.That(copiedDay.Id, Is.Not.EqualTo(day.Id));
+            Assert.That(copiedDay.Name, Is.EqualTo(day.Name));
         }
         SetAuthorizationHeader(trainee.Id);
         using var editCopy = await PostAsJsonWithApiOptionsAsync($"/api/{trainee.Id}/updatePlan", new { _id = copyId, name = "Personal edit", purpose = "Personal" });
-        editCopy.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editCopy.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(coach.Id);
         using var editSource = await PostAsJsonWithApiOptionsAsync($"/api/{coach.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Template edit", purpose = "Professional" });
-        editSource.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editSource.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verification = Factory.Services.CreateScope();
         var plans = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Plans.AsNoTracking().ToListAsync();
-        plans.Single(p => p.Id == source.Id).Name.Should().Be("Template edit");
-        plans.Single(p => p.Id.ToString() == copyId).Name.Should().Be("Personal edit");
-        plans.Single(p => p.Id.ToString() == copyId).Purpose.Should().Be(PlanPurpose.Personal);
+        Assert.That(plans.Single(p => p.Id == source.Id).Name, Is.EqualTo("Template edit"));
+        Assert.That(plans.Single(p => p.Id.ToString() == copyId).Name, Is.EqualTo("Personal edit"));
+        Assert.That(plans.Single(p => p.Id.ToString() == copyId).Purpose, Is.EqualTo(PlanPurpose.Personal));
     }
 
     [Test]
@@ -76,44 +75,44 @@ public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
 
         SetAuthorizationHeader(owner.Id);
         using var share = await Client.PostAsync($"/api/{source.Id}/share", null);
-        share.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(share.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var shareBody = JsonDocument.Parse(await share.Content.ReadAsStringAsync());
         var code = shareBody.RootElement.GetProperty("shareCode").GetString();
         SetAuthorizationHeader(recipient.Id);
         using var first = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
-        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var firstBody = JsonDocument.Parse(await first.Content.ReadAsStringAsync());
         var firstId = firstBody.RootElement.GetProperty("id").GetString();
-        firstBody.RootElement.GetProperty("purpose").GetString().Should().Be("Unclassified");
+        Assert.That(firstBody.RootElement.GetProperty("purpose").GetString(), Is.EqualTo("Unclassified"));
 
         SetAuthorizationHeader(owner.Id);
         using var unlink = await Client.PostAsync($"/api/trainer/trainees/{recipient.Id}/unlink", null);
-        unlink.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(unlink.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(recipient.Id);
         using var second = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
-        second.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var secondBody = JsonDocument.Parse(await second.Content.ReadAsStringAsync());
         var secondId = secondBody.RootElement.GetProperty("id").GetString();
-        secondBody.RootElement.GetProperty("purpose").GetString().Should().Be("Unclassified");
-        firstId.Should().NotBe(secondId);
-        secondId.Should().NotBe(source.Id.ToString());
+        Assert.That(secondBody.RootElement.GetProperty("purpose").GetString(), Is.EqualTo("Unclassified"));
+        Assert.That(firstId, Is.Not.EqualTo(secondId));
+        Assert.That(secondId, Is.Not.EqualTo(source.Id.ToString()));
 
         using var denied = await PostAsJsonWithApiOptionsAsync($"/api/{recipient.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Intrusion" });
-        denied.IsSuccessStatusCode.Should().BeFalse();
+        Assert.That(denied.IsSuccessStatusCode, Is.False);
         using var editCopy = await PostAsJsonWithApiOptionsAsync($"/api/{recipient.Id}/updatePlan", new { _id = firstId, name = "Copy edited" });
-        editCopy.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editCopy.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         SetAuthorizationHeader(owner.Id);
         using var editSource = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", new { _id = source.Id.ToString(), name = "Source edited", purpose = "Professional" });
-        editSource.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(editSource.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var plans = await dbVerify.Plans.AsNoTracking().Where(p => p.UserId == owner.Id || p.UserId == recipient.Id).ToListAsync();
-        plans.Should().HaveCount(3);
-        plans.Single(p => p.Id == source.Id).Name.Should().Be("Source edited");
-        plans.Single(p => p.Id.ToString() == firstId).Name.Should().Be("Copy edited");
-        plans.Single(p => p.Id.ToString() == secondId).Name.Should().Be("Source");
-        plans.Where(p => p.UserId == recipient.Id).Should().OnlyContain(p => p.Purpose == PlanPurpose.Unclassified);
+        Assert.That(plans, Has.Exactly(3).Items);
+        Assert.That(plans.Single(p => p.Id == source.Id).Name, Is.EqualTo("Source edited"));
+        Assert.That(plans.Single(p => p.Id.ToString() == firstId).Name, Is.EqualTo("Copy edited"));
+        Assert.That(plans.Single(p => p.Id.ToString() == secondId).Name, Is.EqualTo("Source"));
+        Assert.That((plans.Where(p => p.UserId == recipient.Id)).All(p => p.Purpose == PlanPurpose.Unclassified), Is.True);
     }
 
     [Test]
@@ -144,15 +143,15 @@ public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
         var downstreamDays = await Client.GetAsync($"/api/planDay/{downstream.Id}/getPlanDaysInfo");
         var indirectList = await Client.GetAsync($"/api/trainer/trainees/{trainee.Id}/plans");
 
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(list.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
         var rows = json.RootElement.EnumerateArray().ToArray();
-        rows.Should().ContainSingle();
-        rows[0].GetProperty("_id").GetString().Should().Be(personal.Id.ToString());
-        personalDays.StatusCode.Should().Be(HttpStatusCode.OK);
-        libraryDays.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        downstreamDays.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        indirectList.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(rows, Has.Exactly(1).Items);
+        Assert.That(rows[0].GetProperty("_id").GetString(), Is.EqualTo(personal.Id.ToString()));
+        Assert.That(personalDays.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(libraryDays.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(downstreamDays.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(indirectList.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -171,22 +170,22 @@ public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
         SetAuthorizationHeader(owner.Id);
         var personalUpdate = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", new { _id = personal.Id.ToString(), name = personal.Name, purpose = "Personal" });
         var professionalUpdate = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", new { _id = professional.Id.ToString(), name = professional.Name, purpose = "Professional" });
-        personalUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
-        professionalUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(personalUpdate.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(professionalUpdate.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var response = await Client.GetAsync($"/api/{owner.Id}/getPlansList?purpose=Personal");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var rows = json.RootElement.EnumerateArray().ToArray();
-        rows.Should().ContainSingle();
-        rows[0].GetProperty("_id").GetString().Should().Be(personal.Id.ToString());
-        rows[0].GetProperty("purpose").GetString().Should().Be("Personal");
+        Assert.That(rows, Has.Exactly(1).Items);
+        Assert.That(rows[0].GetProperty("_id").GetString(), Is.EqualTo(personal.Id.ToString()));
+        Assert.That(rows[0].GetProperty("purpose").GetString(), Is.EqualTo("Personal"));
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var preserved = await dbVerify.Plans.AsNoTracking().SingleAsync(plan => plan.Id == professional.Id);
-        preserved.IsActive.Should().BeTrue();
-        preserved.Purpose.Should().Be(PlanPurpose.Professional);
+        Assert.That(preserved.IsActive, Is.True);
+        Assert.That(preserved.Purpose, Is.EqualTo(PlanPurpose.Professional));
     }
 
     [Test]
@@ -207,27 +206,27 @@ public sealed class PlanPurposeIntegrationTests : IntegrationTestBase
 
         SetAuthorizationHeader(owner.Id);
         var shareResponse = await Client.PostAsync($"/api/{source.Id}/share", null);
-        shareResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(shareResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var share = JsonDocument.Parse(await shareResponse.Content.ReadAsStringAsync());
         var code = share.RootElement.GetProperty("shareCode").GetString();
         SetAuthorizationHeader(recipient.Id);
 
         var response = await Client.PostAsJsonAsync("/api/copy", new { shareCode = code });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var copy = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var copyId = copy.RootElement.GetProperty("id").GetString();
-        copyId.Should().NotBe(source.Id.ToString());
-        copy.RootElement.GetProperty("purpose").GetString().Should().Be("Unclassified");
+        Assert.That(copyId, Is.Not.EqualTo(source.Id.ToString()));
+        Assert.That(copy.RootElement.GetProperty("purpose").GetString(), Is.EqualTo("Unclassified"));
         using var verification = Factory.Services.CreateScope();
         var dbVerify = verification.ServiceProvider.GetRequiredService<AppDbContext>();
         var plans = await dbVerify.Plans.AsNoTracking().ToListAsync();
-        plans.Should().ContainSingle(plan => plan.Id == source.Id && plan.UserId == owner.Id && plan.Purpose == PlanPurpose.Professional);
-        plans.Should().ContainSingle(plan => plan.Id.ToString() == copyId && plan.UserId == recipient.Id && plan.Purpose == PlanPurpose.Unclassified);
+        Assert.That((plans).Where(plan => plan.Id == source.Id && plan.UserId == owner.Id && plan.Purpose == PlanPurpose.Professional), Has.Exactly(1).Items);
+        Assert.That((plans).Where(plan => plan.Id.ToString() == copyId && plan.UserId == recipient.Id && plan.Purpose == PlanPurpose.Unclassified), Has.Exactly(1).Items);
         SetAuthorizationHeader(coach.Id);
         var coachList = await Client.GetAsync($"/api/trainer/trainees/{recipient.Id}/plans");
-        coachList.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(coachList.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var coachJson = JsonDocument.Parse(await coachList.Content.ReadAsStringAsync());
-        coachJson.RootElement.GetArrayLength().Should().Be(0);
+        Assert.That(coachJson.RootElement.GetArrayLength(), Is.EqualTo(0));
     }
 }

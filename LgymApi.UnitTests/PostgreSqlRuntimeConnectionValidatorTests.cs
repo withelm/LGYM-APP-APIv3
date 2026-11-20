@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Infrastructure.Data;
 
 namespace LgymApi.UnitTests;
@@ -11,7 +10,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
     {
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(CreateInspection(), CreateOptions());
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [TestCase("wrong_database", "lgym_runtime")]
@@ -22,7 +21,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -32,7 +31,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*role membership*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*role membership*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCase("role_with_createdb")]
@@ -44,7 +43,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*role membership*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*role membership*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -54,7 +53,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
             CreateInspection() with { IsSuperuser = true },
             CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*elevated attributes*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -64,7 +63,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
             CreateInspection() with { BypassesRowSecurity = true },
             CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*elevated attributes*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCase(true, false, false)]
@@ -82,7 +81,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
             },
             CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*elevated attributes*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*elevated attributes*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -91,7 +90,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(
             CreateInspection() with { SessionUser = "lgym_maintenance" }, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*unexpected role*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*unexpected role*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -101,7 +100,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*multiplexing*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*multiplexing*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -114,7 +113,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [Test]
@@ -133,7 +132,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*must force row-level security*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*must force row-level security*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -146,7 +145,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*RLS state*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*RLS state*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -168,7 +167,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [TestCase(PolicyDrift.Missing)]
@@ -214,7 +213,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*policies do not match*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*policies do not match*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -252,7 +251,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
         };
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().Throw<InvalidOperationException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -265,7 +264,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, CreateOptions());
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*privileges*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*privileges*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -285,7 +284,7 @@ public sealed class PostgreSqlRuntimeConnectionValidatorTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateInspection(inspection, options);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*helper function*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*helper function*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static PostgreSqlRuntimeValidationOptions CreateOptions()

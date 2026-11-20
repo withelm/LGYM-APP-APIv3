@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Nutrition.DietPlans.GetCurrentDietPlan;
@@ -26,10 +25,10 @@ public sealed class GetCurrentDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetCurrentDietPlanQuery(traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeSameAs(mappedPlan);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.SameAs(mappedPlan));
         await dependencies.Plans.Received(1).GetActivePlanForTraineeAsync(traineeId, CancellationToken.None);
-        dependencies.Plans.ReceivedCalls().Should().ContainSingle();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -41,9 +40,9 @@ public sealed class GetCurrentDietPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(new GetCurrentDietPlanQuery(traineeId));
 
-        result.Error.Should().BeOfType<NotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
-        dependencies.Mapper.ReceivedCalls().Should().BeEmpty();
+        Assert.That(result.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(dependencies.Mapper.ReceivedCalls(), Is.Empty);
     }
 
     [Test]

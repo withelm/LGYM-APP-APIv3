@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using FluentAssertions;
 using LgymApi.Api.Authorization;
 using LgymApi.Api.Configuration;
 using LgymApi.Api.Middleware;
@@ -40,18 +39,15 @@ public sealed class ApiAuthorizationExtensionsTests
         {
             var policy = await policyProvider.GetPolicyAsync(policyName);
 
-            policy.Should().NotBeNull();
-            policy!.Requirements
-                .OfType<CurrentPermissionRequirement>()
-                .Should()
-                .ContainSingle()
-                .Which
-                .Permission
-                .Should()
-                .Be(permission);
+            Assert.That(policy, Is.Not.Null);
+            var assertedValue80 = (policy!.Requirements
+                            .OfType<CurrentPermissionRequirement>()).ToArray();
+            Assert.That(assertedValue80, Has.Exactly(1).Items);
+            Assert.That(assertedValue80.Single()
+                .Permission, Is.EqualTo(permission));
         }
 
-        ExpectedPolicies.Should().HaveCount(5);
+        Assert.That(ExpectedPolicies, Has.Exactly(5).Items);
     }
 
     [TestCaseSource(nameof(GetPolicyCases))]
@@ -70,8 +66,8 @@ public sealed class ApiAuthorizationExtensionsTests
             CreateHttpContext(differentPermission),
             policyName);
 
-        permitted.Succeeded.Should().BeTrue();
-        denied.Succeeded.Should().BeFalse();
+        Assert.That(permitted.Succeeded, Is.True);
+        Assert.That(denied.Succeeded, Is.False);
     }
 
     [Test]
@@ -85,7 +81,7 @@ public sealed class ApiAuthorizationExtensionsTests
             new DefaultHttpContext(),
             AuthConstants.Policies.AdminAccess);
 
-        result.Succeeded.Should().BeFalse();
+        Assert.That(result.Succeeded, Is.False);
     }
 
     private static IEnumerable<TestCaseData> GetPolicyCases()

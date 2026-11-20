@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
 using LgymApi.BackgroundWorker.Actions.Contracts;
@@ -17,10 +16,9 @@ public sealed class ActionScopeIsolationTests
         using var provider = BuildProvider();
         var resolver = provider.GetRequiredService<IBackgroundActionResolver>();
 
-        resolver.GetHandlerTypeNames(typeof(TestCommand))
-            .Should()
-            .ContainSingle()
-            .Which.Should().Be(typeof(ScopedHandler).FullName);
+        var assertedValue79 = (resolver.GetHandlerTypeNames(typeof(TestCommand))).ToArray();
+        Assert.That(assertedValue79, Has.Exactly(1).Items);
+        Assert.That(assertedValue79.Single(), Is.EqualTo(typeof(ScopedHandler).FullName));
     }
 
     [Test]
@@ -34,7 +32,7 @@ public sealed class ActionScopeIsolationTests
         var firstHandler = (ScopedHandler)firstScope.ResolveHandler(typeof(ScopedHandler).FullName!);
         var secondHandler = (ScopedHandler)secondScope.ResolveHandler(typeof(ScopedHandler).FullName!);
 
-        firstHandler.Tracker.Should().NotBeSameAs(secondHandler.Tracker);
+        Assert.That(firstHandler.Tracker, Is.Not.SameAs(secondHandler.Tracker));
     }
 
     [Test]
@@ -46,17 +44,14 @@ public sealed class ActionScopeIsolationTests
 
         var action = () => scope.ResolveHandler("Missing.Handler");
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Missing.Handler*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Missing.Handler*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
     public void BackgroundActionResolver_ExposesNoServiceProvider()
     {
-        typeof(IBackgroundActionResolver).GetProperties()
-            .Should().NotContain(property => property.PropertyType == typeof(IServiceProvider));
-        typeof(IBackgroundActionResolutionScope).GetProperties()
-            .Should().NotContain(property => property.PropertyType == typeof(IServiceProvider));
+        Assert.That((typeof(IBackgroundActionResolver).GetProperties()).Any(property => property.PropertyType == typeof(IServiceProvider)), Is.False);
+        Assert.That((typeof(IBackgroundActionResolutionScope).GetProperties()).Any(property => property.PropertyType == typeof(IServiceProvider)), Is.False);
     }
 
     private static Microsoft.Extensions.DependencyInjection.ServiceProvider BuildProvider()

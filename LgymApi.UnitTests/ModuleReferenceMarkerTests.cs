@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.ValueObjects;
@@ -41,16 +40,16 @@ public sealed class ModuleReferenceMarkerTests
 
         Assert.Multiple(() =>
         {
-            actor.Should().Be(source.Rebind<ActorReference>());
-            account.Should().Be(source.Rebind<AccountReference>());
-            accountSession.Should().Be(source.Rebind<AccountSessionReference>());
-            role.Should().Be(source.Rebind<RoleReference>());
-            plan.Should().Be(source.Rebind<PlanReference>());
-            planDay.Should().Be(source.Rebind<PlanDayReference>());
-            planExercise.Should().Be(source.Rebind<PlanExerciseReference>());
-            notification.Should().Be(source.Rebind<NotificationReference>());
-            pushInstallation.Should().Be(source.Rebind<PushInstallationReference>());
-            account.Equals((object)plan).Should().BeFalse();
+            Assert.That(actor, Is.EqualTo(source.Rebind<ActorReference>()));
+            Assert.That(account, Is.EqualTo(source.Rebind<AccountReference>()));
+            Assert.That(accountSession, Is.EqualTo(source.Rebind<AccountSessionReference>()));
+            Assert.That(role, Is.EqualTo(source.Rebind<RoleReference>()));
+            Assert.That(plan, Is.EqualTo(source.Rebind<PlanReference>()));
+            Assert.That(planDay, Is.EqualTo(source.Rebind<PlanDayReference>()));
+            Assert.That(planExercise, Is.EqualTo(source.Rebind<PlanExerciseReference>()));
+            Assert.That(notification, Is.EqualTo(source.Rebind<NotificationReference>()));
+            Assert.That(pushInstallation, Is.EqualTo(source.Rebind<PushInstallationReference>()));
+            Assert.That(account.Equals((object)plan), Is.False);
         });
     }
 
@@ -65,9 +64,9 @@ public sealed class ModuleReferenceMarkerTests
 
         Assert.Multiple(() =>
         {
-            account.GetHashCode().Should().Be(source.Rebind<AccountReference>().GetHashCode());
-            json.Should().Be("\"00000000-0000-0000-0000-000000000005\"");
-            roundTrip.Should().Be(account);
+            Assert.That(account.GetHashCode(), Is.EqualTo(source.Rebind<AccountReference>().GetHashCode()));
+            Assert.That(json, Is.EqualTo("\"00000000-0000-0000-0000-000000000005\""));
+            Assert.That(roundTrip, Is.EqualTo(account));
         });
     }
 }

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -41,13 +40,13 @@ public sealed class PlanShareExpiryTests : IntegrationTestBase
             ? await client.PostAsJsonAsync($"/api/{plan.Id}/share", new { })
             : await client.PostAsync($"/api/{plan.Id}/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        body.GetProperty("shareCode").GetString().Should().NotBe("LEGACY0001");
+        Assert.That(body.GetProperty("shareCode").GetString(), Is.Not.EqualTo("LEGACY0001"));
         using var verifyScope = factory.Services.CreateScope();
         var persisted = await verifyScope.ServiceProvider.GetRequiredService<AppDbContext>().Plans.SingleAsync(p => p.Id == plan.Id);
-        persisted.ShareCodeExpiresAt.Should().Be(Now.AddDays(7));
-        persisted.ShareCodeDurationDays.Should().Be(7);
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(Now.AddDays(7)));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(7));
     }
 
     [TestCase(1)]
@@ -74,14 +73,14 @@ public sealed class PlanShareExpiryTests : IntegrationTestBase
 
         var response = await client.PostAsJsonAsync($"/api/{plan.Id}/share", new { durationDays });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        body.EnumerateObject().Select(property => property.Name).Should().Equal("shareCode");
+        Assert.That(body.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "shareCode" }));
         using var verifyScope = factory.Services.CreateScope();
         var persisted = await verifyScope.ServiceProvider.GetRequiredService<AppDbContext>().Plans.SingleAsync(p => p.Id == plan.Id);
-        persisted.ShareCode.Should().Be(body.GetProperty("shareCode").GetString());
-        persisted.ShareCodeDurationDays.Should().Be(durationDays);
-        persisted.ShareCodeExpiresAt.Should().Be(Now.AddDays(durationDays));
+        Assert.That(persisted.ShareCode, Is.EqualTo(body.GetProperty("shareCode").GetString()));
+        Assert.That(persisted.ShareCodeDurationDays, Is.EqualTo(durationDays));
+        Assert.That(persisted.ShareCodeExpiresAt, Is.EqualTo(Now.AddDays(durationDays)));
     }
 
     [TestCase(-1, HttpStatusCode.Created)]
@@ -109,12 +108,12 @@ public sealed class PlanShareExpiryTests : IntegrationTestBase
 
         var response = await client.PostAsJsonAsync("/api/copy", new { shareCode = "BOUNDARY01" });
 
-        response.StatusCode.Should().Be(expected);
+        Assert.That(response.StatusCode, Is.EqualTo(expected));
         using var verifyScope = factory.Services.CreateScope();
         var dbAfter = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var recipientPlans = await dbAfter.Plans.Where(p => p.UserId == recipient.Id).ToListAsync();
-        recipientPlans.Should().HaveCount(expected == HttpStatusCode.Created ? 2 : 1);
-        recipientPlans.Single(p => p.Id == existing.Id).IsActive.Should().Be(expected != HttpStatusCode.Created);
+        Assert.That(recipientPlans, Has.Exactly(expected == HttpStatusCode.Created ? 2 : 1).Items);
+        Assert.That(recipientPlans.Single(p => p.Id == existing.Id).IsActive, Is.EqualTo(expected != HttpStatusCode.Created));
     }
 
     [Test]
@@ -132,10 +131,10 @@ public sealed class PlanShareExpiryTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/copy", new { shareCode = "LEGACY0001" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verifyDb.Plans.CountAsync(p => p.UserId == recipient.Id)).Should().Be(0);
+        Assert.That((await verifyDb.Plans.CountAsync(p => p.UserId == recipient.Id)), Is.EqualTo(0));
     }
 
     [TestCase(0)]
@@ -155,10 +154,10 @@ public sealed class PlanShareExpiryTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/{plan.Id}/share", new { durationDays });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await verifyDb.Plans.SingleAsync(p => p.Id == plan.Id)).ShareCode.Should().BeNull();
+        Assert.That((await verifyDb.Plans.SingleAsync(p => p.Id == plan.Id)).ShareCode, Is.Null);
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

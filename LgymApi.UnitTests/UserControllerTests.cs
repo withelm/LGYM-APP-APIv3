@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.User.Contracts;
@@ -56,10 +55,10 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        eloRegistryService.LastPreferredLanguage.Should().Be("pl-PL,pl;q=0.9");
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(eloRegistryService.LastPreferredLanguage, Is.EqualTo("pl-PL,pl;q=0.9"));
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
         var dto = ((OkObjectResult)action).Value as ResponseMessageDto;
-        dto.Should().NotBeNull();
+        Assert.That(dto, Is.Not.Null);
     }
 
     [Test]
@@ -78,8 +77,8 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        eloRegistryService.LastPreferredLanguage.Should().BeNull();
-        action.Should().BeOfType<OkObjectResult>();
+        Assert.That(eloRegistryService.LastPreferredLanguage, Is.Null);
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
     }
 
     [Test]
@@ -103,11 +102,11 @@ public sealed class UserControllerTests
             IsVisibleInRanking = true
         });
 
-        action.Should().BeOfType<ObjectResult>();
+        Assert.That(action, Is.TypeOf<ObjectResult>());
         var objectResult = (ObjectResult)action;
-        objectResult.StatusCode.Should().Be(400);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>();
-        ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(400));
+        Assert.That(objectResult.Value, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
     }
 
     [Test]
@@ -129,12 +128,12 @@ public sealed class UserControllerTests
             PermissionStatus = "authorized"
         });
 
-        action.Should().BeOfType<OkObjectResult>();
-        pushInstallationLifecycleService.LastRegistration.Should().NotBeNull();
-        pushInstallationLifecycleService.LastRegistration!.Value.SessionId.Should().Be(sessionId);
-        pushInstallationLifecycleService.LastRegistration.Value.CurrentUserId.Should().Be(userId);
-        pushInstallationLifecycleService.LastRegistration.Value.Input.InstallationKey.Should().Be("device-1");
-        pushInstallationLifecycleService.LastRegistration.Value.Input.FcmToken.Should().Be("token-1");
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        Assert.That(pushInstallationLifecycleService.LastRegistration, Is.Not.Null);
+        Assert.That(pushInstallationLifecycleService.LastRegistration!.Value.SessionId, Is.EqualTo(sessionId));
+        Assert.That(pushInstallationLifecycleService.LastRegistration.Value.CurrentUserId, Is.EqualTo(userId));
+        Assert.That(pushInstallationLifecycleService.LastRegistration.Value.Input.InstallationKey, Is.EqualTo("device-1"));
+        Assert.That(pushInstallationLifecycleService.LastRegistration.Value.Input.FcmToken, Is.EqualTo("token-1"));
     }
 
     [Test]
@@ -151,11 +150,11 @@ public sealed class UserControllerTests
             InstallationId = "device-2"
         });
 
-        action.Should().BeOfType<OkObjectResult>();
-        pushInstallationLifecycleService.LastDisassociate.Should().NotBeNull();
-        pushInstallationLifecycleService.LastDisassociate!.Value.SessionId.Should().Be(sessionId);
-        pushInstallationLifecycleService.LastDisassociate.Value.CurrentUserId.Should().Be(userId);
-        pushInstallationLifecycleService.LastDisassociate.Value.Input.InstallationKey.Should().Be("device-2");
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        Assert.That(pushInstallationLifecycleService.LastDisassociate, Is.Not.Null);
+        Assert.That(pushInstallationLifecycleService.LastDisassociate!.Value.SessionId, Is.EqualTo(sessionId));
+        Assert.That(pushInstallationLifecycleService.LastDisassociate.Value.CurrentUserId, Is.EqualTo(userId));
+        Assert.That(pushInstallationLifecycleService.LastDisassociate.Value.Input.InstallationKey, Is.EqualTo("device-2"));
     }
 
     [Test]
@@ -172,11 +171,11 @@ public sealed class UserControllerTests
             InstallationId = "device-3"
         });
 
-        action.Should().BeOfType<OkObjectResult>();
-        pushInstallationLifecycleService.LastUnregister.Should().NotBeNull();
-        pushInstallationLifecycleService.LastUnregister!.Value.SessionId.Should().Be(sessionId);
-        pushInstallationLifecycleService.LastUnregister.Value.CurrentUserId.Should().Be(userId);
-        pushInstallationLifecycleService.LastUnregister.Value.Input.InstallationKey.Should().Be("device-3");
+        Assert.That(action, Is.TypeOf<OkObjectResult>());
+        Assert.That(pushInstallationLifecycleService.LastUnregister, Is.Not.Null);
+        Assert.That(pushInstallationLifecycleService.LastUnregister!.Value.SessionId, Is.EqualTo(sessionId));
+        Assert.That(pushInstallationLifecycleService.LastUnregister.Value.CurrentUserId, Is.EqualTo(userId));
+        Assert.That(pushInstallationLifecycleService.LastUnregister.Value.Input.InstallationKey, Is.EqualTo("device-3"));
     }
 
     [Test]
@@ -265,19 +264,19 @@ public sealed class UserControllerTests
             Environment = "development"
         });
 
-        action.Should().BeOfType<ObjectResult>();
-        ((ObjectResult)action).StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        pushInstallationLifecycleService.LastRegistration.Should().NotBeNull();
-        pushInstallationLifecycleService.LastRegistration!.Value.SessionId.Should().BeNull();
+        Assert.That(action, Is.TypeOf<ObjectResult>());
+        Assert.That(((ObjectResult)action).StatusCode, Is.EqualTo(StatusCodes.Status401Unauthorized));
+        Assert.That(pushInstallationLifecycleService.LastRegistration, Is.Not.Null);
+        Assert.That(pushInstallationLifecycleService.LastRegistration!.Value.SessionId, Is.Null);
     }
 
     private static void AssertBadRequestMessage(IActionResult action, string message)
     {
-        action.Should().BeOfType<ObjectResult>();
+        Assert.That(action, Is.TypeOf<ObjectResult>());
         var objectResult = (ObjectResult)action;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        objectResult.Value.Should().BeOfType<ResponseMessageDto>();
-        ((ResponseMessageDto)objectResult.Value!).Message.Should().Be(message);
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(objectResult.Value, Is.TypeOf<ResponseMessageDto>());
+        Assert.That(((ResponseMessageDto)objectResult.Value!).Message, Is.EqualTo(message));
     }
 
     private static UserController CreateController(IEloRegistryService? eloRegistryService = null)

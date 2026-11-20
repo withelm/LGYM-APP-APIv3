@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -44,7 +43,7 @@ public sealed class ReportRequestCancellationConcurrencyTests
         var loser = cancellationFirst ? expiration : cancellation;
         await winner.SaveChangesAsync();
         var saveLoser = async () => await loser.SaveChangesAsync();
-        await saveLoser.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await Assert.ThatAsync(async () => { await saveLoser(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
 
         if (!cancellationFirst)
         {
@@ -54,7 +53,6 @@ public sealed class ReportRequestCancellationConcurrencyTests
         }
 
         await using var verification = new AppDbContext(options);
-        (await verification.ReportRequests.AsNoTracking().SingleAsync(request => request.Id == requestId)).Status
-            .Should().Be(ReportRequestStatus.Cancelled);
+        Assert.That((await verification.ReportRequests.AsNoTracking().SingleAsync(request => request.Id == requestId)).Status, Is.EqualTo(ReportRequestStatus.Cancelled));
     }
 }

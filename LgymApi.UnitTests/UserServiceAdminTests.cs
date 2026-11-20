@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -41,8 +40,8 @@ public sealed class UserServiceAdminTests
     {
         var result = await _adminAccessService.IsAdminAsync(Id<User>.Empty);
 
-        result.Should().BeFalse();
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync));
+        Assert.That(result, Is.False);
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync)), Is.False);
     }
 
     [Test]
@@ -55,16 +54,14 @@ public sealed class UserServiceAdminTests
 
         var result = await _adminAccessService.IsAdminAsync(userId, cancellationToken);
 
-        result.Should().BeTrue();
-        _roleRepository.Calls
+        Assert.That(result, Is.True);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.UserHasPermissionAsync)
                 && call.Argument is ValueTuple<Id<User>, string> arguments
                 && arguments.Item1 == userId
                 && arguments.Item2 == AuthConstants.Permissions.AdminAccess
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -81,25 +78,21 @@ public sealed class UserServiceAdminTests
 
         var result = await _roleAdministrationService.UpdateUserRolesAsync(user.Id, [" Trainer ", "trainer", ""], cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        _roleRepository.Calls
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.GetByNamesAsync)
                 && call.Argument is IReadOnlyCollection<string> roles
                 && roles.Count == 1
                 && roles.Single() == AuthConstants.Roles.Trainer
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
-        _roleRepository.Calls
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.ReplaceUserRolesAsync)
                 && call.Argument is ValueTuple<Id<User>, IReadOnlyCollection<Id<Role>>> arguments
                 && arguments.Item1 == user.Id
                 && arguments.Item2.Single() == trainerRole.Id
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
         await _unitOfWork.Received(1).SaveChangesAsync(cancellationToken);
     }
 
@@ -111,8 +104,8 @@ public sealed class UserServiceAdminTests
 
         var result = await _roleAdministrationService.UpdateUserRolesAsync(userId, [AuthConstants.Roles.User]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserNotFoundError>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -125,9 +118,9 @@ public sealed class UserServiceAdminTests
 
         var result = await _roleAdministrationService.UpdateUserRolesAsync(user.Id, ["missing"]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.ReplaceUserRolesAsync));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.ReplaceUserRolesAsync)), Is.False);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -136,10 +129,10 @@ public sealed class UserServiceAdminTests
     {
         var result = await _roleAdministrationService.UpdateUserRolesAsync(Id<User>.Empty, [AuthConstants.Roles.User]);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidUserError>();
-        _userRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserRepository.FindByIdAsync));
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.GetByNamesAsync));
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidUserError>());
+        Assert.That((_userRepository.Calls).Any(call => call.Method == nameof(IUserRepository.FindByIdAsync)), Is.False);
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.GetByNamesAsync)), Is.False);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

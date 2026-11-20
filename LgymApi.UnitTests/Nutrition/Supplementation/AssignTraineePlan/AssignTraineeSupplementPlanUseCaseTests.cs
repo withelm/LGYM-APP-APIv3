@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -51,14 +50,14 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
 
             var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, target.Id));
 
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         await using var readContext = new AppDbContext(options);
         var rows = await readContext.SupplementPlans.AsNoTracking().ToListAsync();
-        rows.Single(row => row.Id == target.Id).IsActive.Should().BeTrue();
-        rows.Single(row => row.Id == competitor.Id).IsActive.Should().BeFalse();
-        rows.Single(row => row.Id == unrelated.Id).IsActive.Should().BeTrue();
+        Assert.That(rows.Single(row => row.Id == target.Id).IsActive, Is.True);
+        Assert.That(rows.Single(row => row.Id == competitor.Id).IsActive, Is.False);
+        Assert.That(rows.Single(row => row.Id == unrelated.Id).IsActive, Is.True);
     }
 
     [Test]
@@ -78,9 +77,9 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        target.IsActive.Should().BeTrue();
-        inactive.IsActive.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(target.IsActive, Is.True);
+        Assert.That(inactive.IsActive, Is.False);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }
@@ -98,15 +97,15 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
 
         var forbidden = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id));
 
-        forbidden.Error.Should().BeOfType<SupplementationForbiddenError>();
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(forbidden.Error, Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
 
         dependencies.GrantAccess();
         dependencies.Plans.FindTrackedPlanByIdAsync(target.Id, Arg.Any<CancellationToken>())
             .Returns(CreatePlan(Id<User>.New(), dependencies.TraineeId));
         var foreign = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id));
 
-        foreign.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(foreign.Error, Is.TypeOf<SupplementationNotFoundError>());
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -129,7 +128,7 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
             dependencies.Command(target.Id),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Access.Received(1).GetAccessDecisionAsync(
             dependencies.TrainerId,
             dependencies.TraineeId,
@@ -159,9 +158,9 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        target.IsActive.Should().BeTrue();
-        otherTrainerCandidate.IsActive.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(target.IsActive, Is.True);
+        Assert.That(otherTrainerCandidate.IsActive, Is.True);
     }
 
     [Test]
@@ -180,12 +179,10 @@ public sealed class AssignTraineeSupplementPlanUseCaseTests
         dependencies.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException<int>(new InvalidOperationException("save failed")));
 
-        await FluentActions.Awaiting(() => dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id)))
-            .Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("save failed");
+        await Assert.ThatAsync(async () => { await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command(target.Id)); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
-        target.IsActive.Should().BeTrue();
-        competitor.IsActive.Should().BeFalse();
+        Assert.That(target.IsActive, Is.True);
+        Assert.That(competitor.IsActive, Is.False);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

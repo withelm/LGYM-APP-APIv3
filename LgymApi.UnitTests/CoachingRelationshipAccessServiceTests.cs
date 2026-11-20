@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Access;
 using LgymApi.Application.Coaching.Contracts.Access;
@@ -42,7 +41,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, traineeId);
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(true, false, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(true, false, false)));
         await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
     }
 
@@ -54,7 +53,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, Id<User>.New());
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(false, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(false, false)));
         await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(Arg.Any<Id<User>>(), Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
     }
 
@@ -74,7 +73,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, traineeId);
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(true, true));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(true, true)));
     }
 
     [Test]
@@ -88,7 +87,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, traineeId);
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(true, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(true, false)));
     }
 
     [Test]
@@ -100,7 +99,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, traineeId);
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(false, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(false, false)));
         await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -112,7 +111,7 @@ public sealed class CoachingRelationshipAccessServiceTests
     {
         var result = await _service.GetAccessDecisionAsync(Id<User>.Empty, Id<User>.New());
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(false, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(false, false)));
         await _userAccess.DidNotReceive().IsTrainerAsync(Arg.Any<Id<User>>(), Arg.Any<CancellationToken>());
         await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(
             Arg.Any<Id<User>>(),
@@ -128,7 +127,7 @@ public sealed class CoachingRelationshipAccessServiceTests
 
         var result = await _service.GetAccessDecisionAsync(trainerId, Id<User>.Empty);
 
-        result.Should().Be(new CoachingRelationshipAccessDecision(true, false));
+        Assert.That(result, Is.EqualTo(new CoachingRelationshipAccessDecision(true, false)));
         await _activeLinks.DidNotReceive().FindByTrainerAndTraineeAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -162,17 +161,12 @@ public sealed class CoachingRelationshipAccessServiceTests
         services.AddScoped(_ => Substitute.For<IAccountLookupService>());
         services.AddCoachingModule();
 
-        services.Count(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService))
-            .Should()
-            .Be(1);
+        Assert.That(services.Count(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService)), Is.EqualTo(1));
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetServices<ICoachingRelationshipAccessService>()
-            .Should()
-            .ContainSingle()
-            .Which
-            .Should()
-            .BeOfType<CoachingRelationshipAccessService>();
+        var assertedValue93 = (scope.ServiceProvider.GetServices<ICoachingRelationshipAccessService>()).ToArray();
+        Assert.That(assertedValue93, Has.Exactly(1).Items);
+        Assert.That(assertedValue93.Single(), Is.TypeOf<CoachingRelationshipAccessService>());
     }
 }

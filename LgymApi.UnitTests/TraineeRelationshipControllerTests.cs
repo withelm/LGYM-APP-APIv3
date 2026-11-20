@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using LgymApi.Api.Features.Common.Contracts;
 using LgymApi.Api.Features.Trainer.Contracts;
@@ -42,9 +41,11 @@ public sealed class TraineeRelationshipControllerTests
 
         var result = await controller.AcceptInvitation(invitationId.ToString());
 
-        var message = ((OkObjectResult)result).Value.Should().BeOfType<ResponseMessageDto>().Subject;
-        message.Message.Should().NotBeNullOrWhiteSpace();
-        captured.Should().Be(new AcceptInvitationCommand(traineeId, invitationId));
+        var assertedValue157 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue157, Is.TypeOf<ResponseMessageDto>());
+        var message = ((ResponseMessageDto)assertedValue157);
+        Assert.That(string.IsNullOrWhiteSpace(message.Message), Is.False);
+        Assert.That(captured, Is.EqualTo(new AcceptInvitationCommand(traineeId, invitationId)));
     }
 
     [Test]
@@ -64,9 +65,11 @@ public sealed class TraineeRelationshipControllerTests
 
         var result = await controller.GetCurrentTrainer();
 
-        var profile = ((OkObjectResult)result).Value.Should().BeOfType<TraineeTrainerProfileDto>().Subject;
-        profile.TrainerId.Should().Be(trainerId.ToString());
-        profile.Name.Should().Be("Trainer");
+        var assertedValue158 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue158, Is.TypeOf<TraineeTrainerProfileDto>());
+        var profile = ((TraineeTrainerProfileDto)assertedValue158);
+        Assert.That(profile.TrainerId, Is.EqualTo(trainerId.ToString()));
+        Assert.That(profile.Name, Is.EqualTo("Trainer"));
     }
 
     [Test]
@@ -81,9 +84,11 @@ public sealed class TraineeRelationshipControllerTests
 
         var result = await controller.GetActiveAssignedPlan();
 
-        var response = ((OkObjectResult)result).Value.Should().BeOfType<TrainerManagedPlanDto>().Subject;
-        response.Id.Should().Be(plan.Id.ToString());
-        response.Name.Should().Be(plan.Name);
+        var assertedValue159 = ((OkObjectResult)result).Value;
+        Assert.That(assertedValue159, Is.TypeOf<TrainerManagedPlanDto>());
+        var response = ((TrainerManagedPlanDto)assertedValue159);
+        Assert.That(response.Id, Is.EqualTo(plan.Id.ToString()));
+        Assert.That(response.Name, Is.EqualTo(plan.Name));
     }
 
     private static TraineeRelationshipController CreateController(

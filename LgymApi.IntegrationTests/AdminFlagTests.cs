@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 
@@ -18,10 +17,10 @@ public sealed class AdminFlagTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{adminUser.Id}/isAdmin");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     private static IEnumerable<TestCaseData> IsAdmin_FalseResultCases()
@@ -68,9 +67,9 @@ public sealed class AdminFlagTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{queryId}/isAdmin");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 }

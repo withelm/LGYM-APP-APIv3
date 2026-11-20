@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Persistence;
 using LgymApi.Application.Coaching.TraineeNotes.Create;
@@ -41,9 +40,9 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -55,7 +54,7 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == slice.Contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == slice.Contract), Is.EqualTo(1));
         }
     }
 
@@ -74,18 +73,15 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
             typeof(TraineeNoteUpsertData)
         };
 
-        inputs.Should().OnlyContain(type => type.IsSealed);
-        typeof(ListTrainerNotesQuery).GetProperties().Should().OnlyContain(property => IsTypedId(property.PropertyType));
-        typeof(DeleteTraineeNoteCommand).GetProperties().Should().OnlyContain(property => IsTypedId(property.PropertyType));
-        typeof(GetTraineeNoteHistoryQuery).GetProperties().Should().OnlyContain(property => IsTypedId(property.PropertyType));
-        typeof(ListVisibleTraineeNotesQuery).GetProperties().Should().OnlyContain(property => IsTypedId(property.PropertyType));
-        typeof(GetVisibleTraineeNoteQuery).GetProperties().Should().OnlyContain(property => IsTypedId(property.PropertyType));
-        typeof(CreateTraineeNoteCommand).GetProperty(nameof(CreateTraineeNoteCommand.Data))!.PropertyType
-            .Should().Be(typeof(TraineeNoteUpsertData));
-        typeof(UpdateTraineeNoteCommand).GetProperty(nameof(UpdateTraineeNoteCommand.Data))!.PropertyType
-            .Should().Be(typeof(TraineeNoteUpsertData));
-        typeof(TraineeNoteUpsertData).GetProperties().Select(property => property.PropertyType)
-            .Should().OnlyContain(type => type == typeof(string) || type == typeof(bool));
+        Assert.That((inputs).All(type => type.IsSealed), Is.True);
+        Assert.That((typeof(ListTrainerNotesQuery).GetProperties()).All(property => IsTypedId(property.PropertyType)), Is.True);
+        Assert.That((typeof(DeleteTraineeNoteCommand).GetProperties()).All(property => IsTypedId(property.PropertyType)), Is.True);
+        Assert.That((typeof(GetTraineeNoteHistoryQuery).GetProperties()).All(property => IsTypedId(property.PropertyType)), Is.True);
+        Assert.That((typeof(ListVisibleTraineeNotesQuery).GetProperties()).All(property => IsTypedId(property.PropertyType)), Is.True);
+        Assert.That((typeof(GetVisibleTraineeNoteQuery).GetProperties()).All(property => IsTypedId(property.PropertyType)), Is.True);
+        Assert.That(typeof(CreateTraineeNoteCommand).GetProperty(nameof(CreateTraineeNoteCommand.Data))!.PropertyType, Is.EqualTo(typeof(TraineeNoteUpsertData)));
+        Assert.That(typeof(UpdateTraineeNoteCommand).GetProperty(nameof(UpdateTraineeNoteCommand.Data))!.PropertyType, Is.EqualTo(typeof(TraineeNoteUpsertData)));
+        Assert.That((typeof(TraineeNoteUpsertData).GetProperties().Select(property => property.PropertyType)).All(type => type == typeof(string) || type == typeof(bool)), Is.True);
     }
 
     [Test]
@@ -100,15 +96,12 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
 
         foreach (var implementationName in implementationNames)
         {
-            assembly.GetType(implementationName)!.GetConstructors().Single().GetParameters()
-                .Select(parameter => parameter.ParameterType)
-                .Should().BeEquivalentTo(new[] { typeof(ICoachingTraineeNotePersistence), typeof(IAccountReadService), typeof(IMapper) });
+            Assert.That(assembly.GetType(implementationName)!.GetConstructors().Single().GetParameters()
+                .Select(parameter => parameter.ParameterType), Is.EquivalentTo(new[] { typeof(ICoachingTraineeNotePersistence), typeof(IAccountReadService), typeof(IMapper) }));
         }
 
-        typeof(IListVisibleTraineeNotesUseCase).GetMethods().Single().ReturnType.Should().Be(
-            typeof(Task<Result<IReadOnlyList<TraineeNoteReadModel>, AppError>>));
-        typeof(IGetVisibleTraineeNoteUseCase).GetMethods().Single().ReturnType.Should().Be(
-            typeof(Task<Result<TraineeNoteReadModel, AppError>>));
+        Assert.That(typeof(IListVisibleTraineeNotesUseCase).GetMethods().Single().ReturnType, Is.EqualTo(typeof(Task<Result<IReadOnlyList<TraineeNoteReadModel>, AppError>>)));
+        Assert.That(typeof(IGetVisibleTraineeNoteUseCase).GetMethods().Single().ReturnType, Is.EqualTo(typeof(Task<Result<TraineeNoteReadModel, AppError>>)));
     }
 
     [Test]
@@ -120,10 +113,10 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        source.Should().NotContain(text => text.Contains("IUserRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITraineeNoteService", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITraineeNoteRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("LgymApi.Infrastructure", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("IUserRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITraineeNoteService", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITraineeNoteRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("LgymApi.Infrastructure", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -137,12 +130,12 @@ public sealed class CoachingTraineeNoteSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length.Should().Be(8);
-        useCases.Should().OnlyContain(source => source.Contains("_mapper.CreateContext()", StringComparison.Ordinal));
-        useCases.Should().NotContain(source => source.Contains("new CoachingTraineeNoteWriteModel", StringComparison.Ordinal));
-        useCases.Should().NotContain(source => source.Contains("new CoachingTraineeNoteHistoryWriteModel", StringComparison.Ordinal));
-        useCases.Should().NotContain(source => source.Contains("new TraineeNoteReadModel", StringComparison.Ordinal));
-        useCases.Should().NotContain(source => source.Contains("new TraineeNoteHistoryReadModel", StringComparison.Ordinal));
+        Assert.That(profile.Split("configuration.CreateMap<", StringSplitOptions.None).Length, Is.EqualTo(8));
+        Assert.That((useCases).All(source => source.Contains("_mapper.CreateContext()", StringComparison.Ordinal)), Is.True);
+        Assert.That((useCases).Any(source => source.Contains("new CoachingTraineeNoteWriteModel", StringComparison.Ordinal)), Is.False);
+        Assert.That((useCases).Any(source => source.Contains("new CoachingTraineeNoteHistoryWriteModel", StringComparison.Ordinal)), Is.False);
+        Assert.That((useCases).Any(source => source.Contains("new TraineeNoteReadModel", StringComparison.Ordinal)), Is.False);
+        Assert.That((useCases).Any(source => source.Contains("new TraineeNoteHistoryReadModel", StringComparison.Ordinal)), Is.False);
     }
 
     private static bool IsTypedId(Type type)

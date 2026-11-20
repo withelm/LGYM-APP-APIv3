@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Hubs;
 using LgymApi.Domain.Security;
 using Microsoft.AspNetCore.Connections;
@@ -19,7 +18,7 @@ public sealed class NotificationHubUserIdProviderTests
 
         var result = new NotificationHubUserIdProvider().GetUserId(connection);
 
-        result.Should().Be("user-123");
+        Assert.That(result, Is.EqualTo("user-123"));
     }
 
     [Test]
@@ -29,7 +28,7 @@ public sealed class NotificationHubUserIdProviderTests
 
         var result = new NotificationHubUserIdProvider().GetUserId(connection);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     [Test]
@@ -39,7 +38,7 @@ public sealed class NotificationHubUserIdProviderTests
 
         var result = new NotificationHubUserIdProvider().GetUserId(connection);
 
-        result.Should().BeNull();
+        Assert.That(result, Is.Null);
     }
 
     private static HubConnectionContext CreateConnection(ClaimsPrincipal? user)

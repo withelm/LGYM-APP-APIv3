@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -26,8 +25,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
                 environment,
                 PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
 
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("*prohibited elevated attributes or role membership*");
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*prohibited elevated attributes or role membership*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
         finally
         {
@@ -51,8 +49,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
                 environment,
                 PostgreSqlRuntimeCatalogInspectionTests.CreateConfiguration(environment));
 
-            await action.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("*prohibited elevated attributes or role membership*");
+            await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*prohibited elevated attributes or role membership*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         }
         finally
         {
@@ -88,8 +85,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
 
         var action = () => PostgreSqlRuntimeConnectionValidator.ValidateAsync(dbContext, configuration);
 
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Runtime PostgreSQL connection must disable multiplexing for the RLS pilot.");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Runtime PostgreSQL connection must disable multiplexing for the RLS pilot.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     public enum RuntimeRoleProperty
@@ -109,7 +105,7 @@ public sealed class PostgreSqlRuntimeRoleSafetyTests
     private static async Task AssertPermissionDeniedAsync(string connectionString, string sql)
     {
         var action = () => ExecuteAsync(connectionString, sql);
-        var exception = await action.Should().ThrowAsync<PostgresException>();
-        exception.Which.SqlState.Should().Be("42501");
+        var exception = (await Assert.CatchAsync<PostgresException>(async () => { await action(); }))!;
+        Assert.That(exception.SqlState, Is.EqualTo("42501"));
     }
 }

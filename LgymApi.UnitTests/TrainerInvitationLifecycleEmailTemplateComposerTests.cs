@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Domain.Entities;
@@ -55,9 +54,9 @@ public sealed class TrainerInvitationLifecycleEmailTemplateComposerTests
 
         var message = composer.Compose(JsonSerializer.Serialize(payload, SharedSerializationOptions.Current));
 
-        message.To.Should().Be("coach@example.com");
-        message.Subject.Should().Be("Trainee accepted Coach");
-        message.Body.Should().Be("Accepted by Trainee");
+        Assert.That(message.To, Is.EqualTo("coach@example.com"));
+        Assert.That(message.Subject, Is.EqualTo("Trainee accepted Coach"));
+        Assert.That(message.Body, Is.EqualTo("Accepted by Trainee"));
     }
 
     [Test]
@@ -75,9 +74,9 @@ public sealed class TrainerInvitationLifecycleEmailTemplateComposerTests
 
         var message = composer.Compose(JsonSerializer.Serialize(payload, SharedSerializationOptions.Current));
 
-        message.To.Should().Be("trainee@example.com");
-        message.Subject.Should().Be("Coach revoked invitation");
-        message.Body.Should().Be("Revoked by Coach");
+        Assert.That(message.To, Is.EqualTo("trainee@example.com"));
+        Assert.That(message.Subject, Is.EqualTo("Coach revoked invitation"));
+        Assert.That(message.Body, Is.EqualTo("Revoked by Coach"));
     }
 
     private EmailOptions CreateEmailOptions() => new()

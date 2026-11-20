@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Jobs;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -39,7 +38,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
                     }
                 });
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await using (var dispatchScope = Factory.Services.CreateAsyncScope())
@@ -50,7 +49,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         }
 
         var envelopeIds = await ReadAcceptedEnvelopeIdsAsync();
-        envelopeIds.Should().HaveCount(3);
+        Assert.That(envelopeIds, Has.Exactly(3).Items);
         await DeliverAsync(envelopeIds);
         await AssertPersistedOutcomeAsync(traineeId, 3);
 
@@ -80,7 +79,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
                        }
                    }))
         {
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         SetAuthorizationHeader(trainerInitiated ? originalTrainerId : traineeId);
@@ -89,7 +88,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
             : "/api/trainee/trainer/detach";
         using (var unlinkResponse = await Client.PostAsync(unlinkUrl, null))
         {
-            unlinkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(unlinkResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await using (var dispatchScope = Factory.Services.CreateAsyncScope())
@@ -103,7 +102,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         SetAuthorizationHeader(originalTrainerId);
         var formerTrainerHistory = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>(
             $"/api/measurements/{traineeId}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
-        formerTrainerHistory!.Measurements.Select(measurement => measurement.Value).Should().Equal(82.4);
+        Assert.That(formerTrainerHistory!.Measurements.Select(measurement => measurement.Value), Is.EqualTo(new[] { 82.4 }));
 
         SetAuthorizationHeader(traineeId);
         using (var manualResponse = await Client.PostAsJsonAsync("/api/measurements/add", new
@@ -114,13 +113,13 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
                    createdAt = DateTimeOffset.UtcNow.AddYears(-1)
                }))
         {
-            manualResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.That(manualResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         SetAuthorizationHeader(originalTrainerId);
         var historyAfterBackdatedManualWrite = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>(
             $"/api/measurements/{traineeId}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
-        historyAfterBackdatedManualWrite!.Measurements.Select(measurement => measurement.Value).Should().Equal(82.4);
+        Assert.That(historyAfterBackdatedManualWrite!.Measurements.Select(measurement => measurement.Value), Is.EqualTo(new[] { 82.4 }));
 
         var successor = await SeedUserAsync(
             name: "in-memory-progress-successor",
@@ -152,7 +151,7 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
         SetAuthorizationHeader(successor.Id);
         var successorHistory = await Client.GetFromJsonAsync<MeasurementsHistoryResponse>(
             $"/api/measurements/{traineeId}/getHistory?bodyPart=BodyWeight&unit=Kilograms");
-        successorHistory!.Measurements.Select(measurement => measurement.Value).Should().BeEquivalentTo(new[] { 82.4, 91.0 });
+        Assert.That(successorHistory!.Measurements.Select(measurement => measurement.Value), Is.EquivalentTo(new[] { 82.4, 91.0 }));
     }
 
     private async Task<(Id<User> TrainerId, Id<User> TraineeId, IReadOnlyList<Id<ReportRequest>> RequestIds)> SeedMeasurementRequestsAsync()
@@ -283,13 +282,13 @@ public sealed class ReportingProgressOutboxInMemoryTests : IntegrationTestBase
             .Where(measurement => measurement.UserId == traineeId)
             .ToArrayAsync();
 
-        submissionIds.Should().HaveCount(expectedCount);
-        receiptSubmissionIds.Should().BeEquivalentTo(submissionIds);
-        measurements.Should().HaveCount(expectedCount);
-        measurements.Should().OnlyContain(measurement =>
+        Assert.That(submissionIds, Has.Exactly(expectedCount).Items);
+        Assert.That(receiptSubmissionIds, Is.EquivalentTo(submissionIds).UsingPropertiesComparer());
+        Assert.That(measurements, Has.Exactly(expectedCount).Items);
+        Assert.That((measurements).All(measurement =>
             measurement.BodyPart == BodyParts.BodyWeight
             && measurement.Value == 82.4
-            && measurement.Unit == MeasurementUnits.Kilograms.ToString());
+            && measurement.Unit == MeasurementUnits.Kilograms.ToString()), Is.True);
     }
 
     private sealed class MeasurementsHistoryResponse

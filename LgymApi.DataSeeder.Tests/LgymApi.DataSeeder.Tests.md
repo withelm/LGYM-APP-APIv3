@@ -1,6 +1,7 @@
 # LgymApi.DataSeeder.Tests.csproj
 
 - Purpose: tests for DataSeeder behavior and assumptions.
+- Assertions: native NUnit constraints; ordered execution uses equality and unordered photo-type inventories use equivalence.
 - Contains: coverage for seeding inputs, defaults, composed Identity password hashing, deterministic ordering, seeded entities, and relational offline reporting-migration dry-run/apply behavior.
 - Stable-ID assertions consume public `IdentitySeedIds`, not an Identity friend-only seed configuration.
 - Rules: update when seeder behavior changes.

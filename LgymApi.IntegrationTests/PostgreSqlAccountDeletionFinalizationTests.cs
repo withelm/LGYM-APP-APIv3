@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Enums;
 using LgymApi.Identity.AccountDeletion.Finalization;
 using LgymApi.Infrastructure.Data;
@@ -48,12 +47,12 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             var service = new AccountFinalizationService(new AccountFinalizationStore(db),
                 execution.ServiceProvider.GetRequiredService<IAccountFinalizationPhotoManifest>(), cleanup, new EfUnitOfWork(db), TimeProvider.System);
 
-            await ((Func<Task>)(() => service.ProcessDueAsync())).Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await (((Func<Task>)(() => service.ProcessDueAsync())))(); }, Throws.InstanceOf<InvalidOperationException>());
         }
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == first.Id)).DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        (await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == second.Id)).DeletionState.Should().Be(AccountDeletionState.PermanentlyDeleted);
+        Assert.That((await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == first.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That((await database.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == second.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PermanentlyDeleted));
     }
 
     [Test]
@@ -86,12 +85,12 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
             var service = new AccountFinalizationService(store, Substitute.For<IAccountFinalizationPhotoManifest>(),
                 new AccountFinalizationCleanup(db), new EfUnitOfWork(db), TimeProvider.System);
 
-            await ((Func<Task>)(() => service.ProcessDueAsync())).Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await (((Func<Task>)(() => service.ProcessDueAsync())))(); }, Throws.InstanceOf<InvalidOperationException>());
         }
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Measurements.AnyAsync(x => x.Id == measurementId)).Should().BeTrue();
-        (await database.Users.SingleAsync(x => x.Id == user.Id)).DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
+        Assert.That((await database.Measurements.AnyAsync(x => x.Id == measurementId)), Is.True);
+        Assert.That((await database.Users.SingleAsync(x => x.Id == user.Id)).DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
     }
 
     [Test]
@@ -157,21 +156,23 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
         await using var verify = Factory.Services.CreateAsyncScope();
         var database = verify.ServiceProvider.GetRequiredService<AppDbContext>();
         var deleted = await database.Users.IgnoreQueryFilters().SingleAsync(x => x.Id == user.Id);
-        deleted.DeletionState.Should().Be(AccountDeletionState.PermanentlyDeleted);
-        deleted.LegacyHash.Should().BeNull();
-        deleted.Name.Should().NotContain(user.Id.ToString()).And.NotBe(user.Name);
-        deleted.Email.Should().NotBe(user.Email);
-        (await database.Users.AnyAsync(x => x.Id == trainer.Id)).Should().BeTrue();
-        (await database.ReportRequests.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.ReportSubmissions.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.Photos.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.CoachingEpisodes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.TraineeNotes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.Measurements.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await database.Addresses.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        Assert.That(deleted.DeletionState, Is.EqualTo(AccountDeletionState.PermanentlyDeleted));
+        Assert.That(deleted.LegacyHash, Is.Null);
+        var assertedChain12 = deleted.Name;
+        Assert.That(assertedChain12, Does.Not.Contain(user.Id.ToString()));
+        Assert.That(assertedChain12, Is.Not.EqualTo(user.Name));
+        Assert.That(deleted.Email, Is.Not.EqualTo(user.Email));
+        Assert.That((await database.Users.AnyAsync(x => x.Id == trainer.Id)), Is.True);
+        Assert.That((await database.ReportRequests.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.ReportSubmissions.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.Photos.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.CoachingEpisodes.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.TraineeNotes.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.Measurements.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await database.Addresses.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
         var work = await database.PhotoDeletionWorkItems.Where(x => x.DeletionGeneration == generation && !x.IsPrefix).ToListAsync();
-        work.Select(x => x.StorageKey).Should().BeEquivalentTo(new[] { key, thumbnail });
-        work.Should().OnlyContain(x => x.CompletedAtUtc == null);
+        Assert.That(work.Select(x => x.StorageKey), Is.EquivalentTo(new[] { key, thumbnail }));
+        Assert.That((work).All(x => x.CompletedAtUtc == null), Is.True);
     }
 
     [Test]
@@ -206,7 +207,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
         }
 
         await using var transaction = await new EfUnitOfWork(scanDb).BeginTransactionAsync();
-        (await store.LockAndBeginAsync(candidate, now)).Should().BeFalse();
+        Assert.That((await store.LockAndBeginAsync(candidate, now)), Is.False);
     }
 
     [Test]
@@ -233,14 +234,14 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
                 .Returns(_ => Task.FromException(new InvalidOperationException("manifest failure")));
             var service = new AccountFinalizationService(new AccountFinalizationStore(db), manifest,
                 new AccountFinalizationCleanup(db), new EfUnitOfWork(db), TimeProvider.System);
-            await FluentActions.Invoking(() => service.ProcessDueAsync()).Should().ThrowAsync<InvalidOperationException>();
+            await Assert.ThatAsync(async () => { await service.ProcessDueAsync(); }, Throws.InstanceOf<InvalidOperationException>());
         }
 
         await using var verify = Factory.Services.CreateAsyncScope();
         var persisted = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Users.IgnoreQueryFilters().SingleAsync(x => x.Id == user.Id);
-        persisted.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        persisted.DeletionGeneration.Should().Be(generation);
-        persisted.Email.Should().Be(user.Email);
+        Assert.That(persisted.DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That(persisted.DeletionGeneration, Is.EqualTo(generation));
+        Assert.That(persisted.Email, Is.EqualTo(user.Email));
     }
 
     [Test]
@@ -264,7 +265,7 @@ internal sealed class PostgreSqlAccountDeletionFinalizationTests : PostgreSqlInt
 
         await using var verify = Factory.Services.CreateAsyncScope();
         var persisted = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Users.IgnoreQueryFilters().SingleAsync(x => x.Id == user.Id);
-        persisted.DeletionState.Should().Be(AccountDeletionState.PendingDeletion);
-        persisted.Email.Should().Be(user.Email);
+        Assert.That(persisted.DeletionState, Is.EqualTo(AccountDeletionState.PendingDeletion));
+        Assert.That(persisted.Email, Is.EqualTo(user.Email));
     }
 }

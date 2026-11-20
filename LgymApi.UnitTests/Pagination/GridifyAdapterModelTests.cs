@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using NUnit.Framework;
 
@@ -52,11 +51,11 @@ public sealed class GridifyAdapterModelTests
             ]
         };
 
-        input.FilterGroups.Should().HaveCount(1);
-        input.FilterGroups[0].Operator.Should().Be(GroupOperator.And);
-        input.FilterGroups[0].Groups.Should().ContainSingle();
-        input.FilterGroups[0].Groups[0].Operator.Should().Be(GroupOperator.Or);
-        input.FilterGroups[0].Groups[0].Conditions.Should().HaveCount(2);
+        Assert.That(input.FilterGroups, Has.Exactly(1).Items);
+        Assert.That(input.FilterGroups[0].Operator, Is.EqualTo(GroupOperator.And));
+        Assert.That(input.FilterGroups[0].Groups, Has.Exactly(1).Items);
+        Assert.That(input.FilterGroups[0].Groups[0].Operator, Is.EqualTo(GroupOperator.Or));
+        Assert.That(input.FilterGroups[0].Groups[0].Conditions, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -71,10 +70,10 @@ public sealed class GridifyAdapterModelTests
             ]
         };
 
-        input.SortDescriptors.Should().HaveCount(2);
-        input.SortDescriptors[0].FieldName.Should().Be("lastName");
-        input.SortDescriptors[0].Descending.Should().BeFalse();
-        input.SortDescriptors[1].FieldName.Should().Be("createdAt");
-        input.SortDescriptors[1].Descending.Should().BeTrue();
+        Assert.That(input.SortDescriptors, Has.Exactly(2).Items);
+        Assert.That(input.SortDescriptors[0].FieldName, Is.EqualTo("lastName"));
+        Assert.That(input.SortDescriptors[0].Descending, Is.False);
+        Assert.That(input.SortDescriptors[1].FieldName, Is.EqualTo("createdAt"));
+        Assert.That(input.SortDescriptors[1].Descending, Is.True);
     }
 }

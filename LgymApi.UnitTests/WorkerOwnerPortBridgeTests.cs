@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Identity.Contracts.BackgroundCommands;
 using LgymApi.Application.Notifications.Contracts.Email;
 using LgymApi.Application.Notifications.Contracts.InApp;

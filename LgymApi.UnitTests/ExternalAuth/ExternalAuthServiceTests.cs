@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -49,9 +48,9 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("invalid-token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserUnauthorizedError>();
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserUnauthorizedError>());
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -61,10 +60,10 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserUnauthorizedError>();
-        _userExternalLoginRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserExternalLoginRepository.FindByProviderAsync));
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserUnauthorizedError>());
+        Assert.That((_userExternalLoginRepository.Calls).Any(call => call.Method == nameof(IUserExternalLoginRepository.FindByProviderAsync)), Is.False);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -87,9 +86,9 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Token.Should().Be("jwt-token");
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Token, Is.EqualTo("jwt-token"));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -112,10 +111,10 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ForbiddenError>();
-        _loginResultBuilder.Calls.Should().BeEmpty();
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ForbiddenError>());
+        Assert.That(_loginResultBuilder.Calls, Is.Empty);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -130,9 +129,9 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Token.Should().Be("jwt-token");
-        _unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Token, Is.EqualTo("jwt-token"));
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -144,10 +143,10 @@ public sealed class ExternalAuthServiceTests
 
         var result = await _service.GoogleSignInAsync("token", null, CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ConflictError>();
-        _loginResultBuilder.Calls.Should().BeEmpty();
-        _unitOfWork.SaveChangesCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ConflictError>());
+        Assert.That(_loginResultBuilder.Calls, Is.Empty);
+        Assert.That(_unitOfWork.SaveChangesCalls, Is.EqualTo(0));
     }
 
     private static User CreateUser(string preferredTimeZone = "UTC")

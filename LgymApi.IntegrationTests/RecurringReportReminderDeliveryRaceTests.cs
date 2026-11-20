@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -40,10 +39,11 @@ public sealed partial class RecurringReportReminderIntegrationTests
             await using var transaction = await database.Database.BeginTransactionAsync(ct);
             await database.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '500ms'", ct);
             Func<Task> invalidate = () => InvalidateReminderAsync(competingScope.ServiceProvider, scenario, upcoming, unlink, ct);
-            var failure = await invalidate.Should().ThrowAsync<InvalidOperationException>();
-            failure.Which.InnerException.Should().BeOfType<DbUpdateException>()
-                .Which.InnerException.Should().BeOfType<PostgresException>()
-                .Which.SqlState.Should().Be(PostgresErrorCodes.LockNotAvailable);
+            var failure = (await Assert.CatchAsync<InvalidOperationException>(async () => { await invalidate(); }))!;
+            Assert.That(failure.InnerException, Is.TypeOf<DbUpdateException>());
+            var assertedValue62 = ((DbUpdateException)failure.InnerException!).InnerException;
+            Assert.That(assertedValue62, Is.TypeOf<PostgresException>());
+            Assert.That(((PostgresException)assertedValue62).SqlState, Is.EqualTo(PostgresErrorCodes.LockNotAvailable));
             await transaction.RollbackAsync(ct);
         }
         finally
@@ -54,7 +54,7 @@ public sealed partial class RecurringReportReminderIntegrationTests
         await delivery.WaitAsync(ct);
         await using var unlinkScope = Factory.Services.CreateAsyncScope();
         await InvalidateReminderAsync(unlinkScope.ServiceProvider, scenario, upcoming, unlink, ct);
-        gate.SendCount.Should().Be(1);
+        Assert.That(gate.SendCount, Is.EqualTo(1));
         await AssertDeliveryMessageAsync(scenario, remotePush, true, ct);
     }
 
@@ -88,7 +88,7 @@ public sealed partial class RecurringReportReminderIntegrationTests
         }
 
         await delivery.WaitAsync(ct);
-        gate.SendCount.Should().Be(0);
+        Assert.That(gate.SendCount, Is.EqualTo(0));
         await AssertDeliveryMessageAsync(scenario, remotePush, false, ct);
     }
 
@@ -99,13 +99,13 @@ public sealed partial class RecurringReportReminderIntegrationTests
         if (remotePush)
         {
             var message = await database.PushNotificationMessages.AsNoTracking().SingleAsync(item => item.Id == scenario.MessageId, ct);
-            message.Status.Should().Be(sent ? Domain.Enums.PushNotificationStatus.Sent : Domain.Enums.PushNotificationStatus.Skipped);
-            message.Attempts.Should().Be(sent ? 1 : 0);
-            if (!sent) message.ProviderStatus.Should().Be("SourceNotificationUnavailable");
+            Assert.That(message.Status, Is.EqualTo(sent ? Domain.Enums.PushNotificationStatus.Sent : Domain.Enums.PushNotificationStatus.Skipped));
+            Assert.That(message.Attempts, Is.EqualTo(sent ? 1 : 0));
+            if (!sent) Assert.That(message.ProviderStatus, Is.EqualTo("SourceNotificationUnavailable"));
         }
         else
         {
-            (await database.InAppNotifications.CountAsync(item => item.DeliveryKey == scenario.Input.DeliveryKey, ct)).Should().Be(1);
+            Assert.That((await database.InAppNotifications.CountAsync(item => item.DeliveryKey == scenario.Input.DeliveryKey, ct)), Is.EqualTo(1));
         }
     }
 
@@ -118,7 +118,7 @@ public sealed partial class RecurringReportReminderIntegrationTests
         else
         {
             var result = await services.GetRequiredService<IInAppNotificationService>().CreateAsync(scenario.Input, ct);
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
     }
 }

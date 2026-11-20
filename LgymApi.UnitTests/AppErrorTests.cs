@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using NUnit.Framework;
 
@@ -12,9 +11,9 @@ public sealed class AppErrorTests
     {
         var error = new NotFoundError("missing");
 
-        error.Message.Should().Be("missing");
-        error.HttpStatusCode.Should().Be(404);
-        error.GetPayload().Should().BeNull();
+        Assert.That(error.Message, Is.EqualTo("missing"));
+        Assert.That(error.HttpStatusCode, Is.EqualTo(404));
+        Assert.That(error.GetPayload(), Is.Null);
     }
 
     [Test]
@@ -23,18 +22,18 @@ public sealed class AppErrorTests
         var payload = new { Field = "name" };
         var error = new BadRequestError("invalid", payload);
 
-        error.Message.Should().Be("invalid");
-        error.HttpStatusCode.Should().Be(400);
-        error.GetPayload().Should().Be(payload);
+        Assert.That(error.Message, Is.EqualTo("invalid"));
+        Assert.That(error.HttpStatusCode, Is.EqualTo(400));
+        Assert.That(error.GetPayload(), Is.EqualTo(payload));
     }
 
     [Test]
     public void RemainingBuiltInErrors_ExposeExpectedStatusCodes()
     {
-        new UnauthorizedError("unauthorized").HttpStatusCode.Should().Be(401);
-        new ForbiddenError("forbidden").HttpStatusCode.Should().Be(403);
-        new ConflictError("conflict").HttpStatusCode.Should().Be(409);
-        new UnprocessableEntityError("unprocessable", new { Code = 1 }).HttpStatusCode.Should().Be(422);
-        new InternalServerError("boom").HttpStatusCode.Should().Be(500);
+        Assert.That(new UnauthorizedError("unauthorized").HttpStatusCode, Is.EqualTo(401));
+        Assert.That(new ForbiddenError("forbidden").HttpStatusCode, Is.EqualTo(403));
+        Assert.That(new ConflictError("conflict").HttpStatusCode, Is.EqualTo(409));
+        Assert.That(new UnprocessableEntityError("unprocessable", new { Code = 1 }).HttpStatusCode, Is.EqualTo(422));
+        Assert.That(new InternalServerError("boom").HttpStatusCode, Is.EqualTo(500));
     }
 }

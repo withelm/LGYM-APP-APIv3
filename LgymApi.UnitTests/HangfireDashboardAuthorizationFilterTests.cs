@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.Common;
@@ -37,7 +36,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -50,7 +49,7 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         var result = filter.Authorize(context);
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     [Test]
@@ -69,11 +68,11 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         await middleware.InvokeAsync(httpContext, authorizationService);
 
-        continued.Should().BeTrue();
-        httpContext.Features.Get<HangfireDashboardAuthorizationFeature>().Should().NotBeNull();
+        Assert.That(continued, Is.True);
+        Assert.That(httpContext.Features.Get<HangfireDashboardAuthorizationFeature>(), Is.Not.Null);
         authorizationService.Received(1).HasPermission(accountContext, AuthConstants.Permissions.AdminAccess);
         var filter = new HangfireDashboardAuthorizationFilter();
-        filter.Authorize(CreateDashboardContext(httpContext)).Should().BeTrue();
+        Assert.That(filter.Authorize(CreateDashboardContext(httpContext)), Is.True);
     }
 
     [Test]
@@ -97,9 +96,9 @@ public sealed class HangfireDashboardAuthorizationFilterTests
 
         await middleware.InvokeAsync(httpContext, authorizationService);
 
-        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        continued.Should().BeFalse();
-        httpContext.Features.Get<HangfireDashboardAuthorizationFeature>().Should().BeNull();
+        Assert.That(httpContext.Response.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
+        Assert.That(continued, Is.False);
+        Assert.That(httpContext.Features.Get<HangfireDashboardAuthorizationFeature>(), Is.Null);
     }
 
     private static HttpContext CreateHttpContext(AuthenticatedAccountContext accountContext)

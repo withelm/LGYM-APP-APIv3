@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Configuration;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -17,7 +16,7 @@ public sealed class StartupMigrationBootstrapTests
     {
         var act = () => StartupMigrationBootstrap.ApplyAsync(app: null!, "Testing");
 
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<ArgumentNullException>());
     }
 
     [TestCase("")]
@@ -32,7 +31,7 @@ public sealed class StartupMigrationBootstrapTests
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, testingEnvironmentName);
 
-        await act.Should().ThrowAsync<ArgumentException>();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -46,7 +45,7 @@ public sealed class StartupMigrationBootstrapTests
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, "Testing");
 
-        await act.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.Nothing);
     }
 
     [Test]
@@ -60,8 +59,7 @@ public sealed class StartupMigrationBootstrapTests
 
         var act = () => StartupMigrationBootstrap.ApplyAsync(app, "Testing");
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*relational-specific methods*");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*relational-specific methods*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [TestCase("Development")]
@@ -70,7 +68,7 @@ public sealed class StartupMigrationBootstrapTests
     [TestCase("Preview")]
     public void ShouldApplyMigrations_InNonTestingEnvironment_ReturnsTrue(string environmentName)
     {
-        StartupMigrationBootstrap.ShouldApplyMigrations(environmentName, "Testing").Should().BeTrue();
+        Assert.That(StartupMigrationBootstrap.ShouldApplyMigrations(environmentName, "Testing"), Is.True);
     }
 
     [TestCase("Development", false)]
@@ -80,7 +78,7 @@ public sealed class StartupMigrationBootstrapTests
     [TestCase("Preview", true)]
     public void RequiresRuntimeValidation_IsFailClosedOutsideDevelopmentAndTesting(string environmentName, bool expected)
     {
-        StartupMigrationBootstrap.RequiresRuntimeValidation(environmentName).Should().Be(expected);
+        Assert.That(StartupMigrationBootstrap.RequiresRuntimeValidation(environmentName), Is.EqualTo(expected));
     }
 
     private static WebApplication CreateApp(string environmentName, Action<IServiceCollection> configureServices)

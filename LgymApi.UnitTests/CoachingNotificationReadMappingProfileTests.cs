@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Notifications;
 using LgymApi.Application.Coaching.Notifications;
 using LgymApi.Application.Coaching.Persistence;
@@ -42,13 +41,13 @@ public sealed class CoachingNotificationReadMappingProfileTests
 
         var result = mapper.Map<CoachingInvitationFact, CoachingInvitationNotificationFact>(source, mapper.CreateContext());
 
-        result.Should().Be(new CoachingInvitationNotificationFact(
+        Assert.That(result, Is.EqualTo(new CoachingInvitationNotificationFact(
             invitationId,
             trainerId,
             traineeId,
             "trainee@example.test",
             "CODE00000001",
-            expiresAt));
+            expiresAt)));
     }
 
     [Test]
@@ -80,12 +79,12 @@ public sealed class CoachingNotificationReadMappingProfileTests
 
         var result = await service.GetInvitationAsync(invitationId);
 
-        result.Should().Be(new CoachingInvitationNotificationFact(
+        Assert.That(result, Is.EqualTo(new CoachingInvitationNotificationFact(
             invitationId,
             trainerId,
             traineeId,
             "trainee@example.test",
             "CODE00000001",
-            expiresAt));
+            expiresAt)));
     }
 }

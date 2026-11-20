@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.ExerciseScores;
@@ -25,8 +24,8 @@ public sealed class ExerciseScoresServiceTests
 
         var result = await new ExerciseScoresService(progress).GetExerciseScoresChartDataAsync(accountId, exerciseId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle(item => item.Id == "entry" && item.ExerciseId == exerciseId);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That((result.Value).Where(item => item.Id == "entry" && item.ExerciseId == exerciseId), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -37,6 +36,6 @@ public sealed class ExerciseScoresServiceTests
         progress.GetExerciseScoreChartAsync(Arg.Any<Id<AccountReference>>(), Arg.Any<Id<Exercise>>(), Arg.Any<CancellationToken>())
             .Returns(Result<List<ExerciseScoreChartPoint>, AppError>.Failure(error));
         var result = await new ExerciseScoresService(progress).GetExerciseScoresChartDataAsync(Id<AccountReference>.New(), Id<Exercise>.New());
-        result.Error.Should().BeSameAs(error);
+        Assert.That(result.Error, Is.SameAs(error));
     }
 }

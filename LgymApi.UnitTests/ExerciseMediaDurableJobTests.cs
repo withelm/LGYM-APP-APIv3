@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
@@ -38,13 +37,13 @@ public sealed class ExerciseMediaDurableJobTests
         var (scheduler, client, _) = Scheduler("Succeeded", JsonSerializer.Serialize(ImageUrl));
         using var caller = new CancellationTokenSource();
         var bytes = new byte[] { 1, 2, 3 };
-        (await scheduler.ProcessAsync(Operation, bytes, caller.Token)).Should().Be(ImageUrl);
+        Assert.That((await scheduler.ProcessAsync(Operation, bytes, caller.Token)), Is.EqualTo(ImageUrl));
         client.Received(1).Create(Arg.Is<Job>(job => job.Type == typeof(ExerciseMediaProcessingJob)
             && job.Method.Name == "ExecuteAsync" && (string)job.Args[0] == Operation
             && ReferenceEquals(job.Args[1], bytes) && (CancellationToken)job.Args[2] == CancellationToken.None), Arg.Is<EnqueuedState>(state => state.Queue == "default"));
         var filters = JobFilterProviders.Providers.GetFilters(new Job(typeof(ExerciseMediaProcessingJob), typeof(ExerciseMediaProcessingJob).GetMethod("ExecuteAsync")!, [Operation, bytes, CancellationToken.None])).ToArray();
-        filters.Should().Contain(filter => filter.Instance is DisableConcurrentExecutionAttribute);
-        filters.Should().Contain(filter => filter.Instance is AutomaticRetryAttribute);
+        Assert.That((filters).Any(filter => filter.Instance is DisableConcurrentExecutionAttribute), Is.True);
+        Assert.That((filters).Any(filter => filter.Instance is AutomaticRetryAttribute), Is.True);
     }
 
     [Test]
@@ -55,8 +54,8 @@ public sealed class ExerciseMediaDurableJobTests
         var waiting = scheduler.ProcessAsync(Operation, [1], caller.Token);
         caller.Cancel();
         await Assert.CatchAsync<OperationCanceledException>(async () => await waiting);
-        client.ReceivedCalls().Should().ContainSingle(call => call.GetMethodInfo().Name == nameof(IBackgroundJobClient.Create));
-        client.ReceivedCalls().Should().NotContain(call => call.GetMethodInfo().Name == nameof(IBackgroundJobClient.ChangeState));
+        Assert.That((client.ReceivedCalls()).Where(call => call.GetMethodInfo().Name == nameof(IBackgroundJobClient.Create)), Has.Exactly(1).Items);
+        Assert.That((client.ReceivedCalls()).Any(call => call.GetMethodInfo().Name == nameof(IBackgroundJobClient.ChangeState)), Is.False);
     }
 
     [Test]
@@ -67,7 +66,7 @@ public sealed class ExerciseMediaDurableJobTests
         await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => scheduler.ProcessAsync("", [1], default));
         await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => scheduler.ProcessAsync(Operation, [], default));
         await Assert.ThrowsAsync<ExerciseMediaRejectedException>(() => scheduler.ProcessAsync(Operation, new byte[ExerciseMediaLimits.MaxBytes + 1], default));
-        client.ReceivedCalls().Should().BeEmpty();
+        Assert.That(client.ReceivedCalls(), Is.Empty);
     }
 
     [TestCase("Failed", null)]
@@ -95,11 +94,11 @@ public sealed class ExerciseMediaDurableJobTests
         using var worker = new CancellationTokenSource();
         processor.ProcessAsync(Operation, Arg.Any<byte[]>(), worker.Token).Returns(ImageUrl);
         var job = new ExerciseMediaProcessingJob(processor);
-        (await job.ExecuteAsync(Operation, [1], worker.Token)).Should().Be(ImageUrl);
+        Assert.That((await job.ExecuteAsync(Operation, [1], worker.Token)), Is.EqualTo(ImageUrl));
         processor.ProcessAsync(Operation, Arg.Any<byte[]>(), worker.Token).Returns(Task.FromException<string>(new ExerciseMediaRejectedException()));
-        (await job.ExecuteAsync(Operation, [1], worker.Token)).Should().Be(ExerciseMediaProcessingJob.RejectedResult);
+        Assert.That((await job.ExecuteAsync(Operation, [1], worker.Token)), Is.EqualTo(ExerciseMediaProcessingJob.RejectedResult));
         processor.ProcessAsync("not-an-operation", Arg.Any<byte[]>(), worker.Token).Returns(Task.FromException<string>(new ExerciseMediaRejectedException()));
-        (await job.ExecuteAsync("not-an-operation", [1], worker.Token)).Should().Be(ExerciseMediaProcessingJob.RejectedResult);
+        Assert.That((await job.ExecuteAsync("not-an-operation", [1], worker.Token)), Is.EqualTo(ExerciseMediaProcessingJob.RejectedResult));
     }
 
     [Test]
@@ -113,7 +112,7 @@ public sealed class ExerciseMediaDurableJobTests
         await Assert.CatchAsync<OperationCanceledException>(() => job.ExecuteAsync(Operation, [1], worker.Token));
         processor.ProcessAsync(Operation, Arg.Any<byte[]>(), default).Returns(Task.FromException<string>(new IOException("synthetic-private-provider-secret")));
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => job.ExecuteAsync(Operation, [1]));
-        error!.ToString().Should().NotContain("synthetic-private-provider-secret");
-        error.InnerException.Should().BeNull();
+        Assert.That(error!.ToString(), Does.Not.Contain("synthetic-private-provider-secret"));
+        Assert.That(error.InnerException, Is.Null);
     }
 }

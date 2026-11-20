@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -51,13 +50,13 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
             });
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ =>
         {
-            stagedBeforeCommit.Should().BeTrue();
+            Assert.That(stagedBeforeCommit, Is.True);
             committed = true;
             return Task.FromResult(1);
         });
         dispatcher.EnqueueAsync(Arg.Any<ReportSubmissionCreatedInAppNotificationCommand>()).Returns(_ =>
         {
-            committed.Should().BeTrue();
+            Assert.That(committed, Is.True);
             return Task.CompletedTask;
         });
         var service = CreateService(persistence, unitOfWork, dispatcher, outbox);
@@ -86,8 +85,8 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
                 }
             });
 
-        result.IsSuccess.Should().BeTrue();
-        addedSubmission.Should().NotBeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(addedSubmission, Is.Not.Null);
         await outbox.Received(1).StageAsync(Arg.Is<ReportSubmissionAcceptedProgressCommand>(command =>
             command.Event.Validate().IsValid
             && command.Event.SchemaVersion == ReportSubmissionAcceptedProgressPayload.CurrentSchemaVersion
@@ -126,7 +125,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
             requestId,
             new SubmitReportRequestCommand { Answers = new() { ["feedback"] = ParseJson("\"complete\"") } });
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await outbox.DidNotReceive().StageAsync(Arg.Any<ReportSubmissionAcceptedProgressCommand>(), Arg.Any<CancellationToken>());
     }
 
@@ -154,7 +153,7 @@ public sealed class ReportingServiceAcceptedProgressOutboxTests
                 Answers = new() { ["measurements"] = ParseJson("""{ "weight": { "value": 82.4, "unit": "Kilograms" } }""") }
             });
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await unitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
         await dispatcher.DidNotReceive().EnqueueAsync(Arg.Any<ReportSubmissionCreatedInAppNotificationCommand>());
     }

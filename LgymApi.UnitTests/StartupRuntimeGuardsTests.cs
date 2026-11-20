@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Configuration;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -29,7 +28,7 @@ public sealed class StartupRuntimeGuardsTests
 
         var action = async () => await StartupRuntimeGuards.ValidateDatabaseSchemaAsync(provider);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -49,7 +48,7 @@ public sealed class StartupRuntimeGuardsTests
 
         app.LogPhotoStorageConfiguration();
 
-        provider.Messages.Should().ContainSingle(message => message.Contains("CloudflareR2") && message.Contains("bucket") && message.Contains("https://endpoint"));
+        Assert.That((provider.Messages).Where(message => message.Contains("CloudflareR2") && message.Contains("bucket") && message.Contains("https://endpoint")), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -65,7 +64,7 @@ public sealed class StartupRuntimeGuardsTests
 
         var result = await InvokeTableExistsAsync(dbContext, null, "ExistingTable");
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
     }
 
     [Test]
@@ -80,7 +79,7 @@ public sealed class StartupRuntimeGuardsTests
 
         var result = await InvokeTableExistsAsync(dbContext, null, "MissingTable");
 
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -92,7 +91,7 @@ public sealed class StartupRuntimeGuardsTests
 
         var action = async () => await StartupRuntimeGuards.ValidateDatabaseSchemaAsync(provider);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
     }
 
     [Test]
@@ -104,10 +103,10 @@ public sealed class StartupRuntimeGuardsTests
         var toDelimitedSql = tableIdentifierType.GetMethod("ToDelimitedSql", BindingFlags.Instance | BindingFlags.Public)!;
         var toDisplayName = tableIdentifierType.GetMethod("ToDisplayName", BindingFlags.Instance | BindingFlags.Public)!;
 
-        toDelimitedSql.Invoke(withSchema, []).Should().Be("\"public\".\"Report\"\"Requests\"");
-        toDisplayName.Invoke(withSchema, []).Should().Be("public.Report\"Requests");
-        toDelimitedSql.Invoke(withoutSchema, []).Should().Be("\"Photos\"");
-        toDisplayName.Invoke(withoutSchema, []).Should().Be("Photos");
+        Assert.That(toDelimitedSql.Invoke(withSchema, []), Is.EqualTo("\"public\".\"Report\"\"Requests\""));
+        Assert.That(toDisplayName.Invoke(withSchema, []), Is.EqualTo("public.Report\"Requests"));
+        Assert.That(toDelimitedSql.Invoke(withoutSchema, []), Is.EqualTo("\"Photos\""));
+        Assert.That(toDisplayName.Invoke(withoutSchema, []), Is.EqualTo("Photos"));
     }
 
     [Test]
@@ -122,8 +121,8 @@ public sealed class StartupRuntimeGuardsTests
 
         var action = async () => await InvokeValidateMappedTablesExistAsync(dbContext);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Message.Should().Contain("mapped tables are missing");
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception.Message, Does.Contain("mapped tables are missing"));
     }
 
     [Test]
@@ -134,12 +133,12 @@ public sealed class StartupRuntimeGuardsTests
             .UseSqlite(connection)
             .Options;
         await using var dbContext = new AppDbContext(options);
-        connection.State.Should().Be(System.Data.ConnectionState.Closed);
+        Assert.That(connection.State, Is.EqualTo(System.Data.ConnectionState.Closed));
 
         var result = await InvokeExecuteExistsScalarAsync(dbContext, "SELECT 1;");
 
-        result.Should().BeTrue();
-        connection.State.Should().Be(System.Data.ConnectionState.Closed);
+        Assert.That(result, Is.True);
+        Assert.That(connection.State, Is.EqualTo(System.Data.ConnectionState.Closed));
     }
 
     [Test]
@@ -157,7 +156,7 @@ public sealed class StartupRuntimeGuardsTests
 
         var action = async () => await (Task<bool>)method.Invoke(null, [dbContext, tableIdentifier])!;
 
-        await action.Should().ThrowAsync<SqliteException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<SqliteException>());
     }
 
     [Test]
@@ -171,9 +170,9 @@ public sealed class StartupRuntimeGuardsTests
 
         var result = (DbParameter)method.Invoke(null, [command, parameterSpec])!;
 
-        result.ParameterName.Should().Be("@tableSchema");
-        result.Value.Should().Be(DBNull.Value);
-        result.DbType.Should().Be(DbType.String);
+        Assert.That(result.ParameterName, Is.EqualTo("@tableSchema"));
+        Assert.That(result.Value, Is.EqualTo(DBNull.Value));
+        Assert.That(result.DbType, Is.EqualTo(DbType.String));
     }
 
     private static async Task InvokeValidateMappedTablesExistAsync(AppDbContext dbContext)

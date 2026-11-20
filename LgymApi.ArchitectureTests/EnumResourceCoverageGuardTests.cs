@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using FluentAssertions;
 using LgymApi.Domain.Enums;
 
 namespace LgymApi.ArchitectureTests;
@@ -24,8 +23,7 @@ public sealed class EnumResourceCoverageGuardTests
     {
         var missingKeys = FindMissingKeys(LoadResourceKeySets());
 
-        missingKeys.Should().BeEmpty(
-            "every exposed enum member, including hidden members, must have a conventional key in both enum resource files");
+        Assert.That(missingKeys, Is.Empty, "every exposed enum member, including hidden members, must have a conventional key in both enum resource files");
     }
 
     [TestCase("English")]
@@ -40,8 +38,9 @@ public sealed class EnumResourceCoverageGuardTests
 
         var missingKeys = FindMissingKeys(keySets);
 
-        missingKeys.Should().ContainSingle()
-            .Which.Should().Be($"{culture}: ExerciseEloFormula.PullupWeighted ({RepresentativeKey})");
+        var assertedValue3 = (missingKeys).ToArray();
+        Assert.That(assertedValue3, Has.Exactly(1).Items);
+        Assert.That(assertedValue3.Single(), Is.EqualTo($"{culture}: ExerciseEloFormula.PullupWeighted ({RepresentativeKey})"));
     }
 
     private static ResourceKeySet[] LoadResourceKeySets()
@@ -58,7 +57,7 @@ public sealed class EnumResourceCoverageGuardTests
 
     private static ResourceKeySet LoadResourceKeySet(string culture, string path)
     {
-        File.Exists(path).Should().BeTrue($"the {culture} enum resource file '{path}' must exist");
+        Assert.That(File.Exists(path), Is.True, $"the {culture} enum resource file '{path}' must exist");
 
         var keys = XDocument.Load(path)
             .Descendants("data")

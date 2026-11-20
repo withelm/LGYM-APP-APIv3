@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Features.Reporting;
@@ -47,13 +46,13 @@ public sealed partial class RecurringReportAssignmentServiceTests
             ReportingTestData.AccountId(traineeId),
             assignment.Id);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.CurrentReportRequest.Should().NotBeNull();
-        result.Value.CurrentReportRequest!.Status.Should().Be(ReportRequestStatus.Pending);
-        result.Value.CurrentReportRequestId.Should().Be(result.Value.CurrentReportRequest.Id);
-        result.Value.LastRequestCreatedAt.Should().Be(result.Value.CurrentReportRequest.CreatedAt);
-        result.Value.NextEligibleAt.Should().BeNull();
-        database.ReportRequests.Should().ContainSingle();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.CurrentReportRequest, Is.Not.Null);
+        Assert.That(result.Value.CurrentReportRequest!.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(result.Value.CurrentReportRequestId, Is.EqualTo(result.Value.CurrentReportRequest.Id));
+        Assert.That(result.Value.LastRequestCreatedAt, Is.EqualTo(result.Value.CurrentReportRequest.CreatedAt));
+        Assert.That(result.Value.NextEligibleAt, Is.Null);
+        Assert.That(database.ReportRequests, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -70,12 +69,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.CurrentReportRequest.Should().NotBeNull();
-        result.Value.CurrentReportRequest!.Status.Should().Be(ReportRequestStatus.Pending);
-        result.Value.CurrentReportRequestId.Should().Be(result.Value.CurrentReportRequest.Id);
-        result.Value.LastRequestCreatedAt.Should().Be(result.Value.CurrentReportRequest.CreatedAt);
-        result.Value.NextEligibleAt.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.CurrentReportRequest, Is.Not.Null);
+        Assert.That(result.Value.CurrentReportRequest!.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(result.Value.CurrentReportRequestId, Is.EqualTo(result.Value.CurrentReportRequest.Id));
+        Assert.That(result.Value.LastRequestCreatedAt, Is.EqualTo(result.Value.CurrentReportRequest.CreatedAt));
+        Assert.That(result.Value.NextEligibleAt, Is.Null);
         await harness.RequestPersistence.Received(1).AddRequestAsync(
             Arg.Is<NewReportRequestPersistenceModel>(request =>
                 request.Id == result.Value.CurrentReportRequestId
@@ -95,10 +94,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
                 && command.TrainerId == assignment.TrainerId
                 && command.TraineeId == assignment.TraineeId),
             Arg.Any<CancellationToken>());
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.UnitOfWork.BeginCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(0);
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(0));
         await harness.RelationshipPersistence.Received(2).GetAccessAsync(
             assignment.TrainerId,
             assignment.TraineeId,
@@ -149,9 +148,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.ScheduleRevision.Should().Be(5);
-        result.Value.PendingScheduleProposal.Should().BeNull();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.ScheduleRevision, Is.EqualTo(5));
+        Assert.That(result.Value.PendingScheduleProposal, Is.Null);
         await harness.AssignmentPersistence.Received(1).UpdateScheduleChangeResolutionAsync(
             activeOverride.Id,
             Arg.Is<RecurringReportScheduleChangeResolutionPersistenceModel>(resolution =>
@@ -175,10 +174,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
-        harness.UnitOfWork.BeginCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(0));
         await harness.RelationshipPersistence.DidNotReceiveWithAnyArgs().GetAccessAsync(
             default,
             default,
@@ -196,10 +195,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             Id<RecurringReportAssignment>.Empty);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
-        harness.UnitOfWork.BeginCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(0));
         await harness.RelationshipPersistence.DidNotReceiveWithAnyArgs().GetAccessAsync(
             default,
             default,
@@ -217,10 +216,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             Id<AccountReference>.Empty,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
-        harness.UnitOfWork.BeginCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(0));
         await harness.RelationshipPersistence.DidNotReceiveWithAnyArgs().GetAccessAsync(
             default,
             default,
@@ -238,10 +237,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
-        harness.UnitOfWork.BeginCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -256,10 +255,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.RelationshipPersistence.Received(1).GetAccessAsync(
             otherTrainerId,
             assignment.TraineeId,
@@ -280,11 +279,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        result.Error.Message.Should().Be(Messages.DidntFind);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.RequestPersistence.DidNotReceiveWithAnyArgs().AddRequestAsync(default!, default);
     }
 
@@ -299,10 +298,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.RequestPersistence.DidNotReceiveWithAnyArgs().AddRequestAsync(default!, default);
     }
 
@@ -323,12 +322,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        result.Error.Message.Should().Be(Messages.RecurringReportTemplateUnavailable);
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.RecurringReportTemplateUnavailable));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(0));
         await harness.AssignmentPersistence.Received(1).UpdateAsync(
             assignment.Id,
             Arg.Is<RecurringReportAssignmentUpdatePersistenceModel>(update => !update.IsActive),
@@ -351,12 +350,12 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        result.Error.Message.Should().Be(Messages.RecurringReportTemplateUnavailable);
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.RecurringReportTemplateUnavailable));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(0));
         await harness.AssignmentPersistence.Received(1).UpdateAsync(
             assignment.Id,
             Arg.Is<RecurringReportAssignmentUpdatePersistenceModel>(update => !update.IsActive),
@@ -385,11 +384,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        result.Error.Message.Should().Be(Messages.RecurringReportAssignmentUnavailable);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.RecurringReportAssignmentUnavailable));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.RequestPersistence.DidNotReceiveWithAnyArgs().AddRequestAsync(default!, default);
     }
 
@@ -453,9 +452,9 @@ public sealed partial class RecurringReportAssignmentServiceTests
                 assignment.TraineeId,
                 assignment.Id);
 
-            result.IsFailure.Should().BeTrue();
-            result.Error.Should().BeOfType<ReportingConflictError>();
-            result.Error.Message.Should().Be("Ten cykl raportu okresowego nie jest teraz aktywny.");
+            Assert.That(result.IsFailure, Is.True);
+            Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+            Assert.That(result.Error.Message, Is.EqualTo("Ten cykl raportu okresowego nie jest teraz aktywny."));
         }
         finally
         {
@@ -479,10 +478,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -505,13 +504,15 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.Id,
             cancellationSource.Token);
 
-        var exception = await action.Should().ThrowAsync<OperationCanceledException>();
-        exception.Which.CancellationToken.Should().Be(cancellationSource.Token);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.RollbackTokens.Should().ContainSingle().Which.CanBeCanceled.Should().BeFalse();
-        harness.Transaction.Operations.Should().Equal("RollbackStarted", "RollbackCompleted", "Dispose");
+        var exception = (await Assert.CatchAsync<OperationCanceledException>(async () => { await action(); }))!;
+        Assert.That(exception.CancellationToken, Is.EqualTo(cancellationSource.Token));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        var assertedValue71 = (harness.Transaction.RollbackTokens).ToArray();
+        Assert.That(assertedValue71, Has.Exactly(1).Items);
+        Assert.That(assertedValue71.Single().CanBeCanceled, Is.False);
+        Assert.That(harness.Transaction.Operations, Is.EqualTo(new[] { "RollbackStarted", "RollbackCompleted", "Dispose" }));
         await harness.RelationshipPersistence.Received(1).GetAccessAsync(
             assignment.TrainerId,
             assignment.TraineeId,
@@ -537,15 +538,17 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.Id,
             cancellationSource.Token);
 
-        var exception = await action.Should().ThrowAsync<OperationCanceledException>();
-        exception.Which.CancellationToken.Should().Be(cancellationSource.Token);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.RollbackCompleted.Should().BeTrue();
-        harness.Transaction.DisposeCompleted.Should().BeTrue();
-        harness.Transaction.RollbackTokens.Should().ContainSingle().Which.CanBeCanceled.Should().BeFalse();
-        harness.Transaction.Operations.Should().Equal("RollbackStarted", "RollbackCompleted", "Dispose");
+        var exception = (await Assert.CatchAsync<OperationCanceledException>(async () => { await action(); }))!;
+        Assert.That(exception.CancellationToken, Is.EqualTo(cancellationSource.Token));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCompleted, Is.True);
+        Assert.That(harness.Transaction.DisposeCompleted, Is.True);
+        var assertedValue72 = (harness.Transaction.RollbackTokens).ToArray();
+        Assert.That(assertedValue72, Has.Exactly(1).Items);
+        Assert.That(assertedValue72.Single().CanBeCanceled, Is.False);
+        Assert.That(harness.Transaction.Operations, Is.EqualTo(new[] { "RollbackStarted", "RollbackCompleted", "Dispose" }));
         await harness.RequestPersistence.DidNotReceiveWithAnyArgs().AddRequestAsync(default!, default);
         await harness.AssignmentPersistence.DidNotReceiveWithAnyArgs().UpdateAsync(default, default!, default);
         await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
@@ -567,8 +570,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.Id,
             cancellationSource.Token);
 
-        var exception = await action.Should().ThrowAsync<OperationCanceledException>();
-        exception.Which.CancellationToken.Should().Be(cancellationSource.Token);
+        var exception = (await Assert.CatchAsync<OperationCanceledException>(async () => { await action(); }))!;
+        Assert.That(exception.CancellationToken, Is.EqualTo(cancellationSource.Token));
         await harness.RequestPersistence.Received(1).AddRequestAsync(
             Arg.Any<NewReportRequestPersistenceModel>(),
             cancellationSource.Token);
@@ -579,21 +582,18 @@ public sealed partial class RecurringReportAssignmentServiceTests
         await harness.OutboxWriter.Received(1).StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             cancellationSource.Token);
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.UnitOfWork.SaveTokens.Should().ContainSingle().Which.Should().Be(cancellationSource.Token);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
-        harness.Transaction.RollbackCompleted.Should().BeTrue();
-        harness.Transaction.DisposeCompleted.Should().BeTrue();
-        harness.Transaction.RollbackTokens.Should().ContainSingle().Which.CanBeCanceled.Should().BeFalse();
-        harness.Transaction.Operations.Should().Equal(
-            "StageRequest",
-            "StageAssignment",
-            "StageEnvelope",
-            "Save",
-            "RollbackStarted",
-            "RollbackCompleted",
-            "Dispose");
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        var assertedValue73 = (harness.UnitOfWork.SaveTokens).ToArray();
+        Assert.That(assertedValue73, Has.Exactly(1).Items);
+        Assert.That(assertedValue73.Single(), Is.EqualTo(cancellationSource.Token));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCompleted, Is.True);
+        Assert.That(harness.Transaction.DisposeCompleted, Is.True);
+        var assertedValue74 = (harness.Transaction.RollbackTokens).ToArray();
+        Assert.That(assertedValue74, Has.Exactly(1).Items);
+        Assert.That(assertedValue74.Single().CanBeCanceled, Is.False);
+        Assert.That(harness.Transaction.Operations, Is.EqualTo(new[] { "StageRequest", "StageAssignment", "StageEnvelope", "Save", "RollbackStarted", "RollbackCompleted", "Dispose" }));
     }
 
     [Test]
@@ -608,10 +608,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        harness.UnitOfWork.SaveCalls.Should().Be(1);
-        harness.Transaction.CommitCalls.Should().Be(1);
-        harness.Transaction.RollbackCalls.Should().Be(0);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -627,11 +627,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Should().BeSameAs(rollbackFailure);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.CommitCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception, Is.SameAs(rollbackFailure));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.CommitCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -647,10 +647,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Should().BeSameAs(disposalFailure);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception, Is.SameAs(disposalFailure));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -666,10 +666,10 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Should().BeSameAs(beginFailure);
-        harness.UnitOfWork.BeginCalls.Should().Be(1);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception, Is.SameAs(beginFailure));
+        Assert.That(harness.UnitOfWork.BeginCalls, Is.EqualTo(1));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
         await harness.AssignmentPersistence.DidNotReceiveWithAnyArgs().FindByIdForUpdateAsync(default, default);
     }
 
@@ -690,8 +690,8 @@ public sealed partial class RecurringReportAssignmentServiceTests
 
         var result = await adapter.RequestNowAsync(trainer, traineeId, assignmentId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeSameAs(expected.Value);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.SameAs(expected.Value));
         await service.Received(1).RequestNowAsync(trainer, traineeId, assignmentId, Arg.Any<CancellationToken>());
     }
 
@@ -705,11 +705,11 @@ public sealed partial class RecurringReportAssignmentServiceTests
             assignment.TraineeId,
             assignment.Id);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingConflictError>();
-        result.Error.Message.Should().Be(Messages.RecurringReportRequestInProgress);
-        harness.UnitOfWork.SaveCalls.Should().Be(0);
-        harness.Transaction.RollbackCalls.Should().Be(1);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingConflictError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.RecurringReportRequestInProgress));
+        Assert.That(harness.UnitOfWork.SaveCalls, Is.EqualTo(0));
+        Assert.That(harness.Transaction.RollbackCalls, Is.EqualTo(1));
         await harness.RequestPersistence.DidNotReceiveWithAnyArgs().AddRequestAsync(default!, default);
         await harness.AssignmentPersistence.DidNotReceiveWithAnyArgs().UpdateAsync(default, default!, default);
         await harness.OutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(

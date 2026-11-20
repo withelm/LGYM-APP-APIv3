@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Identity.Errors;
 using LgymApi.Application.Identity.Contracts.Sessions;
@@ -59,12 +58,12 @@ public sealed class UserSessionTerminationServiceTests
 
         var result = await service.LogoutAsync(currentUser, sessionId, cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        operations.Should().Equal("revoke", "disassociate", "commit");
-        disassociatedAccountId.Should().Be(currentUser.Id.Rebind<AccountReference>());
-        disassociatedSessionId.Should().Be(sessionId.Rebind<AccountSessionReference>());
-        disassociationToken.Should().Be(cancellationToken);
-        userSessionStore.RevokeCount.Should().Be(1);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(operations, Is.EqualTo(new[] { "revoke", "disassociate", "commit" }));
+        Assert.That(disassociatedAccountId, Is.EqualTo(currentUser.Id.Rebind<AccountReference>()));
+        Assert.That(disassociatedSessionId, Is.EqualTo(sessionId.Rebind<AccountSessionReference>()));
+        Assert.That(disassociationToken, Is.EqualTo(cancellationToken));
+        Assert.That(userSessionStore.RevokeCount, Is.EqualTo(1));
         await disassociationPort.Received(1).StageDisassociateAsync(
             currentUser.Id.Rebind<AccountReference>(),
             sessionId.Rebind<AccountSessionReference>(),
@@ -85,9 +84,9 @@ public sealed class UserSessionTerminationServiceTests
 
         var result = await service.LogoutAsync(null, Id<UserSession>.New());
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<UserNotFoundError>();
-        userSessionStore.RevokeCount.Should().Be(0);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<UserNotFoundError>());
+        Assert.That(userSessionStore.RevokeCount, Is.EqualTo(0));
         await disassociationPort.DidNotReceive().StageDisassociateAsync(
             Arg.Any<Id<AccountReference>>(),
             Arg.Any<Id<AccountSessionReference>>(),
@@ -109,8 +108,8 @@ public sealed class UserSessionTerminationServiceTests
 
         var result = await service.LogoutAsync(currentUser, null);
 
-        result.IsSuccess.Should().BeTrue();
-        userSessionStore.RevokeCount.Should().Be(0);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(userSessionStore.RevokeCount, Is.EqualTo(0));
         await disassociationPort.DidNotReceive().StageDisassociateAsync(
             Arg.Any<Id<AccountReference>>(),
             Arg.Any<Id<AccountSessionReference>>(),
@@ -178,11 +177,11 @@ public sealed class UserSessionTerminationServiceTests
                     sessionId,
                     CancellationToken.None));
 
-            exception.Should().BeSameAs(stagingFailure);
+            Assert.That(exception, Is.SameAs(stagingFailure));
         }
 
         await using var verificationContext = new AppDbContext(options);
         var persistedSession = await verificationContext.UserSessions.SingleAsync(session => session.Id == sessionId);
-        persistedSession.RevokedAtUtc.Should().BeNull();
+        Assert.That(persistedSession.RevokedAtUtc, Is.Null);
     }
 }

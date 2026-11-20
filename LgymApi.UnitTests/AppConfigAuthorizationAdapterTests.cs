@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Identity.Adapters;
 using LgymApi.Identity;
 using LgymApi.Application.Platform.ReferenceData.AppConfig.Contracts;
@@ -33,9 +32,9 @@ public sealed class AppConfigAuthorizationAdapterTests
     {
         var result = await _adapter.CanManageAppConfigAsync(Id<ActorReference>.Empty);
 
-        result.Should().BeFalse();
-        _userRepository.Calls.Should().NotContain(call => call.Method == nameof(IUserRepository.FindByIdAsync));
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync));
+        Assert.That(result, Is.False);
+        Assert.That((_userRepository.Calls).Any(call => call.Method == nameof(IUserRepository.FindByIdAsync)), Is.False);
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync)), Is.False);
     }
 
     [Test]
@@ -47,16 +46,14 @@ public sealed class AppConfigAuthorizationAdapterTests
 
         var result = await _adapter.CanManageAppConfigAsync(actorId);
 
-        result.Should().BeFalse();
-        _userRepository.Calls
+        Assert.That(result, Is.False);
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.FindByIdAsync)
                 && call.Argument is Id<User> id
                 && id == userId
-                && call.CancellationToken == CancellationToken.None)
-            .Should()
-            .ContainSingle();
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync));
+                && call.CancellationToken == CancellationToken.None), Has.Exactly(1).Items);
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync)), Is.False);
     }
 
     [Test]
@@ -69,16 +66,14 @@ public sealed class AppConfigAuthorizationAdapterTests
 
         var result = await _adapter.CanManageAppConfigAsync(actorId);
 
-        result.Should().BeFalse();
-        _roleRepository.Calls
+        Assert.That(result, Is.False);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.UserHasPermissionAsync)
                 && call.Argument is ValueTuple<Id<User>, string> arguments
                 && arguments.Item1 == userId
                 && arguments.Item2 == AuthConstants.Permissions.ManageAppConfig
-                && call.CancellationToken == CancellationToken.None)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == CancellationToken.None), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -91,16 +86,14 @@ public sealed class AppConfigAuthorizationAdapterTests
 
         var result = await _adapter.CanManageAppConfigAsync(actorId);
 
-        result.Should().BeTrue();
-        _roleRepository.Calls
+        Assert.That(result, Is.True);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.UserHasPermissionAsync)
                 && call.Argument is ValueTuple<Id<User>, string> arguments
                 && arguments.Item1 == userId
                 && arguments.Item2 == AuthConstants.Permissions.ManageAppConfig
-                && call.CancellationToken == CancellationToken.None)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == CancellationToken.None), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -116,24 +109,20 @@ public sealed class AppConfigAuthorizationAdapterTests
 
         var result = await _adapter.CanManageAppConfigAsync(actorId, cancellationToken);
 
-        result.Should().BeTrue();
-        _userRepository.Calls
+        Assert.That(result, Is.True);
+        Assert.That(_userRepository.Calls
             .Where(call =>
                 call.Method == nameof(IUserRepository.FindByIdAsync)
                 && call.Argument is Id<User> id
                 && id == userId
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
-        _roleRepository.Calls
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
+        Assert.That(_roleRepository.Calls
             .Where(call =>
                 call.Method == nameof(IRoleRepository.UserHasPermissionAsync)
                 && call.Argument is ValueTuple<Id<User>, string> arguments
                 && arguments.Item1 == userId
                 && arguments.Item2 == AuthConstants.Permissions.ManageAppConfig
-                && call.CancellationToken == cancellationToken)
-            .Should()
-            .ContainSingle();
+                && call.CancellationToken == cancellationToken), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -145,8 +134,8 @@ public sealed class AppConfigAuthorizationAdapterTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _adapter.CanManageAppConfigAsync(Id<ActorReference>.New()));
 
-        exception.Should().BeSameAs(expectedException);
-        _roleRepository.Calls.Should().NotContain(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync));
+        Assert.That(exception, Is.SameAs(expectedException));
+        Assert.That((_roleRepository.Calls).Any(call => call.Method == nameof(IRoleRepository.UserHasPermissionAsync)), Is.False);
     }
 
     [Test]
@@ -161,7 +150,7 @@ public sealed class AppConfigAuthorizationAdapterTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _adapter.CanManageAppConfigAsync(actorId));
 
-        exception.Should().BeSameAs(expectedException);
+        Assert.That(exception, Is.SameAs(expectedException));
     }
 
     [Test]
@@ -193,13 +182,13 @@ public sealed class AppConfigAuthorizationAdapterTests
 
         var result = await port.CanManageAppConfigAsync(actorId);
 
-        result.Should().BeTrue();
+        Assert.That(result, Is.True);
 
         _roleRepository.UserHasPermission = (_, _, _) => Task.FromResult(false);
 
         var denied = await port.CanManageAppConfigAsync(actorId);
 
-        denied.Should().BeFalse();
+        Assert.That(denied, Is.False);
 
         var expectedException = new InvalidOperationException("Permission lookup failed.");
         _roleRepository.UserHasPermission = (_, _, _) => Task.FromException<bool>(expectedException);
@@ -207,6 +196,6 @@ public sealed class AppConfigAuthorizationAdapterTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await port.CanManageAppConfigAsync(actorId));
 
-        exception.Should().BeSameAs(expectedException);
+        Assert.That(exception, Is.SameAs(expectedException));
     }
 }

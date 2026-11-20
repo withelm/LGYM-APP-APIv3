@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Persistence;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -32,16 +31,16 @@ public sealed class DietPlanPersistenceRepositoryTests
 
         var tracked = await repository.FindTrackedPlanByIdAsync(plan.Id);
 
-        tracked.Should().NotBeNull();
-        tracked!.Meals.Select(meal => meal.Name).Should().Equal("first", "second");
-        database.ChangeTracker.Entries().Should().NotBeEmpty();
+        Assert.That(tracked, Is.Not.Null);
+        Assert.That(tracked!.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "first", "second" }));
+        Assert.That(database.ChangeTracker.Entries(), Is.Not.Empty);
 
         database.ChangeTracker.Clear();
         var noTracking = await repository.GetPlanByIdAsync(plan.Id);
 
-        noTracking.Should().NotBeNull();
-        noTracking!.Meals.Select(meal => meal.Name).Should().Equal("first", "second");
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(noTracking, Is.Not.Null);
+        Assert.That(noTracking!.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "first", "second" }));
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
     }
 
     [Test]
@@ -73,12 +72,12 @@ public sealed class DietPlanPersistenceRepositoryTests
         var activePlan = await repository.GetActivePlanForTraineeAsync(traineeId);
         var history = await repository.ListPlanHistoryAsync(activeLatest.Id);
 
-        traineePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id, inactive.Id);
-        traineePlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name).Should().Equal("breakfast", "dinner");
-        activePlans.Select(plan => plan.Id).Should().Equal(otherTrainer.Id, activeLatest.Id, activeEarlier.Id);
-        activePlan!.Id.Should().Be(otherTrainer.Id);
-        history.Select(entry => entry.ChangeType).Should().Equal("latest", "older");
-        database.ChangeTracker.Entries().Should().BeEmpty();
+        Assert.That(traineePlans.Select(plan => plan.Id), Is.EqualTo(new[] { otherTrainer.Id, activeLatest.Id, activeEarlier.Id, inactive.Id }));
+        Assert.That(traineePlans.Single(plan => plan.Id == activeLatest.Id).Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "breakfast", "dinner" }));
+        Assert.That(activePlans.Select(plan => plan.Id), Is.EqualTo(new[] { otherTrainer.Id, activeLatest.Id, activeEarlier.Id }));
+        Assert.That(activePlan!.Id, Is.EqualTo(otherTrainer.Id));
+        Assert.That(history.Select(entry => entry.ChangeType), Is.EqualTo(new[] { "latest", "older" }));
+        Assert.That(database.ChangeTracker.Entries(), Is.Empty);
     }
 
     [Test]
@@ -99,8 +98,8 @@ public sealed class DietPlanPersistenceRepositoryTests
 
             await using (var beforeCommitContext = new AppDbContext(options))
             {
-                (await beforeCommitContext.DietPlans.AsNoTracking().AnyAsync()).Should().BeFalse();
-                (await beforeCommitContext.DietPlanHistories.AsNoTracking().AnyAsync()).Should().BeFalse();
+                Assert.That((await beforeCommitContext.DietPlans.AsNoTracking().AnyAsync()), Is.False);
+                Assert.That((await beforeCommitContext.DietPlanHistories.AsNoTracking().AnyAsync()), Is.False);
             }
 
             var unitOfWork = new EfUnitOfWork(writeContext);
@@ -108,8 +107,8 @@ public sealed class DietPlanPersistenceRepositoryTests
         }
 
         await using var afterCommitContext = new AppDbContext(options);
-        (await afterCommitContext.DietPlans.AsNoTracking().SingleAsync()).Id.Should().Be(plan.Id);
-        (await afterCommitContext.DietPlanHistories.AsNoTracking().SingleAsync()).Id.Should().Be(history.Id);
+        Assert.That((await afterCommitContext.DietPlans.AsNoTracking().SingleAsync()).Id, Is.EqualTo(plan.Id));
+        Assert.That((await afterCommitContext.DietPlanHistories.AsNoTracking().SingleAsync()).Id, Is.EqualTo(history.Id));
     }
 
     [Test]
@@ -132,7 +131,7 @@ public sealed class DietPlanPersistenceRepositoryTests
 
         repository.StageUpdate(tracked!);
 
-        database.Entry(tracked!).Property(candidate => candidate.UpdatedAt).IsModified.Should().BeTrue();
+        Assert.That(database.Entry(tracked!).Property(candidate => candidate.UpdatedAt).IsModified, Is.True);
     }
 
     [Test]
@@ -149,9 +148,9 @@ public sealed class DietPlanPersistenceRepositoryTests
             "DietPlanPersistenceRepository.cs");
         var source = File.ReadAllText(sourcePath);
 
-        declaredMethodNames.Should().NotContain(new[] { nameof(AppDbContext.SaveChangesAsync), nameof(EfUnitOfWork.BeginTransactionAsync) });
-        source.Should().NotContain("SaveChangesAsync(");
-        source.Should().NotContain("BeginTransactionAsync(");
+        Assert.That(declaredMethodNames, Has.None.EqualTo(nameof(AppDbContext.SaveChangesAsync)).And.None.EqualTo(nameof(EfUnitOfWork.BeginTransactionAsync)));
+        Assert.That(source, Does.Not.Contain("SaveChangesAsync("));
+        Assert.That(source, Does.Not.Contain("BeginTransactionAsync("));
     }
 
     [Test]
@@ -164,8 +163,8 @@ public sealed class DietPlanPersistenceRepositoryTests
             .Where(descriptor => descriptor.ServiceType == typeof(IDietPlanPersistence))
             .ToList();
 
-        registrations.Should().ContainSingle();
-        registrations[0].ImplementationType.Should().Be(typeof(DietPlanPersistenceRepository));
+        Assert.That(registrations, Has.Exactly(1).Items);
+        Assert.That(registrations[0].ImplementationType, Is.EqualTo(typeof(DietPlanPersistenceRepository)));
     }
 
     private static AppDbContext CreateDbContext()

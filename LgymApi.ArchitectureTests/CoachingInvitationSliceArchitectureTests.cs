@@ -1,5 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.Application.Coaching.Invitations.Create;
@@ -35,9 +34,9 @@ public sealed class CoachingInvitationSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            slice.Contract.IsPublic.Should().BeTrue();
-            slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance).Should().ContainSingle();
-            assembly.GetType(slice.ImplementationName)!.IsNotPublic.Should().BeTrue();
+            Assert.That(slice.Contract.IsPublic, Is.True);
+            Assert.That(slice.Contract.GetMethods(BindingFlags.Public | BindingFlags.Instance), Has.Exactly(1).Items);
+            Assert.That(assembly.GetType(slice.ImplementationName)!.IsNotPublic, Is.True);
         }
     }
 
@@ -49,7 +48,7 @@ public sealed class CoachingInvitationSliceArchitectureTests
 
         foreach (var slice in Slices)
         {
-            services.Count(descriptor => descriptor.ServiceType == slice.Contract).Should().Be(1);
+            Assert.That(services.Count(descriptor => descriptor.ServiceType == slice.Contract), Is.EqualTo(1));
         }
     }
 
@@ -62,8 +61,8 @@ public sealed class CoachingInvitationSliceArchitectureTests
             .Select(File.ReadAllText)
             .ToArray();
 
-        source.Should().NotContain(text => text.Contains("IUserRepository", StringComparison.Ordinal));
-        source.Should().NotContain(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal));
+        Assert.That((source).Any(text => text.Contains("IUserRepository", StringComparison.Ordinal)), Is.False);
+        Assert.That((source).Any(text => text.Contains("ITrainerRelationshipRepository", StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -80,12 +79,12 @@ public sealed class CoachingInvitationSliceArchitectureTests
         foreach (var useCase in createUseCases)
         {
             var source = File.ReadAllText(useCase);
-            source.Should().NotContain("new CoachingInvitationWriteModel(");
-            source.Should().Contain("_mapper.Map<InvitationCreationSource, CoachingInvitationWriteModel>(");
-            source.Should().Contain("_mapper.CreateContext()");
+            Assert.That(source, Does.Not.Contain("new CoachingInvitationWriteModel("));
+            Assert.That(source, Does.Contain("_mapper.Map<InvitationCreationSource, CoachingInvitationWriteModel>("));
+            Assert.That(source, Does.Contain("_mapper.CreateContext()"));
         }
 
-        File.ReadAllText(mappingProfile).Should().Contain("CreateMap<InvitationCreationSource, CoachingInvitationWriteModel>");
+        Assert.That(File.ReadAllText(mappingProfile), Does.Contain("CreateMap<InvitationCreationSource, CoachingInvitationWriteModel>"));
     }
 
     [Test]
@@ -103,12 +102,12 @@ public sealed class CoachingInvitationSliceArchitectureTests
         foreach (var useCase in lifecycleUseCases)
         {
             var source = File.ReadAllText(useCase);
-            source.Should().NotContain("new CoachingInvitationResponseUpdateModel(");
-            source.Should().Contain("_mapper.Map<InvitationResponseSource, CoachingInvitationResponseUpdateModel>(");
-            source.Should().Contain("_mapper.CreateContext()");
+            Assert.That(source, Does.Not.Contain("new CoachingInvitationResponseUpdateModel("));
+            Assert.That(source, Does.Contain("_mapper.Map<InvitationResponseSource, CoachingInvitationResponseUpdateModel>("));
+            Assert.That(source, Does.Contain("_mapper.CreateContext()"));
         }
 
-        File.ReadAllText(mappingProfile).Should().Contain("CreateMap<InvitationResponseSource, CoachingInvitationResponseUpdateModel>");
+        Assert.That(File.ReadAllText(mappingProfile), Does.Contain("CreateMap<InvitationResponseSource, CoachingInvitationResponseUpdateModel>"));
     }
 
     [Test]
@@ -119,9 +118,9 @@ public sealed class CoachingInvitationSliceArchitectureTests
         var mappingProfile = Path.Combine(root, "LgymApi.Application", "Coaching", "Invitations", "InvitationMappingProfile.cs");
         var source = File.ReadAllText(useCase);
 
-        source.Should().NotContain("new CoachingActiveLinkWriteModel(");
-        source.Should().Contain("_mapper.Map<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>(");
-        source.Should().Contain("_mapper.CreateContext()");
-        File.ReadAllText(mappingProfile).Should().Contain("CreateMap<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>");
+        Assert.That(source, Does.Not.Contain("new CoachingActiveLinkWriteModel("));
+        Assert.That(source, Does.Contain("_mapper.Map<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>("));
+        Assert.That(source, Does.Contain("_mapper.CreateContext()"));
+        Assert.That(File.ReadAllText(mappingProfile), Does.Contain("CreateMap<InvitationActiveLinkSource, CoachingActiveLinkWriteModel>"));
     }
 }

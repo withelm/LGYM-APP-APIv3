@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Nutrition.DietPlans;
@@ -45,10 +44,10 @@ public sealed class NutritionMappingProfileTests
 
         var readModel = mapper.Map<DietPlan, DietPlanReadModel>(plan, mapper.CreateContext());
 
-        plan.Name.Should().Be("Lean bulk");
-        plan.Meals.Select(meal => meal.Name).Should().Equal("Breakfast", "Dinner");
-        readModel.Meals.Select(meal => meal.Name).Should().Equal("Breakfast", "Dinner");
-        readModel.Notes.Should().Be("weekly");
+        Assert.That(plan.Name, Is.EqualTo("Lean bulk"));
+        Assert.That(plan.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "Breakfast", "Dinner" }));
+        Assert.That(readModel.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "Breakfast", "Dinner" }));
+        Assert.That(readModel.Notes, Is.EqualTo("weekly"));
     }
 
     [Test]
@@ -85,15 +84,15 @@ public sealed class NutritionMappingProfileTests
         var planReadModel = mapper.Map<SupplementPlan, SupplementPlanReadModel>(supplementPlan, mapper.CreateContext());
         var historyReadModel = mapper.Map<DietPlanHistory, DietPlanHistoryReadModel>(history, mapper.CreateContext());
 
-        supplementPlan.Items.Select(item => item.SupplementName).Should().Equal("Magnesium", "Zinc");
-        planReadModel.Items.Select(item => item.TimeOfDay).Should().Equal("08:00", "09:30");
-        historyReadModel.Should().Be(new DietPlanHistoryReadModel(
+        Assert.That(supplementPlan.Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Magnesium", "Zinc" }));
+        Assert.That(planReadModel.Items.Select(item => item.TimeOfDay), Is.EqualTo(new[] { "08:00", "09:30" }));
+        Assert.That(historyReadModel, Is.EqualTo(new DietPlanHistoryReadModel(
             history.Id,
             history.DietPlanId,
             trainerId,
             history.ChangeDate,
             "Created",
-            "{}"));
+            "{}")));
     }
 
     private static IMapper CreateMapper()

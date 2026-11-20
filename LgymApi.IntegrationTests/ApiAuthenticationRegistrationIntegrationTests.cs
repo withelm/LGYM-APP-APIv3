@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -21,14 +20,14 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
         var user = await SeedUserAsync(name: "hub-query-token-user", email: "hub-query-token@example.com");
         SetAuthorizationHeader(user.Id);
         var token = Client.DefaultRequestHeaders.Authorization?.Parameter;
-        token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(string.IsNullOrWhiteSpace(token), Is.False);
         ClearAuthorizationHeader();
 
         var response = await Client.PostAsync(
             $"/hubs/notifications/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(token!)}",
             null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -53,9 +52,9 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
 
         // Then
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -68,8 +67,8 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
             isAdmin: true);
         var login = await Client.PostAsJsonAsync("/api/login", new { name = administrator.Name, password = "pass1234" });
         var loginBody = await login.Content.ReadFromJsonAsync<LoginResponse>();
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
-        loginBody!.Token.Should().NotBeNullOrWhiteSpace();
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(string.IsNullOrWhiteSpace(loginBody!.Token), Is.False);
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody.Token);
 
         var beforeDemotion = await Client.GetAsync("/api/roles");
@@ -88,8 +87,8 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
 
         var afterDemotion = await Client.GetAsync("/api/roles");
 
-        beforeDemotion.StatusCode.Should().Be(HttpStatusCode.OK);
-        afterDemotion.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(beforeDemotion.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(afterDemotion.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -111,7 +110,7 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
 
         var response = await Client.GetAsync("/api/roles");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -136,8 +135,8 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
         var response = await Client.GetAsync("/api/roles");
         var body = await response.Content.ReadFromJsonAsync<MiddlewareErrorResponse>();
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        body!.Message.Should().Be("Unauthorized");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(body!.Message, Is.EqualTo("Unauthorized"));
     }
 
     [Test]
@@ -152,7 +151,7 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
 
         var response = await Client.GetAsync("/api/roles");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     [Test]
@@ -167,8 +166,7 @@ public sealed class ApiAuthenticationRegistrationIntegrationTests : IntegrationT
             using var client = factory.CreateClient();
         };
 
-        startHost.Should().Throw<Exception>()
-            .Which.ToString().Should().Contain("Jwt:SigningKey is not configured or is too short.");
+        Assert.That(Assert.Catch<Exception>(() => { startHost(); })!.ToString(), Does.Contain("Jwt:SigningKey is not configured or is too short."));
     }
 
     private sealed class MiddlewareErrorResponse

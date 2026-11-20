@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Features.InAppNotification;
 using LgymApi.Api.Features.InAppNotification.Controllers;
 using LgymApi.Api.Features.User.Controllers;
@@ -34,13 +33,13 @@ public sealed class NotificationHostAdapterCompositionTests
         var registrations = services
             .Where(descriptor => descriptor.ServiceType == typeof(IInAppNotificationPushPublisher))
             .ToArray();
-        registrations.Should().ContainSingle()
-            .Which.ImplementationType.Should().Be(typeof(SignalRNotificationPushPublisher));
+        var assertedValue186 = (registrations).ToArray();
+        Assert.That(assertedValue186, Has.Exactly(1).Items);
+        Assert.That(assertedValue186.Single().ImplementationType, Is.EqualTo(typeof(SignalRNotificationPushPublisher)));
 
         using var provider = services.BuildServiceProvider(validateScopes: true);
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IInAppNotificationPushPublisher>()
-            .Should().BeOfType<SignalRNotificationPushPublisher>();
+        Assert.That(scope.ServiceProvider.GetRequiredService<IInAppNotificationPushPublisher>(), Is.TypeOf<SignalRNotificationPushPublisher>());
     }
 
     [Test]
@@ -57,8 +56,7 @@ public sealed class NotificationHostAdapterCompositionTests
 
         var resolve = () => scope.ServiceProvider.GetRequiredService<IInAppNotificationService>();
 
-        resolve.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{nameof(IInAppNotificationPushPublisher)}*");
+        Assert.That(() => { resolve(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{nameof(IInAppNotificationPushPublisher)}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -73,15 +71,15 @@ public sealed class NotificationHostAdapterCompositionTests
             typeof(IInAppNotificationPushPublisher)
         };
 
-        notificationContracts.Should().OnlyContain(type => type.IsPublic && type.Assembly == notificationsAssembly);
-        MappingAssemblyMarkers.All.Should().ContainSingle(assembly => assembly == notificationsAssembly);
-        typeof(InAppNotificationController).GetConstructors().Single().GetParameters()
-            .Select(parameter => parameter.ParameterType).Should().Contain(typeof(IInAppNotificationApiAdapter));
-        typeof(PushNotificationAdminController).GetConstructors().Single().GetParameters()
-            .Select(parameter => parameter.ParameterType).Should().Contain(typeof(INotificationEventApiAdapter));
-        typeof(PushInstallationController).GetConstructors().Single().GetParameters()
-            .Select(parameter => parameter.ParameterType).Should().Contain(typeof(IPushInstallationApiAdapter));
-        typeof(SignalRNotificationPushPublisher).GetInterfaces().Should().Contain(typeof(IInAppNotificationPushPublisher));
+        Assert.That((notificationContracts).All(type => type.IsPublic && type.Assembly == notificationsAssembly), Is.True);
+        Assert.That((MappingAssemblyMarkers.All).Where(assembly => assembly == notificationsAssembly), Has.Exactly(1).Items);
+        Assert.That(typeof(InAppNotificationController).GetConstructors().Single().GetParameters()
+            .Select(parameter => parameter.ParameterType), Does.Contain(typeof(IInAppNotificationApiAdapter)));
+        Assert.That(typeof(PushNotificationAdminController).GetConstructors().Single().GetParameters()
+            .Select(parameter => parameter.ParameterType), Does.Contain(typeof(INotificationEventApiAdapter)));
+        Assert.That(typeof(PushInstallationController).GetConstructors().Single().GetParameters()
+            .Select(parameter => parameter.ParameterType), Does.Contain(typeof(IPushInstallationApiAdapter)));
+        Assert.That(typeof(SignalRNotificationPushPublisher).GetInterfaces(), Does.Contain(typeof(IInAppNotificationPushPublisher)));
     }
 
     [Test]
@@ -100,20 +98,17 @@ public sealed class NotificationHostAdapterCompositionTests
 
         using var provider = services.BuildServiceProvider(validateScopes: true);
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IInAppNotificationApiAdapter>()
-            .Should().BeOfType<InAppNotificationApiAdapter>();
-        scope.ServiceProvider.GetRequiredService<INotificationEventApiAdapter>()
-            .Should().BeOfType<NotificationEventApiAdapter>();
-        scope.ServiceProvider.GetRequiredService<IPushInstallationApiAdapter>()
-            .Should().BeOfType<PushInstallationApiAdapter>();
+        Assert.That(scope.ServiceProvider.GetRequiredService<IInAppNotificationApiAdapter>(), Is.TypeOf<InAppNotificationApiAdapter>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<INotificationEventApiAdapter>(), Is.TypeOf<NotificationEventApiAdapter>());
+        Assert.That(scope.ServiceProvider.GetRequiredService<IPushInstallationApiAdapter>(), Is.TypeOf<PushInstallationApiAdapter>());
     }
 
     private static void AssertScopedRegistration<TContract, TImplementation>(IServiceCollection services)
     {
-        services.Where(descriptor => descriptor.ServiceType == typeof(TContract))
-            .Should().ContainSingle()
-            .Which.Should().Match<ServiceDescriptor>(descriptor =>
+        var assertedValue187 = (services.Where(descriptor => descriptor.ServiceType == typeof(TContract))).ToArray();
+        Assert.That(assertedValue187, Has.Exactly(1).Items);
+        Assert.That(assertedValue187.Single(), new NUnit.Framework.Constraints.PredicateConstraint<ServiceDescriptor>(descriptor =>
                 descriptor.Lifetime == ServiceLifetime.Scoped
-                && descriptor.ImplementationType == typeof(TImplementation));
+                && descriptor.ImplementationType == typeof(TImplementation)));
     }
 }

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Domain.Entities;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
@@ -50,9 +49,9 @@ public sealed class WelcomeEmailTemplateComposerTests
 
         var message = composer.ComposeWelcome(payload);
 
-        message.To.Should().Be("alicja@example.com");
-        message.Subject.Should().Be("Witaj Alicja");
-        message.Body.Should().Be("Cześć Alicja!");
+        Assert.That(message.To, Is.EqualTo("alicja@example.com"));
+        Assert.That(message.Subject, Is.EqualTo("Witaj Alicja"));
+        Assert.That(message.Body, Is.EqualTo("Cześć Alicja!"));
     }
 
     [Test]
@@ -69,8 +68,8 @@ public sealed class WelcomeEmailTemplateComposerTests
 
         var message = composer.ComposeWelcome(payload);
 
-        message.Subject.Should().Be("Welcome Alex");
-        message.Body.Should().Be("Hi Alex!");
+        Assert.That(message.Subject, Is.EqualTo("Welcome Alex"));
+        Assert.That(message.Body, Is.EqualTo("Hi Alex!"));
     }
 
     private WelcomeEmailTemplateComposer CreateComposer()

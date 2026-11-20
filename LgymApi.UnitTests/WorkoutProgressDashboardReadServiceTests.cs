@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.WorkoutProgress.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -61,13 +60,25 @@ public sealed class WorkoutProgressDashboardReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(traineeId, dateRange, cultures);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Translations.Should().BeSameAs(translations);
-        result.Value.Trainings.Should().ContainSingle();
-        result.Value.Trainings[0].Id.Should().Be(training.Id.ToString());
-        result.Value.Trainings[0].PlanDay.Should().BeEquivalentTo(new { Id = planDayId.ToString(), Name = "Push" });
-        result.Value.Trainings[0].Exercises[0].ExerciseDetails.Should().BeEquivalentTo(new { Id = exercise.Id.ToString(), Name = "Bench" });
-        result.Value.Trainings[0].Exercises[0].ScoresDetails[0].Should().BeEquivalentTo(new { Id = score.Id.ToString(), ExerciseId = exercise.Id.ToString(), Weight = 80d, Reps = 8d, Series = 1 });
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Translations, Is.SameAs(translations));
+        Assert.That(result.Value.Trainings, Has.Exactly(1).Items);
+        Assert.That(result.Value.Trainings[0].Id, Is.EqualTo(training.Id.ToString()));
+        var assertedObject42 = result.Value.Trainings[0].PlanDay;
+        Assert.That(assertedObject42, Is.Not.Null);
+        Assert.That(assertedObject42!.Id, Is.EqualTo(planDayId.ToString()));
+        Assert.That(assertedObject42!.Name, Is.EqualTo("Push"));
+        var assertedObject43 = result.Value.Trainings[0].Exercises[0].ExerciseDetails;
+        Assert.That(assertedObject43, Is.Not.Null);
+        Assert.That(assertedObject43!.Id, Is.EqualTo(exercise.Id.ToString()));
+        Assert.That(assertedObject43!.Name, Is.EqualTo("Bench"));
+        var assertedObject44 = result.Value.Trainings[0].Exercises[0].ScoresDetails[0];
+        Assert.That(assertedObject44, Is.Not.Null);
+        Assert.That(assertedObject44!.Id, Is.EqualTo(score.Id.ToString()));
+        Assert.That(assertedObject44!.ExerciseId, Is.EqualTo(exercise.Id.ToString()));
+        Assert.That(assertedObject44!.Weight, Is.EqualTo(80d));
+        Assert.That(assertedObject44!.Reps, Is.EqualTo(8d));
+        Assert.That(assertedObject44!.Series, Is.EqualTo(1));
     }
 
     [Test]
@@ -110,8 +121,8 @@ public sealed class WorkoutProgressDashboardReadServiceTests
 
         var result = await service.GetTrainingByDateAsync(traineeId, UtcTimeRange.ForLegacyUtcDay(DateTime.UtcNow), []);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeSameAs(error);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.SameAs(error));
         await progress.DidNotReceiveWithAnyArgs().GetExerciseDisplayNamesAsync(default!, default!, default);
     }
 }

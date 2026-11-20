@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Features.Reporting.Models;
@@ -38,10 +37,10 @@ public sealed class ReportSubmissionPhotoHydrationTests
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
         var hydrated = GetOnlyPhoto(result.Value.Single());
-        hydrated.GetProperty("readUrl").GetString().Should().Be($"fresh:{photo.StorageKey}");
-        hydrated.GetProperty("thumbnailUrl").GetString().Should().Be($"fresh:{photo.ThumbnailStorageKey}");
-        hydrated.TryGetProperty("ReadUrl", out _).Should().BeFalse();
-        hydrated.TryGetProperty("ThumbnailUrl", out _).Should().BeFalse();
+        Assert.That(hydrated.GetProperty("readUrl").GetString(), Is.EqualTo($"fresh:{photo.StorageKey}"));
+        Assert.That(hydrated.GetProperty("thumbnailUrl").GetString(), Is.EqualTo($"fresh:{photo.ThumbnailStorageKey}"));
+        Assert.That(hydrated.TryGetProperty("ReadUrl", out _), Is.False);
+        Assert.That(hydrated.TryGetProperty("ThumbnailUrl", out _), Is.False);
     }
 
     [Test]
@@ -59,8 +58,8 @@ public sealed class ReportSubmissionPhotoHydrationTests
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
         var hydrated = GetOnlyPhoto(result.Value.Single());
-        hydrated.GetProperty("readUrl").GetString().Should().Be($"fresh:{photo.StorageKey}");
-        hydrated.GetProperty("thumbnailUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        Assert.That(hydrated.GetProperty("readUrl").GetString(), Is.EqualTo($"fresh:{photo.StorageKey}"));
+        Assert.That(hydrated.GetProperty("thumbnailUrl").ValueKind, Is.EqualTo(JsonValueKind.Null));
     }
 
     [Test]
@@ -96,7 +95,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(fixture.Photos[0].StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -113,8 +112,8 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -134,7 +133,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await inconsistentFixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(inconsistentFixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await inconsistentFixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -153,7 +152,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -171,7 +170,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(traineeId));
 
-        result.Value.Should().BeEmpty();
+        Assert.That(result.Value, Is.Empty);
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -187,7 +186,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -204,7 +203,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetProperty("readUrl").GetString().Should().Be($"fresh:{photo.StorageKey}");
+        Assert.That(result.Value.Single().Answers["photos"].GetProperty("readUrl").GetString(), Is.EqualTo($"fresh:{photo.StorageKey}"));
     }
 
     [Test]
@@ -243,8 +242,8 @@ public sealed class ReportSubmissionPhotoHydrationTests
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
         var metadata = result.Value.Single().Answers["photos"].EnumerateArray().Last();
-        metadata.EnumerateObject().Select(property => property.Name).Should().Equal("caption");
-        metadata.GetProperty("caption").GetString().Should().Be("front");
+        Assert.That(metadata.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "caption" }));
+        Assert.That(metadata.GetProperty("caption").GetString(), Is.EqualTo("front"));
     }
 
     [Test]
@@ -259,7 +258,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(1);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(1));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync("captions/front.txt", Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -279,7 +278,7 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        GetOnlyPhoto(result.Value.Single()).GetProperty("readUrl").GetString().Should().Be("https://expired.example/read");
+        Assert.That(GetOnlyPhoto(result.Value.Single()).GetProperty("readUrl").GetString(), Is.EqualTo("https://expired.example/read"));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -299,8 +298,8 @@ public sealed class ReportSubmissionPhotoHydrationTests
 
         var result = await fixture.Service.GetOwnSubmissionsAsync(ReportingTestData.Account(fixture.TraineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Single().Answers["photos"].GetArrayLength().Should().Be(0);
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Single().Answers["photos"].GetArrayLength(), Is.EqualTo(0));
         await fixture.Storage.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 

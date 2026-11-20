@@ -1,6 +1,7 @@
 # LgymApi.Identity.UnitTests.csproj
 
 - Purpose: focused unit tests for Identity-owned behavior and registrations.
+- Assertions: native NUnit constraints, with exact registration counts and derived exception matching.
 - Contains: actor-bridge mapping and evaluation coverage, global permission-policy fail-closed behavior, and exact Identity facade registrations.
 - `AccountLifecycleAuthorizationTests` covers lifecycle mapping, non-active reader and resolver cutoffs, and fresh authorization facts after restoration; policy tests cover privileged claims and blocked, deleted, and unknown lifecycle facts.
 - `AccountAccessCapabilitiesTests` covers policy-derived application flags and missing, duplicate, unknown, and registered owner availability extensions without role fallback.

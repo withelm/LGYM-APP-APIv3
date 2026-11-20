@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api.Logging;
 
 namespace LgymApi.UnitTests;
@@ -13,7 +12,7 @@ public sealed class SerilogBootstrapTests
     {
         var target = SerilogBootstrap.ResolveElasticsearchEndpoint(endpoint);
 
-        target.Should().BeNull();
+        Assert.That(target, Is.Null);
     }
 
     [Test]
@@ -23,6 +22,6 @@ public sealed class SerilogBootstrapTests
 
         var target = SerilogBootstrap.ResolveElasticsearchEndpoint(endpoint);
 
-        target.Should().Be(new Uri(endpoint));
+        Assert.That(target, Is.EqualTo(new Uri(endpoint)));
     }
 }

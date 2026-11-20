@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -39,14 +38,14 @@ public sealed class NutritionSchemaTests
 
         Assert.Multiple(() =>
         {
-            rosterViolations.Should().BeEmpty();
-            ExpectedRoster.Should().OnlyContain(entry => dbContext.Model.FindEntityType(entry.EntityType)!.GetTableName() == entry.TableName);
-            typeof(AppDbContext).GetProperties().Where(property => property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            Assert.That(rosterViolations, Is.Empty);
+            Assert.That((ExpectedRoster).All(entry => dbContext.Model.FindEntityType(entry.EntityType)!.GetTableName() == entry.TableName), Is.True);
+            Assert.That(typeof(AppDbContext).GetProperties().Where(property => property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
                 .Where(property => ExpectedRoster.Select(entry => entry.EntityType).Contains(property.PropertyType.GenericTypeArguments[0]))
-                .Select(property => property.Name).Should().BeEquivalentTo(ExpectedRoster.Select(entry => entry.DbSetName));
-            configurationFiles.Should().BeEquivalentTo(ExpectedRoster.Select(entry => $"{entry.ConfigurationName}.cs").Append("NutritionConfigurationFilters.cs"));
-            nutritionRegistrarEntries.Should().HaveCount(6);
-            nutritionRegistrarEntries.Should().BeEquivalentTo(ExpectedRoster.Select(entry => entry.ConfigurationName));
+                .Select(property => property.Name), Is.EquivalentTo(ExpectedRoster.Select(entry => entry.DbSetName)).UsingPropertiesComparer());
+            Assert.That(configurationFiles, Is.EquivalentTo(ExpectedRoster.Select(entry => $"{entry.ConfigurationName}.cs").Append("NutritionConfigurationFilters.cs")).UsingPropertiesComparer());
+            Assert.That(nutritionRegistrarEntries, Has.Exactly(6).Items);
+            Assert.That(nutritionRegistrarEntries, Is.EquivalentTo(ExpectedRoster.Select(entry => entry.ConfigurationName)).UsingPropertiesComparer());
         });
     }
 
@@ -55,7 +54,9 @@ public sealed class NutritionSchemaTests
     {
         var violations = ValidateRoster(ExpectedRoster.Append(new(typeof(SeventhNutritionEntity), "SeventhNutritionEntities", "SeventhNutritionEntities", "SeventhNutritionEntityTypeConfiguration")));
 
-        violations.Should().ContainSingle().Which.Should().Be("Nutrition roster must contain exactly six entities; found 7 including SeventhNutritionEntity.");
+        var assertedValue136 = (violations).ToArray();
+        Assert.That(assertedValue136, Has.Exactly(1).Items);
+        Assert.That(assertedValue136.Single(), Is.EqualTo("Nutrition roster must contain exactly six entities; found 7 including SeventhNutritionEntity."));
     }
 
     [Test]
@@ -96,14 +97,14 @@ public sealed class NutritionSchemaTests
     {
         foreach (var entry in ExpectedRoster)
         {
-            entities.Single(entity => entity.ClrType == entry.EntityType).GetTableName().Should().Be(entry.TableName);
+            Assert.That(entities.Single(entity => entity.ClrType == entry.EntityType).GetTableName(), Is.EqualTo(entry.TableName));
         }
     }
 
     private static void AssertIndexes(IEnumerable<IEntityType> entities)
     {
         var indexes = entities.SelectMany(entity => entity.GetIndexes()).ToArray();
-        indexes.Should().HaveCount(8);
+        Assert.That(indexes, Has.Exactly(8).Items);
         AssertIndex(GetEntity(entities, typeof(DietPlan)), [nameof(DietPlan.TrainerId), nameof(DietPlan.TraineeId), nameof(DietPlan.CreatedAt)], false, "IX_DietPlans_TrainerId_TraineeId_CreatedAt");
         AssertIndex(GetEntity(entities, typeof(DietPlan)), [nameof(DietPlan.TraineeId), nameof(DietPlan.IsActive)], false, "IX_DietPlans_TraineeId_IsActive");
         AssertIndex(GetEntity(entities, typeof(DietMeal)), [nameof(DietMeal.DietPlanId), nameof(DietMeal.Order)], false, "IX_DietMeals_DietPlanId_Order");
@@ -117,7 +118,7 @@ public sealed class NutritionSchemaTests
     private static void AssertForeignKeys(IEnumerable<IEntityType> entities)
     {
         var foreignKeys = entities.SelectMany(entity => entity.GetForeignKeys()).ToArray();
-        foreignKeys.Should().HaveCount(10);
+        Assert.That(foreignKeys, Has.Exactly(10).Items);
         AssertForeignKey(GetEntity(entities, typeof(DietPlan)), nameof(DietPlan.TrainerId), typeof(User), DeleteBehavior.Cascade);
         AssertForeignKey(GetEntity(entities, typeof(DietPlan)), nameof(DietPlan.TraineeId), typeof(User), DeleteBehavior.Cascade);
         AssertForeignKey(GetEntity(entities, typeof(DietMeal)), nameof(DietMeal.DietPlanId), typeof(DietPlan), DeleteBehavior.Cascade);
@@ -134,33 +135,33 @@ public sealed class NutritionSchemaTests
     {
         foreach (var entity in entities)
         {
-            entity.GetDeclaredQueryFilters().Should().NotBeEmpty($"{entity.ClrType.Name} must keep the global soft-delete filter");
+            Assert.That(entity.GetDeclaredQueryFilters(), Is.Not.Empty, $"{entity.ClrType.Name} must keep the global soft-delete filter");
             foreach (var property in entity.GetProperties().Where(property => property.ClrType.IsGenericType && property.ClrType.GetGenericTypeDefinition() == typeof(Id<>)))
             {
-                property.GetValueConverter().Should().NotBeNull($"{entity.ClrType.Name}.{property.Name} must retain its typed-ID converter");
-                property.GetValueConverter()!.ModelClrType.Should().Be(property.ClrType);
-                property.GetValueConverter()!.ProviderClrType.FullName.Should().Be("System.Guid");
+                Assert.That(property.GetValueConverter(), Is.Not.Null, $"{entity.ClrType.Name}.{property.Name} must retain its typed-ID converter");
+                Assert.That(property.GetValueConverter()!.ModelClrType, Is.EqualTo(property.ClrType));
+                Assert.That(property.GetValueConverter()!.ProviderClrType.FullName, Is.EqualTo("System.Guid"));
             }
         }
 
         var daysOfWeekMask = GetEntity(entities, typeof(SupplementPlanItem)).FindProperty(nameof(SupplementPlanItem.DaysOfWeekMask))!;
-        daysOfWeekMask.GetValueConverter()!.ModelClrType.Should().Be(typeof(DaysOfWeekSet));
-        daysOfWeekMask.GetValueConverter()!.ProviderClrType.Should().Be(typeof(int));
+        Assert.That(daysOfWeekMask.GetValueConverter()!.ModelClrType, Is.EqualTo(typeof(DaysOfWeekSet)));
+        Assert.That(daysOfWeekMask.GetValueConverter()!.ProviderClrType, Is.EqualTo(typeof(int)));
     }
 
     private static void AssertIndex(IEntityType entity, string[] properties, bool unique, string name, string? filter = null)
     {
         var index = entity.GetIndexes().Single(index => index.Properties.Select(property => property.Name).SequenceEqual(properties));
-        index.IsUnique.Should().Be(unique);
-        index.GetDatabaseName().Should().Be(name);
-        index.GetFilter().Should().Be(filter);
+        Assert.That(index.IsUnique, Is.EqualTo(unique));
+        Assert.That(index.GetDatabaseName(), Is.EqualTo(name));
+        Assert.That(index.GetFilter(), Is.EqualTo(filter));
     }
 
     private static void AssertForeignKey(IEntityType entity, string property, Type principalType, DeleteBehavior deleteBehavior)
     {
         var foreignKey = entity.GetForeignKeys().Single(key => key.Properties.Select(candidate => candidate.Name).SequenceEqual([property]));
-        foreignKey.PrincipalEntityType.ClrType.Should().Be(principalType);
-        foreignKey.DeleteBehavior.Should().Be(deleteBehavior);
+        Assert.That(foreignKey.PrincipalEntityType.ClrType, Is.EqualTo(principalType));
+        Assert.That(foreignKey.DeleteBehavior, Is.EqualTo(deleteBehavior));
     }
 
     private static IEntityType GetEntity(AppDbContext dbContext, Type type) => dbContext.Model.FindEntityType(type)!;

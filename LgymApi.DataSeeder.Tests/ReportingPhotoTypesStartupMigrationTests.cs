@@ -20,10 +20,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         fixture.Context.ChangeTracker.Clear();
         var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*PHOTO_OWNER_UNSAFE*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*PHOTO_OWNER_UNSAFE*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
-        (await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId.Should().BeNull();
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
+        Assert.That((await fixture.Context.Photos.SingleAsync()).SourcePhotoTypeId, Is.Null);
     }
 
     [Test]
@@ -37,8 +37,8 @@ public sealed partial class ReportingPhotoTypesMigrationTests
 
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(1);
-        (await fixture.Context.ReportTemplates.IgnoreQueryFilters().SingleAsync()).IsDeleted.Should().BeTrue();
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(1));
+        Assert.That((await fixture.Context.ReportTemplates.IgnoreQueryFilters().SingleAsync()).IsDeleted, Is.True);
     }
 
     [Test]
@@ -51,9 +51,9 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         fixture.Context.ChangeTracker.Clear();
         var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*SOURCE_TEMPLATE_OWNER_CONFLICT*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*SOURCE_TEMPLATE_OWNER_CONFLICT*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
     }
 
     [Test]
@@ -65,7 +65,7 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
         var snapshot = await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync();
-        snapshot.Provenance.Should().Be("MigrationCapture");
+        Assert.That(snapshot.Provenance, Is.EqualTo("MigrationCapture"));
         await fixture.AssertPreservedValuesAsync(original);
         fixture.Context.PhotoUploadSessions.Add(new PhotoUploadSession
         {
@@ -79,8 +79,8 @@ public sealed partial class ReportingPhotoTypesMigrationTests
 
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson.Should().Be(snapshot.DefinitionJson);
-        (await fixture.Context.PhotoUploadSessions.SingleAsync()).Status.Should().Be(PhotoUploadSessionStatus.Pending);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync()).DefinitionJson, Is.EqualTo(snapshot.DefinitionJson));
+        Assert.That((await fixture.Context.PhotoUploadSessions.SingleAsync()).Status, Is.EqualTo(PhotoUploadSessionStatus.Pending));
         await fixture.AssertPreservedValuesAsync(original);
     }
 
@@ -90,10 +90,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         await using var fixture = await MigrationFixture.CreateAsync(photoView: "Unknown-view");
         var original = await fixture.CapturePreservedValuesAsync();
         var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*PHOTO_VIEW_UNKNOWN*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*PHOTO_VIEW_UNKNOWN*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         fixture.Context.ChangeTracker.Clear();
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
-        (await fixture.Context.TrainerPhotoTypes.CountAsync()).Should().Be(1);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.CountAsync()), Is.EqualTo(1));
         await fixture.AssertPreservedValuesAsync(original);
     }
 
@@ -109,12 +109,12 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         };
         var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("Injected second-checkpoint failure");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Injected second-checkpoint failure").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
 
         fixture.Context.ChangeTracker.Clear();
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(0);
-        (await fixture.Context.TrainerPhotoTypes.CountAsync()).Should().Be(1);
-        (await fixture.Context.Photos.SingleAsync()).ReportPhotoSlotId.Should().BeNull();
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(0));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.CountAsync()), Is.EqualTo(1));
+        Assert.That((await fixture.Context.Photos.SingleAsync()).ReportPhotoSlotId, Is.Null);
         await fixture.AssertPreservedValuesAsync(original);
     }
 
@@ -123,7 +123,7 @@ public sealed partial class ReportingPhotoTypesMigrationTests
     {
         await using var fixture = await MigrationFixture.CreateAsync(includePendingUpload: true);
         var action = () => ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
-        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*PENDING_LEGACY_UPLOAD*");
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*PENDING_LEGACY_UPLOAD*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
         var session = await fixture.Context.PhotoUploadSessions.SingleAsync();
         session.ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
         await fixture.Context.SaveChangesAsync();
@@ -131,7 +131,7 @@ public sealed partial class ReportingPhotoTypesMigrationTests
 
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()).Should().Be(1);
-        (await fixture.Context.PhotoUploadSessions.SingleAsync()).Status.Should().Be(PhotoUploadSessionStatus.Pending);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.CountAsync()), Is.EqualTo(1));
+        Assert.That((await fixture.Context.PhotoUploadSessions.SingleAsync()).Status, Is.EqualTo(PhotoUploadSessionStatus.Pending));
     }
 }

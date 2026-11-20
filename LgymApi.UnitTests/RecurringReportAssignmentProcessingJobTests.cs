@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Hangfire;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.BackgroundWorker.Jobs;
@@ -28,8 +27,8 @@ public sealed class RecurringReportAssignmentProcessingJobTests
         var method = typeof(RecurringReportAssignmentProcessingJob).GetMethod(nameof(RecurringReportAssignmentProcessingJob.ExecuteAsync));
         var attributeData = method?.CustomAttributes.FirstOrDefault(attribute => attribute.AttributeType == typeof(DisableConcurrentExecutionAttribute));
 
-        attributeData.Should().NotBeNull("ExecuteAsync must prevent overlapping recurring job runs");
-        attributeData!.ConstructorArguments.Should().ContainSingle();
-        attributeData.ConstructorArguments[0].Value.Should().Be(300);
+        Assert.That(attributeData, Is.Not.Null, "ExecuteAsync must prevent overlapping recurring job runs");
+        Assert.That(attributeData!.ConstructorArguments, Has.Exactly(1).Items);
+        Assert.That(attributeData.ConstructorArguments[0].Value, Is.EqualTo(300));
     }
 }

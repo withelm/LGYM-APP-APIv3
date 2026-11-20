@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
 using LgymApi.Application.Identity.Contracts.Accounts;
@@ -34,19 +33,17 @@ public sealed class CoachingNotificationIntentEmailTests
             Account(trainerId, "Coach", "coach@example.com", "pl-PL", "Europe/Warsaw"),
             Account(traineeId, "Trainee", "trainee@example.com", "en-US", "Europe/Madrid")));
 
-        result.EmailSchedulingRequest.Should().BeEquivalentTo(new CoachingEmailSchedulingRequest(
+        Assert.That(result.EmailSchedulingRequest, Is.EqualTo(new CoachingEmailSchedulingRequest(
             CoachingEmailSchedulingKind.InvitationCreated, EmailNotificationTypes.TrainerInvitation, invitationId,
-            invitationId.Rebind<CorrelationScope>(), "trainee@example.com", "pl-PL", "Europe/Madrid", "Coach", null, "ABC123", expiresAt));
+            invitationId.Rebind<CorrelationScope>(), "trainee@example.com", "pl-PL", "Europe/Madrid", "Coach", null, "ABC123", expiresAt)).UsingPropertiesComparer());
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
-        harness.EmailNotificationLogRepository.Calls
+        Assert.That(harness.EmailNotificationLogRepository.Calls
             .Where(call =>
                 call.Method == nameof(IEmailNotificationLogRepository.FindByCorrelationAsync)
                 && call.Argument is ValueTuple<EmailNotificationType, Id<CorrelationScope>, string> arguments
                 && arguments.Item1 == EmailNotificationTypes.TrainerInvitation
                 && arguments.Item2 == invitationId.Rebind<CorrelationScope>()
-                && arguments.Item3 == "trainee@example.com")
-            .Should()
-            .ContainSingle();
+                && arguments.Item3 == "trainee@example.com"), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -62,9 +59,9 @@ public sealed class CoachingNotificationIntentEmailTests
             Account(trainerId, "Coach", "coach@example.com", "pl-PL", "Europe/Warsaw"),
             Account(traineeId, "Trainee", "trainee@example.com")));
 
-        result.EmailSchedulingRequest.Should().BeEquivalentTo(new CoachingEmailSchedulingRequest(
+        Assert.That(result.EmailSchedulingRequest, Is.EqualTo(new CoachingEmailSchedulingRequest(
             CoachingEmailSchedulingKind.InvitationAccepted, EmailNotificationTypes.TrainerInvitationAccepted, invitationId,
-            invitationId.Rebind<CorrelationScope>(), "coach@example.com", "pl-PL", "Europe/Warsaw", "Coach", "Trainee", null, null));
+            invitationId.Rebind<CorrelationScope>(), "coach@example.com", "pl-PL", "Europe/Warsaw", "Coach", "Trainee", null, null)).UsingPropertiesComparer());
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
     }
 
@@ -78,9 +75,9 @@ public sealed class CoachingNotificationIntentEmailTests
         var result = await harness.Service.SubmitAsync(new InvitationRevokedCoachingNotificationIntent(
             CoachingNotificationLegacyChannel.Email, invitationId, trainerId, "invitee@example.com", Account(trainerId, "Coach", culture: "pl-PL")));
 
-        result.EmailSchedulingRequest.Should().BeEquivalentTo(new CoachingEmailSchedulingRequest(
+        Assert.That(result.EmailSchedulingRequest, Is.EqualTo(new CoachingEmailSchedulingRequest(
             CoachingEmailSchedulingKind.InvitationRevoked, EmailNotificationTypes.TrainerInvitationRevoked, invitationId,
-            invitationId.Rebind<CorrelationScope>(), "invitee@example.com", "en-US", "Europe/Warsaw", "Coach", null, null, null));
+            invitationId.Rebind<CorrelationScope>(), "invitee@example.com", "en-US", "Europe/Warsaw", "Coach", null, null, null)).UsingPropertiesComparer());
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
     }
 
@@ -104,8 +101,8 @@ public sealed class CoachingNotificationIntentEmailTests
             CoachingNotificationLegacyChannel.Email, invitationId, trainerId, traineeId,
             Account(trainerId, "Coach", "coach@example.com"), Account(traineeId, "Trainee")));
 
-        missingAccount.EmailSchedulingRequest.Should().BeNull();
-        duplicate.EmailSchedulingRequest.Should().BeNull();
+        Assert.That(missingAccount.EmailSchedulingRequest, Is.Null);
+        Assert.That(duplicate.EmailSchedulingRequest, Is.Null);
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
     }
 
@@ -130,8 +127,8 @@ public sealed class CoachingNotificationIntentEmailTests
 
         var featureDisabled = await harness.Service.SubmitAsync(intent);
 
-        featureDisabled.EmailSchedulingRequest.Should().BeNull();
-        harness.EmailNotificationLogRepository.Calls.Should().NotContain(call => call.Method == nameof(IEmailNotificationLogRepository.FindByCorrelationAsync));
+        Assert.That(featureDisabled.EmailSchedulingRequest, Is.Null);
+        Assert.That((harness.EmailNotificationLogRepository.Calls).Any(call => call.Method == nameof(IEmailNotificationLogRepository.FindByCorrelationAsync)), Is.False);
         harness.EmailNotificationFeature.Enabled.Returns(true);
         harness.EmailNotificationLogRepository.FindByCorrelation = (_, _, _, _) => Task.FromResult<NotificationMessage?>(new NotificationMessage
             {
@@ -141,7 +138,7 @@ public sealed class CoachingNotificationIntentEmailTests
 
         var retryLimitReached = await harness.Service.SubmitAsync(intent);
 
-        retryLimitReached.EmailSchedulingRequest.Should().BeNull();
+        Assert.That(retryLimitReached.EmailSchedulingRequest, Is.Null);
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
     }
 
@@ -164,7 +161,7 @@ public sealed class CoachingNotificationIntentEmailTests
             Account(trainerId, "Coach"),
             Account(traineeId, "Trainee", "   ")));
 
-        result.EmailSchedulingRequest.Should().BeNull();
+        Assert.That(result.EmailSchedulingRequest, Is.Null);
         await harness.InAppNotificationService.DidNotReceive().CreateAsync(Arg.Any<CreateInAppNotificationInput>(), Arg.Any<CancellationToken>());
     }
 
@@ -176,7 +173,7 @@ public sealed class CoachingNotificationIntentEmailTests
         var action = () => harness.Service.SubmitAsync(new InvitationRevokedCoachingNotificationIntent(
             CoachingNotificationLegacyChannel.InApp, Id<TrainerInvitation>.New(), Id<User>.New(), "invitee@example.com", null));
 
-        await action.Should().ThrowAsync<ArgumentException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     private static AccountReadModel Account(

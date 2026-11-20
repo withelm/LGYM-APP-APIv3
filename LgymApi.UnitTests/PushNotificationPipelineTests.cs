@@ -1,7 +1,6 @@
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
@@ -30,18 +29,11 @@ public sealed class PushNotificationPipelineTests
     [Test]
     public void PushNotificationDeliveryService_UsesTheEightDirectDeliveryCollaborators()
     {
-        var constructor = typeof(PushNotificationDeliveryService).GetConstructors().Should().ContainSingle().Which;
+        var assertedValue148 = (typeof(PushNotificationDeliveryService).GetConstructors()).ToArray();
+        Assert.That(assertedValue148, Has.Exactly(1).Items);
+        var constructor = assertedValue148.Single();
 
-        constructor.GetParameters().Select(parameter => parameter.ParameterType).Should().Equal(
-            typeof(IPushNotificationMessageRepository),
-            typeof(INotificationDisclosureEligibilityService),
-            typeof(IPushInstallationRepository),
-            typeof(IPushProviderSender),
-            typeof(IPushBackgroundScheduler),
-            typeof(IPushNotificationDeliveryRetrySettings),
-            typeof(IUnitOfWork),
-            typeof(IAuthenticatedAccountContextResolver),
-            typeof(Microsoft.Extensions.Logging.ILogger<PushNotificationDeliveryService>));
+        Assert.That(constructor.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(IPushNotificationMessageRepository), typeof(INotificationDisclosureEligibilityService), typeof(IPushInstallationRepository), typeof(IPushProviderSender), typeof(IPushBackgroundScheduler), typeof(IPushNotificationDeliveryRetrySettings), typeof(IUnitOfWork), typeof(IAuthenticatedAccountContextResolver), typeof(Microsoft.Extensions.Logging.ILogger<PushNotificationDeliveryService>) }));
     }
 
     [Test]
@@ -49,8 +41,8 @@ public sealed class PushNotificationPipelineTests
     {
         var property = typeof(PushEventPayload).GetProperty(nameof(PushEventPayload.InAppNotificationId));
 
-        property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(Id<InAppNotification>?));
+        Assert.That(property, Is.Not.Null);
+        Assert.That(property!.PropertyType, Is.EqualTo(typeof(Id<InAppNotification>?)));
     }
 
     [Test]
@@ -67,11 +59,11 @@ public sealed class PushNotificationPipelineTests
         var roundtrip = JsonSerializer.Deserialize<PushEventPayload>(json, SharedSerializationOptions.Current);
         var legacyPayload = JsonSerializer.Deserialize<PushEventPayload>(legacyJson, SharedSerializationOptions.Current);
 
-        document.RootElement.GetProperty("inAppNotificationId").GetString().Should().Be(notificationId.ToString());
-        roundtrip.Should().NotBeNull();
-        roundtrip!.InAppNotificationId.Should().Be(notificationId);
-        legacyPayload.Should().NotBeNull();
-        legacyPayload!.InAppNotificationId.Should().Be(notificationId);
+        Assert.That(document.RootElement.GetProperty("inAppNotificationId").GetString(), Is.EqualTo(notificationId.ToString()));
+        Assert.That(roundtrip, Is.Not.Null);
+        Assert.That(roundtrip!.InAppNotificationId, Is.EqualTo(notificationId));
+        Assert.That(legacyPayload, Is.Not.Null);
+        Assert.That(legacyPayload!.InAppNotificationId, Is.EqualTo(notificationId));
     }
 
     [Test]
@@ -103,9 +95,9 @@ public sealed class PushNotificationPipelineTests
         await service.EnqueueAsync(input);
         await service.EnqueueAsync(input);
 
-        db.PushNotificationMessages.Should().HaveCount(1);
-        db.PushNotificationMessages.Single().Status.Should().Be(PushNotificationStatus.Pending);
-        scheduler.EnqueuedNotificationIds.Should().HaveCount(1);
+        Assert.That(db.PushNotificationMessages, Has.Exactly(1).Items);
+        Assert.That(db.PushNotificationMessages.Single().Status, Is.EqualTo(PushNotificationStatus.Pending));
+        Assert.That(scheduler.EnqueuedNotificationIds, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -147,9 +139,11 @@ public sealed class PushNotificationPipelineTests
             null,
             "/notifications/event-1"));
 
-        db.PushNotificationMessages.Should().HaveCount(1);
-        scheduler.EnqueuedNotificationIds.Should().ContainSingle().Which.Should().Be(existing.Id);
-        existing.SchedulerJobId.Should().Be("push-job-id");
+        Assert.That(db.PushNotificationMessages, Has.Exactly(1).Items);
+        var assertedValue149 = (scheduler.EnqueuedNotificationIds).ToArray();
+        Assert.That(assertedValue149, Has.Exactly(1).Items);
+        Assert.That(assertedValue149.Single(), Is.EqualTo(existing.Id));
+        Assert.That(existing.SchedulerJobId, Is.EqualTo("push-job-id"));
     }
 
     [Test]
@@ -178,11 +172,11 @@ public sealed class PushNotificationPipelineTests
 
         await service.EnqueueAsync(input);
 
-        repository.ClearReservationCalls.Should().Be(1);
-        scheduler.EnqueueCalls.Should().Be(2);
-        repository.Message.Should().NotBeNull();
-        repository.Message!.SchedulerJobId.Should().Be("push-job-id");
-        repository.ReservationId.Should().Be("push-job-id");
+        Assert.That(repository.ClearReservationCalls, Is.EqualTo(1));
+        Assert.That(scheduler.EnqueueCalls, Is.EqualTo(2));
+        Assert.That(repository.Message, Is.Not.Null);
+        Assert.That(repository.Message!.SchedulerJobId, Is.EqualTo("push-job-id"));
+        Assert.That(repository.ReservationId, Is.EqualTo("push-job-id"));
     }
 
     [Test]
@@ -210,11 +204,11 @@ public sealed class PushNotificationPipelineTests
             null,
             null));
 
-        db.PushNotificationMessages.Should().HaveCount(1);
+        Assert.That(db.PushNotificationMessages, Has.Exactly(1).Items);
         var message = db.PushNotificationMessages.Single();
-        message.Status.Should().Be(PushNotificationStatus.Skipped);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Preference));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
     }
 
     [Test]
@@ -238,8 +232,8 @@ public sealed class PushNotificationPipelineTests
             null,
             null));
 
-        db.PushNotificationMessages.Should().BeEmpty();
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+        Assert.That(db.PushNotificationMessages, Is.Empty);
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
     }
 
     [Test]
@@ -266,10 +260,10 @@ public sealed class PushNotificationPipelineTests
             null,
             null));
 
-        await act.Should().NotThrowAsync();
-        repository.DetachedMessages.Should().ContainSingle();
-        repository.WinningMessageReads.Should().Be(1);
-        scheduler.EnqueuedNotificationIds.Should().BeEmpty();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.Nothing);
+        Assert.That(repository.DetachedMessages, Has.Exactly(1).Items);
+        Assert.That(repository.WinningMessageReads, Is.EqualTo(1));
+        Assert.That(scheduler.EnqueuedNotificationIds, Is.Empty);
     }
 
     [Test]
@@ -292,13 +286,13 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.InvalidToken);
-        message.NextAttemptAt.Should().BeNull();
-        installation.DisabledReason.Should().Be("InvalidFcmToken");
-        installation.DisabledAt.Should().NotBeNull();
-        sender.LastInstallationId.Should().Be(installation.Id);
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.InvalidToken));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(installation.DisabledReason, Is.EqualTo("InvalidFcmToken"));
+        Assert.That(installation.DisabledAt, Is.Not.Null);
+        Assert.That(sender.LastInstallationId, Is.EqualTo(installation.Id));
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -318,13 +312,13 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
-        message.ProviderStatus.Should().Be("InstallationMissing");
-        message.LastError.Should().Be("Push installation no longer exists.");
-        message.Attempts.Should().Be(0);
-        sender.SendCalls.Should().Be(0);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Permanent));
+        Assert.That(message.ProviderStatus, Is.EqualTo("InstallationMissing"));
+        Assert.That(message.LastError, Is.EqualTo("Push installation no longer exists."));
+        Assert.That(message.Attempts, Is.EqualTo(0));
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [TestCase("Unregistered")]
@@ -349,13 +343,13 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Skipped);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
-        message.ProviderStatus.Should().Be("InstallationInactive");
-        message.NextAttemptAt.Should().BeNull();
-        message.SchedulerJobId.Should().BeNull();
-        sender.SendCalls.Should().Be(0);
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Preference));
+        Assert.That(message.ProviderStatus, Is.EqualTo("InstallationInactive"));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(message.SchedulerJobId, Is.Null);
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -379,11 +373,11 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
-        message.ProviderStatus.Should().Be("InstallationSessionInvalid");
-        sender.SendCalls.Should().Be(0);
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Permanent));
+        Assert.That(message.ProviderStatus, Is.EqualTo("InstallationSessionInvalid"));
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -405,14 +399,14 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Sent);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.None);
-        message.SentAt.Should().NotBeNull();
-        message.ProviderStatus.Should().Be("OK");
-        message.ProviderMessageId.Should().Be("message-1");
-        message.LastError.Should().BeNull();
-        message.NextAttemptAt.Should().BeNull();
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Sent));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.None));
+        Assert.That(message.SentAt, Is.Not.Null);
+        Assert.That(message.ProviderStatus, Is.EqualTo("OK"));
+        Assert.That(message.ProviderMessageId, Is.EqualTo("message-1"));
+        Assert.That(message.LastError, Is.Null);
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -437,14 +431,14 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Permanent);
-        message.ProviderStatus.Should().Be("BadRequest");
-        message.ProviderErrorCode.Should().Be("INVALID_ARGUMENT");
-        message.ProviderResponseSummary.Should().Be("non-retryable provider error");
-        message.LastError.Should().Be("non-retryable provider error");
-        message.NextAttemptAt.Should().BeNull();
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Permanent));
+        Assert.That(message.ProviderStatus, Is.EqualTo("BadRequest"));
+        Assert.That(message.ProviderErrorCode, Is.EqualTo("INVALID_ARGUMENT"));
+        Assert.That(message.ProviderResponseSummary, Is.EqualTo("non-retryable provider error"));
+        Assert.That(message.LastError, Is.EqualTo("non-retryable provider error"));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -468,13 +462,13 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Skipped);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Preference);
-        message.ProviderStatus.Should().Be("Skipped");
-        message.ProviderErrorCode.Should().Be("push-disabled");
-        message.NextAttemptAt.Should().BeNull();
-        scheduler.ScheduledRetries.Should().BeEmpty();
-        httpClientFactory.CreateClientCalls.Should().Be(0);
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Preference));
+        Assert.That(message.ProviderStatus, Is.EqualTo("Skipped"));
+        Assert.That(message.ProviderErrorCode, Is.EqualTo("push-disabled"));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
+        Assert.That(httpClientFactory.CreateClientCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -484,10 +478,10 @@ public sealed class PushNotificationPipelineTests
 
         Func<Task> act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
         AssertRetryableExceptionRecovery(message, scheduler, "InvalidOperationException");
-        message.LastError.Should().NotContain("token-1");
-        message.LastError.Should().NotContain("credential content");
+        Assert.That(message.LastError, Does.Not.Contain("token-1"));
+        Assert.That(message.LastError, Does.Not.Contain("credential content"));
     }
 
     [Test]
@@ -511,8 +505,8 @@ public sealed class PushNotificationPipelineTests
 
         Func<Task> act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        httpClientFactory.CreateClientCalls.Should().Be(0);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(httpClientFactory.CreateClientCalls, Is.EqualTo(0));
         AssertRetryableExceptionRecovery(message, scheduler, "InvalidOperationException");
     }
 
@@ -523,7 +517,7 @@ public sealed class PushNotificationPipelineTests
 
         Func<Task> act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<HttpRequestException>());
         AssertRetryableExceptionRecovery(message, scheduler, "HttpRequestException");
     }
 
@@ -550,9 +544,9 @@ public sealed class PushNotificationPipelineTests
 
         Func<Task> act = () => handler.ProcessAsync(message.Id, cancellationTokenSource.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
-        sender.LastCancellationToken.Should().Be(cancellationTokenSource.Token);
-        sender.LastCancellationToken.IsCancellationRequested.Should().BeTrue();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(sender.LastCancellationToken, Is.EqualTo(cancellationTokenSource.Token));
+        Assert.That(sender.LastCancellationToken.IsCancellationRequested, Is.True);
         AssertRetryableExceptionRecovery(message, scheduler, "OperationCanceledException");
     }
 
@@ -564,11 +558,11 @@ public sealed class PushNotificationPipelineTests
 
         Func<Task> act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<HttpRequestException>();
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        message.NextAttemptAt.Should().BeNull();
-        scheduler.ScheduledRetries.Should().BeEmpty();
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<HttpRequestException>());
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(scheduler.ScheduledRetries, Is.Empty);
     }
 
     [Test]
@@ -589,12 +583,12 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        message.NextAttemptAt.Should().NotBeNull();
-        scheduler.ScheduledRetries.Should().ContainSingle();
-        scheduler.ScheduledRetries[0].notificationId.Should().Be(message.Id);
-        scheduler.ScheduledRetries[0].delay.Should().Be(TimeSpan.FromSeconds(5));
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(message.NextAttemptAt, Is.Not.Null);
+        Assert.That(scheduler.ScheduledRetries, Has.Exactly(1).Items);
+        Assert.That(scheduler.ScheduledRetries[0].notificationId, Is.EqualTo(message.Id));
+        Assert.That(scheduler.ScheduledRetries[0].delay, Is.EqualTo(TimeSpan.FromSeconds(5)));
     }
 
     [Test]
@@ -620,13 +614,13 @@ public sealed class PushNotificationPipelineTests
 
         var act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        message.NextAttemptAt.Should().NotBeNull();
-        message.SchedulerJobId.Should().BeNull();
-        message.ProviderStatus.Should().Be("ServiceUnavailable");
-        scheduler.ScheduleRetryCalls.Should().Be(1);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(message.NextAttemptAt, Is.Not.Null);
+        Assert.That(message.SchedulerJobId, Is.Null);
+        Assert.That(message.ProviderStatus, Is.EqualTo("ServiceUnavailable"));
+        Assert.That(scheduler.ScheduleRetryCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -650,8 +644,8 @@ public sealed class PushNotificationPipelineTests
 
         var act = () => handler.ProcessAsync(message.Id);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        repository.FindByIdCalls.Should().Be(2);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(repository.FindByIdCalls, Is.EqualTo(2));
         AssertRetryableExceptionRecovery(message, scheduler, "InvalidOperationException");
     }
 
@@ -673,8 +667,8 @@ public sealed class PushNotificationPipelineTests
 
         await handler.ProcessAsync(message.Id);
 
-        sender.SendCalls.Should().Be(0);
-        message.Attempts.Should().Be(0);
+        Assert.That(sender.SendCalls, Is.EqualTo(0));
+        Assert.That(message.Attempts, Is.EqualTo(0));
     }
 
     [Test]
@@ -701,11 +695,11 @@ public sealed class PushNotificationPipelineTests
 
         var cleaned = await service.CleanupAsync();
 
-        cleaned.Should().Be(1);
-        staleInstallation.DisabledReason.Should().Be(StalePushInstallationCleanupService.StaleInstallationDisabledReason);
-        staleInstallation.DisabledAt.Should().NotBeNull();
-        recentInstallation.DisabledAt.Should().BeNull();
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        Assert.That(cleaned, Is.EqualTo(1));
+        Assert.That(staleInstallation.DisabledReason, Is.EqualTo(StalePushInstallationCleanupService.StaleInstallationDisabledReason));
+        Assert.That(staleInstallation.DisabledAt, Is.Not.Null);
+        Assert.That(recentInstallation.DisabledAt, Is.Null);
+        Assert.That(unitOfWork.SaveChangesCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -726,19 +720,19 @@ public sealed class PushNotificationPipelineTests
             "/notifications");
 
         var method = typeof(FcmPushSender).GetMethod("BuildRequestContent", BindingFlags.Instance | BindingFlags.NonPublic);
-        method.Should().NotBeNull();
+        Assert.That(method, Is.Not.Null);
 
         using var content = (StringContent)method!.Invoke(sender, [installation.FcmToken, payload])!;
         var json = await content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(json);
         var message = document.RootElement.GetProperty("message");
 
-        message.GetProperty("token").GetString().Should().Be(installation.FcmToken);
-        message.GetProperty("notification").GetProperty("title").GetString().Should().Be("LGYM");
-        message.GetProperty("notification").GetProperty("body").GetString().Should().Be("You have a new notification.");
-        message.GetProperty("android").GetProperty("priority").GetString().Should().Be("HIGH");
-        message.GetProperty("data").GetProperty("deeplink").GetString().Should().Be("/notifications");
-        message.GetProperty("data").GetProperty("inAppNotificationId").GetString().Should().Be(notificationId.ToString());
+        Assert.That(message.GetProperty("token").GetString(), Is.EqualTo(installation.FcmToken));
+        Assert.That(message.GetProperty("notification").GetProperty("title").GetString(), Is.EqualTo("LGYM"));
+        Assert.That(message.GetProperty("notification").GetProperty("body").GetString(), Is.EqualTo("You have a new notification."));
+        Assert.That(message.GetProperty("android").GetProperty("priority").GetString(), Is.EqualTo("HIGH"));
+        Assert.That(message.GetProperty("data").GetProperty("deeplink").GetString(), Is.EqualTo("/notifications"));
+        Assert.That(message.GetProperty("data").GetProperty("inAppNotificationId").GetString(), Is.EqualTo(notificationId.ToString()));
     }
 
     [Test]
@@ -754,10 +748,10 @@ public sealed class PushNotificationPipelineTests
 
         var result = await sender.SendAsync(CreateTarget(installation), payload);
 
-        result.Outcome.Should().Be(PushSendOutcome.Skipped);
-        result.ProviderStatus.Should().Be("Skipped");
-        result.ProviderErrorCode.Should().Be("push-disabled");
-        httpClientFactory.CreateClientCalls.Should().Be(0);
+        Assert.That(result.Outcome, Is.EqualTo(PushSendOutcome.Skipped));
+        Assert.That(result.ProviderStatus, Is.EqualTo("Skipped"));
+        Assert.That(result.ProviderErrorCode, Is.EqualTo("push-disabled"));
+        Assert.That(httpClientFactory.CreateClientCalls, Is.EqualTo(0));
     }
 
     [Test]
@@ -773,7 +767,7 @@ public sealed class PushNotificationPipelineTests
 
         var url = InvokePrivate<string>(sender, "BuildSendUrl");
 
-        url.Should().Be("https://fcm.example.test/v1/projects/lgym-test/messages:send");
+        Assert.That(url, Is.EqualTo("https://fcm.example.test/v1/projects/lgym-test/messages:send"));
     }
 
     [TestCase(HttpStatusCode.BadRequest, "registration-token-not-registered", PushSendOutcome.InvalidToken)]
@@ -788,34 +782,27 @@ public sealed class PushNotificationPipelineTests
             statusCode,
             summary);
 
-        outcome.Should().Be(expectedOutcome);
+        Assert.That(outcome, Is.EqualTo(expectedOutcome));
     }
 
     [Test]
     public void FcmSender_ExtractsProviderValuesFromDirectAndNestedJson()
     {
-        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"name\":\"projects/lgym/messages/1\"}", "name")
-            .Should().Be("projects/lgym/messages/1");
-        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"error\":{\"status\":\"UNREGISTERED\"}}", "status")
-            .Should().Be("UNREGISTERED");
-        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "not-json", "status")
-            .Should().BeNull();
-        InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", string.Empty, "status")
-            .Should().BeNull();
+        Assert.That(InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"name\":\"projects/lgym/messages/1\"}", "name"), Is.EqualTo("projects/lgym/messages/1"));
+        Assert.That(InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "{\"error\":{\"status\":\"UNREGISTERED\"}}", "status"), Is.EqualTo("UNREGISTERED"));
+        Assert.That(InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", "not-json", "status"), Is.Null);
+        Assert.That(InvokeStaticPrivate<string?>(typeof(FcmPushSender), "TryExtractValue", string.Empty, "status"), Is.Null);
     }
 
     [Test]
     public void FcmSender_SummarizesProviderResponses()
     {
-        InvokeStaticPrivate<string>(
+        Assert.That(InvokeStaticPrivate<string>(
                 typeof(FcmPushSender),
                 "Summarize",
-                "{\"error\":{\"status\":\"UNREGISTERED\",\"message\":\"token-secret-not-for-storage\"}}")
-            .Should().Be("status=UNREGISTERED");
-        InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", "token-secret-not-for-storage")
-            .Should().Be("provider-response-received");
-        InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", (object?)null)
-            .Should().BeEmpty();
+                "{\"error\":{\"status\":\"UNREGISTERED\",\"message\":\"token-secret-not-for-storage\"}}"), Is.EqualTo("status=UNREGISTERED"));
+        Assert.That(InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", "token-secret-not-for-storage"), Is.EqualTo("provider-response-received"));
+        Assert.That(InvokeStaticPrivate<string>(typeof(FcmPushSender), "Summarize", (object?)null), Is.Empty);
     }
 
     [Test]
@@ -840,9 +827,9 @@ public sealed class PushNotificationPipelineTests
 
         var action = () => sender.SendAsync(CreateTarget(installation), payload);
 
-        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
-        exception.Which.Message.Should().Be("FCM provider delivery failed.");
-        exception.Which.Message.Should().NotContain(credentialSentinel);
+        var exception = (await Assert.CatchAsync<InvalidOperationException>(async () => { await action(); }))!;
+        Assert.That(exception.Message, Is.EqualTo("FCM provider delivery failed."));
+        Assert.That(exception.Message, Does.Not.Contain(credentialSentinel));
     }
 
     private static AppDbContext CreateDbContext(string name)
@@ -901,15 +888,15 @@ public sealed class PushNotificationPipelineTests
         FakePushBackgroundScheduler scheduler,
         string exceptionType)
     {
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.Transient);
-        message.NextAttemptAt.Should().NotBeNull();
-        message.ProviderStatus.Should().Be("Exception");
-        message.ProviderErrorCode.Should().Be(exceptionType);
-        message.ProviderResponseSummary.Should().Be($"Push delivery exception: {exceptionType}");
-        message.LastError.Should().Be($"Push delivery exception: {exceptionType}");
-        scheduler.ScheduledRetries.Should().ContainSingle();
-        scheduler.ScheduledRetries[0].notificationId.Should().Be(message.Id);
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.Transient));
+        Assert.That(message.NextAttemptAt, Is.Not.Null);
+        Assert.That(message.ProviderStatus, Is.EqualTo("Exception"));
+        Assert.That(message.ProviderErrorCode, Is.EqualTo(exceptionType));
+        Assert.That(message.ProviderResponseSummary, Is.EqualTo($"Push delivery exception: {exceptionType}"));
+        Assert.That(message.LastError, Is.EqualTo($"Push delivery exception: {exceptionType}"));
+        Assert.That(scheduler.ScheduledRetries, Has.Exactly(1).Items);
+        Assert.That(scheduler.ScheduledRetries[0].notificationId, Is.EqualTo(message.Id));
     }
 
     private static PushNotificationJobHandlerService CreateHandler(
@@ -969,14 +956,14 @@ public sealed class PushNotificationPipelineTests
     private static TResult InvokePrivate<TResult>(object instance, string methodName, params object?[] parameters)
     {
         var method = instance.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-        method.Should().NotBeNull();
+        Assert.That(method, Is.Not.Null);
         return (TResult)method!.Invoke(instance, parameters)!;
     }
 
     private static TResult InvokeStaticPrivate<TResult>(Type type, string methodName, params object?[] parameters)
     {
         var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
-        method.Should().NotBeNull();
+        Assert.That(method, Is.Not.Null);
         return (TResult)method!.Invoke(null, parameters)!;
     }
 

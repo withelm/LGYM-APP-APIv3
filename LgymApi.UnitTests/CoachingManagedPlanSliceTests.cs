@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.ManagedPlans.Assign;
@@ -78,13 +77,13 @@ public sealed class CoachingManagedPlanSliceTests
         var active = await Resolve<IGetActiveManagedPlanUseCase>(services)
             .ExecuteAsync(new GetActiveManagedPlanQuery(traineeId), cancellationToken);
 
-        listed.Value.Should().BeSameAs(plans);
-        created.Value.Should().BeSameAs(readModel);
-        updated.Value.Should().BeSameAs(readModel);
-        deleted.Value.Should().Be(Unit.Value);
-        assigned.Value.Should().Be(Unit.Value);
-        unassigned.Value.Should().Be(Unit.Value);
-        active.Value.Should().BeSameAs(readModel);
+        Assert.That(listed.Value, Is.SameAs(plans));
+        Assert.That(created.Value, Is.SameAs(readModel));
+        Assert.That(updated.Value, Is.SameAs(readModel));
+        Assert.That(deleted.Value, Is.EqualTo(Unit.Value));
+        Assert.That(assigned.Value, Is.EqualTo(Unit.Value));
+        Assert.That(unassigned.Value, Is.EqualTo(Unit.Value));
+        Assert.That(active.Value, Is.SameAs(readModel));
         await dependencies.Access.Received(6).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
         await dependencies.ActiveLinks.Received(1).HasForTraineeAsync(traineeId, cancellationToken);
         await dependencies.List.Received(1).ExecuteAsync(
@@ -133,7 +132,7 @@ public sealed class CoachingManagedPlanSliceTests
             (await Resolve<LgymApi.Application.Coaching.ManagedPlans.Unassign.IUnassignTraineeManagedPlanUseCase>(services).ExecuteAsync(new LgymApi.Application.Coaching.ManagedPlans.Unassign.UnassignTraineeManagedPlanCommand(trainerId, traineeId))).Error
         };
 
-        errors.Should().OnlyContain(error => error is TrainerRelationshipNotFoundError);
+        Assert.That((errors).All(error => error is TrainerRelationshipNotFoundError), Is.True);
         await dependencies.List.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
         await dependencies.Create.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
         await dependencies.Update.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
@@ -161,9 +160,9 @@ public sealed class CoachingManagedPlanSliceTests
         var missingActiveLink = await Resolve<IGetActiveManagedPlanUseCase>(services)
             .ExecuteAsync(new GetActiveManagedPlanQuery(traineeId));
 
-        forbidden.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        invalid.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
-        missingActiveLink.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
+        Assert.That(forbidden.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(invalid.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
+        Assert.That(missingActiveLink.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
         await dependencies.List.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
         await dependencies.Create.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
         await dependencies.GetActive.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
@@ -200,10 +199,10 @@ public sealed class CoachingManagedPlanSliceTests
         Func<Task> assign = () => Resolve<LgymApi.Application.Coaching.ManagedPlans.Assign.IAssignTraineeManagedPlanUseCase>(services)
             .ExecuteAsync(new LgymApi.Application.Coaching.ManagedPlans.Assign.AssignTraineeManagedPlanCommand(trainerId, traineeId, planId));
 
-        create.Error.Should().BeSameAs(invalidName);
-        update.Error.Should().BeSameAs(foreignPlan);
-        delete.Error.Should().BeSameAs(missingOwner);
-        await assign.Should().ThrowAsync<InvalidOperationException>().WithMessage("owner transaction failed");
+        Assert.That(create.Error, Is.SameAs(invalidName));
+        Assert.That(update.Error, Is.SameAs(foreignPlan));
+        Assert.That(delete.Error, Is.SameAs(missingOwner));
+        await Assert.ThatAsync(async () => { await assign(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("owner transaction failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static TContract Resolve<TContract>(ServiceCollection services) where TContract : notnull

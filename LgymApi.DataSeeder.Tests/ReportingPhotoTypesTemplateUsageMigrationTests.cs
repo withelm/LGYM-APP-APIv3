@@ -22,28 +22,28 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
         var types = await fixture.Context.TrainerPhotoTypes.AsNoTracking().ToListAsync();
-        types.Select(type => type.SystemKey).Should().BeEquivalentTo(Enum.GetNames<PhotoViewType>());
-        types.Where(type => type.Id != fixture.ExistingFrontType.Id).Should().OnlyContain(type => !type.IsArchived);
+        Assert.That(types.Select(type => type.SystemKey), Is.EquivalentTo(Enum.GetNames<PhotoViewType>()));
+        Assert.That((types.Where(type => type.Id != fixture.ExistingFrontType.Id)).All(type => !type.IsArchived), Is.True);
         var side = types.Single(type => type.SystemKey == "Side");
-        side.Name.Should().Be("Side");
-        side.NameMode.Should().Be(PhotoTypeNameMode.SystemLocalized);
+        Assert.That(side.Name, Is.EqualTo("Side"));
+        Assert.That(side.NameMode, Is.EqualTo(PhotoTypeNameMode.SystemLocalized));
         // Migration must not undo a pre-existing trainer archive/rename choice.
         var existing = types.Single(type => type.Id == fixture.ExistingFrontType.Id);
-        existing.IsArchived.Should().BeTrue();
-        existing.Name.Should().Be("Coach check-in front");
-        existing.NameMode.Should().Be(PhotoTypeNameMode.TrainerProvided);
+        Assert.That(existing.IsArchived, Is.True);
+        Assert.That(existing.Name, Is.EqualTo("Coach check-in front"));
+        Assert.That(existing.NameMode, Is.EqualTo(PhotoTypeNameMode.TrainerProvided));
         var snapshot = await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync();
         using var document = System.Text.Json.JsonDocument.Parse(snapshot.DefinitionJson);
         var frozenSide = document.RootElement.GetProperty("fields")[0].GetProperty("moduleConfig")
             .GetProperty("photoTypes").EnumerateArray().Single(type => type.GetProperty("systemKey").GetString() == "Side");
-        frozenSide.GetProperty("labels").GetProperty("pl").GetString().Should().Be("Bok");
-        frozenSide.GetProperty("labels").GetProperty("en").GetString().Should().Be("Side");
+        Assert.That(frozenSide.GetProperty("labels").GetProperty("pl").GetString(), Is.EqualTo("Bok"));
+        Assert.That(frozenSide.GetProperty("labels").GetProperty("en").GetString(), Is.EqualTo("Side"));
 
         await ReportingPhotoTypesStartupMigration.ApplyAsync(fixture.Context);
 
-        (await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync())
-            .DefinitionJson.Should().Be(snapshot.DefinitionJson);
-        (await fixture.Context.TrainerPhotoTypes.CountAsync()).Should().Be(5);
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync())
+            .DefinitionJson, Is.EqualTo(snapshot.DefinitionJson));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.CountAsync()), Is.EqualTo(5));
     }
 
     [TestCase(false, "live", false)]
@@ -108,27 +108,27 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var runner = new ReportingPhotoTypesMigrationRunner(fixture.Context);
         var preview = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
 
-        preview.HasUnresolvedRequests.Should().BeFalse();
-        preview.Counters.DefaultsPlanned.Should().Be(1);
-        (await fixture.Context.TrainerPhotoTypes.CountAsync()).Should().Be(1, "dry-run must not create definitions");
+        Assert.That(preview.HasUnresolvedRequests, Is.False);
+        Assert.That(preview.Counters.DefaultsPlanned, Is.EqualTo(1));
+        Assert.That((await fixture.Context.TrainerPhotoTypes.CountAsync()), Is.EqualTo(1), "dry-run must not create definitions");
         var applied = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, preview.Fingerprint), CancellationToken.None);
 
-        applied.Applied.Should().BeTrue();
-        applied.HasUnresolvedRequests.Should().BeFalse();
+        Assert.That(applied.Applied, Is.True);
+        Assert.That(applied.HasUnresolvedRequests, Is.False);
         var back = await fixture.Context.TrainerPhotoTypes.AsNoTracking().SingleAsync(type => type.SystemKey == "Back");
-        back.TrainerId.Should().Be(fixture.Trainer.Id);
-        back.IsArchived.Should().Be(expectedArchived);
+        Assert.That(back.TrainerId, Is.EqualTo(fixture.Trainer.Id));
+        Assert.That(back.IsArchived, Is.EqualTo(expectedArchived));
         await fixture.AssertPreservedValuesAsync(preserved);
         var snapshot = await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync();
         var nextPreview = await runner.RunAsync(Options(ReportingPhotoTypesMigrationMode.DryRun), CancellationToken.None);
         var rerun = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, nextPreview.Fingerprint), CancellationToken.None);
 
-        rerun.Counters.DefaultsWritten.Should().Be(0);
-        rerun.Counters.SnapshotsWritten.Should().Be(0);
-        (await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync())
-            .DefinitionJson.Should().Be(snapshot.DefinitionJson);
+        Assert.That(rerun.Counters.DefaultsWritten, Is.EqualTo(0));
+        Assert.That(rerun.Counters.SnapshotsWritten, Is.EqualTo(0));
+        Assert.That((await fixture.Context.ReportRequestDefinitionSnapshots.AsNoTracking().SingleAsync())
+            .DefinitionJson, Is.EqualTo(snapshot.DefinitionJson));
     }
 
     [Test]
@@ -146,10 +146,10 @@ public sealed partial class ReportingPhotoTypesMigrationTests
         var applied = await runner.RunAsync(
             Options(ReportingPhotoTypesMigrationMode.Apply, preview.Fingerprint, true), CancellationToken.None);
 
-        applied.Applied.Should().BeTrue();
-        (await fixture.Context.TrainerPhotoTypes.SingleAsync(type => type.SystemKey == "Back"))
-            .IsArchived.Should().BeTrue();
-        (await fixture.Context.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == fixture.Trainer.Id))
-            .IsDeleted.Should().BeTrue();
+        Assert.That(applied.Applied, Is.True);
+        Assert.That((await fixture.Context.TrainerPhotoTypes.SingleAsync(type => type.SystemKey == "Back"))
+            .IsArchived, Is.True);
+        Assert.That((await fixture.Context.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == fixture.Trainer.Id))
+            .IsDeleted, Is.True);
     }
 }

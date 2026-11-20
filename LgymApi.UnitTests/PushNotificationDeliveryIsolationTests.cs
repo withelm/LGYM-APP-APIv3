@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Providers.Fcm;
@@ -79,15 +78,17 @@ public sealed class PushNotificationDeliveryIsolationTests
 
         await service.ProcessAsync(message.Id.ToString());
 
-        sender.AttemptedInstallationIds.Should().ContainSingle().Which.Should().Be(installation.Id);
-        message.Status.Should().Be(PushNotificationStatus.Failed);
-        message.FailureKind.Should().Be(PushNotificationFailureKind.InvalidToken);
-        message.NextAttemptAt.Should().BeNull();
-        message.SchedulerJobId.Should().BeNull();
-        installation.DisabledReason.Should().Be("InvalidFcmToken");
-        installation.DisabledAt.Should().NotBeNull();
-        scheduler.RetryNotificationIds.Should().BeEmpty();
-        logger.Messages.Should().NotContain(messageText => messageText.Contains(rawToken, StringComparison.Ordinal));
+        var assertedValue147 = (sender.AttemptedInstallationIds).ToArray();
+        Assert.That(assertedValue147, Has.Exactly(1).Items);
+        Assert.That(assertedValue147.Single(), Is.EqualTo(installation.Id));
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Failed));
+        Assert.That(message.FailureKind, Is.EqualTo(PushNotificationFailureKind.InvalidToken));
+        Assert.That(message.NextAttemptAt, Is.Null);
+        Assert.That(message.SchedulerJobId, Is.Null);
+        Assert.That(installation.DisabledReason, Is.EqualTo("InvalidFcmToken"));
+        Assert.That(installation.DisabledAt, Is.Not.Null);
+        Assert.That(scheduler.RetryNotificationIds, Is.Empty);
+        Assert.That((logger.Messages).Any(messageText => messageText.Contains(rawToken, StringComparison.Ordinal)), Is.False);
     }
 
     [Test]
@@ -123,9 +124,9 @@ public sealed class PushNotificationDeliveryIsolationTests
 
         await service.ProcessAsync(message.Id.ToString());
 
-        message.Status.Should().Be(PushNotificationStatus.Skipped);
-        message.ProviderStatus.Should().Be("SourceNotificationUnavailable");
-        scheduler.RetryNotificationIds.Should().BeEmpty();
+        Assert.That(message.Status, Is.EqualTo(PushNotificationStatus.Skipped));
+        Assert.That(message.ProviderStatus, Is.EqualTo("SourceNotificationUnavailable"));
+        Assert.That(scheduler.RetryNotificationIds, Is.Empty);
         _ = sender.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
     }
 

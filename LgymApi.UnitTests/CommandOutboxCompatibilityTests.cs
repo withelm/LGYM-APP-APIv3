@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Reporting.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
 using LgymApi.BackgroundWorker;
@@ -32,13 +31,13 @@ public sealed class CommandOutboxCompatibilityTests
 
         var result = await writer.StageAsync(command);
 
-        capturedRequest.Should().NotBeNull();
-        capturedRequest!.CommandId.Should().Be(contract.CanonicalId)
-            .And.NotBe(contract.FutureClrNameReadAlias);
-        capturedRequest.PayloadJson.Should().Be(contract.PayloadJson);
-        $"{capturedRequest.CommandId}|{capturedRequest.PayloadJson}"
-            .Should().Be(contract.CorrelationInput);
-        result.EnvelopeId.Should().Be("envelope-id");
-        result.WasExisting.Should().BeFalse();
+        Assert.That(capturedRequest, Is.Not.Null);
+        var assertedChain38 = capturedRequest!.CommandId;
+        Assert.That(assertedChain38, Is.EqualTo(contract.CanonicalId));
+        Assert.That(assertedChain38, Is.Not.EqualTo(contract.FutureClrNameReadAlias));
+        Assert.That(capturedRequest.PayloadJson, Is.EqualTo(contract.PayloadJson));
+        Assert.That($"{capturedRequest.CommandId}|{capturedRequest.PayloadJson}", Is.EqualTo(contract.CorrelationInput));
+        Assert.That(result.EnvelopeId, Is.EqualTo("envelope-id"));
+        Assert.That(result.WasExisting, Is.False);
     }
 }

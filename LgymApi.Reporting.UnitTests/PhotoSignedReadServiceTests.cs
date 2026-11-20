@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Reporting.Errors;
@@ -48,8 +47,8 @@ public sealed class PhotoSignedReadServiceTests
             photoStorageProvider: storageProvider);
         var result = await service.GetSignedReadUrlAsync(currentUser, photoId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.ReadUrl.Should().Be("https://storage.example.com/read-url");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.ReadUrl, Is.EqualTo("https://storage.example.com/read-url"));
     }
 
     [Test]
@@ -64,8 +63,8 @@ public sealed class PhotoSignedReadServiceTests
         var service = PhotoServiceTestFactory.CreateService(reportingRepository: repo);
         var result = await service.GetSignedReadUrlAsync(currentUser, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
     }
 
     [Test]
@@ -97,8 +96,8 @@ public sealed class PhotoSignedReadServiceTests
             photoStorageProvider: storageProvider);
         var result = await service.GetSignedReadUrlAsync(otherUser, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingForbiddenError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingForbiddenError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -135,8 +134,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.ReadUrl.Should().Be("https://storage.example.com/read-url");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.ReadUrl, Is.EqualTo("https://storage.example.com/read-url"));
         await storageProvider.Received(1).GenerateSignedReadUrlAsync(photo.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -172,8 +171,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -216,8 +215,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(sourceTrainer, photoId);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.ReadUrl.Should().Be("https://storage.example.com/former-source");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.ReadUrl, Is.EqualTo("https://storage.example.com/former-source"));
         await storageProvider.Received(1).GenerateSignedReadUrlAsync(photo.StorageKey, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -252,8 +251,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -289,8 +288,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(trainer, photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -318,8 +317,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com"), photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -356,8 +355,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(PhotoServiceTestFactory.CreateUser(trainerId, "trainer@example.com"), photoId);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await storageProvider.DidNotReceive().GenerateSignedReadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
     }
 
@@ -369,8 +368,8 @@ public sealed class PhotoSignedReadServiceTests
 
         var result = await service.GetSignedReadUrlAsync(currentUser, default);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<InvalidReportingError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<InvalidReportingError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
     }
 }

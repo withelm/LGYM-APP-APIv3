@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 
 namespace LgymApi.UnitTests.Pagination;
@@ -13,7 +12,7 @@ public sealed class GridifyPaginationNestedGroupTests
 
         var query = adapter.Adapt(BuildNestedFilterInput());
 
-        query.Should().Be("(status=active&(age>18|(role=coach|role=trainer)))");
+        Assert.That(query, Is.EqualTo("(status=active&(age>18|(role=coach|role=trainer)))"));
     }
 
     [Test]
@@ -55,8 +54,7 @@ public sealed class GridifyPaginationNestedGroupTests
             ]
         });
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*nesting depth cannot exceed 2*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*nesting depth cannot exceed 2*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -76,8 +74,7 @@ public sealed class GridifyPaginationNestedGroupTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*must contain at least one condition or child group*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*must contain at least one condition or child group*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static FilterInput BuildNestedFilterInput() => new()

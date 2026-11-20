@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -78,17 +77,16 @@ public sealed class TrainerDashboardTests : IntegrationTestBase
             SetAuthorizationHeader(actor);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var response = await Client.PostAsync(route, content);
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "{0}: {1}", route, await response.Content.ReadAsStringAsync());
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}: {1}", route, await response.Content.ReadAsStringAsync()));
         }
     }
 
     private async Task AssertHistoryAsync(string route, object body, string[] expected)
     {
         using var response = await Client.PostAsJsonAsync(route, body);
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        json.RootElement.EnumerateArray().Select(row => row.GetProperty("_id").GetString())
-            .Should().BeEquivalentTo(expected);
+        Assert.That(json.RootElement.EnumerateArray().Select(row => row.GetProperty("_id").GetString()), Is.EquivalentTo(expected).UsingPropertiesComparer());
     }
 
     private async Task<Training[]> SeedHistoryAsync(Id<User> trainee, Id<User> trainer, Id<User> foreign, DateTimeOffset[] instants)

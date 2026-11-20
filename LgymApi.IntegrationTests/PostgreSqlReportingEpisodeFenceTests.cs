@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.BuildingBlocks.Results;
@@ -52,15 +51,15 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
 
         await gatedAccess.RevisionCheckStaged.Task.WaitAsync(GateTimeout, cancellationToken);
         await UnlinkAsync(scenario.Trainee.Id, cancellationToken);
-        gatedAccess.Release.TrySetResult(true).Should().BeTrue();
+        Assert.That(gatedAccess.Release.TrySetResult(true), Is.True);
         var result = await editTask.WaitAsync(GateTimeout, cancellationToken);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var submission = await database.ReportSubmissions.AsNoTracking().SingleAsync(item => item.Id == scenario.SubmissionId, cancellationToken);
-        submission.PayloadJson.Should().Be("{\"note\":\"Submitted\"}");
+        Assert.That(submission.PayloadJson, Is.EqualTo("{\"note\":\"Submitted\"}"));
     }
 
     [Test]
@@ -76,16 +75,16 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
 
         SetAuthorizationHeader(scenario.ReplacementTrainer.Id);
         using var replacementResponse = await PostAsJsonWithApiOptionsAsync(FeedbackUrl(scenario), feedback);
-        replacementResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(replacementResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         SetAuthorizationHeader(scenario.SourceTrainer.Id);
         using var formerResponse = await PostAsJsonWithApiOptionsAsync(FeedbackUrl(scenario), feedback);
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         await RelinkAsync(scenario.Trainee.Id, scenario.SourceTrainer.Id);
         SetAuthorizationHeader(scenario.SourceTrainer.Id);
         using var relinkedResponse = await PostAsJsonWithApiOptionsAsync(FeedbackUrl(scenario), feedback);
-        relinkedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(relinkedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         await AssertFeedbackUnchangedAsync(scenario);
     }
@@ -114,24 +113,21 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
 
         await gatedUnitOfWork.SaveReached.Task.WaitAsync(GateTimeout, cancellationToken);
         await UnlinkAsync(scenario.Trainee.Id, cancellationToken);
-        gatedUnitOfWork.ReleaseSave.TrySetResult(true).Should().BeTrue();
+        Assert.That(gatedUnitOfWork.ReleaseSave.TrySetResult(true), Is.True);
         var result = await feedbackTask.WaitAsync(GateTimeout, cancellationToken);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await using var assertionScope = Factory.Services.CreateAsyncScope();
         var database = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var submission = await database.ReportSubmissions.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == scenario.SubmissionId, cancellationToken);
         var assignment = await database.RecurringReportAssignments.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == scenario.AssignmentId, cancellationToken);
-        submission.TrainerOverallComment.Should().Be("Original feedback");
-        submission.TrainerFeedbackAddedAt.Should().NotBeNull();
-        assignment.NextEligibleAt.Should().BeCloseTo(
-            scenario.OriginalNextEligibleAt,
-            TimeSpan.FromMicroseconds(1));
-        (await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == scenario.Trainee.Id, cancellationToken))
-            .Should().BeFalse();
+        Assert.That(submission.TrainerOverallComment, Is.EqualTo("Original feedback"));
+        Assert.That(submission.TrainerFeedbackAddedAt, Is.Not.Null);
+        Assert.That(assignment.NextEligibleAt, Is.EqualTo(scenario.OriginalNextEligibleAt).Within(TimeSpan.FromMicroseconds(1)));
+        Assert.That((await database.TrainerTraineeLinks.AnyAsync(link => link.TraineeId == scenario.Trainee.Id, cancellationToken)), Is.False);
     }
 
     [Test]
@@ -163,13 +159,13 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
 
         await gatedRelationshipAccess.RevisionCheckStaged.Task.WaitAsync(GateTimeout, cancellationToken);
         await UnlinkAsync(scenario.Trainee.Id, cancellationToken);
-        gatedRelationshipAccess.Release.TrySetResult(true).Should().BeTrue();
+        Assert.That(gatedRelationshipAccess.Release.TrySetResult(true), Is.True);
         var result = await feedbackTask.WaitAsync(GateTimeout, cancellationToken);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeOfType<ReportingNotFoundError>();
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.TypeOf<ReportingNotFoundError>());
         await AssertFeedbackUnchangedAsync(scenario);
-        (await CountFeedbackAddedEnvelopesAsync(cancellationToken)).Should().Be(originalEnvelopeCount);
+        Assert.That((await CountFeedbackAddedEnvelopesAsync(cancellationToken)), Is.EqualTo(originalEnvelopeCount));
     }
 
     [Test]
@@ -187,12 +183,12 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
         using var legacyResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainee/report-requests/{scenario.LegacyRequestId}/submit",
             new { answers = new { note = "Ambiguous legacy source" } });
-        legacyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(legacyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var explicitResponse = await PostAsJsonWithApiOptionsAsync(
             $"/api/trainee/report-requests/{explicitRequestId}/submit",
             new { answers = new { note = "Current explicit source" } });
-        explicitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(explicitResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         await using var scope = Factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -202,11 +198,11 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
         var explicitRequest = await database.ReportRequests.AsNoTracking()
             .Include(request => request.Submission)
             .SingleAsync(request => request.Id == explicitRequestId);
-        legacyRequest.Status.Should().Be(ReportRequestStatus.Pending);
-        legacyRequest.Submission.Should().BeNull();
-        explicitRequest.Status.Should().Be(ReportRequestStatus.Submitted);
-        explicitRequest.Submission.Should().NotBeNull();
-        explicitRequest.Submission!.SourceCoachingEpisodeId.Should().Be(currentEpisodeId);
+        Assert.That(legacyRequest.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(legacyRequest.Submission, Is.Null);
+        Assert.That(explicitRequest.Status, Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.That(explicitRequest.Submission, Is.Not.Null);
+        Assert.That(explicitRequest.Submission!.SourceCoachingEpisodeId, Is.EqualTo(currentEpisodeId));
     }
 
     private async Task<FeedbackScenario> SeedFeedbackScenarioAsync(
@@ -347,12 +343,10 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests : PostgreSqlRec
             .SingleAsync(candidate => candidate.Id == scenario.SubmissionId);
         var assignment = await database.RecurringReportAssignments.AsNoTracking()
             .SingleAsync(candidate => candidate.Id == scenario.AssignmentId);
-        submission.TrainerOverallComment.Should().BeNull();
-        submission.TrainerFieldCommentsJson.Should().BeNull();
-        submission.TrainerFeedbackAddedAt.Should().BeNull();
-        assignment.NextEligibleAt.Should().BeCloseTo(
-            scenario.OriginalNextEligibleAt,
-            TimeSpan.FromMicroseconds(1));
+        Assert.That(submission.TrainerOverallComment, Is.Null);
+        Assert.That(submission.TrainerFieldCommentsJson, Is.Null);
+        Assert.That(submission.TrainerFeedbackAddedAt, Is.Null);
+        Assert.That(assignment.NextEligibleAt, Is.EqualTo(scenario.OriginalNextEligibleAt).Within(TimeSpan.FromMicroseconds(1)));
     }
 
     private async Task<int> CountFeedbackAddedEnvelopesAsync(CancellationToken cancellationToken)

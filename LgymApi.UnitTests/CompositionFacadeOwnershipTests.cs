@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Features.Reporting;
@@ -44,17 +43,17 @@ public sealed class CompositionFacadeOwnershipTests
 
         foreach (var expectation in expectations)
         {
-            var descriptor = services
+            var descriptors = services
                 .Where(candidate => candidate.ServiceType == expectation.ServiceType)
-                .Should()
-                .ContainSingle(expectation.ServiceType.FullName)
-                .Which;
-            descriptor.Lifetime.Should().Be(expectation.Lifetime, expectation.ServiceType.FullName);
-            descriptor.ImplementationType.Should().NotBeNull(expectation.ServiceType.FullName);
-            descriptor.ImplementationType!.Assembly.Should().BeSameAs(expectation.OwnerAssembly, expectation.ServiceType.FullName);
+                .ToArray();
+            Assert.That(descriptors, Has.Exactly(1).Items, expectation.ServiceType.FullName);
+            var descriptor = descriptors.Single();
+            Assert.That(descriptor.Lifetime, Is.EqualTo(expectation.Lifetime), expectation.ServiceType.FullName);
+            Assert.That(descriptor.ImplementationType, Is.Not.Null, expectation.ServiceType.FullName);
+            Assert.That(descriptor.ImplementationType!.Assembly, Is.SameAs(expectation.OwnerAssembly), expectation.ServiceType.FullName);
 
             var resolved = scope.ServiceProvider.GetRequiredService(expectation.ServiceType);
-            resolved.GetType().Assembly.Should().BeSameAs(expectation.OwnerAssembly, expectation.ServiceType.FullName);
+            Assert.That(resolved.GetType().Assembly, Is.SameAs(expectation.OwnerAssembly), expectation.ServiceType.FullName);
         }
     }
 
@@ -65,15 +64,15 @@ public sealed class CompositionFacadeOwnershipTests
 
         services.AddApplication();
 
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IReportingService));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IWorkoutProgressReadWriteService));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ICreateTraineeDietPlanUseCase));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IAppConfigService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(ITokenService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPlanDayService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IAppConfigApiAdapter));
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IReportingService)), Is.False);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IWorkoutProgressReadWriteService)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(ICoachingRelationshipAccessService)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(ICreateTraineeDietPlanUseCase)), Has.Exactly(1).Items);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IAppConfigService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(ITokenService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IPlanDayService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IAppConfigApiAdapter)), Is.False);
     }
 
     [Test]
@@ -83,7 +82,7 @@ public sealed class CompositionFacadeOwnershipTests
 
         services.AddReportingModule();
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IReportingService));
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IReportingService)), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -97,14 +96,14 @@ public sealed class CompositionFacadeOwnershipTests
             isTesting: true,
             hostBackgroundServer: true);
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IUnitOfWork));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IPlanDayPersistence));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IAppConfigService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(ITokenService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPlanDayService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IEmailSender));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPushProviderSender));
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IUnitOfWork)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IPlanDayPersistence)), Has.Exactly(1).Items);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IAppConfigService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(ITokenService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IPlanDayService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IEmailSender)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IPushProviderSender)), Is.False);
     }
 
     [Test]
@@ -114,13 +113,13 @@ public sealed class CompositionFacadeOwnershipTests
 
         services.AddBackgroundWorkerServices(isTesting: true);
 
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IBackgroundActionResolver));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IEmailBackgroundScheduler));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IActionMessageScheduler));
-        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IUnitOfWork));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService));
-        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IPushProviderSender));
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IBackgroundActionResolver)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IEmailBackgroundScheduler)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IActionMessageScheduler)), Has.Exactly(1).Items);
+        Assert.That((services).Where(descriptor => descriptor.ServiceType == typeof(IPushBackgroundScheduler)), Has.Exactly(1).Items);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IUnitOfWork)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IInAppNotificationService)), Is.False);
+        Assert.That((services).Any(descriptor => descriptor.ServiceType == typeof(IPushProviderSender)), Is.False);
     }
 
     [Test]
@@ -132,8 +131,7 @@ public sealed class CompositionFacadeOwnershipTests
 
         var action = () => GetSingleDescriptor(services, typeof(IAppConfigRepository));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IAppConfigRepository).FullName}*exactly once*2*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IAppConfigRepository).FullName}*exactly once*2*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -143,7 +141,7 @@ public sealed class CompositionFacadeOwnershipTests
 
         var action = () => AssertWorkerIsLast(services);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*Worker*last*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Worker*last*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static FacadeDescriptorExpectation[] CreateExpectations() =>

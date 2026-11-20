@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
-using FluentAssertions.Execution;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -30,20 +28,20 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/{user.Id}/createPlan", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var plan = await db.Plans.FirstOrDefaultAsync(p => p.Name == "My Workout Plan" && p.UserId == user.Id);
-        plan.Should().NotBeNull();
-        plan!.IsActive.Should().BeTrue();
+        Assert.That(plan, Is.Not.Null);
+        Assert.That(plan!.IsActive, Is.True);
 
-        (await db.Plans.CountAsync(item => item.UserId == user.Id && item.IsActive && !item.IsDeleted)).Should().Be(1);
+        Assert.That((await db.Plans.CountAsync(item => item.UserId == user.Id && item.IsActive && !item.IsDeleted)), Is.EqualTo(1));
     }
 
     [Test]
@@ -61,10 +59,10 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/{user2.Id}/createPlan", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.Forbidden));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.Forbidden)));
     }
 
     [Test]
@@ -75,7 +73,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/not-an-id/createPlan", new { name = "Plan" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -94,17 +92,17 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{owner.Id}/updatePlan", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be(CompatibilityResourceMessage.InCulture("en", () => Messages.Updated));
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo(CompatibilityResourceMessage.InCulture("en", () => Messages.Updated)));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var updatedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == ownerPlan.Id);
-        updatedPlan.Should().NotBeNull();
-        updatedPlan!.Name.Should().Be("Owner Plan After Update");
+        Assert.That(updatedPlan, Is.Not.Null);
+        Assert.That(updatedPlan!.Name, Is.EqualTo("Owner Plan After Update"));
     }
 
     [Test]
@@ -128,9 +126,9 @@ public sealed class PlanTests : IntegrationTestBase
             .AsNoTracking()
             .SingleAsync(plan => plan.Id == victimPlan.Id);
 
-        using var assertionScope = new AssertionScope();
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        persistedVictimPlan.Name.Should().Be("Victim Plan Before Attack");
+        using var assertionScope = Assert.EnterMultipleScope();
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(persistedVictimPlan.Name, Is.EqualTo("Victim Plan Before Attack"));
     }
 
     [Test]
@@ -146,7 +144,7 @@ public sealed class PlanTests : IntegrationTestBase
             name = "Updated"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -161,7 +159,7 @@ public sealed class PlanTests : IntegrationTestBase
             name = "Updated"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -174,13 +172,13 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PlanFormResponse>();
-        body.Should().NotBeNull();
-        body!.Id.Should().Be(plan.Id.ToString());
-        body.Name.Should().Be("Active Plan");
-        body.IsActive.Should().BeTrue();
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Id, Is.EqualTo(plan.Id.ToString()));
+        Assert.That(body.Name, Is.EqualTo("Active Plan"));
+        Assert.That(body.IsActive, Is.True);
     }
 
     [Test]
@@ -192,7 +190,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlanConfig");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -204,10 +202,10 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/checkIsUserHavePlan");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var result = await response.Content.ReadFromJsonAsync<bool>();
-        result.Should().BeFalse();
+        Assert.That(result, Is.False);
     }
 
     [Test]
@@ -221,12 +219,12 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<PlanFormResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(2);
-        body!.Select(p => p.Name).Should().Contain(new[] { "Plan 1", "Plan 2" });
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(2).Items);
+        Assert.That(body!.Select(p => p.Name), Is.SupersetOf(new[] { "Plan 1", "Plan 2" }));
     }
 
     [Test]
@@ -237,7 +235,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/{user.Id}/getPlansList");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -256,7 +254,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{user.Id}/setNewActivePlan", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -264,8 +262,8 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan1 = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan1.Id);
         var updatedPlan2 = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan2.Id);
 
-        updatedPlan1!.IsActive.Should().BeFalse();
-        updatedPlan2!.IsActive.Should().BeTrue();
+        Assert.That(updatedPlan1!.IsActive, Is.False);
+        Assert.That(updatedPlan2!.IsActive, Is.True);
     }
 
     [Test]
@@ -280,7 +278,7 @@ public sealed class PlanTests : IntegrationTestBase
             _id = plan.Id.ToString()
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -294,7 +292,7 @@ public sealed class PlanTests : IntegrationTestBase
             _id = "not-an-id"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -326,11 +324,11 @@ public sealed class PlanTests : IntegrationTestBase
         var afterActive = await afterDb.Plans.AsNoTracking().SingleAsync(plan => plan.Id == victimActivePlan.Id);
         var afterInactive = await afterDb.Plans.AsNoTracking().SingleAsync(plan => plan.Id == victimInactivePlan.Id);
 
-        using (new AssertionScope())
+        using (Assert.EnterMultipleScope())
         {
-            responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.Forbidden);
-            afterActive.IsActive.Should().Be(beforeActive.IsActive);
-            afterInactive.IsActive.Should().BeFalse();
+            Assert.That((responses).All(response => response.StatusCode == HttpStatusCode.Forbidden), Is.True);
+            Assert.That(afterActive.IsActive, Is.EqualTo(beforeActive.IsActive));
+            Assert.That(afterInactive.IsActive, Is.False);
         }
 
         foreach (var response in responses)
@@ -363,7 +361,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -371,20 +369,20 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan = await db.Plans
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
-        updatedPlan.Should().NotBeNull();
-        updatedPlan!.IsActive.Should().BeFalse();
-        updatedPlan.IsDeleted.Should().BeTrue();
+        Assert.That(updatedPlan, Is.Not.Null);
+        Assert.That(updatedPlan!.IsActive, Is.False);
+        Assert.That(updatedPlan.IsDeleted, Is.True);
 
         var planDays = await db.PlanDays
             .IgnoreQueryFilters()
             .Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId)
             .ToListAsync();
-        planDays.Should().HaveCount(3);
-        planDays.All(pd => pd.IsDeleted).Should().BeTrue();
+        Assert.That(planDays, Has.Exactly(3).Items);
+        Assert.That(planDays.All(pd => pd.IsDeleted), Is.True);
 
         var updatedUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
-        updatedUser.Should().NotBeNull();
-        updatedUser!.PlanId.Should().BeNull();
+        Assert.That(updatedUser, Is.Not.Null);
+        Assert.That(updatedUser!.PlanId, Is.Null);
     }
 
     [Test]
@@ -408,19 +406,19 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{plan.Id}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == plan.Id);
-        unchangedPlan.Should().NotBeNull();
-        unchangedPlan!.IsActive.Should().BeTrue();
-        unchangedPlan.IsDeleted.Should().BeFalse();
+        Assert.That(unchangedPlan, Is.Not.Null);
+        Assert.That(unchangedPlan!.IsActive, Is.True);
+        Assert.That(unchangedPlan.IsDeleted, Is.False);
 
         var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == plan.Id).ToListAsync();
-        unchangedPlanDays.Should().HaveCount(2);
-        unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
+        Assert.That(unchangedPlanDays, Has.Exactly(2).Items);
+        Assert.That(unchangedPlanDays.All(pd => !pd.IsDeleted), Is.True);
     }
 
     [Test]
@@ -431,7 +429,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/api/not-an-id/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -457,7 +455,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -465,21 +463,21 @@ public sealed class PlanTests : IntegrationTestBase
         var updatedPlan = await db.Plans
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
-        updatedPlan.Should().NotBeNull();
-        updatedPlan!.IsActive.Should().BeFalse();
-        updatedPlan.IsDeleted.Should().BeTrue();
+        Assert.That(updatedPlan, Is.Not.Null);
+        Assert.That(updatedPlan!.IsActive, Is.False);
+        Assert.That(updatedPlan.IsDeleted, Is.True);
 
         var planDays = await db.PlanDays
             .IgnoreQueryFilters()
             .Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId)
             .ToListAsync();
-        planDays.Should().HaveCount(2);
-        planDays.All(pd => pd.IsDeleted).Should().BeTrue();
+        Assert.That(planDays, Has.Exactly(2).Items);
+        Assert.That(planDays.All(pd => pd.IsDeleted), Is.True);
 
         var trainings = await db.Trainings
             .Where(t => t.UserId == (Domain.ValueObjects.Id<User>)user.Id && (t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay1Id || t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay2Id))
             .ToListAsync();
-        trainings.Should().HaveCount(2);
+        Assert.That(trainings, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -507,24 +505,24 @@ public sealed class PlanTests : IntegrationTestBase
         SetAuthorizationHeader(attacker.Id);
         var response = await Client.PostAsync($"/api/{planId}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var unchangedPlan = await db.Plans.FirstOrDefaultAsync(p => p.Id == (Domain.ValueObjects.Id<Plan>)planId);
-        unchangedPlan.Should().NotBeNull();
-        unchangedPlan!.IsActive.Should().BeTrue();
-        unchangedPlan.IsDeleted.Should().BeFalse();
+        Assert.That(unchangedPlan, Is.Not.Null);
+        Assert.That(unchangedPlan!.IsActive, Is.True);
+        Assert.That(unchangedPlan.IsDeleted, Is.False);
 
         var unchangedPlanDays = await db.PlanDays.Where(pd => pd.PlanId == (Domain.ValueObjects.Id<Plan>)planId).ToListAsync();
-        unchangedPlanDays.Should().HaveCount(2);
-        unchangedPlanDays.All(pd => !pd.IsDeleted).Should().BeTrue();
+        Assert.That(unchangedPlanDays, Has.Exactly(2).Items);
+        Assert.That(unchangedPlanDays.All(pd => !pd.IsDeleted), Is.True);
 
         var trainings = await db.Trainings
             .Where(t => t.UserId == (Domain.ValueObjects.Id<User>)owner.Id && (t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay1Id || t.TypePlanDayId == (Domain.ValueObjects.Id<PlanDay>)planDay2Id))
             .ToListAsync();
-        trainings.Should().HaveCount(2);
+        Assert.That(trainings, Has.Exactly(2).Items);
     }
 
     [Test]
@@ -538,7 +536,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{inactivePlan.Id}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -546,13 +544,13 @@ public sealed class PlanTests : IntegrationTestBase
         var deletedPlan = await verifyDb.Plans
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == inactivePlan.Id);
-        deletedPlan.Should().NotBeNull();
-        deletedPlan!.IsActive.Should().BeFalse();
-        deletedPlan.IsDeleted.Should().BeTrue();
+        Assert.That(deletedPlan, Is.Not.Null);
+        Assert.That(deletedPlan!.IsActive, Is.False);
+        Assert.That(deletedPlan.IsDeleted, Is.True);
 
         var unchangedActivePlan = await verifyDb.Plans.FirstOrDefaultAsync(plan => plan.Id == activePlan.Id);
-        unchangedActivePlan.Should().NotBeNull();
-        unchangedActivePlan!.IsActive.Should().BeTrue();
+        Assert.That(unchangedActivePlan, Is.Not.Null);
+        Assert.That(unchangedActivePlan!.IsActive, Is.True);
     }
 
     [Test]
@@ -566,7 +564,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -574,14 +572,14 @@ public sealed class PlanTests : IntegrationTestBase
         var deletedPlan = await verifyDb.Plans
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == activePlan.Id);
-        deletedPlan.Should().NotBeNull();
-        deletedPlan!.IsDeleted.Should().BeTrue();
-        deletedPlan.IsActive.Should().BeFalse();
+        Assert.That(deletedPlan, Is.Not.Null);
+        Assert.That(deletedPlan!.IsDeleted, Is.True);
+        Assert.That(deletedPlan.IsActive, Is.False);
 
         var activatedFallback = await verifyDb.Plans.FirstOrDefaultAsync(p => p.Id == fallbackPlan.Id);
-        activatedFallback.Should().NotBeNull();
-        activatedFallback!.IsDeleted.Should().BeFalse();
-        activatedFallback.IsActive.Should().BeTrue();
+        Assert.That(activatedFallback, Is.Not.Null);
+        Assert.That(activatedFallback!.IsDeleted, Is.False);
+        Assert.That(activatedFallback.IsActive, Is.True);
 
     }
 
@@ -597,7 +595,7 @@ public sealed class PlanTests : IntegrationTestBase
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var fallback = await db.Plans.FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
-            fallback.Should().NotBeNull();
+            Assert.That(fallback, Is.Not.Null);
             fallback!.IsDeleted = true;
 
             await db.SaveChangesAsync();
@@ -607,7 +605,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{activePlan.Id}/deletePlan", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -615,11 +613,11 @@ public sealed class PlanTests : IntegrationTestBase
         var unchangedFallback = await verifyDb.Plans
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == deletedFallbackPlan.Id);
-        unchangedFallback.Should().NotBeNull();
-        unchangedFallback!.IsDeleted.Should().BeTrue();
-        unchangedFallback.IsActive.Should().BeFalse();
+        Assert.That(unchangedFallback, Is.Not.Null);
+        Assert.That(unchangedFallback!.IsDeleted, Is.True);
+        Assert.That(unchangedFallback.IsActive, Is.False);
 
-        (await verifyDb.Plans.AnyAsync(plan => plan.UserId == user.Id && plan.IsActive && !plan.IsDeleted)).Should().BeFalse();
+        Assert.That((await verifyDb.Plans.AnyAsync(plan => plan.UserId == user.Id && plan.IsActive && !plan.IsDeleted)), Is.False);
     }
 
     private async Task AddTrainingViaEndpointAsync(Id<User> userId, Id<Gym> gymId, Id<PlanDay> planDayId, Id<Exercise> exerciseId)
@@ -636,7 +634,7 @@ public sealed class PlanTests : IntegrationTestBase
         };
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/{userId}/addTraining", request);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     private async Task<Plan> SeedPlanAsync(Id<User> userId, string name, bool isActive = true)
@@ -707,12 +705,12 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<ShareCodeResponse>();
-        body.Should().NotBeNull();
-        body!.ShareCode.Should().NotBeNullOrWhiteSpace();
-        body.ShareCode.Should().HaveLength(10);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(string.IsNullOrWhiteSpace(body!.ShareCode), Is.False);
+        Assert.That(body.ShareCode, Has.Length.EqualTo(10));
     }
 
     [Test]
@@ -724,7 +722,7 @@ public sealed class PlanTests : IntegrationTestBase
         var nonExistentPlanId = Id<Plan>.New();
         var response = await Client.PostAsync($"/api/{nonExistentPlanId}/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -735,7 +733,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync("/api/not-an-id/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -749,7 +747,7 @@ public sealed class PlanTests : IntegrationTestBase
 
         var response = await Client.PostAsync($"/api/{plan.Id}/share", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -770,13 +768,13 @@ public sealed class PlanTests : IntegrationTestBase
         var copyRequest = new { shareCode };
         var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
 
-        copyResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.That(copyResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
 
         var copyBody = await copyResponse.Content.ReadFromJsonAsync<CopiedPlanResponse>();
-        copyBody.Should().NotBeNull();
-        copyBody!.Name.Should().Be("Plan To Copy");
-        copyBody.UserId.Should().Be(user2.Id.ToString());
-        copyBody.IsActive.Should().BeTrue();
+        Assert.That(copyBody, Is.Not.Null);
+        Assert.That(copyBody!.Name, Is.EqualTo("Plan To Copy"));
+        Assert.That(copyBody.UserId, Is.EqualTo(user2.Id.ToString()));
+        Assert.That(copyBody.IsActive, Is.True);
     }
 
     [Test]
@@ -788,7 +786,7 @@ public sealed class PlanTests : IntegrationTestBase
         var copyRequest = new { shareCode = "INVALID1" };
         var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
 
-        copyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(copyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -800,7 +798,7 @@ public sealed class PlanTests : IntegrationTestBase
         var copyRequest = new { shareCode = "TESTCODE" };
         var copyResponse = await Client.PostAsJsonAsync("/api/copy", copyRequest);
 
-        copyResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(copyResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -816,6 +814,6 @@ public sealed class PlanTests : IntegrationTestBase
         var response2 = await Client.PostAsync($"/api/{plan.Id}/share", null);
         var body2 = await response2.Content.ReadFromJsonAsync<ShareCodeResponse>();
 
-        body1!.ShareCode.Should().Be(body2!.ShareCode);
+        Assert.That(body1!.ShareCode, Is.EqualTo(body2!.ShareCode));
     }
 }

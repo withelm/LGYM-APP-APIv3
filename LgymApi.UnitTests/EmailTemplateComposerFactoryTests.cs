@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Options;
@@ -36,8 +35,7 @@ public sealed class EmailTemplateComposerFactoryTests
 
         var action = () => factory.ComposeMessage(EmailNotificationType.Define("email.unknown"), "{}");
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Email template composer not registered for notification type: email.unknown");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Email template composer not registered for notification type: email.unknown").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -47,8 +45,7 @@ public sealed class EmailTemplateComposerFactoryTests
 
         var action = () => composer.Load("Missing", CultureInfo.GetCultureInfo("fr-FR"));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Email template not found: *");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Email template not found: *").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -61,8 +58,7 @@ public sealed class EmailTemplateComposerFactoryTests
 
         var action = () => composer.Load("Malformed", CultureInfo.GetCultureInfo("en-US"));
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Invalid email template format in *");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Invalid email template format in *").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private ExposedEmailTemplateComposer CreateComposer()

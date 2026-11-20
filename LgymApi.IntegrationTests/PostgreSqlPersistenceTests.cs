@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Contracts;
 using LgymApi.Application.Nutrition.Supplementation.CheckOffIntake.Models;
 using LgymApi.Application.Repositories;
@@ -26,10 +25,10 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        database.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
-        (await database.Database.GetPendingMigrationsAsync()).Should().BeEmpty();
-        database.Database.HasPendingModelChanges().Should().BeFalse();
-        database.Model.GetEntityTypes().Should().HaveCount(55);
+        Assert.That(database.Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
+        Assert.That((await database.Database.GetPendingMigrationsAsync()), Is.Empty);
+        Assert.That(database.Database.HasPendingModelChanges(), Is.False);
+        Assert.That(database.Model.GetEntityTypes(), Has.Exactly(55).Items);
     }
 
     [Test]
@@ -44,7 +43,7 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
         database.ChangeTracker.Clear();
 
         var storedRecord = await database.ApiIdempotencyRecords.SingleAsync(record => record.Id == recordId);
-        storedRecord.Id.Should().Be(recordId);
+        Assert.That(storedRecord.Id, Is.EqualTo(recordId));
 
         await database.Database.OpenConnectionAsync();
         try
@@ -62,7 +61,7 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
             command.Parameters.Add(idParameter);
 
             var providerType = await command.ExecuteScalarAsync();
-            providerType.Should().Be("uuid");
+            Assert.That(providerType, Is.EqualTo("uuid"));
         }
         finally
         {
@@ -100,11 +99,11 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
             await database.SaveChangesAsync();
             database.ChangeTracker.Clear();
 
-            (await database.ApiIdempotencyRecords.SingleOrDefaultAsync(item => item.Id == originalRecordId)).Should().BeNull();
+            Assert.That((await database.ApiIdempotencyRecords.SingleOrDefaultAsync(item => item.Id == originalRecordId)), Is.Null);
             var softDeletedRecord = await database.ApiIdempotencyRecords
                 .IgnoreQueryFilters()
                 .SingleAsync(item => item.Id == originalRecordId);
-            softDeletedRecord.IsDeleted.Should().BeTrue();
+            Assert.That(softDeletedRecord.IsDeleted, Is.True);
         }
 
         using (var replacementScope = Factory.Services.CreateScope())
@@ -114,15 +113,13 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
             await database.SaveChangesAsync();
             database.ChangeTracker.Clear();
 
-            (await database.ApiIdempotencyRecords
+            Assert.That((await database.ApiIdempotencyRecords
                 .Where(item => item.ScopeTuple == scopeTuple && item.IdempotencyKey == idempotencyKey)
-                .ToListAsync())
-                .Should().ContainSingle();
-            (await database.ApiIdempotencyRecords
+                .ToListAsync()), Has.Exactly(1).Items);
+            Assert.That((await database.ApiIdempotencyRecords
                 .IgnoreQueryFilters()
                 .Where(item => item.ScopeTuple == scopeTuple && item.IdempotencyKey == idempotencyKey)
-                .ToListAsync())
-                .Should().HaveCount(2);
+                .ToListAsync()), Has.Exactly(2).Items);
         }
     }
 
@@ -185,10 +182,10 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
                 return await second.ExecuteAsync(command);
             }));
 
-        results.Should().OnlyContain(result => result.IsSuccess);
-        results.Select(result => result.Value.Taken).Should().OnlyContain(taken => taken);
-        results.Select(result => result.Value.PlanItemId).Should().OnlyContain(id => id == planItemId);
-        results.Select(result => result.Value.TakenAt).Distinct().Should().ContainSingle();
+        Assert.That((results).All(result => result.IsSuccess), Is.True);
+        Assert.That((results.Select(result => result.Value.Taken)).All(taken => taken), Is.True);
+        Assert.That((results.Select(result => result.Value.PlanItemId)).All(id => id == planItemId), Is.True);
+        Assert.That(results.Select(result => result.Value.TakenAt).Distinct(), Has.Exactly(1).Items);
 
         using var readScope = Factory.Services.CreateScope();
         var readDatabase = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -196,8 +193,8 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
             .AsNoTracking()
             .Where(log => log.TraineeId == trainee.Id && log.PlanItemId == planItemId && log.IntakeDate == intakeDate)
             .ToListAsync();
-        intakeLogs.Should().ContainSingle();
-        intakeLogs[0].TakenAt.Should().Be(results[0].Value.TakenAt);
+        Assert.That(intakeLogs, Has.Exactly(1).Items);
+        Assert.That(intakeLogs[0].TakenAt, Is.EqualTo(results[0].Value.TakenAt));
     }
 
     [Test]
@@ -224,7 +221,7 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
                 ProcessedAt = DateTimeOffset.UtcNow
             };
             var staged = await repository.AddOrGetExistingAsync(proposed);
-            staged.Id.Should().Be(proposed.Id);
+            Assert.That(staged.Id, Is.EqualTo(proposed.Id));
             barrier.SignalAndWait();
 
             try
@@ -248,9 +245,9 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
 
         var outcomes = await Task.WhenAll(Task.Run(ClaimAsync), Task.Run(ClaimAsync));
 
-        outcomes.Count(outcome => outcome.ExecutedMutation).Should().Be(1);
-        outcomes.Count(outcome => outcome.RecoveredWinner).Should().Be(1);
-        mutationCount.Should().Be(1);
+        Assert.That(outcomes.Count(outcome => outcome.ExecutedMutation), Is.EqualTo(1));
+        Assert.That(outcomes.Count(outcome => outcome.RecoveredWinner), Is.EqualTo(1));
+        Assert.That(mutationCount, Is.EqualTo(1));
 
         using var readScope = Factory.Services.CreateScope();
         var database = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -258,9 +255,9 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
             .AsNoTracking()
             .Where(record => record.ScopeTuple == scopeTuple && record.IdempotencyKey == idempotencyKey)
             .ToListAsync();
-        storedRecords.Should().ContainSingle();
-        storedRecords[0].ResponseStatusCode.Should().Be(200);
-        storedRecords[0].ResponseBodyJson.Should().Be("{\"ok\":true}");
+        Assert.That(storedRecords, Has.Exactly(1).Items);
+        Assert.That(storedRecords[0].ResponseStatusCode, Is.EqualTo(200));
+        Assert.That(storedRecords[0].ResponseBodyJson, Is.EqualTo("{\"ok\":true}"));
     }
 
     [Test]
@@ -310,11 +307,13 @@ public sealed class PostgreSqlPersistenceTests : PostgreSqlIntegrationTestBase
         try
         {
             Func<Task> saveChanges = async () => await database.SaveChangesAsync();
-            var exception = await saveChanges.Should().ThrowAsync<DbUpdateException>();
-            var postgresException = exception.Which.InnerException.Should().BeOfType<PostgresException>().Which;
+            var exception = (await Assert.CatchAsync<DbUpdateException>(async () => { await saveChanges(); }))!;
+            var assertedValue58 = exception.InnerException;
+            Assert.That(assertedValue58, Is.TypeOf<PostgresException>());
+            var postgresException = ((PostgresException)assertedValue58);
 
-            postgresException.SqlState.Should().Be(expectedSqlState);
-            postgresException.ConstraintName.Should().Be(expectedConstraintName);
+            Assert.That(postgresException.SqlState, Is.EqualTo(expectedSqlState));
+            Assert.That(postgresException.ConstraintName, Is.EqualTo(expectedConstraintName));
         }
         finally
         {

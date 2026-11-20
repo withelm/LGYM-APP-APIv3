@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Notifications;
@@ -31,15 +30,15 @@ public sealed class TestServiceProviderFactoryTests
         using var scope = provider.CreateScope();
         var services = scope.ServiceProvider;
 
-        services.GetServices<IAppConfigService>().Should().ContainSingle();
-        services.GetServices<ITokenService>().Should().ContainSingle();
-        services.GetServices<IPlanDayService>().Should().ContainSingle();
-        services.GetServices<IInAppNotificationService>().Should().ContainSingle();
-        services.GetServices<IReportingService>().Should().ContainSingle();
-        services.GetServices<IUnitOfWork>().Should().ContainSingle();
-        services.GetServices<CommandContractRegistry>().Should().ContainSingle();
-        services.GetServices<IMappingProfile>().Should().HaveCount(49);
-        services.GetServices<IMappingProfile>().Select(profile => profile.GetType()).Should().OnlyHaveUniqueItems();
+        Assert.That(services.GetServices<IAppConfigService>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<ITokenService>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<IPlanDayService>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<IInAppNotificationService>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<IReportingService>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<IUnitOfWork>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<CommandContractRegistry>(), Has.Exactly(1).Items);
+        Assert.That(services.GetServices<IMappingProfile>(), Has.Exactly(49).Items);
+        Assert.That(services.GetServices<IMappingProfile>().Select(profile => profile.GetType()), Is.Unique);
     }
 
     [Test]
@@ -53,8 +52,7 @@ public sealed class TestServiceProviderFactoryTests
 
         var action = () => provider.GetRequiredService<IPlanDayService>();
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{typeof(IPlanDayService).FullName}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{typeof(IPlanDayService).FullName}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -76,9 +74,9 @@ public sealed class TestServiceProviderFactoryTests
             });
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<IEmailSender>().Should().NotBeSameAs(earlyEmailSender);
-        scope.ServiceProvider.GetRequiredService<IPushProviderSender>().Should().NotBeSameAs(earlyPushSender);
-        scope.ServiceProvider.GetRequiredService<IUserSessionStore>().Should().NotBeSameAs(earlySessionStore);
+        Assert.That(scope.ServiceProvider.GetRequiredService<IEmailSender>(), Is.Not.SameAs(earlyEmailSender));
+        Assert.That(scope.ServiceProvider.GetRequiredService<IPushProviderSender>(), Is.Not.SameAs(earlyPushSender));
+        Assert.That(scope.ServiceProvider.GetRequiredService<IUserSessionStore>(), Is.Not.SameAs(earlySessionStore));
     }
 
     [Test]
@@ -103,9 +101,15 @@ public sealed class TestServiceProviderFactoryTests
             });
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetServices<IEmailSender>().Should().ContainSingle().Which.Should().BeSameAs(emailSender);
-        scope.ServiceProvider.GetServices<IPushProviderSender>().Should().ContainSingle().Which.Should().BeSameAs(pushSender);
-        scope.ServiceProvider.GetServices<IUserSessionStore>().Should().ContainSingle().Which.Should().BeSameAs(sessionStore);
+        var assertedValue154 = (scope.ServiceProvider.GetServices<IEmailSender>()).ToArray();
+        Assert.That(assertedValue154, Has.Exactly(1).Items);
+        Assert.That(assertedValue154.Single(), Is.SameAs(emailSender));
+        var assertedValue155 = (scope.ServiceProvider.GetServices<IPushProviderSender>()).ToArray();
+        Assert.That(assertedValue155, Has.Exactly(1).Items);
+        Assert.That(assertedValue155.Single(), Is.SameAs(pushSender));
+        var assertedValue156 = (scope.ServiceProvider.GetServices<IUserSessionStore>()).ToArray();
+        Assert.That(assertedValue156, Has.Exactly(1).Items);
+        Assert.That(assertedValue156.Single(), Is.SameAs(sessionStore));
     }
 
     private sealed class RecordingPushProviderSender : IPushProviderSender

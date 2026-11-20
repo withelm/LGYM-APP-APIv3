@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.ManagedPlans.Update;
 using LgymApi.Application.Coaching.Relationships.UnlinkTrainee;
 using LgymApi.Application.Repositories;
@@ -54,19 +53,19 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
             if (!unlinkFirst)
             {
                 gate.Release.TrySetResult();
-                (await update.WaitAsync(TimeSpan.FromSeconds(15), timeout.Token)).IsSuccess.Should().BeTrue();
+                Assert.That((await update.WaitAsync(TimeSpan.FromSeconds(15), timeout.Token)).IsSuccess, Is.True);
             }
             await using (var unlinkScope = Factory.Services.CreateAsyncScope())
             {
                 var unlink = await unlinkScope.ServiceProvider.GetRequiredService<IUnlinkTraineeUseCase>()
                     .ExecuteAsync(new UnlinkTraineeCommand(graph.CoachId, graph.OwnerId), timeout.Token);
-                unlink.IsSuccess.Should().BeTrue();
+                Assert.That(unlink.IsSuccess, Is.True);
             }
             if (unlinkFirst)
             {
                 gate.Release.TrySetResult();
                 Func<Task> staleSave = async () => await update;
-                await staleSave.Should().ThrowAsync<DbUpdateConcurrencyException>();
+                await Assert.ThatAsync(async () => { await staleSave(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
             }
         }
         finally
@@ -76,11 +75,11 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
 
         await using var verification = Factory.Services.CreateAsyncScope();
         var db = verification.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.Plans.AsNoTracking().SingleAsync(p => p.Id == graph.PlanId)).Name.Should().Be(unlinkFirst ? "Original plan" : "Coach edit");
-        (await db.TrainerTraineeLinks.AnyAsync(l => l.TraineeId == graph.OwnerId)).Should().BeFalse();
-        (await db.PlanDays.AsNoTracking().SingleAsync(d => d.Id == graph.DayId)).PlanId.Should().Be(graph.PlanId);
-        (await db.Trainings.AsNoTracking().SingleAsync(t => t.Id == graph.TrainingId)).TypePlanDayId.Should().Be(graph.DayId);
-        (await db.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == graph.ScoreId)).TrainingId.Should().Be(graph.TrainingId);
+        Assert.That((await db.Plans.AsNoTracking().SingleAsync(p => p.Id == graph.PlanId)).Name, Is.EqualTo(unlinkFirst ? "Original plan" : "Coach edit"));
+        Assert.That((await db.TrainerTraineeLinks.AnyAsync(l => l.TraineeId == graph.OwnerId)), Is.False);
+        Assert.That((await db.PlanDays.AsNoTracking().SingleAsync(d => d.Id == graph.DayId)).PlanId, Is.EqualTo(graph.PlanId));
+        Assert.That((await db.Trainings.AsNoTracking().SingleAsync(t => t.Id == graph.TrainingId)).TypePlanDayId, Is.EqualTo(graph.DayId));
+        Assert.That((await db.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == graph.ScoreId)).TrainingId, Is.EqualTo(graph.TrainingId));
     }
 
     [Test]
@@ -97,28 +96,28 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
         var migrator = db.Database.GetService<IMigrator>();
         await migrator.MigrateAsync(PurposeMigration);
         var before = await ReadLegacyGraphAsync(db, graph);
-        before.Plan.UserId.Should().Be(graph.OwnerId);
-        before.Plan.ShareCode.Should().Be("legacy-graph-code");
-        before.Day.PlanId.Should().Be(graph.PlanId);
-        before.Training.TypePlanDayId.Should().Be(graph.DayId);
+        Assert.That(before.Plan.UserId, Is.EqualTo(graph.OwnerId));
+        Assert.That(before.Plan.ShareCode, Is.EqualTo("legacy-graph-code"));
+        Assert.That(before.Day.PlanId, Is.EqualTo(graph.PlanId));
+        Assert.That(before.Training.TypePlanDayId, Is.EqualTo(graph.DayId));
 
         await migrator.MigrateAsync(ShareExpiryMigration);
-        (await ReadLegacyGraphAsync(db, graph)).Should().BeEquivalentTo(before);
+        Assert.That((await ReadLegacyGraphAsync(db, graph)), Is.EqualTo(before).UsingPropertiesComparer());
         var expiry = await db.Plans.AsNoTracking().Where(p => p.Id == graph.PlanId)
             .Select(p => new { p.ShareCodeExpiresAt, p.ShareCodeDurationDays }).SingleAsync();
-        expiry.ShareCodeExpiresAt.Should().BeNull();
-        expiry.ShareCodeDurationDays.Should().BeNull();
+        Assert.That(expiry.ShareCodeExpiresAt, Is.Null);
+        Assert.That(expiry.ShareCodeDurationDays, Is.Null);
 
         await migrator.MigrateAsync(ShareRevisionMigration);
         await migrator.MigrateAsync(ShareRevisionMigration);
-        (await ReadLegacyGraphAsync(db, graph)).Should().BeEquivalentTo(before);
+        Assert.That((await ReadLegacyGraphAsync(db, graph)), Is.EqualTo(before).UsingPropertiesComparer());
         var updated = await db.Plans.AsNoTracking().SingleAsync(p => p.Id == graph.PlanId);
-        updated.ShareCodeExpiresAt.Should().BeNull();
-        updated.ShareCodeDurationDays.Should().BeNull();
-        updated.ShareCodeRevision.Should().Be(0);
+        Assert.That(updated.ShareCodeExpiresAt, Is.Null);
+        Assert.That(updated.ShareCodeDurationDays, Is.Null);
+        Assert.That(updated.ShareCodeRevision, Is.EqualTo(0));
         var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-        applied.Count(id => id == ShareExpiryMigration).Should().Be(1);
-        applied.Count(id => id == ShareRevisionMigration).Should().Be(1);
+        Assert.That(applied.Count(id => id == ShareExpiryMigration), Is.EqualTo(1));
+        Assert.That(applied.Count(id => id == ShareRevisionMigration), Is.EqualTo(1));
     }
 
     private static async Task<LegacyGraph> ReadLegacyGraphAsync(AppDbContext db, Graph graph)
@@ -145,7 +144,7 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
         var graph = await SeedHistoricalGraphAsync(database);
         database.ChangeTracker.Clear();
         var migrations = database.Database.GetMigrations().ToList();
-        migrations.IndexOf(PreviousMigration).Should().Be(migrations.IndexOf(PurposeMigration) - 1);
+        Assert.That(migrations.IndexOf(PreviousMigration), Is.EqualTo(migrations.IndexOf(PurposeMigration) - 1));
         await database.Database.GetService<IMigrator>().MigrateAsync(PreviousMigration);
         await database.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
         await database.Database.GetService<IMigrator>().MigrateAsync(PurposeMigration);
@@ -156,19 +155,19 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
         var training = await database.Trainings.AsNoTracking().SingleAsync(t => t.Id == graph.TrainingId);
         var score = await database.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == graph.ScoreId);
         var link = await database.TrainingExerciseScores.AsNoTracking().SingleAsync(s => s.ExerciseScoreId == graph.ScoreId);
-        plan.Purpose.Should().Be(PlanPurpose.Unclassified);
-        plan.Name.Should().Be("Original plan");
-        plan.UserId.Should().Be(graph.OwnerId);
-        day.PlanId.Should().Be(graph.PlanId);
-        day.Name.Should().Be("Original day");
-        exercise.ExerciseId.Should().Be(graph.ExerciseId);
-        exercise.Reps.Should().Be("8");
-        training.TypePlanDayId.Should().Be(graph.DayId);
-        score.TrainingId.Should().Be(graph.TrainingId);
-        score.ExerciseId.Should().Be(graph.ExerciseId);
-        score.Reps.Should().Be(8);
-        link.TrainingId.Should().Be(graph.TrainingId);
-        (await database.Database.GetAppliedMigrationsAsync()).Count(id => id == PurposeMigration).Should().Be(1);
+        Assert.That(plan.Purpose, Is.EqualTo(PlanPurpose.Unclassified));
+        Assert.That(plan.Name, Is.EqualTo("Original plan"));
+        Assert.That(plan.UserId, Is.EqualTo(graph.OwnerId));
+        Assert.That(day.PlanId, Is.EqualTo(graph.PlanId));
+        Assert.That(day.Name, Is.EqualTo("Original day"));
+        Assert.That(exercise.ExerciseId, Is.EqualTo(graph.ExerciseId));
+        Assert.That(exercise.Reps, Is.EqualTo("8"));
+        Assert.That(training.TypePlanDayId, Is.EqualTo(graph.DayId));
+        Assert.That(score.TrainingId, Is.EqualTo(graph.TrainingId));
+        Assert.That(score.ExerciseId, Is.EqualTo(graph.ExerciseId));
+        Assert.That(score.Reps, Is.EqualTo(8));
+        Assert.That(link.TrainingId, Is.EqualTo(graph.TrainingId));
+        Assert.That((await database.Database.GetAppliedMigrationsAsync()).Count(id => id == PurposeMigration), Is.EqualTo(1));
     }
 
     [TestCase(true)]
@@ -194,7 +193,7 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
             if (!ownerFirst)
             {
                 gate.Release.TrySetResult();
-                (await deletion.WaitAsync(TimeSpan.FromSeconds(15), timeout.Token)).IsSuccess.Should().BeTrue();
+                Assert.That((await deletion.WaitAsync(TimeSpan.FromSeconds(15), timeout.Token)).IsSuccess, Is.True);
             }
 
             await using (var ownerScope = Factory.Services.CreateAsyncScope())
@@ -203,14 +202,14 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
                 var owner = graph.OwnerId.Rebind<AccountReference>();
                 var result = await update.ExecuteAsync(new UpdatePlanCommand(
                     owner, owner, graph.PlanId.Rebind<PlanReference>(), "Original plan", PlanPurpose.Professional), timeout.Token);
-                result.IsSuccess.Should().BeTrue();
+                Assert.That(result.IsSuccess, Is.True);
             }
 
             if (ownerFirst)
             {
                 gate.Release.TrySetResult();
                 Func<Task> staleSave = async () => await deletion;
-                await staleSave.Should().ThrowAsync<DbUpdateConcurrencyException>();
+                await Assert.ThatAsync(async () => { await staleSave(); }, Throws.InstanceOf<DbUpdateConcurrencyException>());
             }
         }
         finally
@@ -220,14 +219,14 @@ public sealed class PostgreSqlPlanPurposeTests : PostgreSqlIntegrationTestBase
 
         await using var verification = Factory.Services.CreateAsyncScope();
         var database = verification.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await database.Plans.AsNoTracking().SingleAsync(p => p.Id == graph.PlanId)).Purpose.Should().Be(PlanPurpose.Professional);
+        Assert.That((await database.Plans.AsNoTracking().SingleAsync(p => p.Id == graph.PlanId)).Purpose, Is.EqualTo(PlanPurpose.Professional));
         var day = await database.PlanDays.IgnoreQueryFilters().AsNoTracking().SingleAsync(d => d.Id == graph.DayId);
-        day.IsDeleted.Should().Be(!ownerFirst);
-        day.Name.Should().Be("Original day");
-        (await database.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == graph.DayId)).ExerciseId.Should().Be(graph.ExerciseId);
-        (await database.Trainings.AsNoTracking().SingleAsync(t => t.Id == graph.TrainingId)).TypePlanDayId.Should().Be(graph.DayId);
-        (await database.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == graph.ScoreId)).TrainingId.Should().Be(graph.TrainingId);
-        (await database.TrainingExerciseScores.AsNoTracking().SingleAsync(s => s.ExerciseScoreId == graph.ScoreId)).TrainingId.Should().Be(graph.TrainingId);
+        Assert.That(day.IsDeleted, Is.EqualTo(!ownerFirst));
+        Assert.That(day.Name, Is.EqualTo("Original day"));
+        Assert.That((await database.PlanDayExercises.AsNoTracking().SingleAsync(e => e.PlanDayId == graph.DayId)).ExerciseId, Is.EqualTo(graph.ExerciseId));
+        Assert.That((await database.Trainings.AsNoTracking().SingleAsync(t => t.Id == graph.TrainingId)).TypePlanDayId, Is.EqualTo(graph.DayId));
+        Assert.That((await database.ExerciseScores.AsNoTracking().SingleAsync(s => s.Id == graph.ScoreId)).TrainingId, Is.EqualTo(graph.TrainingId));
+        Assert.That((await database.TrainingExerciseScores.AsNoTracking().SingleAsync(s => s.ExerciseScoreId == graph.ScoreId)).TrainingId, Is.EqualTo(graph.TrainingId));
     }
 
     private async Task<Graph> SeedGraphAsync()

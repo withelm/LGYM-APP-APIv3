@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -46,8 +45,8 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         await unitOfWork.SaveChangesAsync();
 
-        dispatcher.CallCount.Should().Be(1);
-        persistedBeforeDispatch.Should().BeTrue();
+        Assert.That(dispatcher.CallCount, Is.EqualTo(1));
+        Assert.That(persistedBeforeDispatch, Is.True);
     }
 
     [Test]
@@ -62,10 +61,10 @@ public sealed class UnitOfWorkCommittedDispatchTests
         var transaction = new EfUnitOfWorkTransaction(dbTransaction, dbContext, dispatcher, NullLogger<EfUnitOfWork>.Instance);
 
         var action = async () => await transaction.CommitAsync();
-        await action.Should().NotThrowAsync();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.Nothing);
 
-        dbTransaction.CommitCalls.Should().Be(1);
-        dispatcher.CallCount.Should().Be(1);
+        Assert.That(dbTransaction.CommitCalls, Is.EqualTo(1));
+        Assert.That(dispatcher.CallCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -79,7 +78,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         var transaction = await unitOfWork.BeginTransactionAsync();
 
-        transaction.GetType().Name.Should().Be("NoOpUnitOfWorkTransaction");
+        Assert.That(transaction.GetType().Name, Is.EqualTo("NoOpUnitOfWorkTransaction"));
     }
 
     [Test]
@@ -99,7 +98,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
                 await uncommittedTransaction.RollbackAsync();
             }
 
-            dbContext.ChangeTracker.Entries().Should().BeEmpty();
+            Assert.That(dbContext.ChangeTracker.Entries(), Is.Empty);
 
             await using var savedTransaction = await unitOfWork.BeginTransactionAsync();
             dbContext.CommandEnvelopes.Add(CreateEnvelope(savedEnvelopeId, "Saved.Command"));
@@ -108,7 +107,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
         }
 
         await using var verificationContext = new AppDbContext(options);
-        verificationContext.CommandEnvelopes.Should().ContainSingle(envelope => envelope.Id == savedEnvelopeId);
+        Assert.That((verificationContext.CommandEnvelopes).Where(envelope => envelope.Id == savedEnvelopeId), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -131,7 +130,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         unitOfWork.DetachEntity(envelope);
 
-        dbContext.Entry(envelope).State.Should().Be(EntityState.Detached);
+        Assert.That(dbContext.Entry(envelope).State, Is.EqualTo(EntityState.Detached));
     }
 
     [Test]
@@ -147,7 +146,7 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         var transaction = await unitOfWork.BeginTransactionAsync();
 
-        transaction.Should().BeOfType<EfUnitOfWorkTransaction>();
+        Assert.That(transaction, Is.TypeOf<EfUnitOfWorkTransaction>());
         await transaction.DisposeAsync();
     }
 
@@ -163,8 +162,8 @@ public sealed class UnitOfWorkCommittedDispatchTests
 
         var action = async () => await unitOfWork.SaveChangesAsync();
 
-        await action.Should().NotThrowAsync();
-        dispatcher.CallCount.Should().Be(1);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.Nothing);
+        Assert.That(dispatcher.CallCount, Is.EqualTo(1));
     }
 
     private static CommandEnvelope CreateEnvelope(Id<CommandEnvelope> id, string commandType) => new()

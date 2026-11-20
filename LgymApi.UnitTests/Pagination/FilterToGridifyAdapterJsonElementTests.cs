@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using LgymApi.Domain.Enums;
 
@@ -13,7 +12,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
     {
         var query = AdaptSingle("status", FilterOperator.Equals, JsonSerializer.SerializeToElement("active"));
 
-        query.Should().Be("status=active");
+        Assert.That(query, Is.EqualTo("status=active"));
     }
 
     [Test]
@@ -21,7 +20,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
     {
         var query = AdaptSingle("age", FilterOperator.Equals, JsonSerializer.SerializeToElement(42));
 
-        query.Should().Be("age=42");
+        Assert.That(query, Is.EqualTo("age=42"));
     }
 
     [Test]
@@ -29,7 +28,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
     {
         var query = AdaptSingle("score", FilterOperator.Equals, JsonSerializer.SerializeToElement(3.14));
 
-        query.Should().Be("score=3.14");
+        Assert.That(query, Is.EqualTo("score=3.14"));
     }
 
     [Test]
@@ -37,7 +36,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
     {
         var query = AdaptSingle("isActive", FilterOperator.Equals, JsonSerializer.SerializeToElement(true));
 
-        query.Should().Be("isActive=true");
+        Assert.That(query, Is.EqualTo("isActive=true"));
     }
 
     [Test]
@@ -45,7 +44,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
     {
         var query = AdaptSingle("isActive", FilterOperator.Equals, JsonSerializer.SerializeToElement(false));
 
-        query.Should().Be("isActive=false");
+        Assert.That(query, Is.EqualTo("isActive=false"));
     }
 
     [Test]
@@ -56,8 +55,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Field 'status' requires a value.*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Field 'status' requires a value.*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -68,8 +66,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Value 'System.Collections.Generic.List`1[System.Object]' is not valid for field 'status'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Value 'System.Collections.Generic.List`1[System.Object]' is not valid for field 'status'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -83,8 +80,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
 
         var act = () => adapter.Adapt(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Value 'System.Collections.Generic.List`1[System.Object]' is not valid for field 'status'*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Value 'System.Collections.Generic.List`1[System.Object]' is not valid for field 'status'*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -95,7 +91,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
             FilterOperator.Equals,
             JsonSerializer.SerializeToElement(nameof(TrainerInvitationStatus.Pending)));
 
-        query.Should().Be("invitationStatus=Pending");
+        Assert.That(query, Is.EqualTo("invitationStatus=Pending"));
     }
 
     [Test]
@@ -106,7 +102,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
             FilterOperator.In,
             JsonSerializer.SerializeToElement(new[] { "coach", "trainer" }));
 
-        query.Should().Be("(role=coach|role=trainer)");
+        Assert.That(query, Is.EqualTo("(role=coach|role=trainer)"));
     }
 
     [Test]
@@ -117,7 +113,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
             FilterOperator.In,
             JsonSerializer.SerializeToElement(new[] { 1, 2 }));
 
-        query.Should().Be("(age=1|age=2)");
+        Assert.That(query, Is.EqualTo("(age=1|age=2)"));
     }
 
     [Test]
@@ -132,7 +128,7 @@ public sealed class FilterToGridifyAdapterJsonElementTests
                 nameof(TrainerInvitationStatus.Accepted)
             }));
 
-        query.Should().Be("(invitationStatus=Pending|invitationStatus=Accepted)");
+        Assert.That(query, Is.EqualTo("(invitationStatus=Pending|invitationStatus=Accepted)"));
     }
 
     private static string AdaptSingle(string fieldName, FilterOperator filterOperator, object? value)

@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Invitations.Accept;
 using LgymApi.BackgroundWorker.Common.Notifications;
 using LgymApi.Domain.Entities;
@@ -43,7 +42,7 @@ public sealed partial class TrainerEmailInvitationTests
                 .Where(x => x.CorrelationId == correlationId)
                 .ToListAsync();
 
-            notifications.Should().ContainSingle();
+            Assert.That(notifications, Has.Exactly(1).Items);
             notificationId = notifications.Single().Id;
         }
 
@@ -61,7 +60,7 @@ public sealed partial class TrainerEmailInvitationTests
         }
 
         // Assert
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
     }
 
     [Test]
@@ -96,7 +95,7 @@ public sealed partial class TrainerEmailInvitationTests
                 .Where(x => x.CorrelationId == correlationId)
                 .ToListAsync();
 
-            notifications.Should().ContainSingle();
+            Assert.That(notifications, Has.Exactly(1).Items);
             notificationId = notifications.Single().Id;
         }
 
@@ -122,7 +121,7 @@ public sealed partial class TrainerEmailInvitationTests
         }
 
         // Assert
-        Factory.EmailSender.SentMessages.Should().ContainSingle();
+        Assert.That(Factory.EmailSender.SentMessages, Has.Exactly(1).Items);
     }
 
     private async Task<User> SeedDuplicateAcceptanceTrainerAsync(string name = "trainer", string email = "trainer@example.com")

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Pagination;
 using LgymApi.Infrastructure.Pagination;
 using NUnit.Framework;
@@ -46,8 +45,8 @@ public sealed class PaginationWhitelistPolicyTests
 
         var found = registry.TryGetMapping<TestProjection>("nonExistentField", out var mapping);
 
-        found.Should().BeFalse();
-        mapping.Should().BeNull();
+        Assert.That(found, Is.False);
+        Assert.That(mapping, Is.Null);
     }
 
     [Test]
@@ -64,8 +63,7 @@ public sealed class PaginationWhitelistPolicyTests
 
         var act = () => policy.ValidateSort(sortDescriptors);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate sort field*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate sort field*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -83,7 +81,7 @@ public sealed class PaginationWhitelistPolicyTests
 
         var capped = policy.CapPageSize(200);
 
-        capped.Should().Be(50);
+        Assert.That(capped, Is.EqualTo(50));
     }
 
     [Test]
@@ -100,7 +98,7 @@ public sealed class PaginationWhitelistPolicyTests
 
         var act = () => policy.ValidateSort(sortDescriptors);
 
-        act.Should().NotThrow();
+        Assert.That(() => { act(); }, Throws.Nothing);
     }
 
     [Test]
@@ -111,10 +109,10 @@ public sealed class PaginationWhitelistPolicyTests
         var hasTieBreaker = registry.TryGetMapping<TestProjection>(
             DefaultPolicy.TieBreakerField, out var tieBreaker);
 
-        hasTieBreaker.Should().BeTrue();
-        tieBreaker.Should().NotBeNull();
-        tieBreaker!.FieldName.Should().Be("id");
-        tieBreaker.AllowSort.Should().BeTrue();
+        Assert.That(hasTieBreaker, Is.True);
+        Assert.That(tieBreaker, Is.Not.Null);
+        Assert.That(tieBreaker!.FieldName, Is.EqualTo("id"));
+        Assert.That(tieBreaker.AllowSort, Is.True);
     }
 
     [Test]
@@ -131,7 +129,6 @@ public sealed class PaginationWhitelistPolicyTests
 
         var act = () => policy.ValidateSort(sortDescriptors);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Duplicate sort field*");
+        Assert.That(() => { act(); }, Throws.InstanceOf<ArgumentException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*Duplicate sort field*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 }

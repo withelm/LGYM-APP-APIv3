@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications.Contracts.InApp;
 using LgymApi.Application.Nutrition.Contracts.BackgroundCommands;
 using LgymApi.Application.Platform.Contracts.Serialization;

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -33,6 +32,6 @@ internal sealed class PostgreSqlUserRepositoryBatchReadTests : PostgreSqlIntegra
 
         var users = await repository.GetByIdsAsync([deletedUser.Id, missingUserId, activeUser.Id]);
 
-        users.Select(user => user.Id).Should().Equal(activeUser.Id);
+        Assert.That(users.Select(user => user.Id), Is.EqualTo(new[] { activeUser.Id }));
     }
 }

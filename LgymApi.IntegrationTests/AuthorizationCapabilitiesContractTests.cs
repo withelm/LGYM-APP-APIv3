@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
 using LgymApi.Infrastructure.Data;
@@ -25,45 +24,43 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
 
         using var response = await Client.GetAsync("/api/account/access");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        response.Headers.CacheControl!.Private.Should().BeTrue();
-        response.Headers.CacheControl.NoStore.Should().BeTrue();
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.Headers.CacheControl!.Private, Is.True);
+        Assert.That(response.Headers.CacheControl.NoStore, Is.True);
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        payload.RootElement.EnumerateObject().Select(property => property.Name)
-            .Should().Equal("schemaVersion", "account", "application", "extensions");
-        payload.RootElement.GetProperty("schemaVersion").GetInt32().Should().Be(1);
-        payload.RootElement.GetProperty("account").GetProperty("_id").GetString().Should().Be(administrator.Id.ToString());
+        Assert.That(payload.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "schemaVersion", "account", "application", "extensions" }));
+        Assert.That(payload.RootElement.GetProperty("schemaVersion").GetInt32(), Is.EqualTo(1));
+        Assert.That(payload.RootElement.GetProperty("account").GetProperty("_id").GetString(), Is.EqualTo(administrator.Id.ToString()));
 
         var application = payload.RootElement.GetProperty("application");
-        application.GetProperty("canAccessAdminWorkspace").GetBoolean().Should().BeTrue();
-        application.GetProperty("canManageUserRoles").GetBoolean().Should().BeTrue();
-        application.GetProperty("canManageAppConfig").GetBoolean().Should().BeTrue();
-        application.GetProperty("canManageGlobalExercises").GetBoolean().Should().BeTrue();
-        application.GetProperty("canAccessTrainerWorkspace").GetBoolean().Should().BeFalse();
+        Assert.That(application.GetProperty("canAccessAdminWorkspace").GetBoolean(), Is.True);
+        Assert.That(application.GetProperty("canManageUserRoles").GetBoolean(), Is.True);
+        Assert.That(application.GetProperty("canManageAppConfig").GetBoolean(), Is.True);
+        Assert.That(application.GetProperty("canManageGlobalExercises").GetBoolean(), Is.True);
+        Assert.That(application.GetProperty("canAccessTrainerWorkspace").GetBoolean(), Is.False);
 
         var extensions = payload.RootElement.GetProperty("extensions");
-        extensions.EnumerateObject().Select(property => property.Name)
-            .Should().Equal("reporting", "trainingPlanning", "coaching", "nutrition", "workoutProgress", "notifications");
-        extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition").Should().OnlyContain(property =>
+        Assert.That(extensions.EnumerateObject().Select(property => property.Name), Is.EqualTo(new[] { "reporting", "trainingPlanning", "coaching", "nutrition", "workoutProgress", "notifications" }));
+        Assert.That((extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition")).All(property =>
             property.Value.EnumerateObject().Select(nested => nested.Name).SequenceEqual(new[] { "available" })
-            && !property.Value.GetProperty("available").GetBoolean());
+            && !property.Value.GetProperty("available").GetBoolean()), Is.True);
         var reporting = extensions.GetProperty("reporting");
-        reporting.GetProperty("available").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canReadOwnSubmissions").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canSubmitReportRequests").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canManageReportTemplates").GetBoolean().Should().BeFalse();
-        reporting.GetProperty("canManagePhotoTypes").GetBoolean().Should().BeFalse();
+        Assert.That(reporting.GetProperty("available").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canReadOwnSubmissions").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canSubmitReportRequests").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canManageReportTemplates").GetBoolean(), Is.False);
+        Assert.That(reporting.GetProperty("canManagePhotoTypes").GetBoolean(), Is.False);
         var nutrition = extensions.GetProperty("nutrition");
-        nutrition.GetProperty("available").GetBoolean().Should().BeTrue();
-        nutrition.GetProperty("canReadOwnDietPlans").GetBoolean().Should().BeTrue();
-        nutrition.GetProperty("canUpdateOwnDietPlans").GetBoolean().Should().BeTrue();
-        nutrition.GetProperty("canCreateDietPlans").GetBoolean().Should().BeFalse();
-        nutrition.GetProperty("canManageSupplementation").GetBoolean().Should().BeFalse();
+        Assert.That(nutrition.GetProperty("available").GetBoolean(), Is.True);
+        Assert.That(nutrition.GetProperty("canReadOwnDietPlans").GetBoolean(), Is.True);
+        Assert.That(nutrition.GetProperty("canUpdateOwnDietPlans").GetBoolean(), Is.True);
+        Assert.That(nutrition.GetProperty("canCreateDietPlans").GetBoolean(), Is.False);
+        Assert.That(nutrition.GetProperty("canManageSupplementation").GetBoolean(), Is.False);
         var notifications = extensions.GetProperty("notifications");
-        notifications.GetProperty("available").GetBoolean().Should().BeTrue();
-        notifications.GetProperty("canReadNotifications").GetBoolean().Should().BeTrue();
-        notifications.GetProperty("canMarkNotificationsRead").GetBoolean().Should().BeTrue();
-        notifications.GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();
+        Assert.That(notifications.GetProperty("available").GetBoolean(), Is.True);
+        Assert.That(notifications.GetProperty("canReadNotifications").GetBoolean(), Is.True);
+        Assert.That(notifications.GetProperty("canMarkNotificationsRead").GetBoolean(), Is.True);
+        Assert.That(notifications.GetProperty("canManagePushInstallations").GetBoolean(), Is.True);
     }
 
     [Test]
@@ -84,10 +81,10 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
 
         using var response = await Client.GetAsync("/api/account/access");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var application = payload.RootElement.GetProperty("application");
-        application.EnumerateObject().Should().OnlyContain(property => !property.Value.GetBoolean());
+        Assert.That((application.EnumerateObject()).All(property => !property.Value.GetBoolean()), Is.True);
     }
 
     [Test]
@@ -100,10 +97,10 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         using var queryResponse = await Client.GetAsync($"/api/account/access?accountId={foreignAccount.Id}");
         using var foreignRouteResponse = await Client.GetAsync($"/api/account/{foreignAccount.Id}/access");
 
-        queryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(queryResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var payload = JsonDocument.Parse(await queryResponse.Content.ReadAsStringAsync());
-        payload.RootElement.GetProperty("account").GetProperty("_id").GetString().Should().Be(actor.Id.ToString());
-        foreignRouteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(payload.RootElement.GetProperty("account").GetProperty("_id").GetString(), Is.EqualTo(actor.Id.ToString()));
+        Assert.That(foreignRouteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -112,10 +109,10 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
     {
         using var response = await Client.GetAsync("/api/account/access");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        payload.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
-        payload.RootElement.TryGetProperty("req", out _).Should().BeFalse();
+        Assert.That(string.IsNullOrWhiteSpace(payload.RootElement.GetProperty("msg").GetString()), Is.False);
+        Assert.That(payload.RootElement.TryGetProperty("req", out _), Is.False);
     }
 
     [Test]
@@ -133,12 +130,12 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
 
         using var response = await Client.GetAsync("/api/account/access");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        payload.RootElement.GetProperty("msg").GetString().Should().NotBeNullOrWhiteSpace();
-        payload.RootElement.TryGetProperty("req", out _).Should().BeFalse();
-        payload.RootElement.TryGetProperty("application", out _).Should().BeFalse();
-        payload.RootElement.TryGetProperty("extensions", out _).Should().BeFalse();
+        Assert.That(string.IsNullOrWhiteSpace(payload.RootElement.GetProperty("msg").GetString()), Is.False);
+        Assert.That(payload.RootElement.TryGetProperty("req", out _), Is.False);
+        Assert.That(payload.RootElement.TryGetProperty("application", out _), Is.False);
+        Assert.That(payload.RootElement.TryGetProperty("extensions", out _), Is.False);
     }
 
     [Test]
@@ -148,28 +145,24 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
         var json = await document.SerializeAsJsonAsync(OpenApiSpecVersion.OpenApi3_0);
         using var payload = JsonDocument.Parse(json);
         var operation = payload.RootElement.GetProperty("paths").GetProperty("/api/account/access").GetProperty("get");
-        operation.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).Should().Contain("Authorization");
-        operation.TryGetProperty("parameters", out _).Should().BeFalse();
+        Assert.That(operation.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()), Does.Contain("Authorization"));
+        Assert.That(operation.TryGetProperty("parameters", out _), Is.False);
         foreach (var status in new[] { "401", "403" })
         {
-            operation.GetProperty("responses").GetProperty(status).GetProperty("content")
-                .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString()
-                .Should().Be("#/components/schemas/ResponseMessageDto");
+            Assert.That(operation.GetProperty("responses").GetProperty(status).GetProperty("content")
+                .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString(), Is.EqualTo("#/components/schemas/ResponseMessageDto"));
         }
-        operation.GetProperty("responses").GetProperty("200").GetProperty("content")
-            .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString()
-            .Should().Be("#/components/schemas/AccountAccessResponseDto");
+        Assert.That(operation.GetProperty("responses").GetProperty("200").GetProperty("content")
+            .GetProperty("application/json").GetProperty("schema").GetProperty("$ref").GetString(), Is.EqualTo("#/components/schemas/AccountAccessResponseDto"));
         var schemas = payload.RootElement.GetProperty("components").GetProperty("schemas");
-        schemas.GetProperty("AccountAccessResponseDto").GetProperty("properties").EnumerateObject()
-            .Select(property => property.Name).Should().BeEquivalentTo("schemaVersion", "account", "application", "extensions");
-        schemas.GetProperty("AccountAccessOwnerCapabilitiesDto").GetProperty("properties").GetProperty("available")
-            .GetProperty("type").GetString().Should().Be("boolean");
-        schemas.GetProperty("ReportingAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
-            .EnumerateObject().Select(property => property.Name)
-            .Should().BeEquivalentTo("available", "canReadOwnSubmissions", "canSubmitReportRequests", "canManageReportTemplates", "canManagePhotoTypes");
-        schemas.GetProperty("NotificationsAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
-            .EnumerateObject().Select(property => property.Name)
-            .Should().BeEquivalentTo("available", "canReadNotifications", "canMarkNotificationsRead", "canManagePushInstallations");
+        Assert.That(schemas.GetProperty("AccountAccessResponseDto").GetProperty("properties").EnumerateObject()
+            .Select(property => property.Name), Is.EquivalentTo(new[] { "schemaVersion", "account", "application", "extensions" }));
+        Assert.That(schemas.GetProperty("AccountAccessOwnerCapabilitiesDto").GetProperty("properties").GetProperty("available")
+            .GetProperty("type").GetString(), Is.EqualTo("boolean"));
+        Assert.That(schemas.GetProperty("ReportingAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
+            .EnumerateObject().Select(property => property.Name), Is.EquivalentTo(new[] { "available", "canReadOwnSubmissions", "canSubmitReportRequests", "canManageReportTemplates", "canManagePhotoTypes" }));
+        Assert.That(schemas.GetProperty("NotificationsAccountAccessOwnerCapabilitiesDto").GetProperty("properties")
+            .EnumerateObject().Select(property => property.Name), Is.EquivalentTo(new[] { "available", "canReadNotifications", "canMarkNotificationsRead", "canManagePushInstallations" }));
 
         var exportPath = Environment.GetEnvironmentVariable("LGYM_CAPABILITIES_OPENAPI_OUTPUT");
         if (!string.IsNullOrWhiteSpace(exportPath))
@@ -195,22 +188,21 @@ public sealed class AuthorizationCapabilitiesContractTests : IntegrationTestBase
 
         using var response = await Client.GetAsync("/api/account/access");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var application = payload.RootElement.GetProperty("application");
-        application.GetProperty("canAccessTrainerWorkspace").GetBoolean().Should().BeTrue();
-        application.GetProperty("canAccessAdminWorkspace").GetBoolean().Should().Be(isAdmin);
+        Assert.That(application.GetProperty("canAccessTrainerWorkspace").GetBoolean(), Is.True);
+        Assert.That(application.GetProperty("canAccessAdminWorkspace").GetBoolean(), Is.EqualTo(isAdmin));
         var extensions = payload.RootElement.GetProperty("extensions");
-        extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition")
-            .Should().OnlyContain(property => !property.Value.GetProperty("available").GetBoolean());
+        Assert.That((extensions.EnumerateObject().Where(property => property.Name is not "reporting" and not "notifications" and not "nutrition")).All(property => !property.Value.GetProperty("available").GetBoolean()), Is.True);
         var reporting = extensions.GetProperty("reporting");
-        reporting.GetProperty("available").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canReadOwnSubmissions").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canSubmitReportRequests").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canManageReportTemplates").GetBoolean().Should().BeTrue();
-        reporting.GetProperty("canManagePhotoTypes").GetBoolean().Should().BeTrue();
-        extensions.GetProperty("nutrition").GetProperty("canCreateDietPlans").GetBoolean().Should().BeTrue();
-        extensions.GetProperty("nutrition").GetProperty("canManageSupplementation").GetBoolean().Should().BeTrue();
-        extensions.GetProperty("notifications").GetProperty("canManagePushInstallations").GetBoolean().Should().BeTrue();
+        Assert.That(reporting.GetProperty("available").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canReadOwnSubmissions").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canSubmitReportRequests").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canManageReportTemplates").GetBoolean(), Is.True);
+        Assert.That(reporting.GetProperty("canManagePhotoTypes").GetBoolean(), Is.True);
+        Assert.That(extensions.GetProperty("nutrition").GetProperty("canCreateDietPlans").GetBoolean(), Is.True);
+        Assert.That(extensions.GetProperty("nutrition").GetProperty("canManageSupplementation").GetBoolean(), Is.True);
+        Assert.That(extensions.GetProperty("notifications").GetProperty("canManagePushInstallations").GetBoolean(), Is.True);
     }
 }

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Api.Features.Trainer.Contracts;
 using NUnit.Framework;
 
@@ -28,8 +27,7 @@ public sealed class SupplementationDtosTests
             ]
         };
 
-        JsonSerializer.Serialize(request).Should().Be(
-            "{\"name\":\"Daily supplements\",\"notes\":\"Before sleep\",\"items\":[{\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":65,\"order\":2}]}");
+        Assert.That(JsonSerializer.Serialize(request), Is.EqualTo("{\"name\":\"Daily supplements\",\"notes\":\"Before sleep\",\"items\":[{\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":65,\"order\":2}]}"));
     }
 
     [Test]
@@ -58,9 +56,7 @@ public sealed class SupplementationDtosTests
             ]
         };
 
-        JsonSerializer.Serialize(dto).Should().Be(
-            "{\"_id\":\"plan-1\",\"trainerId\":\"trainer-1\",\"traineeId\":\"trainee-1\",\"name\":\"Night stack\",\"notes\":null,\"isActive\":true,\"createdAt\":\"2026-07-01T06:30:00+00:00\",\"items\":[{\"_id\":\"item-1\",\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":127,\"order\":0}]}"
-        );
+        Assert.That(JsonSerializer.Serialize(dto), Is.EqualTo("{\"_id\":\"plan-1\",\"trainerId\":\"trainer-1\",\"traineeId\":\"trainee-1\",\"name\":\"Night stack\",\"notes\":null,\"isActive\":true,\"createdAt\":\"2026-07-01T06:30:00+00:00\",\"items\":[{\"_id\":\"item-1\",\"supplementName\":\"Magnesium\",\"dosage\":\"400 mg\",\"timeOfDay\":\"21:30\",\"daysOfWeekMask\":127,\"order\":0}]}"));
     }
 
     [Test]
@@ -73,8 +69,7 @@ public sealed class SupplementationDtosTests
             TakenAt = null
         };
 
-        JsonSerializer.Serialize(request).Should().Be(
-            "{\"planItemId\":\"item-1\",\"intakeDate\":\"2026-07-02\",\"takenAt\":null}");
+        Assert.That(JsonSerializer.Serialize(request), Is.EqualTo("{\"planItemId\":\"item-1\",\"intakeDate\":\"2026-07-02\",\"takenAt\":null}"));
     }
 
     [Test]
@@ -100,9 +95,7 @@ public sealed class SupplementationDtosTests
             AdherenceRate = 33.33
         };
 
-        JsonSerializer.Serialize(schedule).Should().Be(
-            "{\"planItemId\":\"item-1\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"intakeDate\":\"2026-07-03\",\"taken\":true,\"takenAt\":\"2026-07-03T08:05:00+00:00\"}");
-        JsonSerializer.Serialize(compliance).Should().Be(
-            "{\"traineeId\":\"trainee-1\",\"fromDate\":\"2026-07-01\",\"toDate\":\"2026-07-03\",\"plannedDoses\":3,\"takenDoses\":1,\"adherenceRate\":33.33}");
+        Assert.That(JsonSerializer.Serialize(schedule), Is.EqualTo("{\"planItemId\":\"item-1\",\"supplementName\":\"Vitamin D\",\"dosage\":\"2000 IU\",\"timeOfDay\":\"08:00\",\"intakeDate\":\"2026-07-03\",\"taken\":true,\"takenAt\":\"2026-07-03T08:05:00+00:00\"}"));
+        Assert.That(JsonSerializer.Serialize(compliance), Is.EqualTo("{\"traineeId\":\"trainee-1\",\"fromDate\":\"2026-07-01\",\"toDate\":\"2026-07-03\",\"plannedDoses\":3,\"takenDoses\":1,\"adherenceRate\":33.33}"));
     }
 }

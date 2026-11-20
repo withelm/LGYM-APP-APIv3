@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
@@ -36,11 +35,11 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         var secondTask = second.Service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), loser, cancellationToken: timeout.Token);
         await Task.WhenAll(first.Loaded.Task, second.Loaded.Task).WaitAsync(timeout.Token);
         first.Release.SetResult();
-        (await firstTask).IsSuccess.Should().BeTrue();
+        Assert.That((await firstTask).IsSuccess, Is.True);
         second.Release.SetResult();
         var losingResult = await secondTask;
-        losingResult.IsFailure.Should().BeTrue();
-        losingResult.Error.HttpStatusCode.Should().Be(409);
+        Assert.That(losingResult.IsFailure, Is.True);
+        Assert.That(losingResult.Error.HttpStatusCode, Is.EqualTo(409));
         await AssertStateAsync(applicant.Id, winner, actor.Id.Rebind<User>());
     }
 
@@ -61,20 +60,20 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         await using (var submission = Factory.Services.CreateAsyncScope())
         {
             var service = submission.ServiceProvider.GetRequiredService<ITrainerApprovalService>();
-            (await service.ResubmitAsync(actor, timeout.Token)).IsSuccess.Should().BeTrue();
+            Assert.That((await service.ResubmitAsync(actor, timeout.Token)).IsSuccess, Is.True);
         }
 
         stale.Release.SetResult();
-        (await staleDecision).Error.HttpStatusCode.Should().Be(409);
+        Assert.That((await staleDecision).Error.HttpStatusCode, Is.EqualTo(409));
         await AssertStateAsync(applicant.Id, TrainerApprovalStatus.PendingApproval, null);
         await using var verify = Factory.Services.CreateAsyncScope();
         var history = await verify.ServiceProvider.GetRequiredService<AppDbContext>().TrainerApplications
             .Where(application => application.ApplicantId == applicant.Id)
             .OrderBy(application => application.Attempt).ToListAsync(timeout.Token);
-        history.Should().HaveCount(2);
-        history[0].Status.Should().Be(TrainerApprovalStatus.Rejected);
-        history[0].ReviewedBy.Should().Be(admin.Id.Rebind<User>());
-        history[1].Attempt.Should().Be(2);
+        Assert.That(history, Has.Exactly(2).Items);
+        Assert.That(history[0].Status, Is.EqualTo(TrainerApprovalStatus.Rejected));
+        Assert.That(history[0].ReviewedBy, Is.EqualTo(admin.Id.Rebind<User>()));
+        Assert.That(history[1].Attempt, Is.EqualTo(2));
     }
 
     [Test]
@@ -93,17 +92,16 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         await using (var submission = Factory.Services.CreateAsyncScope())
         {
             var service = submission.ServiceProvider.GetRequiredService<ITrainerApprovalService>();
-            (await service.ResubmitAsync(actor, timeout.Token)).IsSuccess.Should().BeTrue();
+            Assert.That((await service.ResubmitAsync(actor, timeout.Token)).IsSuccess, Is.True);
         }
         await RejectAsync(admin, target, 2, timeout.Token);
         stale.Release.SetResult();
 
-        (await staleSubmission).Error.HttpStatusCode.Should().Be(409);
+        Assert.That((await staleSubmission).Error.HttpStatusCode, Is.EqualTo(409));
         await AssertStateAsync(applicant.Id, TrainerApprovalStatus.Rejected, admin.Id.Rebind<User>());
         await using var verify = Factory.Services.CreateAsyncScope();
         var db = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.TrainerApplications.CountAsync(application => application.ApplicantId == applicant.Id, timeout.Token))
-            .Should().Be(2);
+        Assert.That((await db.TrainerApplications.CountAsync(application => application.ApplicantId == applicant.Id, timeout.Token)), Is.EqualTo(2));
     }
 
     [Test]
@@ -123,7 +121,7 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
             provider.GetRequiredService<IRoleRepository>(), provider.GetRequiredService<IAuthenticatedAccountContextResolver>(),
             failing, provider.GetRequiredService<IMapper>());
         var action = () => service.DecideAsync(actor, applicant.Id.Rebind<AccountReference>(), TrainerApprovalStatus.Approved);
-        await action.Should().ThrowAsync<InvalidOperationException>();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
         await AssertStateAsync(applicant.Id, TrainerApprovalStatus.PendingApproval, null);
     }
 
@@ -140,7 +138,7 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         {
             var migrations = before.Database.GetMigrations().ToList();
             var approvalIndex = migrations.FindIndex(id => id.EndsWith("_AddTrainerApproval", StringComparison.Ordinal));
-            approvalIndex.Should().BeGreaterThan(0);
+            Assert.That(approvalIndex, Is.GreaterThan(0));
             await before.GetService<IMigrator>().MigrateAsync(migrations[approvalIndex - 1]);
             foreach (var (id, name, deleted) in new[] { (trainerId, "legacy-trainer", false), (athleteId, "athlete", false), (deletedId, "deleted", true) })
             {
@@ -157,16 +155,16 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         }
         await using (var after = new AppDbContext(options))
         {
-            after.Database.HasPendingModelChanges().Should().BeFalse();
-            after.Model.FindEntityType(typeof(User))!.FindProperty("TrainerApprovalStatus").Should().BeNull();
+            Assert.That(after.Database.HasPendingModelChanges(), Is.False);
+            Assert.That(after.Model.FindEntityType(typeof(User))!.FindProperty("TrainerApprovalStatus"), Is.Null);
             var legacy = await after.TrainerApplications.SingleAsync(application => application.ApplicantId == trainerId);
-            legacy.Attempt.Should().Be(1);
-            legacy.Status.Should().Be(TrainerApprovalStatus.Approved);
-            legacy.CreatedAt.Should().Be(created);
-            legacy.ReviewedBy.Should().BeNull();
-            legacy.DecidedAt.Should().NotBeNull();
-            (await after.TrainerApplications.AnyAsync(application =>
-                application.ApplicantId == athleteId || application.ApplicantId == deletedId)).Should().BeFalse();
+            Assert.That(legacy.Attempt, Is.EqualTo(1));
+            Assert.That(legacy.Status, Is.EqualTo(TrainerApprovalStatus.Approved));
+            Assert.That(legacy.CreatedAt, Is.EqualTo(created));
+            Assert.That(legacy.ReviewedBy, Is.Null);
+            Assert.That(legacy.DecidedAt, Is.Not.Null);
+            Assert.That((await after.TrainerApplications.AnyAsync(application =>
+                application.ApplicantId == athleteId || application.ApplicantId == deletedId)), Is.False);
             var pending = new User { Id = Id<User>.New(), Name = "new-pending", Email = "new-pending@example.test" };
             pending.TrainerApplications.Add(TrainerApplicationAttempt.Submit(pending.Id, 1));
             after.Users.Add(pending);
@@ -174,10 +172,10 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
             await after.Database.MigrateAsync();
         }
         await using var verify = new AppDbContext(options);
-        (await verify.TrainerApplications.SingleAsync(application => application.Applicant.Name == "new-pending"))
-            .Status.Should().Be(TrainerApprovalStatus.PendingApproval);
-        (await verify.TrainerApplications.CountAsync()).Should().Be(2);
-        (await verify.UserRoles.CountAsync()).Should().Be(2);
+        Assert.That((await verify.TrainerApplications.SingleAsync(application => application.Applicant.Name == "new-pending"))
+            .Status, Is.EqualTo(TrainerApprovalStatus.PendingApproval));
+        Assert.That((await verify.TrainerApplications.CountAsync()), Is.EqualTo(2));
+        Assert.That((await verify.UserRoles.CountAsync()), Is.EqualTo(2));
     }
 
     private async Task<(User Applicant, AuthenticatedAccountContext Actor)> SeedScenarioAsync()
@@ -201,11 +199,10 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var latest = await db.TrainerApplications.Where(item => item.ApplicantId == applicant)
             .OrderByDescending(item => item.Attempt).FirstAsync();
-        latest.Status.Should().Be(expected);
-        latest.ReviewedBy.Should().Be(reviewer);
-        latest.DecidedAt.HasValue.Should().Be(reviewer.HasValue);
-        (await db.UserRoles.CountAsync(role => role.UserId == applicant && role.RoleId == RoleSeedDataConfiguration.TrainerRoleSeedId))
-            .Should().Be(expected == TrainerApprovalStatus.Approved ? 1 : 0);
+        Assert.That(latest.Status, Is.EqualTo(expected));
+        Assert.That(latest.ReviewedBy, Is.EqualTo(reviewer));
+        Assert.That(latest.DecidedAt.HasValue, Is.EqualTo(reviewer.HasValue));
+        Assert.That((await db.UserRoles.CountAsync(role => role.UserId == applicant && role.RoleId == RoleSeedDataConfiguration.TrainerRoleSeedId)), Is.EqualTo(expected == TrainerApprovalStatus.Approved ? 1 : 0));
     }
 
     private async Task<AuthenticatedAccountContext> CreateApplicantSessionAsync(Id<User> applicant, CancellationToken cancellationToken)
@@ -226,8 +223,8 @@ public sealed class PostgreSqlTrainerApprovalTests : PostgreSqlIntegrationTestBa
     {
         await using var scope = Factory.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ITrainerApprovalService>();
-        (await service.DecideAsync(admin, target, TrainerApprovalStatus.Rejected, attempt, cancellationToken))
-            .IsSuccess.Should().BeTrue();
+        Assert.That((await service.DecideAsync(admin, target, TrainerApprovalStatus.Rejected, attempt, cancellationToken))
+            .IsSuccess, Is.True);
     }
 
     private static (TrainerApprovalService Service, TaskCompletionSource Loaded, TaskCompletionSource Release) CreateGatedService(IServiceProvider provider)

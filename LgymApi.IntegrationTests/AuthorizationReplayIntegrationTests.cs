@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using LgymApi.Api.Idempotency;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Security;
@@ -42,12 +41,12 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
         var denied = await client.PostAsJsonAsync("/api/trainer/invitations", new { traineeId = trainee.Id.ToString() });
         var deniedBody = await denied.Content.ReadAsStringAsync();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        deniedBody.Should().NotBe(firstBody);
-        deniedBody.Should().NotContain("traineeId");
-        denyingPort.Calls.Should().Be(1);
-        (await CountInvitationsAsync(trainer.Id, trainee.Id)).Should().Be(1);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(deniedBody, Is.Not.EqualTo(firstBody));
+        Assert.That(deniedBody, Does.Not.Contain("traineeId"));
+        Assert.That(denyingPort.Calls, Is.EqualTo(1));
+        Assert.That((await CountInvitationsAsync(trainer.Id, trainee.Id)), Is.EqualTo(1));
     }
 
     [Test]
@@ -57,41 +56,41 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
         SetAuthorizationHeader(permittedTrainer.Id);
         var permittedSession = await GetSessionIdAsync(permittedTrainer.Id);
 
-        (await CanIdentityPortReplayAsync(
+        Assert.That((await CanIdentityPortReplayAsync(
             permittedTrainer.Id,
             permittedSession,
             ApiIdempotencyReplayResourceBinding.None,
-            AuthConstants.Permissions.TrainerAccess)).Should().BeTrue();
+            AuthConstants.Permissions.TrainerAccess)), Is.True);
 
         await RevokeSessionAsync(permittedTrainer.Id);
 
-        (await CanIdentityPortReplayAsync(
+        Assert.That((await CanIdentityPortReplayAsync(
             permittedTrainer.Id,
             permittedSession,
             ApiIdempotencyReplayResourceBinding.None,
-            AuthConstants.Permissions.TrainerAccess)).Should().BeFalse();
+            AuthConstants.Permissions.TrainerAccess)), Is.False);
 
         var routeTrainer = await SeedUserAsync("replay-port-route", "replay-port-route@example.com");
         SetAuthorizationHeader(routeTrainer.Id);
         var routeSession = await GetSessionIdAsync(routeTrainer.Id);
         var unrelatedAccount = Id<AccountReference>.New();
 
-        (await CanIdentityPortReplayAsync(
+        Assert.That((await CanIdentityPortReplayAsync(
             routeTrainer.Id,
             routeSession,
             ApiIdempotencyReplayResourceBinding.RouteAccount,
-            routeAccountId: unrelatedAccount)).Should().BeFalse();
+            routeAccountId: unrelatedAccount)), Is.False);
 
         var demotedTrainer = await SeedApprovedTrainerAsync("replay-port-demoted", "replay-port-demoted@example.com");
         SetAuthorizationHeader(demotedTrainer.Id);
         var demotedSession = await GetSessionIdAsync(demotedTrainer.Id);
         await RemoveTrainerRoleAsync(demotedTrainer.Id);
 
-        (await CanIdentityPortReplayAsync(
+        Assert.That((await CanIdentityPortReplayAsync(
             demotedTrainer.Id,
             demotedSession,
             ApiIdempotencyReplayResourceBinding.None,
-            AuthConstants.Permissions.TrainerAccess)).Should().BeFalse();
+            AuthConstants.Permissions.TrainerAccess)), Is.False);
     }
 
     [Test]
@@ -114,13 +113,13 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
         var deniedBody = await denied.Content.ReadAsStringAsync();
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        replay.StatusCode.Should().Be(HttpStatusCode.OK);
-        replayBody.Should().Be(firstBody);
-        denied.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        deniedBody.Should().NotBe(firstBody);
-        deniedBody.Should().Contain("Unauthorized");
-        (await CountInvitationsAsync(trainer.Id, trainee.Id)).Should().Be(1);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(replayBody, Is.EqualTo(firstBody));
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(deniedBody, Is.Not.EqualTo(firstBody));
+        Assert.That(deniedBody, Does.Contain("Unauthorized"));
+        Assert.That((await CountInvitationsAsync(trainer.Id, trainee.Id)), Is.EqualTo(1));
     }
 
     [Test]
@@ -141,11 +140,11 @@ public sealed class AuthorizationReplayIntegrationTests : IntegrationTestBase
         var deniedBody = await denied.Content.ReadAsStringAsync();
         ClearIdempotencyKey();
 
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        deniedBody.Should().NotBe(firstBody);
-        deniedBody.Should().NotContain("traineeId");
-        (await CountInvitationsAsync(trainer.Id, trainee.Id)).Should().Be(1);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(deniedBody, Is.Not.EqualTo(firstBody));
+        Assert.That(deniedBody, Does.Not.Contain("traineeId"));
+        Assert.That((await CountInvitationsAsync(trainer.Id, trainee.Id)), Is.EqualTo(1));
     }
 
     private async Task RevokeSessionAsync(LgymApi.Domain.ValueObjects.Id<LgymApi.Domain.Entities.User> userId)

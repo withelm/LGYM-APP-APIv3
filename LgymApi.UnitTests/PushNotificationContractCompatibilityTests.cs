@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Notifications;
 using LgymApi.Application.Notifications.Contracts.Push;
 using LgymApi.Application.Notifications.Models;
@@ -76,16 +75,16 @@ public sealed class PushNotificationContractCompatibilityTests
             notificationId,
             WireDeeplink);
 
-        GetOrderedPropertyNames<PushEventPayload>().Should().Equal(PayloadFieldNames);
-        GetPrimaryConstructorParameterNames<PushEventPayload>().Should().Equal(PayloadFieldNames);
+        Assert.That(GetOrderedPropertyNames<PushEventPayload>(), Is.EqualTo(PayloadFieldNames));
+        Assert.That(GetPrimaryConstructorParameterNames<PushEventPayload>(), Is.EqualTo(PayloadFieldNames));
 
         var json = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current);
-        json.Should().Be(ExpectedWirePayloadJson);
+        Assert.That(json, Is.EqualTo(ExpectedWirePayloadJson));
         using var document = JsonDocument.Parse(json);
-        document.RootElement.EnumerateObject().Select(property => property.Name).Should().Equal(PayloadJsonFieldNames);
+        Assert.That(document.RootElement.EnumerateObject().Select(property => property.Name), Is.EqualTo(PayloadJsonFieldNames));
 
         var deserializedLegacyPayload = JsonSerializer.Deserialize<PushEventPayload>(ExpectedWirePayloadJson, SharedSerializationOptions.Current);
-        deserializedLegacyPayload.Should().Be(payload);
+        Assert.That(deserializedLegacyPayload, Is.EqualTo(payload));
     }
 
     [Test]
@@ -101,15 +100,14 @@ public sealed class PushNotificationContractCompatibilityTests
 
         var json = JsonSerializer.Serialize(payload, SharedSerializationOptions.Current);
 
-        json.Should().Be(ExpectedMetadataOnlyPayloadJson);
-        JsonSerializer.Deserialize<PushEventPayload>(json, SharedSerializationOptions.Current).Should().Be(payload);
+        Assert.That(json, Is.EqualTo(ExpectedMetadataOnlyPayloadJson));
+        Assert.That(JsonSerializer.Deserialize<PushEventPayload>(json, SharedSerializationOptions.Current), Is.EqualTo(payload));
 
         using var document = JsonDocument.Parse(json);
         var serializedFieldNames = document.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
-        serializedFieldNames.Should().Equal("schemaVersion", "type", "eventId");
-        new[] { "message", "title", "body", "fcmToken", "deviceToken", "providerMessageId" }
-            .Any(forbiddenField => PayloadJsonFieldNames.Contains(forbiddenField, StringComparer.Ordinal))
-            .Should().BeFalse();
+        Assert.That(serializedFieldNames, Is.EqualTo(new[] { "schemaVersion", "type", "eventId" }));
+        Assert.That(new[] { "message", "title", "body", "fcmToken", "deviceToken", "providerMessageId" }
+            .Any(forbiddenField => PayloadJsonFieldNames.Contains(forbiddenField, StringComparer.Ordinal)), Is.False);
     }
 
     [Test]
@@ -122,21 +120,16 @@ public sealed class PushNotificationContractCompatibilityTests
             "UNREGISTERED",
             "registration-token-not-registered");
 
-        GetOrderedPropertyNames<PushSendAttemptResult>().Should().Equal(SendResultFieldNames);
-        GetPrimaryConstructorParameterNames<PushSendAttemptResult>().Should().Equal(SendResultFieldNames);
-        Enum.GetNames<PushSendOutcome>().Should().Equal(
-            nameof(PushSendOutcome.Sent),
-            nameof(PushSendOutcome.TransientFailure),
-            nameof(PushSendOutcome.InvalidToken),
-            nameof(PushSendOutcome.PermanentFailure),
-            nameof(PushSendOutcome.Skipped));
-        Enum.GetValues<PushSendOutcome>().Select(outcome => (int)outcome).Should().Equal(0, 1, 2, 3, 4);
+        Assert.That(GetOrderedPropertyNames<PushSendAttemptResult>(), Is.EqualTo(SendResultFieldNames));
+        Assert.That(GetPrimaryConstructorParameterNames<PushSendAttemptResult>(), Is.EqualTo(SendResultFieldNames));
+        Assert.That(Enum.GetNames<PushSendOutcome>(), Is.EqualTo(new[] { nameof(PushSendOutcome.Sent), nameof(PushSendOutcome.TransientFailure), nameof(PushSendOutcome.InvalidToken), nameof(PushSendOutcome.PermanentFailure), nameof(PushSendOutcome.Skipped) }));
+        Assert.That(Enum.GetValues<PushSendOutcome>().Select(outcome => (int)outcome), Is.EqualTo(new[] { 0, 1, 2, 3, 4 }));
 
-        result.Outcome.Should().Be(PushSendOutcome.InvalidToken);
-        result.ProviderStatus.Should().Be("BadRequest");
-        result.ProviderMessageId.Should().Be("provider-message-1");
-        result.ProviderErrorCode.Should().Be("UNREGISTERED");
-        result.ProviderResponseSummary.Should().Be("registration-token-not-registered");
+        Assert.That(result.Outcome, Is.EqualTo(PushSendOutcome.InvalidToken));
+        Assert.That(result.ProviderStatus, Is.EqualTo("BadRequest"));
+        Assert.That(result.ProviderMessageId, Is.EqualTo("provider-message-1"));
+        Assert.That(result.ProviderErrorCode, Is.EqualTo("UNREGISTERED"));
+        Assert.That(result.ProviderResponseSummary, Is.EqualTo("registration-token-not-registered"));
     }
 
     [Test]
@@ -178,14 +171,16 @@ public sealed class PushNotificationContractCompatibilityTests
 
         var row = db.PushNotificationMessages.Single();
 
-        row.PayloadJson.Should().Be(ExpectedPersistedPayloadJson);
-        row.SchemaVersion.Should().Be(PersistedSchemaVersion);
-        row.Type.Should().Be(PersistedType);
-        row.EventId.Should().Be(PersistedEventId);
-        row.EntityId.Should().Be(PersistedEntityId);
-        row.InAppNotificationId.Should().Be(new Id<InAppNotification>(new Guid(PersistedInAppNotificationId)));
-        row.Deeplink.Should().Be(PersistedDeeplink);
-        scheduler.EnqueuedNotificationIds.Should().ContainSingle().Which.Should().Be(row.Id);
+        Assert.That(row.PayloadJson, Is.EqualTo(ExpectedPersistedPayloadJson));
+        Assert.That(row.SchemaVersion, Is.EqualTo(PersistedSchemaVersion));
+        Assert.That(row.Type, Is.EqualTo(PersistedType));
+        Assert.That(row.EventId, Is.EqualTo(PersistedEventId));
+        Assert.That(row.EntityId, Is.EqualTo(PersistedEntityId));
+        Assert.That(row.InAppNotificationId, Is.EqualTo(new Id<InAppNotification>(new Guid(PersistedInAppNotificationId))));
+        Assert.That(row.Deeplink, Is.EqualTo(PersistedDeeplink));
+        var assertedValue145 = (scheduler.EnqueuedNotificationIds).ToArray();
+        Assert.That(assertedValue145, Has.Exactly(1).Items);
+        Assert.That(assertedValue145.Single(), Is.EqualTo(row.Id));
     }
 
     private static AppDbContext CreateDbContext()
@@ -202,16 +197,15 @@ public sealed class PushNotificationContractCompatibilityTests
 
     private static string[] GetPrimaryConstructorParameterNames<T>()
     {
-        var parameterNames = typeof(T)
-            .GetConstructors()
-            .Should()
-            .ContainSingle()
-            .Which
+        var assertedValue146 = (typeof(T)
+                    .GetConstructors()).ToArray();
+        Assert.That(assertedValue146, Has.Exactly(1).Items);
+        var parameterNames = assertedValue146.Single()
             .GetParameters()
             .Select(parameter => parameter.Name)
             .ToArray();
 
-        parameterNames.Should().NotContainNulls();
+        Assert.That(parameterNames, Has.None.Null);
         return parameterNames.Select(parameterName => parameterName!).ToArray();
     }
 

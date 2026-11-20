@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -30,8 +29,8 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command());
 
-        result.IsSuccess.Should().BeTrue();
-        plan.IsActive.Should().BeFalse();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(plan.IsActive, Is.False);
         await dependencies.Plans.Received(1).GetTrackedActivePlanForTraineeAsync(
             dependencies.TraineeId,
             Arg.Any<CancellationToken>());
@@ -49,7 +48,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
 
         var result = await dependencies.CreateUseCase().ExecuteAsync(dependencies.Command());
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await AssertNoSaveAsync(dependencies);
     }
 
@@ -83,7 +82,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
 
             var result = await useCase.ExecuteAsync(new(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId));
 
-            result.IsSuccess.Should().BeTrue();
+            Assert.That(result.IsSuccess, Is.True);
         }
 
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -92,7 +91,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
         var persistedPlan = await readContext.SupplementPlans
             .AsNoTracking()
             .SingleAsync(plan => plan.Id == foreignPlan.Id);
-        persistedPlan.IsActive.Should().BeTrue();
+        Assert.That(persistedPlan.IsActive, Is.True);
     }
 
     [Test]
@@ -104,7 +103,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
         var forbiddenResult = await forbidden.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(forbidden.TrainerId), forbidden.TrainerId, Id<UserEntity>.Empty));
 
-        forbiddenResult.Error.Should().BeOfType<SupplementationForbiddenError>();
+        Assert.That(forbiddenResult.Error, Is.TypeOf<SupplementationForbiddenError>());
         await AssertNoPersistenceAsync(forbidden);
 
         var emptyTrainee = new Dependencies();
@@ -113,7 +112,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
         var emptyResult = await emptyTrainee.CreateUseCase().ExecuteAsync(
             new(NutritionAuthorizationTestFactory.CreateActor(emptyTrainee.TrainerId), emptyTrainee.TrainerId, Id<UserEntity>.Empty));
 
-        emptyResult.Error.Should().BeOfType<InvalidSupplementationError>();
+        Assert.That(emptyResult.Error, Is.TypeOf<InvalidSupplementationError>());
         await AssertNoPersistenceAsync(emptyTrainee);
 
         var noLink = new Dependencies();
@@ -121,7 +120,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
             .Returns(new CoachingRelationshipAccessDecision(true, false));
         var noLinkResult = await noLink.CreateUseCase().ExecuteAsync(noLink.Command());
 
-        noLinkResult.Error.Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(noLinkResult.Error, Is.TypeOf<SupplementationNotFoundError>());
         await AssertNoPersistenceAsync(noLink);
     }
 
@@ -140,7 +139,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
             dependencies.Command(),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Access.Received(1).GetAccessDecisionAsync(
             dependencies.TrainerId,
             dependencies.TraineeId,
@@ -163,7 +162,7 @@ public sealed class UnassignTraineeSupplementPlanUseCaseTests
 
     private static async Task AssertNoPersistenceAsync(Dependencies dependencies)
     {
-        dependencies.Plans.ReceivedCalls().Should().BeEmpty();
+        Assert.That(dependencies.Plans.ReceivedCalls(), Is.Empty);
         await AssertNoSaveAsync(dependencies);
     }
 

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
 using LgymApi.Infrastructure.Data;
@@ -25,9 +24,9 @@ public sealed class PlanShareExpiryRepositoryTests
 
         var code = await repository.GenerateShareCodeAsync(plan.Id, plan.UserId, days, Now);
 
-        code.Should().Be("NEWCODE001");
-        plan.ShareCodeDurationDays.Should().Be(days);
-        plan.ShareCodeExpiresAt.Should().Be(Now.AddDays(days));
+        Assert.That(code, Is.EqualTo("NEWCODE001"));
+        Assert.That(plan.ShareCodeDurationDays, Is.EqualTo(days));
+        Assert.That(plan.ShareCodeExpiresAt, Is.EqualTo(Now.AddDays(days)));
     }
 
     [TestCase(7, 1, false)]
@@ -48,9 +47,9 @@ public sealed class PlanShareExpiryRepositoryTests
 
         var code = await repository.GenerateShareCodeAsync(plan.Id, plan.UserId, 7, Now);
 
-        code.Should().Be(rotates ? "NEWCODE001" : "OLDCODE001");
-        plan.ShareCodeExpiresAt.Should().Be(rotates ? Now.AddDays(7) : Now.AddDays(remainingDays));
-        plan.ShareCodeDurationDays.Should().Be(7);
+        Assert.That(code, Is.EqualTo(rotates ? "NEWCODE001" : "OLDCODE001"));
+        Assert.That(plan.ShareCodeExpiresAt, Is.EqualTo(rotates ? Now.AddDays(7) : Now.AddDays(remainingDays)));
+        Assert.That(plan.ShareCodeDurationDays, Is.EqualTo(7));
     }
 
     [Test]
@@ -65,10 +64,10 @@ public sealed class PlanShareExpiryRepositoryTests
 
         var action = () => repository.GenerateShareCodeAsync(plan.Id, owner, 7, Now);
 
-        await action.Should().ThrowAsync<InvalidOperationException>();
-        plan.ShareCode.Should().Be("OLDCODE001");
-        plan.ShareCodeExpiresAt.Should().BeNull();
-        plan.ShareCodeDurationDays.Should().BeNull();
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<InvalidOperationException>());
+        Assert.That(plan.ShareCode, Is.EqualTo("OLDCODE001"));
+        Assert.That(plan.ShareCodeExpiresAt, Is.Null);
+        Assert.That(plan.ShareCodeDurationDays, Is.Null);
     }
 
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()

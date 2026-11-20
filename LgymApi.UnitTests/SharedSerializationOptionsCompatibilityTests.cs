@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Platform.Contracts.Serialization;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.ValueObjects;
@@ -17,8 +16,8 @@ public void Current_Is_Owned_By_Platform()
 
         Assert.Multiple(() =>
         {
-            owner.Namespace.Should().Be("LgymApi.Application.Platform.Contracts.Serialization");
-owner.Assembly.GetName().Name.Should().Be("LgymApi.Platform");
+            Assert.That(owner.Namespace, Is.EqualTo("LgymApi.Application.Platform.Contracts.Serialization"));
+Assert.That(owner.Assembly.GetName().Name, Is.EqualTo("LgymApi.Platform"));
         });
     }
 
@@ -29,10 +28,10 @@ owner.Assembly.GetName().Name.Should().Be("LgymApi.Platform");
 
         Assert.Multiple(() =>
         {
-            options.PropertyNamingPolicy.Should().Be(JsonNamingPolicy.CamelCase);
-            options.DictionaryKeyPolicy.Should().Be(JsonNamingPolicy.CamelCase);
-            options.DefaultIgnoreCondition.Should().Be(JsonIgnoreCondition.WhenWritingNull);
-            options.PropertyNameCaseInsensitive.Should().BeTrue();
+            Assert.That(options.PropertyNamingPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
+            Assert.That(options.DictionaryKeyPolicy, Is.EqualTo(JsonNamingPolicy.CamelCase));
+            Assert.That(options.DefaultIgnoreCondition, Is.EqualTo(JsonIgnoreCondition.WhenWritingNull));
+            Assert.That(options.PropertyNameCaseInsensitive, Is.True);
         });
     }
 
@@ -43,9 +42,9 @@ owner.Assembly.GetName().Name.Should().Be("LgymApi.Platform");
 
         Assert.Multiple(() =>
         {
-            converters.Should().HaveCount(2);
-            converters[0].Should().BeOfType<TypedIdJsonConverterFactory>();
-            converters[1].Should().BeOfType<JsonStringEnumConverter>();
+            Assert.That(converters, Has.Exactly(2).Items);
+            Assert.That(converters[0], Is.TypeOf<TypedIdJsonConverterFactory>());
+            Assert.That(converters[1], Is.TypeOf<JsonStringEnumConverter>());
         });
     }
 
@@ -67,12 +66,14 @@ owner.Assembly.GetName().Name.Should().Be("LgymApi.Platform");
 
         Assert.Multiple(() =>
         {
-            json.Should().Be("{\"userId\":\"" + userId + "\",\"values\":{\"legacyKey\":\"value\"},\"status\":\"Ready\"}");
-            legacyPayload.Should().NotBeNull();
-            legacyPayload!.UserId.Should().Be(userId);
-            legacyPayload.Values.Should().ContainSingle().Which.Should().Be(new KeyValuePair<string, string>("LegacyKey", "value"));
-            legacyPayload.Status.Should().Be(PersistedStatus.Ready);
-            legacyPayload.OptionalValue.Should().BeNull();
+            Assert.That(json, Is.EqualTo("{\"userId\":\"" + userId + "\",\"values\":{\"legacyKey\":\"value\"},\"status\":\"Ready\"}"));
+            Assert.That(legacyPayload, Is.Not.Null);
+            Assert.That(legacyPayload!.UserId, Is.EqualTo(userId));
+            var assertedValue153 = (legacyPayload.Values).ToArray();
+            Assert.That(assertedValue153, Has.Exactly(1).Items);
+            Assert.That(assertedValue153.Single(), Is.EqualTo(new KeyValuePair<string, string>("LegacyKey", "value")));
+            Assert.That(legacyPayload.Status, Is.EqualTo(PersistedStatus.Ready));
+            Assert.That(legacyPayload.OptionalValue, Is.Null);
         });
     }
 
@@ -88,14 +89,14 @@ owner.Assembly.GetName().Name.Should().Be("LgymApi.Platform");
 
         Assert.Multiple(() =>
         {
-            invalidTypedId.Should().Throw<JsonException>();
-            invalidEnum.Should().Throw<JsonException>();
+            Assert.That(() => { invalidTypedId(); }, Throws.InstanceOf<JsonException>());
+            Assert.That(() => { invalidEnum(); }, Throws.InstanceOf<JsonException>());
         });
     }
 
     private static Id<User> ParseUserId(string value)
     {
-        Id<User>.TryParse(value, out var userId).Should().BeTrue();
+        Assert.That(Id<User>.TryParse(value, out var userId), Is.True);
         return userId;
     }
 

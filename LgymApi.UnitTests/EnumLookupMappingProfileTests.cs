@@ -1,5 +1,4 @@
 using System.Globalization;
-using FluentAssertions;
 using LgymApi.Application.Mapping;
 using LgymApi.Application.Mapping.Core;
 using LgymApi.Application.Platform.ReferenceData.Enums;
@@ -17,23 +16,16 @@ public sealed class EnumLookupMappingProfileTests
     public void Mapper_Should_Register_Exactly_The_Supported_Enum_Lookup_Maps()
     {
         var mapper = CreateApplicationMapper();
-        var concreteMapper = mapper.Should().BeOfType<Mapper>().Subject;
+        var assertedValue109 = mapper;
+        Assert.That(assertedValue109, Is.TypeOf<Mapper>());
+        var concreteMapper = ((Mapper)assertedValue109);
 
         var enumLookupMaps = concreteMapper.RegisteredMappings
             .Where(map => map.Target == typeof(EnumLookupEntry))
             .Select(map => map.Source)
             .ToList();
 
-        enumLookupMaps.Should().BeEquivalentTo(
-        [
-            typeof(BodyParts),
-            typeof(ExerciseEloFormula),
-            typeof(MeasurementUnits),
-            typeof(WeightUnits),
-            typeof(HeightUnits),
-            typeof(Platforms),
-            typeof(PlanPurpose)
-        ]);
+        Assert.That(enumLookupMaps, Is.EquivalentTo(new[] { typeof(BodyParts), typeof(ExerciseEloFormula), typeof(MeasurementUnits), typeof(WeightUnits), typeof(HeightUnits), typeof(Platforms), typeof(PlanPurpose) }));
     }
 
     [Test]
@@ -43,8 +35,7 @@ public sealed class EnumLookupMappingProfileTests
 
         var action = () => mapper.Map<EnumLookupEntry>(BodyParts.Chest);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("Mapping from BodyParts to EnumLookupEntry is not registered.");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Mapping from BodyParts to EnumLookupEntry is not registered.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -57,8 +48,8 @@ public sealed class EnumLookupMappingProfileTests
 
         var lookup = mapper.Map<ExerciseEloFormula, EnumLookupEntry>(ExerciseEloFormula.PullupWeighted, context);
 
-        lookup.Name.Should().Be("Pull-up weighted");
-        lookup.DisplayName.Should().Be("Pull-up weighted");
+        Assert.That(lookup.Name, Is.EqualTo("Pull-up weighted"));
+        Assert.That(lookup.DisplayName, Is.EqualTo("Pull-up weighted"));
     }
 
     [Test]
@@ -69,8 +60,8 @@ public sealed class EnumLookupMappingProfileTests
 
         var lookup = mapper.Map<ExerciseEloFormula, EnumLookupEntry>(ExerciseEloFormula.PullupWeighted);
 
-        lookup.Name.Should().Be("Podciąganie: im mniejszy ciężar, tym lepiej");
-        lookup.DisplayName.Should().Be("Podciąganie: im mniejszy ciężar, tym lepiej");
+        Assert.That(lookup.Name, Is.EqualTo("Podciąganie: im mniejszy ciężar, tym lepiej"));
+        Assert.That(lookup.DisplayName, Is.EqualTo("Podciąganie: im mniejszy ciężar, tym lepiej"));
     }
 
     [Test]
@@ -80,7 +71,7 @@ public sealed class EnumLookupMappingProfileTests
 
         var values = service.GetLookup<WeightUnits>(CultureInfo.GetCultureInfo("en"));
 
-        values.Select(value => value.Id).Should().NotContain(nameof(WeightUnits.Unknown));
+        Assert.That(values.Select(value => value.Id), Does.Not.Contain(nameof(WeightUnits.Unknown)));
     }
 
     [TestCase("en", "Pull-up weighted")]
@@ -102,13 +93,16 @@ public sealed class EnumLookupMappingProfileTests
         };
         var pullupWeighted = lookups[1].Single(value => value.Id == nameof(ExerciseEloFormula.PullupWeighted));
 
-        lookups.Should().AllSatisfy(values =>
+        Assert.Multiple(() =>
         {
-            values.Should().NotBeEmpty();
-            values.Select(value => value.Id).Should().NotContain("Unknown");
+            foreach (var values in lookups)
+            {
+                Assert.That(values, Is.Not.Empty);
+                Assert.That(values.Select(value => value.Id), Does.Not.Contain("Unknown"));
+            }
         });
-        pullupWeighted.Name.Should().Be(expectedPullupLabel);
-        pullupWeighted.DisplayName.Should().Be(expectedPullupLabel);
+        Assert.That(pullupWeighted.Name, Is.EqualTo(expectedPullupLabel));
+        Assert.That(pullupWeighted.DisplayName, Is.EqualTo(expectedPullupLabel));
     }
 
     private static IMapper CreateApplicationMapper()

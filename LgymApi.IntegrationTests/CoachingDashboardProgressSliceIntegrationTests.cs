@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Progress.EloChart;
 using LgymApi.Application.Coaching.Progress.ExerciseScoresChart;
 using LgymApi.Application.Coaching.Progress.MainRecordsHistory;
@@ -66,12 +65,12 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
             Page: 2,
             PageSize: 1));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.TotalCount.Should().Be(3);
-        result.Value.Items.Should().ContainSingle(item =>
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.TotalCount, Is.EqualTo(3));
+        Assert.That((result.Value.Items).Where(item =>
             item.Id == pending.Id
             && item.Status == TrainerDashboardTraineeStatus.InvitationPending
-            && item.HasPendingInvitation);
+            && item.HasPendingInvitation), Has.Exactly(1).Items);
     }
 
     [Test]
@@ -103,15 +102,15 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
 
         SetAuthorizationHeader(trainer.Id);
         using var ownerResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        ownerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var ownerDashboard = await ownerResponse.Content.ReadFromJsonAsync<TrainerDashboardResponse>();
-        ownerDashboard.Should().NotBeNull();
-        ownerDashboard!.Items.Should().ContainSingle(item =>
+        Assert.That(ownerDashboard, Is.Not.Null);
+        Assert.That((ownerDashboard!.Items).Where(item =>
             item.Id == linked.Id.ToString()
             && item.Name == linked.Name
             && item.Email == linked.Email.Value
-            && item.IsLinked);
-        ownerDashboard.Items.Should().NotContain(item => item.Id == unrelated.Id.ToString());
+            && item.IsLinked), Has.Exactly(1).Items);
+        Assert.That((ownerDashboard.Items).Any(item => item.Id == unrelated.Id.ToString()), Is.False);
 
         using (var unlinkScope = Factory.Services.CreateScope())
         {
@@ -123,42 +122,41 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         }
 
         using var formerResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        formerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(formerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var formerDashboard = await formerResponse.Content.ReadFromJsonAsync<TrainerDashboardResponse>();
-        formerDashboard.Should().NotBeNull();
-        formerDashboard!.Items.Should().NotContain(item => item.Id == linked.Id.ToString());
-        formerDashboard.Items.Should().NotContain(item => item.Id == unrelated.Id.ToString());
+        Assert.That(formerDashboard, Is.Not.Null);
+        Assert.That((formerDashboard!.Items).Any(item => item.Id == linked.Id.ToString()), Is.False);
+        Assert.That((formerDashboard.Items).Any(item => item.Id == unrelated.Id.ToString()), Is.False);
         var formerResponseText = await formerResponse.Content.ReadAsStringAsync();
-        formerResponseText.Should().NotContain(linked.Name);
-        formerResponseText.Should().NotContain(linked.Email.Value);
-        formerResponseText.Should().NotContain(unrelated.Name);
-        formerResponseText.Should().NotContain(unrelated.Email.Value);
+        Assert.That(formerResponseText, Does.Not.Contain(linked.Name));
+        Assert.That(formerResponseText, Does.Not.Contain(linked.Email.Value));
+        Assert.That(formerResponseText, Does.Not.Contain(unrelated.Name));
+        Assert.That(formerResponseText, Does.Not.Contain(unrelated.Email.Value));
 
         using (var verifyScope = Factory.Services.CreateScope())
         {
             var database = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await database.TrainerTraineeLinks.AsNoTracking()
-                .AnyAsync(candidate => candidate.TrainerId == trainer.Id && candidate.TraineeId == linked.Id))
-                .Should().BeFalse();
+            Assert.That((await database.TrainerTraineeLinks.AsNoTracking()
+                .AnyAsync(candidate => candidate.TrainerId == trainer.Id && candidate.TraineeId == linked.Id)), Is.False);
         }
 
         SetAuthorizationHeader(ordinaryUser.Id);
         using var ordinaryResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        ordinaryResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(ordinaryResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         var ordinaryResponseText = await ordinaryResponse.Content.ReadAsStringAsync();
-        ordinaryResponseText.Should().NotContain(linked.Id.ToString());
-        ordinaryResponseText.Should().NotContain(linked.Name);
-        ordinaryResponseText.Should().NotContain(unrelated.Id.ToString());
-        ordinaryResponseText.Should().NotContain(unrelated.Name);
+        Assert.That(ordinaryResponseText, Does.Not.Contain(linked.Id.ToString()));
+        Assert.That(ordinaryResponseText, Does.Not.Contain(linked.Name));
+        Assert.That(ordinaryResponseText, Does.Not.Contain(unrelated.Id.ToString()));
+        Assert.That(ordinaryResponseText, Does.Not.Contain(unrelated.Name));
 
         ClearAuthorizationHeader();
         using var anonymousResponse = await Client.GetAsync("/api/trainer/trainees?page=1&pageSize=20");
-        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Assert.That(anonymousResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         var anonymousResponseText = await anonymousResponse.Content.ReadAsStringAsync();
-        anonymousResponseText.Should().NotContain(linked.Id.ToString());
-        anonymousResponseText.Should().NotContain(linked.Name);
-        anonymousResponseText.Should().NotContain(unrelated.Id.ToString());
-        anonymousResponseText.Should().NotContain(unrelated.Name);
+        Assert.That(anonymousResponseText, Does.Not.Contain(linked.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(linked.Name));
+        Assert.That(anonymousResponseText, Does.Not.Contain(unrelated.Id.ToString()));
+        Assert.That(anonymousResponseText, Does.Not.Contain(unrelated.Name));
     }
 
     [Test]
@@ -268,17 +266,17 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         var records = await actionScope.ServiceProvider.GetRequiredService<IGetMainRecordsHistoryUseCase>()
             .ExecuteAsync(new GetMainRecordsHistoryQuery(trainer.Id.Rebind<AccountReference>(), trainee.Id.Rebind<AccountReference>()));
 
-        dates.IsSuccess.Should().BeTrue();
-        dates.Value.Should().ContainSingle();
-        byDate.IsSuccess.Should().BeTrue();
-        byDate.Value.Trainings.Should().ContainSingle(item => item.Gym == gymName);
-        byDate.Value.Trainings.Single().Exercises.Should().ContainSingle(item => item.ExerciseDetails.Id == exerciseId.ToString());
-        scores.IsSuccess.Should().BeTrue();
-        scores.Value.Should().ContainSingle(item => item.ExerciseId == exerciseId);
-        elo.IsSuccess.Should().BeTrue();
-        elo.Value.Should().Contain(item => item.Value == 1010);
-        records.IsSuccess.Should().BeTrue();
-        records.Value.Should().ContainSingle(item => item.Weight == 100);
+        Assert.That(dates.IsSuccess, Is.True);
+        Assert.That(dates.Value, Has.Exactly(1).Items);
+        Assert.That(byDate.IsSuccess, Is.True);
+        Assert.That((byDate.Value.Trainings).Where(item => item.Gym == gymName), Has.Exactly(1).Items);
+        Assert.That((byDate.Value.Trainings.Single().Exercises).Where(item => item.ExerciseDetails.Id == exerciseId.ToString()), Has.Exactly(1).Items);
+        Assert.That(scores.IsSuccess, Is.True);
+        Assert.That((scores.Value).Where(item => item.ExerciseId == exerciseId), Has.Exactly(1).Items);
+        Assert.That(elo.IsSuccess, Is.True);
+        Assert.That((elo.Value).Any(item => item.Value == 1010), Is.True);
+        Assert.That(records.IsSuccess, Is.True);
+        Assert.That((records.Value).Where(item => item.Weight == 100), Has.Exactly(1).Items);
 
     }
 
@@ -300,8 +298,8 @@ public sealed class CoachingDashboardProgressSliceIntegrationTests : Integration
         var empty = await actionScope.ServiceProvider.GetRequiredService<IGetEloChartUseCase>()
             .ExecuteAsync(new GetEloChartQuery(trainer.Id.Rebind<AccountReference>(), Id<AccountReference>.Empty));
 
-        foreign.Error.Should().BeOfType<TrainerRelationshipNotFoundError>();
-        empty.Error.Should().BeOfType<InvalidTrainerRelationshipError>();
+        Assert.That(foreign.Error, Is.TypeOf<TrainerRelationshipNotFoundError>());
+        Assert.That(empty.Error, Is.TypeOf<InvalidTrainerRelationshipError>());
     }
 
     private sealed class TrainerDashboardResponse

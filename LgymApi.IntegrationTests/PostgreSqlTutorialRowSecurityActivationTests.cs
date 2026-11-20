@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using FluentAssertions;
 using Npgsql;
 
 namespace LgymApi.IntegrationTests;
@@ -14,7 +13,7 @@ public sealed class PostgreSqlTutorialRowSecurityActivationTests
         var method = typeof(PostgreSqlTutorialRowSecurityActivation).GetMethod(
             "CreateProcessStartInfo",
             BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull();
+        Assert.That(method, Is.Not.Null);
 
         var startInfo = (ProcessStartInfo)method!.Invoke(null,
         [
@@ -25,7 +24,7 @@ public sealed class PostgreSqlTutorialRowSecurityActivationTests
             "Staging"
         ])!;
 
-        startInfo.WorkingDirectory.Should().Be(Path.Combine(FindRepositoryRoot(), "deploy", "postgres"));
+        Assert.That(startInfo.WorkingDirectory, Is.EqualTo(Path.Combine(FindRepositoryRoot(), "deploy", "postgres")));
     }
 
     private static string FindRepositoryRoot()

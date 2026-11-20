@@ -1,5 +1,4 @@
 using System.Net;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -63,7 +62,7 @@ public sealed class AccountDeletionPushCleanupIntegrationTests : IntegrationTest
         SetAuthorizationHeader(user.Id);
         var response = await Client.GetAsync("/api/deleteAccount");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var verificationScope = Factory.Services.CreateScope();
         var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -82,17 +81,17 @@ public sealed class AccountDeletionPushCleanupIntegrationTests : IntegrationTest
             .Select(message => message.Id)
             .ToListAsync();
 
-        pendingUser.IsDeleted.Should().BeFalse();
-        pendingUser.Name.Should().Be(user.Name);
-        pendingUser.Email.Should().Be(user.Email);
-        remainingInstallationIds.Should().BeEquivalentTo(new[]
+        Assert.That(pendingUser.IsDeleted, Is.False);
+        Assert.That(pendingUser.Name, Is.EqualTo(user.Name));
+        Assert.That(pendingUser.Email, Is.EqualTo(user.Email));
+        Assert.That(remainingInstallationIds, Is.EquivalentTo(new[]
         {
             unrelatedInstallationId, activeInstallationId, disabledInstallationId, softDeletedInstallationId
-        });
-        remainingMessageIds.Should().BeEquivalentTo(new[]
+        }));
+        Assert.That(remainingMessageIds, Is.EquivalentTo(new[]
         {
             unrelatedMessageId, activeMessageId, disabledMessageId, softDeletedMessageId
-        });
+        }));
     }
 
     private static PushInstallation CreateInstallation(

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.BackgroundWorker.Runtime;
 using NUnit.Framework;
 
@@ -14,8 +13,8 @@ public sealed class CommandDescriptorTests
         var runtimeType = GetApplicationRuntimeType(contract);
         var descriptor = new CommandDescriptor(registry, runtimeType);
 
-        descriptor.CanonicalId.Should().Be(contract.CanonicalId);
-        descriptor.RuntimeType.Should().Be(runtimeType);
+        Assert.That(descriptor.CanonicalId, Is.EqualTo(contract.CanonicalId));
+        Assert.That(descriptor.RuntimeType, Is.EqualTo(runtimeType));
     }
 
     [Test]
@@ -24,7 +23,7 @@ public sealed class CommandDescriptorTests
         var registry = CommandContractRegistry.CreateDefault();
         var action = () => new CommandDescriptor(registry, null!);
 
-        action.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("runtimeType");
+        Assert.That(Assert.Catch<ArgumentNullException>(() => { action(); })!.ParamName, Is.EqualTo("runtimeType"));
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -33,8 +32,8 @@ public sealed class CommandDescriptorTests
         var registry = CommandContractRegistry.CreateDefault();
         var descriptor = CommandDescriptor.FromPersistedId(registry, contract.CanonicalId);
 
-        descriptor.CanonicalId.Should().Be(contract.CanonicalId);
-        descriptor.RuntimeType.Should().Be(GetApplicationRuntimeType(contract));
+        Assert.That(descriptor.CanonicalId, Is.EqualTo(contract.CanonicalId));
+        Assert.That(descriptor.RuntimeType, Is.EqualTo(GetApplicationRuntimeType(contract)));
     }
 
     [Test]
@@ -45,9 +44,9 @@ public sealed class CommandDescriptorTests
         var emptyAction = () => CommandDescriptor.FromPersistedId(registry, "");
         var whitespaceAction = () => CommandDescriptor.FromPersistedId(registry, "   ");
 
-        nullAction.Should().Throw<ArgumentException>();
-        emptyAction.Should().Throw<ArgumentException>();
-        whitespaceAction.Should().Throw<ArgumentException>();
+        Assert.That(() => { nullAction(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(() => { emptyAction(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(() => { whitespaceAction(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -60,9 +59,9 @@ public sealed class CommandDescriptorTests
         var sameDescriptor = CommandDescriptor.FromPersistedId(registry, firstContract.FutureClrNameReadAlias);
         var differentDescriptor = new CommandDescriptor(registry, GetApplicationRuntimeType(secondContract));
 
-        firstDescriptor.Should().Be(sameDescriptor);
-        firstDescriptor.Should().NotBe(differentDescriptor);
-        firstDescriptor.Equals(null).Should().BeFalse();
+        Assert.That(firstDescriptor, Is.EqualTo(sameDescriptor));
+        Assert.That(firstDescriptor, Is.Not.EqualTo(differentDescriptor));
+        Assert.That(firstDescriptor.Equals(null), Is.False);
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -70,8 +69,7 @@ public sealed class CommandDescriptorTests
     {
         var registry = CommandContractRegistry.CreateDefault();
 
-        CommandDescriptor.FromPersistedId(registry, contract.CanonicalId).RuntimeType
-            .Should().Be(GetApplicationRuntimeType(contract));
+        Assert.That(CommandDescriptor.FromPersistedId(registry, contract.CanonicalId).RuntimeType, Is.EqualTo(GetApplicationRuntimeType(contract)));
     }
 
     [Test]
@@ -81,8 +79,7 @@ public sealed class CommandDescriptorTests
         var registry = CommandContractRegistry.CreateDefault();
         var action = () => CommandDescriptor.FromPersistedId(registry, unknownId);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{unknownId}*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape($"*{unknownId}*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -93,9 +90,9 @@ public sealed class CommandDescriptorTests
         var emptyAction = () => CommandDescriptor.FromPersistedId(registry, "");
         var whitespaceAction = () => CommandDescriptor.FromPersistedId(registry, "   ");
 
-        nullAction.Should().Throw<ArgumentException>();
-        emptyAction.Should().Throw<ArgumentException>();
-        whitespaceAction.Should().Throw<ArgumentException>();
+        Assert.That(() => { nullAction(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(() => { emptyAction(); }, Throws.InstanceOf<ArgumentException>());
+        Assert.That(() => { whitespaceAction(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [TestCaseSource(typeof(LegacyCommandContractManifest), nameof(LegacyCommandContractManifest.CommandCases))]
@@ -105,10 +102,10 @@ public sealed class CommandDescriptorTests
         var originalDescriptor = new CommandDescriptor(registry, GetApplicationRuntimeType(contract));
         var restoredDescriptor = CommandDescriptor.FromPersistedId(registry, originalDescriptor.CanonicalId);
 
-        restoredDescriptor.RuntimeType.Should().Be(GetApplicationRuntimeType(contract));
-        restoredDescriptor.Should().Be(originalDescriptor);
-        restoredDescriptor.GetHashCode().Should().Be(originalDescriptor.GetHashCode());
-        restoredDescriptor.ToString().Should().Be(contract.CanonicalId);
+        Assert.That(restoredDescriptor.RuntimeType, Is.EqualTo(GetApplicationRuntimeType(contract)));
+        Assert.That(restoredDescriptor, Is.EqualTo(originalDescriptor));
+        Assert.That(restoredDescriptor.GetHashCode(), Is.EqualTo(originalDescriptor.GetHashCode()));
+        Assert.That(restoredDescriptor.ToString(), Is.EqualTo(contract.CanonicalId));
     }
 
     private static Type GetApplicationRuntimeType(LegacyCommandContract contract) => contract.CommandType;

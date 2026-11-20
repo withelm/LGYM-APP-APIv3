@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Repositories;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
@@ -80,10 +79,10 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var results = await _commandEnvelopeRepository.GetPendingUndispatchedAsync();
 
         // Assert
-        results.Should().HaveCount(1);
-        results.First().Id.Should().Be(pendingUndispatched.Id);
-        results.First().Status.Should().Be(ActionExecutionStatus.Pending);
-        results.First().DispatchedAt.Should().BeNull();
+        Assert.That(results, Has.Exactly(1).Items);
+        Assert.That(results.First().Id, Is.EqualTo(pendingUndispatched.Id));
+        Assert.That(results.First().Status, Is.EqualTo(ActionExecutionStatus.Pending));
+        Assert.That(results.First().DispatchedAt, Is.Null);
     }
 
     [Test]
@@ -125,10 +124,10 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var results = await _commandEnvelopeRepository.GetFailedAsync();
 
         // Assert
-        results.Should().HaveCount(2);
-        results.Should().AllSatisfy(e => e.Status.Should().Be(ActionExecutionStatus.Failed));
-        results.Should().Contain(e => e.Id == failed1.Id);
-        results.Should().Contain(e => e.Id == failed2.Id);
+        Assert.That(results, Has.Exactly(2).Items);
+        Assert.Multiple(() => { foreach (var e in results) { Assert.That(e.Status, Is.EqualTo(ActionExecutionStatus.Failed)); } });
+        Assert.That((results).Any(e => e.Id == failed1.Id), Is.True);
+        Assert.That((results).Any(e => e.Id == failed2.Id), Is.True);
     }
 
     [Test]
@@ -161,9 +160,9 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var results = await _commandEnvelopeRepository.GetDeadLetteredAsync();
 
         // Assert
-        results.Should().HaveCount(1);
-        results.First().Id.Should().Be(deadLettered.Id);
-        results.First().Status.Should().Be(ActionExecutionStatus.DeadLettered);
+        Assert.That(results, Has.Exactly(1).Items);
+        Assert.That(results.First().Id, Is.EqualTo(deadLettered.Id));
+        Assert.That(results.First().Status, Is.EqualTo(ActionExecutionStatus.DeadLettered));
     }
 
     [Test]
@@ -227,10 +226,10 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var deadLetteredCount = await _commandEnvelopeRepository.CountByStatusAsync(ActionExecutionStatus.DeadLettered);
         var completedCount = await _commandEnvelopeRepository.CountByStatusAsync(ActionExecutionStatus.Completed);
 
-        pendingCount.Should().Be(3);
-        failedCount.Should().Be(2);
-        deadLetteredCount.Should().Be(1);
-        completedCount.Should().Be(2);
+        Assert.That(pendingCount, Is.EqualTo(3));
+        Assert.That(failedCount, Is.EqualTo(2));
+        Assert.That(deadLetteredCount, Is.EqualTo(1));
+        Assert.That(completedCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -285,10 +284,10 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var results = await _notificationRepository.GetPendingUndispatchedAsync();
 
         // Assert
-        results.Should().HaveCount(1);
-        results.First().Id.Should().Be(pendingUndispatched.Id);
-        results.First().Status.Should().Be(EmailNotificationStatus.Pending);
-        results.First().DispatchedAt.Should().BeNull();
+        Assert.That(results, Has.Exactly(1).Items);
+        Assert.That(results.First().Id, Is.EqualTo(pendingUndispatched.Id));
+        Assert.That(results.First().Status, Is.EqualTo(EmailNotificationStatus.Pending));
+        Assert.That(results.First().DispatchedAt, Is.Null);
     }
 
     [Test]
@@ -331,9 +330,9 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var results = await _notificationRepository.GetDeadLetteredAsync();
 
         // Assert
-        results.Should().HaveCount(1);
-        results.First().Id.Should().Be(deadLettered.Id);
-        results.First().IsDeadLettered.Should().BeTrue();
+        Assert.That(results, Has.Exactly(1).Items);
+        Assert.That(results.First().Id, Is.EqualTo(deadLettered.Id));
+        Assert.That(results.First().IsDeadLettered, Is.True);
     }
 
     [Test]
@@ -380,7 +379,7 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var inProgressCount = await _idempotencyRepository.CountInProgressAsync();
 
         // Assert
-        inProgressCount.Should().Be(2);
+        Assert.That(inProgressCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -433,9 +432,9 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         var count409 = await _idempotencyRepository.CountByStatusCodeAsync(409);
         var count400 = await _idempotencyRepository.CountByStatusCodeAsync(400);
 
-        count200.Should().Be(5);
-        count409.Should().Be(3);
-        count400.Should().Be(2);
+        Assert.That(count200, Is.EqualTo(5));
+        Assert.That(count409, Is.EqualTo(3));
+        Assert.That(count400, Is.EqualTo(2));
     }
 
     [Test]
@@ -504,17 +503,17 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         await unitOfWork.SaveChangesAsync();
 
         // Assert
-        deleteCount.Should().Be(2, "two old completed envelopes should be deleted");
+        Assert.That(deleteCount, Is.EqualTo(2), "two old completed envelopes should be deleted");
         // Refresh context to see persisted changes
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var remaining = await verifyDb.CommandEnvelopes.ToListAsync();
-        remaining.Should().HaveCount(3, "only non-old-completed should remain");
-        remaining.Should().Contain(e => e.Id == recentCompleted.Id);
-        remaining.Should().Contain(e => e.Id == oldFailed.Id);
-        remaining.Should().Contain(e => e.Id == oldPending.Id);
-        remaining.Should().NotContain(e => e.Id == oldCompleted1.Id);
-        remaining.Should().NotContain(e => e.Id == oldCompleted2.Id);
+        Assert.That(remaining, Has.Exactly(3).Items, "only non-old-completed should remain");
+        Assert.That((remaining).Any(e => e.Id == recentCompleted.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldFailed.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldPending.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldCompleted1.Id), Is.False);
+        Assert.That((remaining).Any(e => e.Id == oldCompleted2.Id), Is.False);
     }
 
     [Test]
@@ -603,17 +602,17 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         await unitOfWork.SaveChangesAsync();
 
         // Assert
-        deleteCount.Should().Be(2, "two old sent notifications should be deleted");
+        Assert.That(deleteCount, Is.EqualTo(2), "two old sent notifications should be deleted");
         // Refresh context to see persisted changes
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var remaining = await verifyDb.NotificationMessages.ToListAsync();
-        remaining.Should().HaveCount(3, "only non-old-sent should remain");
-        remaining.Should().Contain(e => e.Id == recentSent.Id);
-        remaining.Should().Contain(e => e.Id == oldPending.Id);
-        remaining.Should().Contain(e => e.Id == oldFailed.Id);
-        remaining.Should().NotContain(e => e.Id == oldSent1.Id);
-        remaining.Should().NotContain(e => e.Id == oldSent2.Id);
+        Assert.That(remaining, Has.Exactly(3).Items, "only non-old-sent should remain");
+        Assert.That((remaining).Any(e => e.Id == recentSent.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldPending.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldFailed.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldSent1.Id), Is.False);
+        Assert.That((remaining).Any(e => e.Id == oldSent2.Id), Is.False);
     }
 
     [Test]
@@ -680,15 +679,15 @@ public class ReliabilityObservabilityTests : IntegrationTestBase
         await unitOfWork.SaveChangesAsync();
 
         // Assert
-        deleteCount.Should().Be(2, "two old idempotency records should be deleted");
+        Assert.That(deleteCount, Is.EqualTo(2), "two old idempotency records should be deleted");
         // Refresh context to see persisted changes
         using var verifyScope = Factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var remaining = await verifyDb.ApiIdempotencyRecords.ToListAsync();
-        remaining.Should().HaveCount(2, "only non-old records should remain");
-        remaining.Should().Contain(e => e.Id == recentCompleted.Id);
-        remaining.Should().Contain(e => e.Id == recentInProgress.Id);
-        remaining.Should().NotContain(e => e.Id == oldCompleted.Id);
-        remaining.Should().NotContain(e => e.Id == oldFailed.Id);
+        Assert.That(remaining, Has.Exactly(2).Items, "only non-old records should remain");
+        Assert.That((remaining).Any(e => e.Id == recentCompleted.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == recentInProgress.Id), Is.True);
+        Assert.That((remaining).Any(e => e.Id == oldCompleted.Id), Is.False);
+        Assert.That((remaining).Any(e => e.Id == oldFailed.Id), Is.False);
     }
 }

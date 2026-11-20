@@ -84,7 +84,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 | `LgymApi.BackgroundWorker.Common/LgymApi.BackgroundWorker.Common.csproj` | Exact bounded Worker/Infrastructure seam for persisted job interfaces, scheduler bridges, idempotency policy, and email wire contracts. | Do not add Application-facing contracts, commands, serialization, or push delivery types. |
 | `LgymApi.BackgroundWorker/LgymApi.BackgroundWorker.csproj` | Hangfire/background worker implementations for module ports and the bounded Common job seam. | Keep jobs idempotent where practical, register worker services here, and select no-op or Hangfire scheduling by testing mode. |
 | `LgymApi.DataSeeder/LgymApi.DataSeeder.csproj` | Console executable for deterministic data seeding/bootstrap using infrastructure and EF tooling. | Do not make API startup depend on this executable. |
-| `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service, domain, application, mapping, API, and infrastructure units. | Use NUnit, FluentAssertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
+| `LgymApi.UnitTests/LgymApi.UnitTests.csproj` | Focused unit tests for service, domain, application, mapping, API, and infrastructure units. | Use native NUnit assertions, NSubstitute, and shared helpers from `LgymApi.TestUtils`. |
 | `LgymApi.Reporting.UnitTests/LgymApi.Reporting.UnitTests.csproj` | Focused unit tests for Reporting-owned services, persistence adapters, mapping, recurring assignments, and photo workflows. | Keep API, Worker, Workout & Progress consumer, integration, domain, and cross-cutting tests in their existing suites. |
 | `LgymApi.IntegrationTests/LgymApi.IntegrationTests.csproj` | End-to-end API tests with `WebApplicationFactory`, middleware, auth, serialization, localization, and test persistence. | Reuse integration helpers and validate legacy contract compatibility for changed endpoints. |
 | `LgymApi.ArchitectureTests/LgymApi.ArchitectureTests.csproj` | Roslyn guard tests for dependency direction, ID boundaries, DI placement, feature layout, mapping, enums, and unit-of-work rules. | Treat failures as architecture violations unless an intentional exception is documented. |
@@ -110,6 +110,7 @@ Final responses for such tasks should mention which `.csproj` files changed and 
 ## Test Rules
 
 - Prefer the smallest relevant validation slice first.
+- Use native NUnit constraints and `Assert.EnterMultipleScope()` for assertions. Preserve exact versus derived exception types, collection ordering/multiplicity, structural member coverage, and numeric/time tolerances. Await NUnit async assertions.
 - Use targeted `dotnet test` on affected projects after the relevant build.
 - If you touch E2E code, say clearly whether you only built it or ran it on a prepared workstation.
 - If a build or test cannot be run, say so explicitly.

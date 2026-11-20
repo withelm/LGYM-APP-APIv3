@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Security.Cryptography;
 
 namespace LgymApi.IntegrationTests;
@@ -28,13 +27,13 @@ public sealed class EmailTemplateOutputPathTests
     {
         var templateRoot = Path.Combine(AppContext.BaseDirectory, "EmailTemplates");
 
-        Directory.Exists(templateRoot).Should().BeTrue();
+        Assert.That(Directory.Exists(templateRoot), Is.True);
         var publishedTemplatePaths = Directory.EnumerateFiles(templateRoot, "*.email", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(templateRoot, path).Replace('\\', '/'))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
 
-        publishedTemplatePaths.Should().Equal(ExpectedTemplates.Keys.OrderBy(path => path, StringComparer.Ordinal));
+        Assert.That(publishedTemplatePaths, Is.EqualTo(ExpectedTemplates.Keys.OrderBy(path => path, StringComparer.Ordinal)));
     }
 
     [Test]
@@ -58,7 +57,7 @@ public sealed class EmailTemplateOutputPathTests
         foreach (var templateRoot in templateRoots.Skip(1))
         {
             var outputManifest = ReadManifest(templateRoot);
-            outputManifest.Should().BeEquivalentTo(sourceManifest);
+            Assert.That(outputManifest, Is.EquivalentTo(sourceManifest).UsingPropertiesComparer());
             ValidateManifest(ReadManifest(templateRoot, normalizeLineEndings: true));
         }
     }
@@ -77,10 +76,8 @@ public sealed class EmailTemplateOutputPathTests
         var missingAction = () => ValidateManifest(missing);
         var alteredAction = () => ValidateManifest(altered);
 
-        missingAction.Should().Throw<InvalidOperationException>()
-            .WithMessage("The runtime email template manifest must contain exactly 12 files.");
-        alteredAction.Should().Throw<InvalidOperationException>()
-            .WithMessage("Runtime email template hash mismatch for 'Welcome/pl.email'.");
+        Assert.That(() => { missingAction(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("The runtime email template manifest must contain exactly 12 files.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(() => { alteredAction(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("Runtime email template hash mismatch for 'Welcome/pl.email'.").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     private static IReadOnlyDictionary<string, string> ReadManifest(string templateRoot, bool normalizeLineEndings = false)

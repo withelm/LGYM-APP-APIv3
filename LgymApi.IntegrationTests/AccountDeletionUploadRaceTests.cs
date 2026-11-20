@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Abstractions.Storage;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Reporting.Persistence;
@@ -44,7 +43,7 @@ public sealed class AccountDeletionUploadRaceTests : IntegrationTestBase
         selection.ListCleanupCandidatesAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(async call =>
         {
             var candidates = await actual.ListCleanupCandidatesAsync(call.Arg<DateTimeOffset>(), call.Arg<CancellationToken>());
-            candidates.Should().ContainSingle(candidate => candidate.Id == uploadId);
+            Assert.That((candidates).Where(candidate => candidate.Id == uploadId), Has.Exactly(1).Items);
             using var deletion = Factory.Services.CreateScope();
             await deletion.ServiceProvider.GetRequiredService<IAccountDeletionService>().RequestAsync(user.Id.Rebind<AccountReference>());
             return candidates;
@@ -55,11 +54,11 @@ public sealed class AccountDeletionUploadRaceTests : IntegrationTestBase
             scope.ServiceProvider.GetRequiredService<IAccountDeletionRetention>());
         try
         {
-            (await cleanup.CleanupExpiredUploadsAsync()).Should().Be(0);
+            Assert.That((await cleanup.CleanupExpiredUploadsAsync()), Is.EqualTo(0));
 
-            (await store.ReadAsync(key)).Should().Equal(new byte[] { 1, 2, 3 });
+            Assert.That((await store.ReadAsync(key)), Is.EqualTo(new byte[] { 1, 2, 3 }));
             await db.Entry(await db.PhotoUploadSessions.SingleAsync(upload => upload.Id == uploadId)).ReloadAsync();
-            (await db.PhotoUploadSessions.SingleAsync(upload => upload.Id == uploadId)).Status.Should().Be(PhotoUploadSessionStatus.Pending);
+            Assert.That((await db.PhotoUploadSessions.SingleAsync(upload => upload.Id == uploadId)).Status, Is.EqualTo(PhotoUploadSessionStatus.Pending));
         }
         finally
         {

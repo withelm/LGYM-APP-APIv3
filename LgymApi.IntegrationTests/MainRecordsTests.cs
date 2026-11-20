@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -38,11 +37,11 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<MessageResponse>();
-        body.Should().NotBeNull();
-        body!.Message.Should().Be("Created");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Message, Is.EqualTo("Created"));
     }
 
     [Test]
@@ -74,7 +73,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{otherUserId}/addNewRecord", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -96,7 +95,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userBId}/getMainRecordsHistory");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -118,7 +117,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userBId}/getLastMainRecords");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -143,7 +142,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -159,7 +158,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getMainRecordsHistory");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -187,12 +186,12 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getMainRecordsHistory");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCountGreaterThanOrEqualTo(1);
-        body![0].Weight.Should().Be(120.0);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Count.GreaterThanOrEqualTo(1));
+        Assert.That(body![0].Weight, Is.EqualTo(120.0));
     }
 
     [Test]
@@ -208,7 +207,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -245,7 +244,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         var response = await Client.GetAsync($"/api/mainRecords/{ownerId}/getMainRecordsHistory");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -276,8 +275,8 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var bestResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
         var possibleResponse = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", new { exerciseId = foreignExerciseId.ToString() });
 
-        bestResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        possibleResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(bestResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(possibleResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -314,14 +313,14 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<MainRecordWithExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Weight.Should().Be(55.0);
-        body[0].ExerciseDetails.Id.Should().Be(exerciseId.ToString());
-        body[0].ExerciseDetails.Name.Should().Be("OHP");
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Weight, Is.EqualTo(55.0));
+        Assert.That(body[0].ExerciseDetails.Id, Is.EqualTo(exerciseId.ToString()));
+        Assert.That(body[0].ExerciseDetails.Name, Is.EqualTo("OHP"));
     }
 
     [Test]
@@ -357,12 +356,12 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/mainRecords/{userId}/getLastMainRecords");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<List<MainRecordWithExerciseResponse>>();
-        body.Should().NotBeNull();
-        body.Should().HaveCount(1);
-        body![0].Weight.Should().Be(60.0);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body, Has.Exactly(1).Items);
+        Assert.That(body![0].Weight, Is.EqualTo(60.0));
     }
 
     [Test]
@@ -394,10 +393,10 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var deleteResponse = await Client.GetAsync($"/api/mainRecords/{recordId}/deleteMainRecord");
 
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var verifyResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getMainRecordsHistory");
-        verifyResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(verifyResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -414,7 +413,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var nonExistentId = Domain.ValueObjects.Id<MainRecord>.New();
         var response = await Client.GetAsync($"/api/mainRecords/{nonExistentId}/deleteMainRecord");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -441,7 +440,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await Client.GetAsync("/api/mainRecords/not-a-guid/deleteMainRecord");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -481,7 +480,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var deleteResponse = await Client.GetAsync($"/api/mainRecords/{recordId}/deleteMainRecord");
 
-        deleteResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -522,11 +521,11 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var updateResponse = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/updateMainRecords", updateRequest);
 
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var verifyResponse = await Client.GetAsync($"/api/mainRecords/{userId}/getMainRecordsHistory");
         var updatedRecords = await verifyResponse.Content.ReadFromJsonAsync<List<MainRecordResponse>>();
-        updatedRecords![0].Weight.Should().Be(80.0);
+        Assert.That(updatedRecords![0].Weight, Is.EqualTo(80.0));
     }
 
     [Test]
@@ -575,7 +574,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userAId}/updateMainRecords", updateRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -623,7 +622,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userBId}/updateMainRecords", updateRequest);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
     [Test]
@@ -652,12 +651,12 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PossibleRecordResponse>();
-        body.Should().NotBeNull();
-        body!.Weight.Should().Be(30.0);
-        body.Reps.Should().Be(1);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Weight, Is.EqualTo(30.0));
+        Assert.That(body.Reps, Is.EqualTo(1));
     }
 
     [Test]
@@ -696,11 +695,11 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var body = await response.Content.ReadFromJsonAsync<PossibleRecordResponse>();
-        body.Should().NotBeNull();
-        body!.Reps.Should().Be(1);
+        Assert.That(body, Is.Not.Null);
+        Assert.That(body!.Reps, Is.EqualTo(1));
     }
 
     [Test]
@@ -719,7 +718,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         var request = new { exerciseId = exerciseId.ToString() };
         var response = await Client.PostAsJsonAsync("/api/mainRecords/getRecordOrPossibleRecordInExercise", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -744,7 +743,7 @@ public sealed class MainRecordsTests : IntegrationTestBase
         };
 
         var response = await PostAsJsonWithApiOptionsAsync($"/api/mainRecords/{userId}/addNewRecord", request);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     private sealed class MessageResponse

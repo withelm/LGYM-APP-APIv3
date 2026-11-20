@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting.Models;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Reporting.Errors;
@@ -55,15 +54,15 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests
         var firstResult = await firstTask.WaitAsync(GateTimeout, ct);
         var secondResult = await secondTask.WaitAsync(GateTimeout, ct);
 
-        firstResult.IsSuccess.Should().BeTrue();
+        Assert.That(firstResult.IsSuccess, Is.True);
         if (feedbackFirst)
         {
-            secondResult.IsFailure.Should().BeTrue();
-            secondResult.Error.Should().BeOfType<ReportingNotFoundError>();
+            Assert.That(secondResult.IsFailure, Is.True);
+            Assert.That(secondResult.Error, Is.TypeOf<ReportingNotFoundError>());
         }
         else
         {
-            secondResult.IsSuccess.Should().BeTrue();
+            Assert.That(secondResult.IsSuccess, Is.True);
         }
 
         await using var assertionScope = Factory.Services.CreateAsyncScope();
@@ -71,15 +70,15 @@ public sealed partial class PostgreSqlReportingEpisodeFenceTests
         var submission = await database.ReportSubmissions.AsNoTracking().SingleAsync(x => x.Id == scenario.SubmissionId, ct);
         var assignment = await database.RecurringReportAssignments.AsNoTracking().SingleAsync(x => x.Id == scenario.AssignmentId, ct);
         using var payload = JsonDocument.Parse(submission.PayloadJson);
-        payload.RootElement.GetProperty("note").GetString().Should().Be(feedbackFirst ? "Submitted" : "Edited");
-        submission.HasEverHadFeedback.Should().BeTrue();
-        submission.TrainerOverallComment.Should().Be("First feedback");
-        submission.TrainerFeedbackAddedAt.Should().NotBeNull();
-        submission.TrainerFeedbackReadAt.Should().BeNull();
+        Assert.That(payload.RootElement.GetProperty("note").GetString(), Is.EqualTo(feedbackFirst ? "Submitted" : "Edited"));
+        Assert.That(submission.HasEverHadFeedback, Is.True);
+        Assert.That(submission.TrainerOverallComment, Is.EqualTo("First feedback"));
+        Assert.That(submission.TrainerFeedbackAddedAt, Is.Not.Null);
+        Assert.That(submission.TrainerFeedbackReadAt, Is.Null);
         using var comments = JsonDocument.Parse(submission.TrainerFieldCommentsJson!);
-        comments.RootElement.GetProperty("note").GetString().Should().Be("Reviewed");
-        assignment.NextEligibleAt.Should().BeNull();
-        (await CountFeedbackAddedEnvelopesAsync(ct)).Should().Be(originalOutboxCount + 1);
+        Assert.That(comments.RootElement.GetProperty("note").GetString(), Is.EqualTo("Reviewed"));
+        Assert.That(assignment.NextEligibleAt, Is.Null);
+        Assert.That((await CountFeedbackAddedEnvelopesAsync(ct)), Is.EqualTo(originalOutboxCount + 1));
     }
 
     private sealed class LockAttemptPersistence(IReportRequestSubmissionPersistence inner) : IReportRequestSubmissionPersistence

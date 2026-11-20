@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.PasswordReset.Contracts;
 using LgymApi.BackgroundWorker.Common.Notifications.Models;
 using LgymApi.Application.Notifications.Contracts.Email;
@@ -29,32 +28,31 @@ public sealed class PasswordRecoveryEmailSchedulerAdapterTests
 
         await adapter.ScheduleAsync(request, cancellationToken);
 
-        typeof(PasswordRecoveryEmailRequest).IsPublic.Should().BeTrue();
-        typeof(PasswordRecoveryEmailSchedulerAdapter).IsNotPublic.Should().BeTrue();
-        typeof(PasswordRecoveryEmailRequest).GetProperties()
-            .Select(property => property.Name)
-            .Should().Equal("UserId", "TokenId", "UserName", "RecipientEmail", "ResetToken", "ResetUrl", "CultureName");
-        var adapterConstructor = typeof(PasswordRecoveryEmailSchedulerAdapter).GetConstructors().Should().ContainSingle().Which;
-        adapterConstructor.GetParameters().Select(parameter => parameter.ParameterType)
-            .Should().Equal(typeof(IEmailSchedulingPort<PasswordRecoveryEmailPayload>));
+        Assert.That(typeof(PasswordRecoveryEmailRequest).IsPublic, Is.True);
+        Assert.That(typeof(PasswordRecoveryEmailSchedulerAdapter).IsNotPublic, Is.True);
+        Assert.That(typeof(PasswordRecoveryEmailRequest).GetProperties()
+            .Select(property => property.Name), Is.EqualTo(new[] { "UserId", "TokenId", "UserName", "RecipientEmail", "ResetToken", "ResetUrl", "CultureName" }));
+        var assertedValue137 = (typeof(PasswordRecoveryEmailSchedulerAdapter).GetConstructors()).ToArray();
+        Assert.That(assertedValue137, Has.Exactly(1).Items);
+        var adapterConstructor = assertedValue137.Single();
+        Assert.That(adapterConstructor.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(IEmailSchedulingPort<PasswordRecoveryEmailPayload>) }));
         var scheduleMethod = typeof(PasswordRecoveryEmailSchedulerAdapter)
             .GetMethod(nameof(PasswordRecoveryEmailSchedulerAdapter.ScheduleAsync));
-        scheduleMethod.Should().NotBeNull();
-        scheduleMethod!.ReturnType.Should().Be(typeof(Task));
-        scheduleMethod.GetParameters().Select(parameter => parameter.ParameterType)
-            .Should().Equal(typeof(PasswordRecoveryEmailRequest), typeof(CancellationToken));
-        scheduler.Payload.Should().NotBeNull();
-        scheduler.Payload!.UserId.Should().Be(request.UserId);
-        scheduler.Payload.TokenId.Should().Be(request.TokenId);
-        scheduler.Payload.UserName.Should().Be(request.UserName);
-        scheduler.Payload.RecipientEmail.Should().Be(request.RecipientEmail);
-        scheduler.Payload.ResetToken.Should().Be(request.ResetToken);
-        scheduler.Payload.ResetUrl.Should().Be("https://identity-sentinel.example.test/reset");
-        scheduler.Payload.CultureName.Should().Be(request.CultureName);
-        scheduler.Payload.CorrelationId.GetValue().Should().Be(request.TokenId.GetValue());
-        scheduler.Payload.NotificationType.Value.Should().Be("user.password.recovery");
-        scheduler.Payload.Culture.Name.Should().Be("en-US");
-        scheduler.CancellationToken.Should().Be(cancellationToken);
+        Assert.That(scheduleMethod, Is.Not.Null);
+        Assert.That(scheduleMethod!.ReturnType, Is.EqualTo(typeof(Task)));
+        Assert.That(scheduleMethod.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(new[] { typeof(PasswordRecoveryEmailRequest), typeof(CancellationToken) }));
+        Assert.That(scheduler.Payload, Is.Not.Null);
+        Assert.That(scheduler.Payload!.UserId, Is.EqualTo(request.UserId));
+        Assert.That(scheduler.Payload.TokenId, Is.EqualTo(request.TokenId));
+        Assert.That(scheduler.Payload.UserName, Is.EqualTo(request.UserName));
+        Assert.That(scheduler.Payload.RecipientEmail, Is.EqualTo(request.RecipientEmail));
+        Assert.That(scheduler.Payload.ResetToken, Is.EqualTo(request.ResetToken));
+        Assert.That(scheduler.Payload.ResetUrl, Is.EqualTo("https://identity-sentinel.example.test/reset"));
+        Assert.That(scheduler.Payload.CultureName, Is.EqualTo(request.CultureName));
+        Assert.That(scheduler.Payload.CorrelationId.GetValue(), Is.EqualTo(request.TokenId.GetValue()));
+        Assert.That(scheduler.Payload.NotificationType.Value, Is.EqualTo("user.password.recovery"));
+        Assert.That(scheduler.Payload.Culture.Name, Is.EqualTo("en-US"));
+        Assert.That(scheduler.CancellationToken, Is.EqualTo(cancellationToken));
     }
 
     [Test]
@@ -75,13 +73,13 @@ public sealed class PasswordRecoveryEmailSchedulerAdapterTests
 
         var action = () => adapter.ScheduleAsync(request, cancellationSource.Token);
 
-        await action.Should().ThrowAsync<OperationCanceledException>();
-        scheduler.CancellationToken.Should().Be(cancellationSource.Token);
+        await Assert.ThatAsync(async () => { await action(); }, Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(scheduler.CancellationToken, Is.EqualTo(cancellationSource.Token));
     }
 
     private static Id<TEntity> ParseId<TEntity>(string value)
     {
-        Id<TEntity>.TryParse(value, out var id).Should().BeTrue();
+        Assert.That(Id<TEntity>.TryParse(value, out var id), Is.True);
         return id;
     }
 

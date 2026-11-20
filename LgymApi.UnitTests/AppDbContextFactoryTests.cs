@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -40,8 +39,8 @@ public sealed class AppDbContextFactoryTests
 
         using var context = factory.CreateDbContext([]);
 
-        context.Database.GetDbConnection().Database.Should().Be("LGYM-APP");
-        context.Database.GetDbConnection().DataSource.Should().Contain("localhost");
+        Assert.That(context.Database.GetDbConnection().Database, Is.EqualTo("LGYM-APP"));
+        Assert.That(context.Database.GetDbConnection().DataSource, Does.Contain("localhost"));
     }
 
     [Test]
@@ -54,8 +53,8 @@ public sealed class AppDbContextFactoryTests
 
         using var context = factory.CreateDbContext([]);
 
-        context.Database.GetDbConnection().Database.Should().Be("design_time");
-        context.Database.GetDbConnection().DataSource.Should().Contain("maintenance");
+        Assert.That(context.Database.GetDbConnection().Database, Is.EqualTo("design_time"));
+        Assert.That(context.Database.GetDbConnection().DataSource, Does.Contain("maintenance"));
     }
 
     [Test]
@@ -66,7 +65,7 @@ public sealed class AppDbContextFactoryTests
 
         var action = () => new AppDbContextFactory().CreateDbContext([]);
 
-        action.Should().Throw<InvalidOperationException>().WithMessage("*LGYM_MIGRATION_POSTGRES*");
+        Assert.That(() => { action(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("*LGYM_MIGRATION_POSTGRES*").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
     }
 
     [Test]
@@ -80,11 +79,11 @@ public sealed class AppDbContextFactoryTests
         using var context = factory.CreateDbContext([]);
         var migrationsAssembly = context.GetService<IMigrationsAssembly>();
 
-        context.Database.ProviderName.Should().Be("Npgsql.EntityFrameworkCore.PostgreSQL");
-        context.Model.GetEntityTypes().Should().HaveCount(55);
-        context.Database.HasPendingModelChanges().Should().BeFalse();
-        migrationsAssembly.Assembly.Should().BeSameAs(typeof(AppDbContext).Assembly);
-        migrationsAssembly.ModelSnapshot.Should().NotBeNull();
-        migrationsAssembly.ModelSnapshot!.GetType().Name.Should().Be("AppDbContextModelSnapshot");
+        Assert.That(context.Database.ProviderName, Is.EqualTo("Npgsql.EntityFrameworkCore.PostgreSQL"));
+        Assert.That(context.Model.GetEntityTypes(), Has.Exactly(55).Items);
+        Assert.That(context.Database.HasPendingModelChanges(), Is.False);
+        Assert.That(migrationsAssembly.Assembly, Is.SameAs(typeof(AppDbContext).Assembly));
+        Assert.That(migrationsAssembly.ModelSnapshot, Is.Not.Null);
+        Assert.That(migrationsAssembly.ModelSnapshot!.GetType().Name, Is.EqualTo("AppDbContextModelSnapshot"));
     }
 }

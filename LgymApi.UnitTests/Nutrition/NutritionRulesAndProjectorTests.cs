@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
 using LgymApi.Application.Nutrition.Errors;
@@ -32,16 +31,16 @@ public sealed class NutritionRulesAndProjectorTests
 
         var normalized = DietPlanRules.Normalize(data);
 
-        DietPlanRules.GetUpsertError(data).Should().BeNull();
-        normalized.Name.Should().Be("Cut");
-        normalized.Notes.Should().BeNull();
-        normalized.Meals.Should().ContainSingle().Which.Should().Be(new DietMealInput("Dinner", 0, "rice", null, null, null, null));
+        Assert.That(DietPlanRules.GetUpsertError(data), Is.Null);
+        Assert.That(normalized.Name, Is.EqualTo("Cut"));
+        Assert.That(normalized.Notes, Is.Null);
+        var assertedValue190 = (normalized.Meals).ToArray();
+        Assert.That(assertedValue190, Has.Exactly(1).Items);
+        Assert.That(assertedValue190.Single(), Is.EqualTo(new DietMealInput("Dinner", 0, "rice", null, null, null, null)));
         var actorId = Id<User>.New();
         var actor = NutritionAuthorizationTestFactory.CreateActor(actorId);
-        DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), false, true)
-            .Should().BeOfType<TrainerRelationshipForbiddenError>();
-        DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), true, false)
-            .Should().BeOfType<NotFoundError>();
+        Assert.That(DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), false, true), Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(DietPlanAccess.GetAccessError(NutritionAuthorizationTestFactory.CreateDietCoordinator(), actor, DietPlanAction.Read, actorId, Id<User>.New(), true, false), Is.TypeOf<NotFoundError>());
     }
 
     [Test]
@@ -57,18 +56,14 @@ public sealed class NutritionRulesAndProjectorTests
 
         var normalized = SupplementationRules.Normalize(data);
 
-        SupplementationRules.GetUpsertError(data).Should().BeNull();
-        normalized.Items.Select(item => item.SupplementName).Should().Equal("Magnesium", "Zinc");
-        SupplementationRules.GetComplianceRangeError(new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1))
-            .Should().BeOfType<InvalidSupplementationError>();
+        Assert.That(SupplementationRules.GetUpsertError(data), Is.Null);
+        Assert.That(normalized.Items.Select(item => item.SupplementName), Is.EqualTo(new[] { "Magnesium", "Zinc" }));
+        Assert.That(SupplementationRules.GetComplianceRangeError(new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 1)), Is.TypeOf<InvalidSupplementationError>());
         var actorId = Id<User>.New();
         var actor = NutritionAuthorizationTestFactory.CreateActor(actorId);
-        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, false, false, default)
-            .Should().BeOfType<SupplementationForbiddenError>();
-        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, true, default)
-            .Should().BeOfType<InvalidSupplementationError>();
-        SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, false, Id<User>.New())
-            .Should().BeOfType<SupplementationNotFoundError>();
+        Assert.That(SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, false, false, default), Is.TypeOf<SupplementationForbiddenError>());
+        Assert.That(SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, true, default), Is.TypeOf<InvalidSupplementationError>());
+        Assert.That(SupplementationAccess.GetTrainerAccessError(NutritionAuthorizationTestFactory.CreateSupplementationCoordinator(), actor, true, false, Id<User>.New()), Is.TypeOf<SupplementationNotFoundError>());
     }
 
     [Test]
@@ -80,7 +75,7 @@ public sealed class NutritionRulesAndProjectorTests
             .SelectMany(method => method.GetParameters())
             .Select(parameter => parameter.ParameterType.FullName);
 
-        parameterTypes.Should().NotContain(forbiddenType);
+        Assert.That(parameterTypes, Does.Not.Contain(forbiddenType));
     }
 
     [Test]
@@ -130,12 +125,12 @@ public sealed class NutritionRulesAndProjectorTests
         var schedule = SupplementScheduleProjector.Project(plan, date, logs);
         var compliance = SupplementComplianceProjector.Project(traineeId, plan.Items, date, date.AddDays(2), logs);
 
-        schedule.Select(entry => entry.SupplementName).Should().Equal("Magnesium", "Zinc");
-        schedule[0].Taken.Should().BeTrue();
-        schedule[0].TakenAt.Should().Be(logs[0].TakenAt);
-        schedule[1].Taken.Should().BeFalse();
-        compliance.PlannedDoses.Should().Be(2);
-        compliance.TakenDoses.Should().Be(1);
-        compliance.AdherenceRate.Should().Be(50);
+        Assert.That(schedule.Select(entry => entry.SupplementName), Is.EqualTo(new[] { "Magnesium", "Zinc" }));
+        Assert.That(schedule[0].Taken, Is.True);
+        Assert.That(schedule[0].TakenAt, Is.EqualTo(logs[0].TakenAt));
+        Assert.That(schedule[1].Taken, Is.False);
+        Assert.That(compliance.PlannedDoses, Is.EqualTo(2));
+        Assert.That(compliance.TakenDoses, Is.EqualTo(1));
+        Assert.That(compliance.AdherenceRate, Is.EqualTo(50));
     }
 }

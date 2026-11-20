@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Api;
 using Microsoft.AspNetCore.Builder;
 
@@ -18,7 +17,7 @@ public sealed class ProgramHangfireTests
 
         var action = () => ProgramHangfire.ConfigureRecurringJobs(app, "Testing");
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 
     [Test]
@@ -32,6 +31,6 @@ public sealed class ProgramHangfireTests
 
         var action = () => ProgramHangfire.ConfigureDashboard(app, "Testing");
 
-        action.Should().NotThrow();
+        Assert.That(() => { action(); }, Throws.Nothing);
     }
 }

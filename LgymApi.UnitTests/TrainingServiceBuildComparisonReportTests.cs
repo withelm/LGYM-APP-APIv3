@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Training.Models;
 using LgymApi.Application.WorkoutProgress.Persistence;
 using LgymApi.Application.WorkoutProgress.TrainingExecution;
@@ -24,10 +23,10 @@ public sealed class TrainingServiceBuildComparisonReportTests
 
         var result = TrainingComparisonReportBuilder.Build(current, previous, new Dictionary<Id<Exercise>, string> { [exerciseId] = "Bench" });
 
-        result.Should().ContainSingle();
-        result[0].ExerciseName.Should().Be("Bench");
-        result[0].SeriesComparisons[0].PreviousResult!.Weight.Should().Be(70);
-        result[0].SeriesComparisons[0].CurrentResult.Weight.Should().Be(80);
+        Assert.That(result, Has.Exactly(1).Items);
+        Assert.That(result[0].ExerciseName, Is.EqualTo("Bench"));
+        Assert.That(result[0].SeriesComparisons[0].PreviousResult!.Weight, Is.EqualTo(70));
+        Assert.That(result[0].SeriesComparisons[0].CurrentResult.Weight, Is.EqualTo(80));
     }
 
     [Test]
@@ -37,7 +36,7 @@ public sealed class TrainingServiceBuildComparisonReportTests
             [new TrainingExerciseInput { ExerciseId = Id<Exercise>.Empty, Series = 1, Unit = WeightUnits.Kilograms }],
             [],
             []);
-        result.Should().BeEmpty();
+        Assert.That(result, Is.Empty);
     }
 
     private static WorkoutExerciseScorePersistenceModel Score(Id<Exercise> exerciseId, double reps, double weight)

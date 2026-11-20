@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.ValueObjects;
 
 namespace LgymApi.UnitTests;
@@ -11,14 +10,14 @@ public sealed class EmailValueObjectTests
     {
         var email = new Email("  USER@Example.COM ");
 
-        email.Value.Should().Be("user@example.com");
+        Assert.That(email.Value, Is.EqualTo("user@example.com"));
     }
 
     [TestCase("not-an-email")]
     public void Constructor_Throws_ForInvalidInput(string value)
     {
         var action = () => _ = new Email(value);
-        action.Should().Throw<ArgumentException>();
+        Assert.That(() => { action(); }, Throws.InstanceOf<ArgumentException>());
     }
 
     [Test]
@@ -26,8 +25,8 @@ public sealed class EmailValueObjectTests
     {
         var email = new Email("   ");
 
-        email.IsEmpty.Should().BeTrue();
-        email.Value.Should().Be(string.Empty);
+        Assert.That(email.IsEmpty, Is.True);
+        Assert.That(email.Value, Is.EqualTo(string.Empty));
     }
 
     [Test]
@@ -36,6 +35,6 @@ public sealed class EmailValueObjectTests
         Email email = "user@example.com";
         string value = email;
 
-        value.Should().Be("user@example.com");
+        Assert.That(value, Is.EqualTo("user@example.com"));
     }
 }

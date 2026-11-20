@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Coaching;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.Coaching.Contracts.BackgroundCommands;
@@ -45,8 +44,10 @@ public sealed class CoachingTraineeNoteSliceTests
         var result = await Resolve<IListTrainerNotesUseCase>(dependencies.CreateServices())
             .ExecuteAsync(new ListTrainerNotesQuery(trainerId, traineeId));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle().Which.Should().Be(new TraineeNoteReadModel(
+        Assert.That(result.IsSuccess, Is.True);
+        var assertedValue94 = (result.Value).ToArray();
+        Assert.That(assertedValue94, Has.Exactly(1).Items);
+        Assert.That(assertedValue94.Single(), Is.EqualTo(new TraineeNoteReadModel(
             note.Id,
             note.TrainerId,
             note.TraineeId,
@@ -58,7 +59,7 @@ public sealed class CoachingTraineeNoteSliceTests
             note.LastUpdatedAt,
             note.CreatedAt,
             note.UpdatedAt,
-            "Original trainer"));
+            "Original trainer")));
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -77,9 +78,9 @@ public sealed class CoachingTraineeNoteSliceTests
         var result = await Resolve<IListVisibleTraineeNotesUseCase>(dependencies.CreateServices())
             .ExecuteAsync(new ListVisibleTraineeNotesQuery(traineeId), cancellation.Token);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Select(note => note.Id).Should().Equal(first.Id, second.Id);
-        result.Value.Select(note => note.Content).Should().Equal("Pinned", "Recent");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Select(note => note.Id), Is.EqualTo(new[] { first.Id, second.Id }));
+        Assert.That(result.Value.Select(note => note.Content), Is.EqualTo(new[] { "Pinned", "Recent" }));
         await dependencies.Notes.Received(1).GetVisibleNotesByTraineeAsync(traineeId, cancellation.Token);
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<User>>(),
@@ -121,17 +122,17 @@ public sealed class CoachingTraineeNoteSliceTests
         var privateResult = await useCase.ExecuteAsync(new GetVisibleTraineeNoteQuery(traineeId, privateNote.Id));
         var foreign = await useCase.ExecuteAsync(new GetVisibleTraineeNoteQuery(traineeId, foreignNote.Id));
 
-        success.IsSuccess.Should().BeTrue();
-        success.Value.Id.Should().Be(visible.Id);
-        success.Value.Content.Should().Be("Visible");
-        invalid.Error.Should().BeOfType<BadRequestError>();
-        invalid.Error.Message.Should().Be(Messages.FieldRequired);
-        missing.Error.Should().BeOfType<NotFoundError>();
-        missing.Error.Message.Should().Be(Messages.DidntFind);
-        privateResult.Error.Should().BeOfType<NotFoundError>();
-        privateResult.Error.Message.Should().Be(Messages.DidntFind);
-        foreign.Error.Should().BeOfType<NotFoundError>();
-        foreign.Error.Message.Should().Be(Messages.DidntFind);
+        Assert.That(success.IsSuccess, Is.True);
+        Assert.That(success.Value.Id, Is.EqualTo(visible.Id));
+        Assert.That(success.Value.Content, Is.EqualTo("Visible"));
+        Assert.That(invalid.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(invalid.Error.Message, Is.EqualTo(Messages.FieldRequired));
+        Assert.That(missing.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(missing.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(privateResult.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(privateResult.Error.Message, Is.EqualTo(Messages.DidntFind));
+        Assert.That(foreign.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(foreign.Error.Message, Is.EqualTo(Messages.DidntFind));
         await dependencies.Notes.DidNotReceive().FindNoteByIdAsync(
             Id<TraineeNote>.Empty,
             Arg.Any<CancellationToken>());
@@ -192,25 +193,25 @@ public sealed class CoachingTraineeNoteSliceTests
                 traineeId,
                 new TraineeNoteUpsertData("   ", "  First note  ", true, true)));
 
-        result.IsSuccess.Should().BeTrue();
-        stagedNote.Should().NotBeNull();
-        stagedNote!.Title.Should().BeNull();
-        stagedNote.Content.Should().Be("First note");
-        stagedNote.VisibleToTrainee.Should().BeTrue();
-        stagedNote.IsPinned.Should().BeTrue();
-        stagedNote.IsDeleted.Should().BeFalse();
-        stagedHistory.Should().NotBeNull();
-        stagedHistory!.TraineeNoteId.Should().Be(stagedNote.Id);
-        stagedHistory.PreviousContent.Should().BeNull();
-        stagedHistory.NewContent.Should().Be("First note");
-        stagedHistory.ChangeType.Should().Be("Created");
-        stagedHistory.ChangedAt.Should().BeOnOrAfter(stagedNote.LastUpdatedAt);
-        notification.Should().NotBeNull();
-        notification!.TraineeNoteId.Should().Be(stagedNote.Id);
-        notification.TraineeId.Should().Be(traineeId);
-        notification.TrainerId.Should().Be(trainerId);
-        notification.NoteTitle.Should().BeNull();
-        operations.Should().Equal("access", "note", "history", "commit", "notify", "read");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(stagedNote, Is.Not.Null);
+        Assert.That(stagedNote!.Title, Is.Null);
+        Assert.That(stagedNote.Content, Is.EqualTo("First note"));
+        Assert.That(stagedNote.VisibleToTrainee, Is.True);
+        Assert.That(stagedNote.IsPinned, Is.True);
+        Assert.That(stagedNote.IsDeleted, Is.False);
+        Assert.That(stagedHistory, Is.Not.Null);
+        Assert.That(stagedHistory!.TraineeNoteId, Is.EqualTo(stagedNote.Id));
+        Assert.That(stagedHistory.PreviousContent, Is.Null);
+        Assert.That(stagedHistory.NewContent, Is.EqualTo("First note"));
+        Assert.That(stagedHistory.ChangeType, Is.EqualTo("Created"));
+        Assert.That(stagedHistory.ChangedAt, Is.GreaterThanOrEqualTo(stagedNote.LastUpdatedAt));
+        Assert.That(notification, Is.Not.Null);
+        Assert.That(notification!.TraineeNoteId, Is.EqualTo(stagedNote.Id));
+        Assert.That(notification.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(notification.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(notification.NoteTitle, Is.Null);
+        Assert.That(operations, Is.EqualTo(new[] { "access", "note", "history", "commit", "notify", "read" }));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -228,7 +229,7 @@ public sealed class CoachingTraineeNoteSliceTests
                 traineeId,
                 new TraineeNoteUpsertData(null, "  ", false, false)));
 
-        result.Error.Should().BeOfType<BadRequestError>();
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
         await dependencies.Access.Received(1).GetAccessDecisionAsync(
             trainerId,
             traineeId,
@@ -279,15 +280,15 @@ public sealed class CoachingTraineeNoteSliceTests
                 existing.Id,
                 new TraineeNoteUpsertData("  New title  ", "  New content  ", false, true)));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Title.Should().Be("New title");
-        result.Value.Content.Should().Be("New content");
-        result.Value.VisibleToTrainee.Should().BeFalse();
-        stagedHistory.Should().NotBeNull();
-        stagedHistory!.PreviousContent.Should().Be("Old content");
-        stagedHistory.NewContent.Should().Be("New content");
-        stagedHistory.ChangeType.Should().Be("Updated");
-        operations.Should().Equal("note", "history", "commit");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Title, Is.EqualTo("New title"));
+        Assert.That(result.Value.Content, Is.EqualTo("New content"));
+        Assert.That(result.Value.VisibleToTrainee, Is.False);
+        Assert.That(stagedHistory, Is.Not.Null);
+        Assert.That(stagedHistory!.PreviousContent, Is.EqualTo("Old content"));
+        Assert.That(stagedHistory.NewContent, Is.EqualTo("New content"));
+        Assert.That(stagedHistory.ChangeType, Is.EqualTo("Updated"));
+        Assert.That(operations, Is.EqualTo(new[] { "note", "history", "commit" }));
         await dependencies.Commands.DidNotReceive().EnqueueAsync(
             Arg.Any<TraineeNoteUpdatedInAppNotificationCommand>());
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -315,7 +316,7 @@ public sealed class CoachingTraineeNoteSliceTests
                 existing.Id,
                 new TraineeNoteUpsertData(null, "Still private", false, false)));
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
 
@@ -331,7 +332,7 @@ public sealed class CoachingTraineeNoteSliceTests
                 Id<TraineeNote>.New(),
                 new TraineeNoteUpsertData(null, string.Empty, false, false)));
 
-        result.Error.Should().BeOfType<BadRequestError>();
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -359,16 +360,16 @@ public sealed class CoachingTraineeNoteSliceTests
         var result = await Resolve<IDeleteTraineeNoteUseCase>(dependencies.CreateServices())
             .ExecuteAsync(new DeleteTraineeNoteCommand(trainerId, traineeId, existing.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        deleted.Should().NotBeNull();
-        deleted!.IsDeleted.Should().BeTrue();
-        deleted.VisibleToTrainee.Should().BeFalse();
-        deleted.IsPinned.Should().BeTrue();
-        deleted.Content.Should().Be("Keep in history");
-        history.Should().NotBeNull();
-        history!.PreviousContent.Should().Be("Keep in history");
-        history.NewContent.Should().Be("Keep in history");
-        history.ChangeType.Should().Be("Deleted");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(deleted, Is.Not.Null);
+        Assert.That(deleted!.IsDeleted, Is.True);
+        Assert.That(deleted.VisibleToTrainee, Is.False);
+        Assert.That(deleted.IsPinned, Is.True);
+        Assert.That(deleted.Content, Is.EqualTo("Keep in history"));
+        Assert.That(history, Is.Not.Null);
+        Assert.That(history!.PreviousContent, Is.EqualTo("Keep in history"));
+        Assert.That(history.NewContent, Is.EqualTo("Keep in history"));
+        Assert.That(history.ChangeType, Is.EqualTo("Deleted"));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
     }
@@ -400,15 +401,17 @@ public sealed class CoachingTraineeNoteSliceTests
         var result = await Resolve<IGetTraineeNoteHistoryUseCase>(dependencies.CreateServices())
             .ExecuteAsync(new GetTraineeNoteHistoryQuery(trainerId, traineeId, note.Id));
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().ContainSingle().Which.Should().Be(new TraineeNoteHistoryReadModel(
+        Assert.That(result.IsSuccess, Is.True);
+        var assertedValue95 = (result.Value).ToArray();
+        Assert.That(assertedValue95, Has.Exactly(1).Items);
+        Assert.That(assertedValue95.Single(), Is.EqualTo(new TraineeNoteHistoryReadModel(
             history.Id,
             history.TraineeNoteId,
             history.ChangedByUserId,
             history.ChangedAt,
             history.PreviousContent,
             history.NewContent,
-            history.ChangeType));
+            history.ChangeType)));
         await dependencies.UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -439,9 +442,9 @@ public sealed class CoachingTraineeNoteSliceTests
         var invalidId = await Resolve<IDeleteTraineeNoteUseCase>(services)
             .ExecuteAsync(new DeleteTraineeNoteCommand(trainerId, traineeId, Id<TraineeNote>.Empty));
 
-        foreignRelationship.IsSuccess.Should().BeTrue();
-        foreignNote.Error.Should().BeOfType<NotFoundError>();
-        invalidId.Error.Should().BeOfType<BadRequestError>();
+        Assert.That(foreignRelationship.IsSuccess, Is.True);
+        Assert.That(foreignNote.Error, Is.TypeOf<NotFoundError>());
+        Assert.That(invalidId.Error, Is.TypeOf<BadRequestError>());
         await dependencies.Notes.DidNotReceive().UpdateNoteAsync(
             Arg.Any<CoachingTraineeNoteWriteModel>(),
             Arg.Any<CancellationToken>());
@@ -497,14 +500,14 @@ public sealed class CoachingTraineeNoteSliceTests
                 traineeId,
                 new TraineeNoteUpsertData("Atomic", "Both or neither", true, false)));
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("commit failed");
-        database.ChangeTracker.Entries<TraineeNote>().Should().ContainSingle(entry => entry.State == EntityState.Added);
-        database.ChangeTracker.Entries<TraineeNoteHistory>().Should().ContainSingle(entry => entry.State == EntityState.Added);
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("commit failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That((database.ChangeTracker.Entries<TraineeNote>()).Where(entry => entry.State == EntityState.Added), Has.Exactly(1).Items);
+        Assert.That((database.ChangeTracker.Entries<TraineeNoteHistory>()).Where(entry => entry.State == EntityState.Added), Has.Exactly(1).Items);
         await commands.DidNotReceive().EnqueueAsync(Arg.Any<IActionCommand>());
 
         await using var verificationDatabase = new AppDbContext(options);
-        (await verificationDatabase.TraineeNotes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        (await verificationDatabase.TraineeNoteHistories.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        Assert.That((await verificationDatabase.TraineeNotes.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
+        Assert.That((await verificationDatabase.TraineeNoteHistories.IgnoreQueryFilters().CountAsync()), Is.EqualTo(0));
     }
 
     private static TContract Resolve<TContract>(ServiceCollection services) where TContract : notnull

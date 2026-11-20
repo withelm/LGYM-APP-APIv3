@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Application.Features.Reporting;
 using LgymApi.Application.Repositories;
 using LgymApi.Application.Platform.Contracts.BackgroundCommands;
@@ -92,19 +91,19 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
         await using var verification = new AppDbContext(options);
         var assignments = await verification.RecurringReportAssignments.AsNoTracking().ToListAsync();
         var ended = assignments.Single(x => x.Id == assignmentId);
-        ended.IsActive.Should().BeFalse();
-        ended.NextEligibleAt.Should().BeNull();
-        ended.ScheduleRevision.Should().Be(4);
-        ended.Note.Should().Be("preserve");
+        Assert.That(ended.IsActive, Is.False);
+        Assert.That(ended.NextEligibleAt, Is.Null);
+        Assert.That(ended.ScheduleRevision, Is.EqualTo(4));
+        Assert.That(ended.Note, Is.EqualTo("preserve"));
         var other = assignments.Single(x => x.Id == otherAssignmentId);
-        other.IsActive.Should().BeTrue();
-        other.NextEligibleAt.Should().Be(now.AddDays(7));
-        other.ScheduleRevision.Should().Be(3);
+        Assert.That(other.IsActive, Is.True);
+        Assert.That(other.NextEligibleAt, Is.EqualTo(now.AddDays(7)));
+        Assert.That(other.ScheduleRevision, Is.EqualTo(3));
         var requests = await verification.ReportRequests.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.Status);
-        requests[pendingId].Should().Be(ReportRequestStatus.Cancelled);
-        requests[expiredId].Should().Be(ReportRequestStatus.Cancelled);
-        requests[submittedId].Should().Be(ReportRequestStatus.Submitted);
-        requests[otherRequestId].Should().Be(ReportRequestStatus.Pending);
+        Assert.That(requests[pendingId], Is.EqualTo(ReportRequestStatus.Cancelled));
+        Assert.That(requests[expiredId], Is.EqualTo(ReportRequestStatus.Cancelled));
+        Assert.That(requests[submittedId], Is.EqualTo(ReportRequestStatus.Submitted));
+        Assert.That(requests[otherRequestId], Is.EqualTo(ReportRequestStatus.Pending));
     }
 
     [Test]
@@ -155,8 +154,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
         }
 
         await using var assertDb = new AppDbContext(options);
-        (await assertDb.ReportRequests.CountAsync()).Should().Be(1);
-        (await assertDb.RecurringReportAssignments.SingleAsync()).CurrentReportRequestId.Should().Be(requestId);
+        Assert.That((await assertDb.ReportRequests.CountAsync()), Is.EqualTo(1));
+        Assert.That((await assertDb.RecurringReportAssignments.SingleAsync()).CurrentReportRequestId, Is.EqualTo(requestId));
         await outbox.Received(1).StageAsync(
             Arg.Is<RecurringReportReminderInAppNotificationCommand>(command =>
                 command.AssignmentId == assignmentId && command.ReportRequestId == requestId
@@ -260,8 +259,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             var access = await relationshipAccess.GetAccessAsync(
                 (await actDb.Users.SingleAsync(user => user.Email == "trainer@example.com")).Id.Rebind<LgymApi.Identity.Contracts.AccountReference>(),
                 (await actDb.Users.SingleAsync(user => user.Email == "trainee@example.com")).Id.Rebind<LgymApi.Identity.Contracts.AccountReference>());
-            access.HasActiveRelationship.Should().BeTrue();
-            access.ActiveEpisode.Should().NotBeNull();
+            Assert.That(access.HasActiveRelationship, Is.True);
+            Assert.That(access.ActiveEpisode, Is.Not.Null);
             var service = CreateService(actDb, commandOutboxWriter);
             await service.ProcessDueAssignmentsAsync();
         }
@@ -272,13 +271,13 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
         var requests = await assertDb.ReportRequests.ToListAsync();
         var nextRequest = requests.Single(x => x.Id != originalRequestId);
 
-        requests.Should().HaveCount(2);
-        storedAssignment.CurrentReportRequestId.Should().Be(nextRequest.Id);
-        storedAssignment.CurrentReportRequestId.Should().NotBe(originalRequestId);
-        storedAssignment.NextEligibleAt.Should().BeNull();
-        nextRequest.RecurringReportAssignmentId.Should().Be(storedAssignment.Id);
-        nextRequest.Status.Should().Be(ReportRequestStatus.Pending);
-        nextRequest.Note.Should().Be("weekly check-in");
+        Assert.That(requests, Has.Exactly(2).Items);
+        Assert.That(storedAssignment.CurrentReportRequestId, Is.EqualTo(nextRequest.Id));
+        Assert.That(storedAssignment.CurrentReportRequestId, Is.Not.EqualTo(originalRequestId));
+        Assert.That(storedAssignment.NextEligibleAt, Is.Null);
+        Assert.That(nextRequest.RecurringReportAssignmentId, Is.EqualTo(storedAssignment.Id));
+        Assert.That(nextRequest.Status, Is.EqualTo(ReportRequestStatus.Pending));
+        Assert.That(nextRequest.Note, Is.EqualTo("weekly check-in"));
 
         await commandOutboxWriter.Received(1).StageAsync(
             Arg.Is<ReportRequestCreatedInAppNotificationCommand>(command =>
@@ -360,8 +359,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
             .IgnoreQueryFilters()
             .SingleAsync(assignment => assignment.Id == assignmentId);
 
-        storedAssignment.IsActive.Should().BeFalse();
-        (await assertDb.ReportRequests.CountAsync()).Should().Be(0);
+        Assert.That(storedAssignment.IsActive, Is.False);
+        Assert.That((await assertDb.ReportRequests.CountAsync()), Is.EqualTo(0));
         await commandOutboxWriter.DidNotReceiveWithAnyArgs().StageAsync(
             Arg.Any<ReportRequestCreatedInAppNotificationCommand>(),
             Arg.Any<CancellationToken>());
@@ -385,8 +384,8 @@ public sealed class RecurringReportAssignmentServiceRelationalTests
         var firstElement = collection.First();
 
         // Assert
-        firstElement.Should().Be(10);
-        firstElement.Should().NotBe(20); // Ensure we're not getting the wrong element
+        Assert.That(firstElement, Is.EqualTo(10));
+        Assert.That(firstElement, Is.Not.EqualTo(20)); // Ensure we're not getting the wrong element
     }
 
     private static RecurringReportAssignmentService CreateService(AppDbContext db, ICommandOutboxWriter commandOutboxWriter)

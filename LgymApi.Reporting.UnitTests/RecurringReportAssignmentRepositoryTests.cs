@@ -1,4 +1,3 @@
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using LgymApi.Domain.ValueObjects;
@@ -27,9 +26,9 @@ public sealed class RecurringReportAssignmentRepositoryTests
 
         var result = await persistence.FindByCurrentRequestAsync(request.Id);
 
-        result.Should().NotBeNull();
-        result!.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest!.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest!.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
     }
 
     [Test]
@@ -47,11 +46,11 @@ public sealed class RecurringReportAssignmentRepositoryTests
 
         var result = await persistence.FindByIdAsync(assignment.Id);
 
-        result.Should().NotBeNull();
-        result!.IsDeleted.Should().BeFalse();
-        result.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
-        result.CurrentReportRequest.Should().NotBeNull();
-        result.CurrentReportRequest!.Template.Fields.Select(field => field.Order).Should().BeInAscendingOrder();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.IsDeleted, Is.False);
+        Assert.That(result.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
+        Assert.That(result.CurrentReportRequest, Is.Not.Null);
+        Assert.That(result.CurrentReportRequest!.Template.Fields.Select(field => field.Order), Is.Ordered.Ascending);
     }
 
     [Test]
@@ -77,8 +76,8 @@ public sealed class RecurringReportAssignmentRepositoryTests
 
         var result = await persistence.ListDueAsync(now);
 
-        result.Select(assignment => assignment.Note).Should().BeEquivalentTo(["ending", "open", "upcoming"]);
-        result.Should().OnlyContain(assignment => assignment.Template.Fields.Count == 2);
+        Assert.That(result.Select(assignment => assignment.Note), Is.EquivalentTo(new[] { "ending", "open", "upcoming" }));
+        Assert.That((result).All(assignment => assignment.Template.Fields.Count == 2), Is.True);
     }
 
     [Test]
@@ -99,7 +98,7 @@ public sealed class RecurringReportAssignmentRepositoryTests
 
         var result = await new RecurringReportAssignmentPersistenceRepository(db).ListDueAsync(now);
 
-        result.Select(assignment => assignment.Id).Should().Equal(pendingAssignment.Id);
+        Assert.That(result.Select(assignment => assignment.Id), Is.EqualTo(new[] { pendingAssignment.Id }));
     }
 
     private static AppDbContext CreateDbContext()

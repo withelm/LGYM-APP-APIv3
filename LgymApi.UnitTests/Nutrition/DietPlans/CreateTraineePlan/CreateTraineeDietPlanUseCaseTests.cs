@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using LgymApi.Application.Coaching.Contracts.Access;
 using LgymApi.Application.BuildingBlocks.Errors;
 using LgymApi.Application.Coaching.Errors;
@@ -67,37 +66,38 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             cancellationToken);
 
         var afterNotification = DateTimeOffset.UtcNow;
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("Cut");
-        result.Value.Notes.Should().BeNull();
-        result.Value.Meals.Select(meal => meal.Name).Should().Equal("Breakfast", "Dinner");
-        stagedPlan.Should().NotBeNull();
-        stagedPlan!.Id.IsEmpty.Should().BeFalse();
-        stagedPlan.TrainerId.Should().Be(trainerId);
-        stagedPlan.TraineeId.Should().Be(traineeId);
-        stagedPlan.IsDeleted.Should().BeFalse();
-        stagedPlan.Meals.Should().OnlyContain(meal => !meal.Id.IsEmpty && meal.DietPlanId == stagedPlan.Id);
-        stagedPlan.Meals.Select(meal => meal.Description).Should().Equal("eggs", null);
-        stagedHistory.Should().NotBeNull();
-        stagedHistory!.Id.IsEmpty.Should().BeFalse();
-        stagedHistory.DietPlanId.Should().Be(stagedPlan.Id);
-        stagedHistory.ChangedByUserId.Should().Be(trainerId);
-        stagedHistory.ChangeType.Should().Be("Created");
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Name, Is.EqualTo("Cut"));
+        Assert.That(result.Value.Notes, Is.Null);
+        Assert.That(result.Value.Meals.Select(meal => meal.Name), Is.EqualTo(new[] { "Breakfast", "Dinner" }));
+        Assert.That(stagedPlan, Is.Not.Null);
+        Assert.That(stagedPlan!.Id.IsEmpty, Is.False);
+        Assert.That(stagedPlan.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(stagedPlan.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(stagedPlan.IsDeleted, Is.False);
+        Assert.That((stagedPlan.Meals).All(meal => !meal.Id.IsEmpty && meal.DietPlanId == stagedPlan.Id), Is.True);
+        Assert.That(stagedPlan.Meals.Select(meal => meal.Description), Is.EqualTo(new[] { "eggs", null }));
+        Assert.That(stagedHistory, Is.Not.Null);
+        Assert.That(stagedHistory!.Id.IsEmpty, Is.False);
+        Assert.That(stagedHistory.DietPlanId, Is.EqualTo(stagedPlan.Id));
+        Assert.That(stagedHistory.ChangedByUserId, Is.EqualTo(trainerId));
+        Assert.That(stagedHistory.ChangeType, Is.EqualTo("Created"));
         using (var snapshot = JsonDocument.Parse(stagedHistory.SnapshotJson))
         {
-            snapshot.RootElement.GetProperty("Name").GetString().Should().Be("Cut");
-            snapshot.RootElement.GetProperty("Meals").EnumerateArray()
-                .Select(meal => meal.GetProperty("Name").GetString())
-                .Should().Equal("Breakfast", "Dinner");
+            Assert.That(snapshot.RootElement.GetProperty("Name").GetString(), Is.EqualTo("Cut"));
+            Assert.That(snapshot.RootElement.GetProperty("Meals").EnumerateArray()
+                .Select(meal => meal.GetProperty("Name").GetString()), Is.EqualTo(new[] { "Breakfast", "Dinner" }));
         }
 
-        notification.Should().NotBeNull();
-        notification!.DietPlanId.Should().Be(stagedPlan.Id);
-        notification.TraineeId.Should().Be(traineeId);
-        notification.TrainerId.Should().Be(trainerId);
-        notification.DietPlanName.Should().Be("Cut");
-        notification.TriggeredAt.Should().BeOnOrAfter(beforeNotification).And.BeOnOrBefore(afterNotification);
-        operations.Should().Equal("access", "stage plan", "stage history", "save", "enqueue");
+        Assert.That(notification, Is.Not.Null);
+        Assert.That(notification!.DietPlanId, Is.EqualTo(stagedPlan.Id));
+        Assert.That(notification.TraineeId, Is.EqualTo(traineeId));
+        Assert.That(notification.TrainerId, Is.EqualTo(trainerId));
+        Assert.That(notification.DietPlanName, Is.EqualTo("Cut"));
+        var assertedChain51 = notification.TriggeredAt;
+        Assert.That(assertedChain51, Is.GreaterThanOrEqualTo(beforeNotification));
+        Assert.That(assertedChain51, Is.LessThanOrEqualTo(afterNotification));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "stage plan", "stage history", "save", "enqueue" }));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }
@@ -118,7 +118,7 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData(isActive: false)),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
+        Assert.That(result.IsSuccess, Is.True);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
@@ -147,9 +147,9 @@ public sealed class CreateTraineeDietPlanUseCaseTests
                 new DietPlanUpsertData("Macros", new DateOnly(2026, 7, 23), null, 2200, null, null, null, null, false, [])),
             cancellationToken);
 
-        result.IsSuccess.Should().BeTrue();
-        stagedPlan!.Meals.Should().BeEmpty();
-        result.Value.Meals.Should().BeEmpty();
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(stagedPlan!.Meals, Is.Empty);
+        Assert.That(result.Value.Meals, Is.Empty);
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
@@ -172,8 +172,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
                 new DietPlanUpsertData("Plan", new DateOnly(2026, 7, 23), null, null, null, null, null, null, false, [])),
             cancellationToken);
 
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Be(Messages.FieldRequired);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
         await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
         await AssertNoWritesAsync(dependencies);
     }
@@ -200,8 +200,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
                 new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, data),
                 cancellationToken);
 
-            result.Error.Should().BeOfType<BadRequestError>();
-            result.Error.Message.Should().Be(Messages.FieldRequired);
+            Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+            Assert.That(result.Error.Message, Is.EqualTo(Messages.FieldRequired));
             await dependencies.Access.Received(1).GetAccessDecisionAsync(trainerId, traineeId, cancellationToken);
             await AssertNoWritesAsync(dependencies);
         }
@@ -216,8 +216,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, Id<User>.Empty, ValidData()));
 
-        result.Error.Should().BeOfType<BadRequestError>();
-        result.Error.Message.Should().Be(Messages.UserIdRequired);
+        Assert.That(result.Error, Is.TypeOf<BadRequestError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.UserIdRequired));
         await dependencies.Access.DidNotReceive().GetAccessDecisionAsync(
             Arg.Any<Id<User>>(),
             Arg.Any<Id<User>>(),
@@ -237,8 +237,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
         var result = await dependencies.CreateUseCase().ExecuteAsync(
             new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()));
 
-        result.Error.Should().BeOfType<TrainerRelationshipForbiddenError>();
-        result.Error.Message.Should().Be(Messages.TrainerRoleRequired);
+        Assert.That(result.Error, Is.TypeOf<TrainerRelationshipForbiddenError>());
+        Assert.That(result.Error.Message, Is.EqualTo(Messages.TrainerRoleRequired));
         await AssertNoWritesAsync(dependencies);
     }
 
@@ -265,8 +265,8 @@ public sealed class CreateTraineeDietPlanUseCaseTests
             new CreateTraineeDietPlanCommand(NutritionAuthorizationTestFactory.CreateActor(trainerId), trainerId, traineeId, ValidData()),
             cancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("save failed");
-        operations.Should().Equal("access", "stage plan", "stage history", "save");
+        await Assert.ThatAsync(async () => { await act(); }, Throws.InstanceOf<InvalidOperationException>().With.Message.Matches("(?is)\\A" + System.Text.RegularExpressions.Regex.Escape("save failed").Replace("\\*", ".*").Replace("\\?", ".") + "\\z"));
+        Assert.That(operations, Is.EqualTo(new[] { "access", "stage plan", "stage history", "save" }));
         await dependencies.UnitOfWork.Received(1).SaveChangesAsync(cancellationToken);
         await dependencies.Commands.DidNotReceive().EnqueueAsync(Arg.Any<DietPlanUpdatedInAppNotificationCommand>());
         await dependencies.UnitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());

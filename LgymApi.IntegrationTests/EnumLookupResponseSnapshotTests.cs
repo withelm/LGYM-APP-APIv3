@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
 using LgymApi.Domain.Entities;
 using LgymApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +29,7 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             value = 81.5,
             unit = MeasurementUnits.Kilograms.ToString()
         });
-        addMeasurementResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addMeasurementResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         using var db = GetDbContext();
         var measurementId = await db.Measurements
@@ -45,11 +44,11 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             unit = WeightUnits.Kilograms.ToString(),
             date = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)
         });
-        addRecordResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(addRecordResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var exerciseEnglish = await GetJsonAsync($"/api/exercise/{exerciseId}/getExercise", "en");
         var exercisePolish = await GetJsonAsync($"/api/exercise/{exerciseId}/getExercise", "pl");
-        exerciseEnglish.Should().Be(JsonSerializer.Serialize(new
+        Assert.That(exerciseEnglish, Is.EqualTo(JsonSerializer.Serialize(new
         {
             _id = exerciseId.ToString(),
             name = "Snapshot row",
@@ -59,8 +58,8 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             eloFormula = new { id = "Standard", displayName = "Standard" },
             description = "Test description",
             image = (string?)null
-        }, SnapshotOptions));
-        exercisePolish.Should().Be(JsonSerializer.Serialize(new
+        }, SnapshotOptions)));
+        Assert.That(exercisePolish, Is.EqualTo(JsonSerializer.Serialize(new
         {
             _id = exerciseId.ToString(),
             name = "Snapshot row",
@@ -70,14 +69,14 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             eloFormula = new { id = "Standard", displayName = "Standardowa" },
             description = "Test description",
             image = (string?)null
-        }, SnapshotOptions));
+        }, SnapshotOptions)));
 
         var measurementEnglish = await GetJsonAsync($"/api/measurements:/{measurementId}/getMeasurementDetail", "en");
         var measurementPolish = await GetJsonAsync($"/api/measurements:/{measurementId}/getMeasurementDetail", "pl");
         using var measurementDocument = JsonDocument.Parse(measurementEnglish);
         var createdAt = measurementDocument.RootElement.GetProperty("createdAt").GetString();
         var updatedAt = measurementDocument.RootElement.GetProperty("updatedAt").GetString();
-        measurementEnglish.Should().Be(JsonSerializer.Serialize(new
+        Assert.That(measurementEnglish, Is.EqualTo(JsonSerializer.Serialize(new
         {
             user = userId.ToString(),
             bodyPart = new { id = "BodyWeight", name = "Body weight", displayName = "Body weight" },
@@ -85,8 +84,8 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             value = 81.5,
             createdAt,
             updatedAt
-        }, SnapshotOptions));
-        measurementPolish.Should().Be(JsonSerializer.Serialize(new
+        }, SnapshotOptions)));
+        Assert.That(measurementPolish, Is.EqualTo(JsonSerializer.Serialize(new
         {
             user = userId.ToString(),
             bodyPart = new { id = "BodyWeight", name = "Masa ciała", displayName = "Masa ciała" },
@@ -94,7 +93,7 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
             value = 81.5,
             createdAt,
             updatedAt
-        }, SnapshotOptions));
+        }, SnapshotOptions)));
 
         var mainRecordEnglish = await GetJsonAsync($"/api/mainRecords/{userId}/getLastMainRecords", "en");
         var mainRecordPolish = await GetJsonAsync($"/api/mainRecords/{userId}/getLastMainRecords", "pl");
@@ -102,7 +101,7 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
         var mainRecord = mainRecordDocument.RootElement.EnumerateArray().Single();
         var recordId = mainRecord.GetProperty("_id").GetString();
         var date = mainRecord.GetProperty("date").GetString();
-        mainRecordEnglish.Should().Be(JsonSerializer.Serialize(new[]
+        Assert.That(mainRecordEnglish, Is.EqualTo(JsonSerializer.Serialize(new[]
         {
             new
             {
@@ -114,8 +113,8 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
                     eloFormula = new { id = "Standard", displayName = "Standard" }, description = "Test description", image = (string?)null
                 }
             }
-        }, SnapshotOptions));
-        mainRecordPolish.Should().Be(JsonSerializer.Serialize(new[]
+        }, SnapshotOptions)));
+        Assert.That(mainRecordPolish, Is.EqualTo(JsonSerializer.Serialize(new[]
         {
             new
             {
@@ -127,7 +126,7 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
                     eloFormula = new { id = "Standard", displayName = "Standardowa" }, description = "Test description", image = (string?)null
                 }
             }
-        }, SnapshotOptions));
+        }, SnapshotOptions)));
     }
 
     private async Task<string> GetJsonAsync(string path, string culture)
@@ -136,7 +135,7 @@ public sealed class EnumLookupResponseSnapshotTests : IntegrationTestBase
         request.Headers.AcceptLanguage.ParseAdd(culture);
 
         var response = await Client.SendAsync(request);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         return await response.Content.ReadAsStringAsync();
     }
 
