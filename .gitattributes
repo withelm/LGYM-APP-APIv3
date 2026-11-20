@@ -1,0 +1,2 @@
+scripts/magick-native/*.sh text eol=lf
+scripts/magick-native/*.py text eol=lf
