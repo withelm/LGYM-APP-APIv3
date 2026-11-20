@@ -6,7 +6,8 @@ def replace_once(path, old, new):
     text = path.read_text()
     if text.count(old) != 1:
         raise RuntimeError(f"Unexpected upstream content: {path}: {old}")
-    path.write_text(text.replace(old, new))
+    with path.open("w") as output:
+        output.write(text.replace(old, new))
 
 
 def prepare(root):
